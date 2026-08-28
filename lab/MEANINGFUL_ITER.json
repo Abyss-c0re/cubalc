@@ -13,8 +13,13 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "head": "d4a38cfea259477583e9c7971cfcc1e7348f14cb",
-  "tip": "d4a38cfea259477583e9c7971cfcc1e7348f14cb",
-  "pin": "d4a38cfea259477583e9c7971cfcc1e7348f14cb",
-  "tip_equals_pin": true
+  "head": "59c54c93156a3e910121a428c07bd6b6c74a3e0b",
+  "tip": "59c54c93156a3e910121a428c07bd6b6c74a3e0b",
+  "pin": "59c54c93156a3e910121a428c07bd6b6c74a3e0b",
+  "tip_equals_pin": true,
+  "proofs": {
+    "1894": "PASS 64/0",
+    "99_smx_optic_tract": "PASS 64/0",
+    "1620": "PASS 12/0"
+  }
 }
