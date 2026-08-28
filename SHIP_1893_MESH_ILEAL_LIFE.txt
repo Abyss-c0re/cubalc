@@ -11,4 +11,9 @@ unity=1.0 next=we_autoheal
 selftest=PASS
 MEANINGFUL_ITER=1893
 VERSION=1.15.1372-usability
+head=0c7d87343f6c53bf2954f18377ce716f516e1158
+tip=0c7d87343f6c53bf2954f18377ce716f516e1158
+pin=0c7d87343f6c53bf2954f18377ce716f516e1158
+tip_equals_pin=0c7d87343f6c53bf2954f18377ce716f516e1158
+sealed=true
 MESH_ILEAL soft-OOB fail-closed C(4,2)=6 dual-autoheal ileum_ready
