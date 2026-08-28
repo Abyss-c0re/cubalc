@@ -29,5 +29,7 @@
   "item_id": "mi_1885_smx_mesh_hypogastric_life",
   "title": "1885 smx mesh hypogastric life",
   "summary": "Hypogastric pelvic visceral mesh life-force: soft-OOB fail-closed, C(4,2) mesh, dual autoheal, mitosis under locked rails.",
-  "ts": "2026-08-28T02:02:35Z"
+  "ts": "2026-08-28T02:02:35Z",
+  "pin_head": "a511097f5",
+  "tip": "a511097f5"
 }
