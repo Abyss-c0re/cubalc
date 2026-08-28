@@ -1,0 +1,119 @@
+// atomic_printer_mesh_superior_gluteal_life.cubalc
+// Science board twin: MESH_SUPERIOR_GLUTEAL soft-OOB fail-closed mesh life-force.
+// Energy path: internal iliac posterior-division superior gluteal feed -> greater sciatic foramen (suprapiriform) trunk ->
+// gluteal free-energy distal crown (superficial branch / deep superior branch / deep inferior branch / nutrient artery rails).
+// Dual WE_AUTOHEAL harden after second storm. INCLUDE path for AGI wonder.
+// Flagship-adjacent sibling of atomic_printer_life_force. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD superior_gluteal | from=gift | type=atomic_printer_mesh_superior_gluteal_life | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 5
+FLOW 4
+
+LET base_cubes = CUBES
+
+SMX KEY
+
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+ASSERT CUBES == base_cubes "no ghost"
+
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "mesh_exchange live"
+ASSERT SMX_MESH_EXCHANGE == 1 "mesh_exchange latch"
+ASSERT SMX_STABLE_MESH == 1 "stable_mesh"
+ASSERT SMX_BONDS == 6 "C(4,2)"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_LIVE == 4 "four live"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize"
+ASSERT SMX_STABLE == 1 "stable"
+ASSERT SMX_STEADFAST == 4 "steadfast"
+
+IMPULSE bed 2
+ENERGYFLOW 4
+FLOW 3
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_OK == 1 "autoheal"
+ASSERT SMX_AUTOHEALED == 1 "autohealed"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "energy"
+ASSERT UNITY >= 40 "unity"
+ASSERT SMX_STABLE == 1 "stable sticky"
+
+GETF seed energy
+LET e0 = LAST_N
+IF e0 < 2 THEN
+  LET e0 = 16
+  SETF seed energy e0
+END
+LET half = e0 / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+ASSERT LAST_N == 1 "mitosis under pudendal perineal mesh"
+
+SMX TALK bed ghost_again
+ASSERT SMX_OK == 0 "second storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob after storm2"
+
+SMX MESH_EXCHANGE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "re-mesh"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_BONDS == 6 "bonds"
+
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_STABLE == 1 "re-stable"
+
+SMX WE_AUTOHEAL bed nozzle hive scrap
+ASSERT SMX_AUTOHEALED == 1 "dual autoheal"
+
+ENERGYFLOW 1
+FLOW 1
+ASSERT ENERGY > 0 "final energy"
+ASSERT OK == 1
+
+PRINT "atomic_printer_mesh_superior_gluteal_life" POPULATION SMX_OK SMX_MESH_EXCHANGE SMX_STABLE SMX_STABLE_MESH SMX_BONDS SMX_AUTOHEALED SMX_OOB UNITY ENERGY
+PASS
