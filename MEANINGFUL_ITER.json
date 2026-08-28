@@ -1,1 +1,16 @@
-{"meaningful_iter":1893,"feature":"MESH_ILEAL","ship":"1893_smx_mesh_ileal_life","version":"1.15.1372-usability","soft_oob":1,"bonds":6,"dual_autoheal":1,"ileum_ready":1,"proofs_pass":true}
+{
+  "meaningful_iter": 1894,
+  "feature": "MESH_OPTIC_TRACT",
+  "ship": "1894_smx_mesh_optic_tract_life",
+  "version": "1.15.1373-usability",
+  "soft_oob": 1,
+  "bonds": 6,
+  "dual_autoheal": 1,
+  "geniculate_ready": 1,
+  "proofs_pass": true,
+  "flagship_1620": "PASS",
+  "c_slice": "src/cubalc_smx_optic_tract.c",
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "sealed": true
+}
