@@ -1,8 +1,8 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1893,
-  "feature": "MESH_ILEAL",
-  "version": "1.15.1372-usability",
+  "meaningful_iter": 1894,
+  "feature": "MESH_OPTIC_CHIASM",
+  "version": "1.15.1373-usability",
   "c_slice": "src/cubalc_smx_ileal.c",
   "proofs": [
     "1893_smx_mesh_ileal_life",
@@ -16,6 +16,6 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "head": "PENDING",
-  "ship": "1893_smx_mesh_ileal_life",
-  "head_note": "MESH_ILEAL dual-autoheal soft-OOB"
+  "ship": "1894_smx_mesh_optic_chiasm_life",
+  "head_note": "MESH_OPTIC_CHIASM dual-autoheal decussation_ready"
 }

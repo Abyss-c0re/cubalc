@@ -1,0 +1,7 @@
+SHIP 1894 MESH_OPTIC_CHIASM life-force
+pure-C: src/cubalc_smx_optic_chiasm.c
+proofs: 99_smx_optic_chiasm + 1894_smx_mesh_optic_chiasm_life asserts_ok=64 fail=0
+flagship 1620_atomic_printer_life_force PASS asserts_ok=12
+selftest: soft_oob=1 bonds=6 dual_autoheal=1 decussation_ready=1
+MEANINGFUL_ITER=1894 VERSION=1.15.1373-usability
+energy: nerve → nasal hemidecussation → tract roots · optic_chiasm mesh

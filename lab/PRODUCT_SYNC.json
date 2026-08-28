@@ -1,7 +1,7 @@
 {
-  "feature": "MESH_OPTIC_NERVE",
+  "feature": "MESH_OPTIC_CHIASM",
   "iter": 1862,
-  "version": "1.15.1342-usability",
+  "version": "1.15.1373-usability",
   "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
   "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
   "tip_equals_pin": true,
@@ -9,5 +9,8 @@
   "bonds": 6,
   "chiasm_ready": 1,
   "proofs_pass": true,
-  "sealed": true
+  "sealed": true,
+  "meaningful_iter": 1894,
+  "ship": "1894_smx_mesh_optic_chiasm_life",
+  "head_note": "MESH_OPTIC_CHIASM dual-autoheal decussation_ready"
 }

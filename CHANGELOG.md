@@ -1,3 +1,19 @@
+## 1.15.1373-usability — 1894 SMX mesh optic chiasm life
+- SMX OPTIC_CHIASM|MESH_OPTIC_CHIASM|RAISE_OPTIC_CHIASM
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: optic nerve → nasal hemidecussation → optic tract roots dual-autoheal life-force seal
+- Usability: cubalc_smx_optic_chiasm_decussation_ready() + dual_autoheal pure-C face
+- Proofs: 99_smx_optic_chiasm + 1894_smx_mesh_optic_chiasm_life = 64/0; flagship 1620 = 12/0 PASS
+- c_slice=src/cubalc_smx_optic_chiasm.c
+
+## 1.15.1343-usability — 1863 SMX mesh optic chiasm life
+- SMX OPTIC_CHIASM|MESH_OPTIC_CHIASM|RAISE_OPTIC_CHIASM
+- Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
+- Energy path: outer-segment → cilium → ellipsoid → myoid → nucleus → outer fiber → spherule/pedicle triad → bipolar ON/OFF → ganglion axon hillock → optic nerve → optic chiasm decussation tract-ready life-force seal
+- Usability: cubalc_smx_optic_chiasm_tract_ready() pure-C face
+- Proofs: 99_smx_optic_chiasm + 1863_smx_mesh_optic_chiasm_life selftest PASS; flagship 1620 path retained
+- c_slice=src/cubalc_smx_optic_chiasm.c
+
 ## 1.15.1342-usability — 1862 SMX mesh optic nerve life
 - SMX OPTIC_NERVE|MESH_OPTIC_NERVE|RAISE_OPTIC_NERVE
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6
