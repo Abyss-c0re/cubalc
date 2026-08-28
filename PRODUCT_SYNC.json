@@ -1,13 +1,21 @@
 {
-  "feature": "MESH_OPTIC_NERVE",
-  "iter": 1862,
-  "version": "1.15.1342-usability",
-  "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "tip_equals_pin": true,
+  "product": "CubalC",
+  "meaningful_iter": 1893,
+  "feature": "MESH_ILEAL",
+  "version": "1.15.1372-usability",
+  "c_slice": "src/cubalc_smx_ileal.c",
+  "proofs": [
+    "1893_smx_mesh_ileal_life",
+    "99_smx_ileal",
+    "1620_atomic_printer_life_force"
+  ],
   "soft_oob": 1,
   "bonds": 6,
-  "chiasm_ready": 1,
-  "proofs_pass": true,
-  "sealed": true
+  "dual_autoheal": 1,
+  "ileum_ready": 1,
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "head": "PENDING",
+  "ship": "1893_smx_mesh_ileal_life",
+  "head_note": "MESH_ILEAL dual-autoheal soft-OOB"
 }

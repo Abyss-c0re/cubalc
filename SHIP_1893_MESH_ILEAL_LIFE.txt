@@ -1,0 +1,14 @@
+SHIP 1893 SMX_MESH_ILEAL_LIFE
+feature=MESH_ILEAL
+proof=programs/proof/1893_smx_mesh_ileal_life.cubalc
+proofs=1893,99_smx_ileal,1620_atomic_printer_life_force,science_ileal
+proof_status=PASS asserts_ok=64 asserts_fail=0
+flagship_1620=PASS asserts_ok=12 asserts_fail=0
+science=PASS asserts_ok=60 asserts_fail=0
+c_slice=src/cubalc_smx_ileal.c
+soft_oob=1 fail_closed=1 bonds=6 dual_autoheal=1 ileum_ready=1
+unity=1.0 next=we_autoheal
+selftest=PASS
+MEANINGFUL_ITER=1893
+VERSION=1.15.1372-usability
+MESH_ILEAL soft-OOB fail-closed C(4,2)=6 dual-autoheal ileum_ready
