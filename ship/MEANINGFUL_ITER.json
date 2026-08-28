@@ -13,8 +13,8 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "head": "d263998616dd39dbdd62cd33905a69f5f0c04a59",
-  "tip": "d263998616dd39dbdd62cd33905a69f5f0c04a59",
-  "pin": "d263998616dd39dbdd62cd33905a69f5f0c04a59",
+  "head": "6ef0531a5b3f34dd88d39112a9bc1387094216dd",
+  "tip": "6ef0531a5b3f34dd88d39112a9bc1387094216dd",
+  "pin": "6ef0531a5b3f34dd88d39112a9bc1387094216dd",
   "tip_equals_pin": true
 }
