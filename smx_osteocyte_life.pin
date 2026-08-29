@@ -1,0 +1,11 @@
+MESH_OSTEOCYTE
+MEANINGFUL_ITER=1945
+VERSION=1.15.1425-usability
+pure_c=src/cubalc_smx_osteocyte.c
+proof=programs/proof/211_smx_osteocyte.cubalc
+proof_life=programs/proof/1945_smx_mesh_osteocyte_life.cubalc
+science=programs/science/integration/atomic_printer_mesh_osteocyte_life.cubalc
+asserts_ok=67
+science_ok=28
+flagship_1620=PASS
+commit=e9de9ad1b
