@@ -31,7 +31,7 @@
   "summary": "MESH_APOPHYSIS traction epiphysis / enthesis muscle-tendon load life-force mesh.",
   "head_before": "da1db5b0c",
   "pin_sha_before": "da1db5b0c148fd2e68f4a7193dc06abdb2cd401c",
-  "pin_sha": "da1db5b0c148fd2e68f4a7193dc06abdb2cd401c",
+  "pin_sha": "1f585d61dc1171983cfef1165c8d0e3cd34e42a8",
   "head": "8744c9993",
   "HEAD": "2f93cf2ab186ed3e44f5944d8c5b0e1a1c8ccacf",
   "updated": 1788037603,
@@ -39,5 +39,6 @@
   "pin": "8744c9993",
   "commit": "6a332f3d9",
   "ts": "2026-08-29T21:09:19Z",
-  "host_finish": true
+  "host_finish": true,
+  "head_after": "1f585d61dc1171983cfef1165c8d0e3cd34e42a8"
 }
