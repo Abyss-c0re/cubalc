@@ -33,5 +33,8 @@
   "ts": "2026-08-29T22:02:20Z",
   "host_finish": false,
   "updated": 1788040940,
-  "pin_sha_before": "5dc6ebcf5a3ecd2a897f7488b8355d157b43c9a2"
+  "pin_sha_before": "5dc6ebcf5a3ecd2a897f7488b8355d157b43c9a2",
+  "pin_sha": "4269143464bd12c0713fad21547c90449716ba4d",
+  "head_after": "4269143464bd12c0713fad21547c90449716ba4d",
+  "commit": "426914346"
 }
