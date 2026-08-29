@@ -7,19 +7,20 @@
   "bonds": 6,
   "dual_autoheal": 1,
   "lacuna_ready": 1,
+  "canaliculi_coupled": 1,
   "proofs_pass": true,
   "flagship_1620": "PASS",
   "c_slice": "src/cubalc_smx_osteocyte.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
-  "head": "28af41abdb431565398c0779e5995544e1e3b19e",
-  "tip": "28af41abdb431565398c0779e5995544e1e3b19e",
-  "pin": "28af41abdb431565398c0779e5995544e1e3b19e",
-  "tip_equals_pin": true,
+  "sealed": true,
   "proofs": {
     "1945": "PASS 64/0",
     "99_smx_osteocyte": "PASS 64/0",
     "1620": "PASS 12/0"
-  }
+  },
+  "head": "5f7e4396833bbf6e883938ad1f8c1523ee7d350c",
+  "tip": "5f7e4396833bbf6e883938ad1f8c1523ee7d350c",
+  "pin": "5f7e4396833bbf6e883938ad1f8c1523ee7d350c",
+  "tip_equals_pin": true
 }

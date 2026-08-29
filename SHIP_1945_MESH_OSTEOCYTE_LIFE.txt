@@ -1,0 +1,14 @@
+SHIP 1945 SMX_MESH_OSTEOCYTE_LIFE
+feature=MESH_OSTEOCYTE
+proof=programs/proof/1945_smx_mesh_osteocyte_life.cubalc
+proofs=1945,99_smx_osteocyte,1620_atomic_printer_life_force
+proof_status=PASS asserts_ok=64 asserts_fail=0
+flagship_1620=PASS asserts_ok=12 asserts_fail=0
+c_slice=src/cubalc_smx_osteocyte.c
+soft_oob=1 fail_closed=1 bonds=6 dual_autoheal=1 lacuna_ready=1 canaliculi_coupled=1
+unity=1.0 next=we_autoheal
+selftest=PASS
+MEANINGFUL_ITER=1945
+VERSION=1.15.1425-usability
+sealed=true
+MESH_OSTEOCYTE soft-OOB fail-closed C(4,2)=6 dual-autoheal lacuna_ready canaliculi_coupled

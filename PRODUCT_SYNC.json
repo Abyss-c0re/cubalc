@@ -1,21 +1,21 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1894,
-  "feature": "MESH_OPTIC_CHIASM",
-  "version": "1.15.1373-usability",
-  "c_slice": "src/cubalc_smx_ileal.c",
+  "meaningful_iter": 1945,
+  "feature": "MESH_OSTEOCYTE",
+  "version": "1.15.1425-usability",
+  "c_slice": "src/cubalc_smx_osteocyte.c",
   "proofs": [
-    "1893_smx_mesh_ileal_life",
-    "99_smx_ileal",
+    "1945_smx_mesh_osteocyte_life",
+    "99_smx_osteocyte",
     "1620_atomic_printer_life_force"
   ],
   "soft_oob": 1,
   "bonds": 6,
   "dual_autoheal": 1,
-  "ileum_ready": 1,
+  "lacuna_ready": 1,
+  "canaliculi_coupled": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "head": "PENDING",
-  "ship": "1894_smx_mesh_optic_chiasm_life",
-  "head_note": "MESH_OPTIC_CHIASM dual-autoheal decussation_ready"
+  "ship": "1945_smx_mesh_osteocyte_life",
+  "head_note": "MESH_OSTEOCYTE dual-autoheal lacuna_ready canaliculi_coupled"
 }
