@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_PERIOSTEUM dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW subchondral load-bearing vault crest free-energy crown origin -> periosteum conduits (fibrous outer lamina + cambium osteogenic inner + Sharpeys fiber anchors + periosteal nutrient vessels — fibrous tension, cambium osteogenesis, Sharpey root grip, periosteal perfusion) -> periosteal osteogenic cambium crest; pure-C src/cubalc_smx_periosteum.c",
+  "notes": "MESH_PERIOSTEUM dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW subchondral load-bearing vault crest free-energy crown origin -> periosteum conduits (fibrous outer lamina + cambium osteogenic inner + Sharpeys fiber anchors + periosteal nutrient vessels \u2014 fibrous tension, cambium osteogenesis, Sharpey root grip, periosteal perfusion) -> periosteal osteogenic cambium crest; pure-C src/cubalc_smx_periosteum.c",
   "pure_c": "src/cubalc_smx_periosteum.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_periosteum_life.cubalc",
@@ -29,7 +29,7 @@
   "item_id": "mi_206_smx_periosteum",
   "title": "MESH_PERIOSTEUM life-force",
   "summary": "Periosteum fibrous/cambium/Sharpey/nutrient-vessel mesh soft-OOB dual-autoheal life-force.",
-  "pin_head": "PENDING",
-  "commit": "PENDING",
+  "pin_head": "c322727107cafc9cc6b80f586f6b96baefdee03e",
+  "commit": "c32272710",
   "ts": "2026-08-29T20:42:00Z"
 }
