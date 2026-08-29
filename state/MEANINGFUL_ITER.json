@@ -2,16 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1956,
   "MEANINGFUL_ITER": 1956,
-  "iter": 1957,
-  "version": "1.15.1436-usability",
+  "iter": 1958,
+  "version": "1.15.1438-usability",
   "VERSION": "1.15.1436-usability",
   "feature": "SMX_MESH_OSTEON_LIFE",
   "FEATURE": "SMX_MESH_OSTEON_LIFE",
   "ship": "1956_smx_mesh_osteon_life",
   "proof": "programs/proof/222_smx_osteon.cubalc",
   "proofs": [
-    "programs/proof/222_smx_osteon.cubalc",
-    "programs/proof/1956_smx_mesh_osteon_life.cubalc"
+    "programs/proof/223_smx_trabecula.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -25,8 +24,11 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_osteon_life.cubalc",
   "science_asserts_ok": 28,
-  "item": "222 smx osteon",
-  "item_id": "mi_222_smx_osteon",
-  "title": "MESH_OSTEON life-force",
-  "summary": "Osteon Haversian soft-OOB mesh life-force from lamellar-bone crown through canal/cylinder/cement/Volkmann to cortical osteon vitality crest"
+  "item": "223 smx trabecula",
+  "item_id": "mi_223_smx_trabecula",
+  "title": "223 smx trabecula",
+  "summary": "Host-finished MI ship after nanobot partial (223_smx_trabecula).",
+  "commit": "PENDING",
+  "ts": "2026-08-29T20:18:38Z",
+  "host_finish": true
 }
