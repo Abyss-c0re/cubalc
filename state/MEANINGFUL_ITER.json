@@ -2,16 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1934,
   "MEANINGFUL_ITER": 1934,
-  "iter": 1934,
-  "version": "1.15.1413-usability",
+  "iter": 1935,
+  "version": "1.15.1414-usability",
   "VERSION": "1.15.1413-usability",
   "feature": "SMX_MESH_MUSCLE_SPINDLE_LIFE",
   "FEATURE": "SMX_MESH_MUSCLE_SPINDLE_LIFE",
   "ship": "1934_smx_mesh_muscle_spindle_life",
   "proof": "programs/proof/200_smx_muscle_spindle.cubalc",
   "proofs": [
-    "programs/proof/200_smx_muscle_spindle.cubalc",
-    "programs/proof/1934_smx_mesh_muscle_spindle_life.cubalc"
+    "programs/proof/201_smx_golgi_tendon.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -25,9 +24,12 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_muscle_spindle_life.cubalc",
   "science_asserts_ok": 28,
-  "item": "1934 smx mesh muscle spindle life",
-  "item_id": "mi_1934_smx_mesh_muscle_spindle_life",
-  "title": "1934 smx mesh muscle spindle life",
-  "summary": "Muscle spindle stretch receptor visceral mesh life-force: soft-OOB fail-closed, C(4,2) mesh, dual autoheal, hair-follicle deflection origin to proprioceptive stretch crown free-energy path",
-  "pin_head": "630a76b9e449ef5c454cb9b918b69903e35783ed"
+  "item": "201 smx golgi tendon",
+  "item_id": "mi_201_smx_golgi_tendon",
+  "title": "201 smx golgi tendon",
+  "summary": "Host-finished MI ship after nanobot partial (201_smx_golgi_tendon).",
+  "pin_head": "630a76b9e449ef5c454cb9b918b69903e35783ed",
+  "commit": "PENDING",
+  "ts": "2026-08-29T11:28:52Z",
+  "host_finish": true
 }
