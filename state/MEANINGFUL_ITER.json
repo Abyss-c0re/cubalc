@@ -29,7 +29,7 @@
   "item_id": "mi_208_smx_bone_marrow",
   "title": "MESH_BONE_MARROW life-force",
   "summary": "Bone marrow HSC/sinusoid/adipocyte/stromal mesh soft-OOB dual-autoheal life-force.",
-  "pin_head": "PENDING",
-  "commit": "PENDING",
+  "pin_head": "eef7b602b6ca87a656cee9d5c8c4d80d38c24872",
+  "commit": "eef7b602b",
   "ts": "2026-08-29T18:02:43Z"
 }
