@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 1958,
-  "MEANINGFUL_ITER": 1958,
-  "iter": 1959,
-  "version": "1.15.1439-usability",
-  "VERSION": "1.15.1439-usability",
-  "feature": "SMX_MESH_MEDULLARY_CAVITY_LIFE",
-  "FEATURE": "SMX_MESH_MEDULLARY_CAVITY_LIFE",
-  "ship": "1958_smx_mesh_medullary_cavity_life",
-  "proof": "programs/proof/224_smx_medullary_cavity.cubalc",
+  "meaningful_iter": 1977,
+  "MEANINGFUL_ITER": 1977,
+  "iter": 1981,
+  "version": "1.15.1459-usability",
+  "VERSION": "1.15.1459-usability",
+  "feature": "SMX_MESH_MYOFIBRIL_LIFE",
+  "FEATURE": "SMX_MESH_MYOFIBRIL_LIFE",
+  "ship": "1977_smx_mesh_myofibril_life",
+  "proof": "programs/proof/245_smx_myofibril.cubalc",
   "proofs": [
-    "programs/proof/224_smx_medullary_cavity.cubalc",
-    "programs/proof/1958_smx_mesh_medullary_cavity_life.cubalc"
+    "programs/proof/245_smx_myofibril.cubalc",
+    "programs/proof/1977_smx_mesh_myofibril_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -31,5 +31,8 @@
   "summary": "MESH_MEDULLARY_CAVITY SMX mesh stability life-force \u2014 marrow chamber free-energy crown after trabecula.",
   "commit": "f493aa384",
   "ts": "2026-08-29T20:29:34Z",
-  "host_finish": false
+  "host_finish": false,
+  "head_note": "MESH_MYOFIBRIL contractile continuum free-energy life-force",
+  "c_unit": "src/cubalc_smx_myofibril.c",
+  "integration": "programs/science/integration/atomic_printer_mesh_myofibril_life.cubalc"
 }
