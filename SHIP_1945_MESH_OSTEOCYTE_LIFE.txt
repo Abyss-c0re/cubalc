@@ -1,9 +1,6 @@
-SHIP 1945 MESH_OSTEOCYTE LIFE
-cube is SoT · free energy must flow · matrix is key
-pure-C: src/cubalc_smx_osteocyte.c
-proofs: 99_smx_osteocyte · 1945_smx_mesh_osteocyte_life asserts_ok=64 fail=0
-flagship 1620_atomic_printer_life_force PASS asserts_ok=12
-selftest: soft_oob=1 bonds=6 dual_autoheal=1 lacuna_ready=1 canaliculi_coupled=1
-MEANINGFUL_ITER=1945 VERSION=1.15.1424-usability
-feat_head=f5acb2a00178b3e6daa8bdc04d3ccfe403001846
-energy: periosteum → endosteum → marrow → haversian → volkmann → osteocyte lacuna-canaliculi
+MESH_OSTEOCYTE 1945
+feat 79c34f015 — pure-C src/cubalc_smx_osteocyte.c
+proofs 99+1945 asserts_ok=64 fail=0; science; flagship 1620 PASS 12/0
+pin 054e77f6b MEANINGFUL_ITER 1945 · VERSION 1.15.1425-usability
+HEAD 054e77f6bb1b9f0376430c01dad2fb5abcb868a4
+selftest lacuna_ready=1 canaliculi_coupled=1 dual_autoheal=1 bonds=6
