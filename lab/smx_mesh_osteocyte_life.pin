@@ -1,3 +1,4 @@
 MESH_OSTEOCYTE
 1945
-lacuna_ready=1 dual_autoheal=1 bonds=6 soft_oob=1
+1.15.1424-usability
+src/cubalc_smx_osteocyte.c
