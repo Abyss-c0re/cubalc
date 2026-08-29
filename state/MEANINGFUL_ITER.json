@@ -28,5 +28,9 @@
   "item": "212 smx osteoblast",
   "item_id": "mi_212_smx_osteoblast",
   "title": "MESH_OSTEOBLAST life-force",
-  "summary": "Osteoblast osteoid deposition soft-OOB dual-autoheal life-force mesh."
+  "summary": "Osteoblast osteoid deposition soft-OOB dual-autoheal life-force mesh.",
+  "pin_sha": "780549166e63210942aa02d8b5966b65472a05eb",
+  "pin_head": "780549166",
+  "tip": "780549166",
+  "tip_sha": "780549166e63210942aa02d8b5966b65472a05eb"
 }
