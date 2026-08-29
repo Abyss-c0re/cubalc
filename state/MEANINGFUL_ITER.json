@@ -29,8 +29,8 @@
   "item_id": "mi_202_smx_joint_capsule",
   "title": "MESH_JOINT_CAPSULE life-force",
   "summary": "Articular joint capsule type I-IV mechanoreceptor mesh soft-OOB dual-autoheal life-force.",
-  "pin_head": "PENDING",
-  "commit": "PENDING",
+  "pin_head": "54a506488bc7de356d46aa194ac596810a15646a",
+  "commit": "54a506488",
   "ts": "2026-08-29T16:55:33Z",
   "host_finish": false
 }
