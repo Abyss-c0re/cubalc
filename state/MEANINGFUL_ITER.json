@@ -1,17 +1,17 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 1954,
-  "MEANINGFUL_ITER": 1954,
-  "iter": 1955,
-  "version": "1.15.1434-usability",
-  "VERSION": "1.15.1434-usability",
-  "feature": "SMX_MESH_HYDROXYAPATITE_LIFE",
-  "FEATURE": "SMX_MESH_HYDROXYAPATITE_LIFE",
-  "ship": "1954_smx_mesh_hydroxyapatite_life",
-  "proof": "programs/proof/220_smx_hydroxyapatite.cubalc",
+  "meaningful_iter": 1955,
+  "MEANINGFUL_ITER": 1955,
+  "iter": 1956,
+  "version": "1.15.1435-usability",
+  "VERSION": "1.15.1435-usability",
+  "feature": "SMX_MESH_LAMELLA_LIFE",
+  "FEATURE": "SMX_MESH_LAMELLA_LIFE",
+  "ship": "1955_smx_mesh_lamella_life",
+  "proof": "programs/proof/221_smx_lamella.cubalc",
   "proofs": [
-    "programs/proof/220_smx_hydroxyapatite.cubalc",
-    "programs/proof/1954_smx_mesh_hydroxyapatite_life.cubalc"
+    "programs/proof/221_smx_lamella.cubalc",
+    "programs/proof/1955_smx_mesh_lamella_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_HYDROXYAPATITE dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW osteoid seam free-energy crown origin -> hydroxyapatite mineral front (Ca/PO4 nucleation lattice + plate-crystal gap-zone stacks + amorphous calcium phosphate precursor gel + collagen hole-zone mineral seeds — ion supersaturation floor, nanocrystal epitaxial shelves, ACP-to-HAP conversion cuff, hole-zone seed rim) -> mineralized-matrix free-energy crown (hydroxyapatite vitality crest); pure-C src/cubalc_smx_hydroxyapatite.c",
+  "notes": "MESH_HYDROXYAPATITE dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW osteoid seam free-energy crown origin -> hydroxyapatite mineral front (Ca/PO4 nucleation lattice + plate-crystal gap-zone stacks + amorphous calcium phosphate precursor gel + collagen hole-zone mineral seeds \u2014 ion supersaturation floor, nanocrystal epitaxial shelves, ACP-to-HAP conversion cuff, hole-zone seed rim) -> mineralized-matrix free-energy crown (hydroxyapatite vitality crest); pure-C src/cubalc_smx_hydroxyapatite.c",
   "pure_c": "src/cubalc_smx_hydroxyapatite.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_hydroxyapatite_life.cubalc",
@@ -30,5 +30,7 @@
   "title": "MESH_HYDROXYAPATITE life-force",
   "summary": "Hydroxyapatite mineral-front soft-OOB mesh stability life-force under dual autoheal",
   "head_before": "5e3ed47b3",
-  "pinned_head_before": "5e3ed47b3"
+  "pinned_head_before": "5e3ed47b3",
+  "head_feature": "MESH_LAMELLA",
+  "c_source": "src/cubalc_smx_lamella.c"
 }
