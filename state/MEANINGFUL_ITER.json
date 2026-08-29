@@ -2,7 +2,7 @@
   "meaningful_iter": 1945,
   "feature": "MESH_OSTEOCYTE",
   "ship": "1945_smx_mesh_osteocyte_life",
-  "version": "1.15.1425-usability",
+  "version": "1.15.1424-usability",
   "soft_oob": 1,
   "bonds": 6,
   "dual_autoheal": 1,
@@ -14,13 +14,13 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
+  "head": "f5acb2a00178b3e6daa8bdc04d3ccfe403001846",
+  "tip": "f5acb2a00178b3e6daa8bdc04d3ccfe403001846",
+  "pin": "f5acb2a00178b3e6daa8bdc04d3ccfe403001846",
+  "tip_equals_pin": true,
   "proofs": {
     "1945": "PASS 64/0",
     "99_smx_osteocyte": "PASS 64/0",
     "1620": "PASS 12/0"
-  },
-  "head": "56816bdf45515240d5c10523aa569cbf692974ab",
-  "tip": "56816bdf45515240d5c10523aa569cbf692974ab",
-  "pin": "56816bdf45515240d5c10523aa569cbf692974ab",
-  "tip_equals_pin": true
+  }
 }
