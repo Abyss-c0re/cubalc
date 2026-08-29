@@ -1,0 +1,6 @@
+SHIP 1945 MESH_OSTEOCYTE LIFE
+cube is SoT · free energy must flow · matrix is key
+pure-C: src/cubalc_smx_osteocyte.c
+proofs: 99_smx_osteocyte · 1945_smx_mesh_osteocyte_life
+path: periosteum → endosteum → marrow → haversian → volkmann → osteocyte lacuna-canaliculi
+soft_oob=1 bonds=6 dual_autoheal=1 lacuna_ready=1
