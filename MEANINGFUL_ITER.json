@@ -19,8 +19,8 @@
     "99_smx_osteocyte": "PASS 64/0",
     "1620": "PASS 12/0"
   },
-  "head": "79c34f015b185f76a89e57d6f2aa55c40d81e502",
-  "tip": "79c34f015b185f76a89e57d6f2aa55c40d81e502",
-  "pin": "79c34f015b185f76a89e57d6f2aa55c40d81e502",
+  "head": "5e438ec152ccd08e5742258ef8af57467666cbaf",
+  "tip": "5e438ec152ccd08e5742258ef8af57467666cbaf",
+  "pin": "5e438ec152ccd08e5742258ef8af57467666cbaf",
   "tip_equals_pin": true
 }
