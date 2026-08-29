@@ -29,8 +29,8 @@
   "item_id": "mi_201_smx_golgi_tendon",
   "title": "MESH_GOLGI_TENDON life-force",
   "summary": "Golgi tendon organ Ib tension receptor mesh soft-OOB dual-autoheal life-force.",
-  "pin_head": "",
-  "commit": "",
+  "pin_head": "7439fcfcbda3cac664f4b1d8f75f68326ff989e6",
+  "commit": "7439fcfcb",
   "ts": "2026-08-29T16:43:02Z",
   "host_finish": false
 }
