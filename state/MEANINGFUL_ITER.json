@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_ENDOSTEUM dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW periosteal osteogenic cambium crest free-energy crown origin -> endosteum conduits (endosteal osteoprogenitor lamina + bone-lining quiescent cells + marrow stromal niche + endosteal capillary plexus — osteoprogenitor reserve, lining quietude, stromal nurture, endosteal perfusion) -> medullary osteogenic crest; pure-C src/cubalc_smx_endosteum.c",
+  "notes": "MESH_ENDOSTEUM dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW periosteal osteogenic cambium crest free-energy crown origin -> endosteum conduits (endosteal osteoprogenitor lamina + bone-lining quiescent cells + marrow stromal niche + endosteal capillary plexus \u2014 osteoprogenitor reserve, lining quietude, stromal nurture, endosteal perfusion) -> medullary osteogenic crest; pure-C src/cubalc_smx_endosteum.c",
   "pure_c": "src/cubalc_smx_endosteum.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_endosteum_life.cubalc",
@@ -29,7 +29,7 @@
   "item_id": "mi_207_smx_endosteum",
   "title": "MESH_ENDOSTEUM life-force",
   "summary": "Endosteum osteoprogenitor/lining/stromal/capillary mesh soft-OOB dual-autoheal life-force.",
-  "pin_head": "PENDING",
-  "commit": "PENDING",
+  "pin_head": "2d382236a3bf7c53c925f11ca64be29debed8a3a",
+  "commit": "2d382236a",
   "ts": "2026-08-29T20:54:00Z"
 }
