@@ -30,5 +30,8 @@
   "title": "226 smx epiphysis",
   "summary": "MESH_EPIPHYSIS SMX mesh stability life-force \u2014 growth-end vitality crest via physis + secondary ossification under soft-OOB dual-autoheal rails",
   "head_before": "3c89d9bc0",
-  "pin_sha_before": "3c89d9bc0ff204ba086d0d621f59d2277f949dd2"
+  "pin_sha_before": "3c89d9bc0ff204ba086d0d621f59d2277f949dd2",
+  "pin_sha": "2f93cf2ab186ed3e44f5944d8c5b0e1a1c8ccacf",
+  "head": "2f93cf2ab",
+  "HEAD": "2f93cf2ab186ed3e44f5944d8c5b0e1a1c8ccacf"
 }
