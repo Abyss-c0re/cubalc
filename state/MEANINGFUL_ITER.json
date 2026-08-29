@@ -2,16 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 1965,
   "MEANINGFUL_ITER": 1965,
-  "iter": 1968,
-  "version": "1.15.1447-usability",
+  "iter": 1969,
+  "version": "1.15.1448-usability",
   "VERSION": "1.15.1447-usability",
   "feature": "SMX_MESH_MENISCUS_LIFE",
   "FEATURE": "SMX_MESH_MENISCUS_LIFE",
   "ship": "1965_smx_mesh_meniscus_life",
   "proof": "programs/proof/232_smx_meniscus.cubalc",
   "proofs": [
-    "programs/proof/232_smx_meniscus.cubalc",
-    "programs/proof/1965_smx_mesh_meniscus_life.cubalc"
+    "programs/proof/233_smx_labrum.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 67,
@@ -25,12 +24,15 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_meniscus_life.cubalc",
   "science_asserts_ok": 67,
-  "item": "232 smx meniscus",
-  "item_id": "mi_232_smx_meniscus",
-  "title": "232 smx meniscus",
-  "summary": "MESH_MENISCUS joint congruence fibrocartilage wedge life-force under soft-OOB mesh.",
+  "item": "233 smx labrum",
+  "item_id": "mi_233_smx_labrum",
+  "title": "233 smx labrum",
+  "summary": "Host-finished MI ship after nanobot partial (233_smx_labrum).",
   "head_before": "36858ba6a448aad8b31ab97d9c1f05ac02527f61",
   "pin_sha_before": "36858ba6a448aad8b31ab97d9c1f05ac02527f61",
   "pin_sha": "7d253484673097c849a07ec8916b359eaaff3685",
-  "head_after": "7d253484673097c849a07ec8916b359eaaff3685"
+  "head_after": "7d253484673097c849a07ec8916b359eaaff3685",
+  "commit": "PENDING",
+  "ts": "2026-08-29T21:29:45Z",
+  "host_finish": true
 }
