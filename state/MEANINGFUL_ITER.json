@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_COFILIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW profilin free-energy crown origin -> cofilin tunnel (ADF-H F-actin bind wall + pointed-end sever gate + G-actin recycle sleeve + twinfilin partner ring — filament turnover core, sever-to-seed gel, Pi-release island, lamellipod recycle crest) -> cofilin free-energy crown (F-actin sever/turnover FA tip crest); pure-C src/cubalc_smx_cofilin.c",
+  "notes": "MESH_COFILIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW profilin free-energy crown origin -> cofilin tunnel (ADF-H F-actin bind wall + pointed-end sever gate + G-actin recycle sleeve + twinfilin partner ring \u2014 filament turnover core, sever-to-seed gel, Pi-release island, lamellipod recycle crest) -> cofilin free-energy crown (F-actin sever/turnover FA tip crest); pure-C src/cubalc_smx_cofilin.c",
   "pure_c": "src/cubalc_smx_cofilin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_cofilin_life.cubalc",
@@ -28,7 +28,7 @@
   "item": "240 smx cofilin",
   "item_id": "mi_240_smx_cofilin",
   "title": "240 smx cofilin",
-  "summary": "MESH_COFILIN SMX mesh stability life-force — F-actin sever/turnover FA tip free-energy crown after profilin G-actin recharge crest",
-  "commit": "PENDING",
-  "sha": "PENDING"
+  "summary": "MESH_COFILIN SMX mesh stability life-force \u2014 F-actin sever/turnover FA tip free-energy crown after profilin G-actin recharge crest",
+  "commit": "7eb2cbe395b113808d14877d6921b77e4d0f670b",
+  "sha": "7eb2cbe395b1"
 }
