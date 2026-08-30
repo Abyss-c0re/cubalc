@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_LEM2 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW lbr free-energy crown origin -> lem2 tunnel (LEMD2/LEM-domain protein-2 INM collar + BAF chromatin partner sleeve + lamin-A/C nucleoplasmic partner crest + TM-domain membrane gate + LEM-helix chromatin tethering ring + nuclear integrity seal — LEMD2 LEM INM island, BAF chromoshadow dock lattice, lamin filament ring, nuclear integrity seal spacer) -> lem2 free-energy crown (LEMD2 LEM-domain nuclear-envelope crest); pure-C src/cubalc_smx_lem2.c",
+  "notes": "MESH_LEM2 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW lbr free-energy crown origin -> lem2 tunnel (LEMD2/LEM-domain protein-2 INM collar + BAF chromatin partner sleeve + lamin-A/C nucleoplasmic partner crest + TM-domain membrane gate + LEM-helix chromatin tethering ring + nuclear integrity seal \u2014 LEMD2 LEM INM island, BAF chromoshadow dock lattice, lamin filament ring, nuclear integrity seal spacer) -> lem2 free-energy crown (LEMD2 LEM-domain nuclear-envelope crest); pure-C src/cubalc_smx_lem2.c",
   "pure_c": "src/cubalc_smx_lem2.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_lem2_life.cubalc",
@@ -29,5 +29,5 @@
   "item_id": "mi_271_smx_lem2",
   "title": "271 smx lem2",
   "summary": "MESH_LEM2 LEMD2 LEM-domain INM nuclear-envelope free-energy crown",
-  "commit": "PENDING"
+  "commit": "eecf5e962"
 }
