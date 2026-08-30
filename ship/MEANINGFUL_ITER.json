@@ -6,7 +6,6 @@
   "soft_oob": 1,
   "bonds": 6,
   "dual_autoheal": 1,
-  "lacuna_ready": 1,
   "resorption_front_coupled": 1,
   "proofs_pass": true,
   "flagship_1620": "PASS",
@@ -14,13 +13,14 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "head": "5bcf35bacf8f9e721dce1e31c64d65d0542e46cc",
-  "tip": "5bcf35bacf8f9e721dce1e31c64d65d0542e46cc",
-  "pin": "5bcf35bacf8f9e721dce1e31c64d65d0542e46cc",
+  "head": "504732c7da17f7376874cf2ee45858d793bca3d3",
+  "tip": "504732c7da17f7376874cf2ee45858d793bca3d3",
+  "pin": "504732c7da17f7376874cf2ee45858d793bca3d3",
   "tip_equals_pin": true,
   "proofs": {
     "1947": "PASS 64/0",
     "99_smx_osteoclast": "PASS 64/0",
     "1620": "PASS 12/0"
-  }
+  },
+  "howship_ready": 1
 }
