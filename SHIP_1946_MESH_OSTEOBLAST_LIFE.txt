@@ -3,3 +3,5 @@ feat — pure-C src/cubalc_smx_osteoblast.c
 proofs 99+1946 asserts_ok=64 fail=0; science; flagship 1620 PASS 12/0
 selftest osteoid_ready=1 mineral_front_coupled=1 dual_autoheal=1 bonds=6
 energy: periosteum → endosteum → osteoprogenitor → osteoblast → osteoid → mineral front
+pin 5d56ea25239 MEANINGFUL_ITER 1946 · VERSION 1.15.1426-usability
+HEAD 5d56ea252394fd191302af5d41050331c58f7aee

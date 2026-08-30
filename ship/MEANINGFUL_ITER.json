@@ -13,5 +13,14 @@
   "c_slice": "src/cubalc_smx_osteoblast.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": true
+  "sealed": true,
+  "head": "5d56ea252394fd191302af5d41050331c58f7aee",
+  "tip": "5d56ea252394fd191302af5d41050331c58f7aee",
+  "pin": "5d56ea252394fd191302af5d41050331c58f7aee",
+  "tip_equals_pin": true,
+  "proofs": {
+    "1946": "PASS 64/0",
+    "99_smx_osteoblast": "PASS 64/0",
+    "1620": "PASS 12/0"
+  }
 }
