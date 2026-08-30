@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_VASP dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW zyxin free-energy crown origin -> vasp tunnel (EVH1 zyxin-dock wall + GAB proline gateway + EVH2 tetramer gate + G-actin bind sleeve — barbed-end processive core, anti-capping gel, FP4 ligand island, lamellipod tip ring) -> vasp free-energy crown (actin-polymerization FA tip crest); pure-C src/cubalc_smx_vasp.c",
+  "notes": "MESH_VASP dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW zyxin free-energy crown origin -> vasp tunnel (EVH1 zyxin-dock wall + GAB proline gateway + EVH2 tetramer gate + G-actin bind sleeve \u2014 barbed-end processive core, anti-capping gel, FP4 ligand island, lamellipod tip ring) -> vasp free-energy crown (actin-polymerization FA tip crest); pure-C src/cubalc_smx_vasp.c",
   "pure_c": "src/cubalc_smx_vasp.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_vasp_life.cubalc",
@@ -28,7 +28,7 @@
   "item": "238 smx vasp",
   "item_id": "mi_238_smx_vasp",
   "title": "238 smx vasp",
-  "summary": "MESH_VASP SMX mesh stability life-force — actin-polymerization FA tip free-energy crown after zyxin stress-fiber crest",
-  "commit": "PENDING",
-  "sha": "PENDING"
+  "summary": "MESH_VASP SMX mesh stability life-force \u2014 actin-polymerization FA tip free-energy crown after zyxin stress-fiber crest",
+  "commit": "14309b9a7c1062d26f6bc160cc6e4274c8f73aec",
+  "sha": "14309b9a7c10"
 }
