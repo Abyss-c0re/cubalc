@@ -29,5 +29,9 @@
   "item_id": "mi_256_smx_desmoplakin",
   "title": "256 smx desmoplakin",
   "summary": "MESH_DESMOPLAKIN SMX mesh stability life-force desmosomal plakin IF-anchorage scaffold crest",
-  "updated": 1788071275
+  "updated": 1788071275,
+  "commit": "57d9a9519c77b32a52eb5140359f7762baced2de",
+  "head": "57d9a9519",
+  "feat_commit": "57d9a9519c77b32a52eb5140359f7762baced2de",
+  "feat_head": "57d9a9519"
 }
