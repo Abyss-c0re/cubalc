@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_MAN1 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW baf free-energy crown origin -> man1 tunnel (MAN1/LEMD3 LEM-domain integral INM collar + BAF chromatin partner sleeve + Smad R-SMAD MH2 binding crest + TGF-β/BMP signal attenuation gate + lamin-A/C nucleoplasmic partner ring + nuclear TGF-β signal seal — MAN1 LEM-domain INM island, BAF dual-LEM dock lattice, R-SMAD sequestration ring, nuclear TGF-β signal seal spacer) -> man1 free-energy crown (MAN1 LEMD3 nuclear-envelope crest); pure-C src/cubalc_smx_man1.c",
+  "notes": "MESH_MAN1 dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW baf free-energy crown origin -> man1 tunnel (MAN1/LEMD3 LEM-domain integral INM collar + BAF chromatin partner sleeve + Smad R-SMAD MH2 binding crest + TGF-\u03b2/BMP signal attenuation gate + lamin-A/C nucleoplasmic partner ring + nuclear TGF-\u03b2 signal seal \u2014 MAN1 LEM-domain INM island, BAF dual-LEM dock lattice, R-SMAD sequestration ring, nuclear TGF-\u03b2 signal seal spacer) -> man1 free-energy crown (MAN1 LEMD3 nuclear-envelope crest); pure-C src/cubalc_smx_man1.c",
   "pure_c": "src/cubalc_smx_man1.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_man1_life.cubalc",
@@ -29,5 +29,5 @@
   "item_id": "mi_269_smx_man1",
   "title": "269 smx man1",
   "summary": "MESH_MAN1 MAN1/LEMD3 LEM-domain INM nuclear-envelope free-energy crown",
-  "commit": "PENDING"
+  "commit": "5850a7ccf"
 }
