@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_EPIPLAKIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW envoplakin free-energy crown origin -> epiplakin tunnel (plakin N-terminal plaque-binding collar + central rod coiled-coil sleeve + C-terminal intermediate-filament latch + multi-repeat IF-binding ring + envoplakin partnership gate — epiplakin repeat crest island, keratin intermediate-filament lattice, epidermal stress-buffer dock ring, cytolinker cascade seal spacer) -> epiplakin free-energy crown (plakin multi-repeat IF cytolinker crest); pure-C src/cubalc_smx_epiplakin.c",
+  "notes": "MESH_EPIPLAKIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW envoplakin free-energy crown origin -> epiplakin tunnel (plakin N-terminal plaque-binding collar + central rod coiled-coil sleeve + C-terminal intermediate-filament latch + multi-repeat IF-binding ring + envoplakin partnership gate \u2014 epiplakin repeat crest island, keratin intermediate-filament lattice, epidermal stress-buffer dock ring, cytolinker cascade seal spacer) -> epiplakin free-energy crown (plakin multi-repeat IF cytolinker crest); pure-C src/cubalc_smx_epiplakin.c",
   "pure_c": "src/cubalc_smx_epiplakin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_epiplakin_life.cubalc",
@@ -28,5 +28,9 @@
   "item": "259 smx epiplakin",
   "item_id": "mi_259_smx_epiplakin",
   "title": "259 smx epiplakin",
-  "summary": "MESH_EPIPLAKIN multi-repeat IF cytolinker free-energy crown soft-OOB mesh stability life-force"
+  "summary": "MESH_EPIPLAKIN multi-repeat IF cytolinker free-energy crown soft-OOB mesh stability life-force",
+  "commit": "bf31124f9164dc01f996e27843e44ba4f851eef6",
+  "commit_short": "bf31124f9",
+  "HEAD": "bf31124f9164dc01f996e27843e44ba4f851eef6",
+  "pin": "bf31124f9"
 }
