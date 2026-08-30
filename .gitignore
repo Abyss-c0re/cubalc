@@ -44,3 +44,26 @@ src/lang/*.o
 state/braincube_science/
 programs/proof/bc_science_latest.cubalc
 programs/proof/bc_science_d*.cubalc
+
+# --- ZERO BLOAT (2026-08-30) — healthy growth only ---
+# Build trees & ship sandboxes (multi-GB noise)
+out/**
+!out/cubalc
+!out/cubalc.exe
+build/
+**/ship*/
+*.pin
+TIP_AFTER_PIN.txt
+# Object leftovers
+src/**/*.o
+src/lang/*.o
+*.out
+*.err
+# Local runtime plates that thrash commits
+state/MEANINGFUL_ITER
+MEANINGFUL_ITER
+MEANINGFUL_ITER.json
+# Evolve language snapshots (keep LATEST only if needed — not every gen)
+programs/evolve/gen_*.cubalc
+# Auto mesh crown spam (prefer unique science; old clones stay in history)
+# Note: new clones rejected by cube_lang_anti_bloat before commit

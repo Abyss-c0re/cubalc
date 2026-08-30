@@ -1,9 +1,0 @@
-feature=SMX_CORTEX
-iter=1707
-version=1.15.1178-usability
-proof=programs/science/proof/1707_atomic_printer_mesh_cortex.cubalc
-asserts_ok=69
-asserts_fail=0
-flagship_1620=12
-status=PASS
-soft_oob=fail-closed

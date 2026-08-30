@@ -1,7 +1,0 @@
-HEAD=869870240b5ea618966c58cbd63c1b20516aaeac
-SHORT=86987024
-MEANINGFUL_ITER=1693
-VERSION=1.15.1162-usability
-PROOFS=1693_exosphere+1620_life_force PASS
-feature=EXOSPHERE soft-OOB fail-closed mesh stability
-feat_head=89293007e36b8243e983e9f6610e66ef7b849c38
