@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_DYSTROPHIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW desmin free-energy crown origin -> dystrophin tunnel (sarcolemma dystrophin rod wall + costamere DGC gateway + beta-dystroglycan gate + actin-binding N-terminus sleeve — dystrophin glycoprotein complex core, spectrin-like rod gel, costamere force-transmission island, ECM laminin ring) -> dystrophin free-energy crown (DGC force-transmission crest); pure-C src/cubalc_smx_dystrophin.c",
+  "notes": "MESH_DYSTROPHIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW desmin free-energy crown origin -> dystrophin tunnel (sarcolemma dystrophin rod wall + costamere DGC gateway + beta-dystroglycan gate + actin-binding N-terminus sleeve \u2014 dystrophin glycoprotein complex core, spectrin-like rod gel, costamere force-transmission island, ECM laminin ring) -> dystrophin free-energy crown (DGC force-transmission crest); pure-C src/cubalc_smx_dystrophin.c",
   "pure_c": "src/cubalc_smx_dystrophin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_dystrophin_life.cubalc",
@@ -28,7 +28,7 @@
   "item": "233 smx dystrophin",
   "item_id": "mi_233_smx_dystrophin",
   "title": "233 smx dystrophin",
-  "summary": "MESH_DYSTROPHIN SMX mesh stability life-force — DGC force-transmission free-energy crown after desmin intermediate-filament cross-link",
-  "commit": "PENDING",
-  "sha": "PENDING"
+  "summary": "MESH_DYSTROPHIN SMX mesh stability life-force \u2014 DGC force-transmission free-energy crown after desmin intermediate-filament cross-link",
+  "commit": "425c42eecf5f1fccadd8c417b1c36173256e4f1d",
+  "sha": "425c42eecf5f1fccadd8c417b1c36173256e4f1d"
 }
