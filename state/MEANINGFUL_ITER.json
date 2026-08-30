@@ -13,7 +13,11 @@
   "c_slice": "src/cubalc_smx_osteoclast.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
+  "sealed": true,
+  "head": "eee7457c2e46342040a702fdfb7d879eb8ca9147",
+  "tip": "eee7457c2e46342040a702fdfb7d879eb8ca9147",
+  "pin": "eee7457c2e46342040a702fdfb7d879eb8ca9147",
+  "tip_equals_pin": true,
   "proofs": {
     "1947": "PASS 64/0",
     "99_smx_osteoclast": "PASS 64/0",
