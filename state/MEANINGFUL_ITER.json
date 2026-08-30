@@ -29,8 +29,8 @@
   "item_id": "mi_226_smx_troponin",
   "title": "226 smx troponin",
   "summary": "MESH_TROPONIN SMX mesh stability life-force \u2014 calcium-triggered contraction-permit free-energy crown after sarcomere continuum",
-  "commit": "PENDING",
-  "head": "PENDING",
-  "feat_sha": "PENDING",
-  "pinned_head": "PENDING"
+  "commit": "c196eda7207d92e1fedf747256c055a2483f6a47",
+  "head": "c196eda7207d92e1fedf747256c055a2483f6a47",
+  "feat_sha": "c196eda7207d92e1fedf747256c055a2483f6a47",
+  "pinned_head": "c196eda7207d92e1fedf747256c055a2483f6a47"
 }
