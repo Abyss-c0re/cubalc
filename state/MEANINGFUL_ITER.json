@@ -29,8 +29,8 @@
   "item_id": "mi_260_smx_dystonin",
   "title": "260 smx dystonin",
   "summary": "MESH_DYSTONIN giant-plakin IF-actin-MT cytolinker free-energy crown soft-OOB mesh stability life-force",
-  "commit": "PENDING",
-  "commit_short": "PENDING",
-  "HEAD": "PENDING",
-  "pin": "PENDING"
+  "commit": "3d4a63729b013dcc195fe1f2de50e57738b6259e",
+  "commit_short": "3d4a63729",
+  "HEAD": "3d4a63729b013dcc195fe1f2de50e57738b6259e",
+  "pin": "3d4a63729"
 }
