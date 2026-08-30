@@ -29,8 +29,8 @@
   "item_id": "mi_227_smx_tropomyosin",
   "title": "227 smx tropomyosin",
   "summary": "MESH_TROPOMYOSIN SMX mesh stability life-force \u2014 thin-filament azimuth-shift free-energy crown after troponin continuum",
-  "commit": "PENDING",
-  "head": "PENDING",
-  "feat_sha": "PENDING",
-  "pinned_head": "PENDING"
+  "commit": "e02d99cfc96cd348cc99a0875e563ca9c3ea7250",
+  "head": "e02d99cfc96cd348cc99a0875e563ca9c3ea7250",
+  "feat_sha": "e02d99cfc96cd348cc99a0875e563ca9c3ea7250",
+  "pinned_head": "e02d99cfc96cd348cc99a0875e563ca9c3ea7250"
 }
