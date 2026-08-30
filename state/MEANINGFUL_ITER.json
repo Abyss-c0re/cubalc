@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_ZYXIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW paxillin free-energy crown origin -> zyxin tunnel (LIM1 domains wall + LIM2 stretch gateway + NES nuclear-shuttle gate + actinin-bind sleeve — FA maturation core, stress-fiber reinforcement gel, VASP-dock island, mechanotransduction ring) -> zyxin free-energy crown (focal-adhesion stress-fiber crest); pure-C src/cubalc_smx_zyxin.c",
+  "notes": "MESH_ZYXIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW paxillin free-energy crown origin -> zyxin tunnel (LIM1 domains wall + LIM2 stretch gateway + NES nuclear-shuttle gate + actinin-bind sleeve \u2014 FA maturation core, stress-fiber reinforcement gel, VASP-dock island, mechanotransduction ring) -> zyxin free-energy crown (focal-adhesion stress-fiber crest); pure-C src/cubalc_smx_zyxin.c",
   "pure_c": "src/cubalc_smx_zyxin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_zyxin_life.cubalc",
@@ -28,5 +28,7 @@
   "item": "237 smx zyxin",
   "item_id": "mi_237_smx_zyxin",
   "title": "237 smx zyxin",
-  "summary": "MESH_ZYXIN SMX mesh stability life-force — focal-adhesion stress-fiber free-energy crown after paxillin FA scaffold"
+  "summary": "MESH_ZYXIN SMX mesh stability life-force \u2014 focal-adhesion stress-fiber free-energy crown after paxillin FA scaffold",
+  "commit": "6d76958ef9c8d29974d84780591e918bd0341b19",
+  "sha": "6d76958ef9c8"
 }
