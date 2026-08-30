@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_MYOSIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW tropomyosin free-energy crown origin -> myosin tunnel (thick-filament backbone wall + lever-arm converter gateway + ATP-pocket gate + cross-bridge force sleeve — S1 head core, S2 hinge gel, bare-zone island, bipolar thick-filament ring) -> myosin free-energy crown (power-stroke force crest); pure-C src/cubalc_smx_myosin.c",
+  "notes": "MESH_MYOSIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW tropomyosin free-energy crown origin -> myosin tunnel (thick-filament backbone wall + lever-arm converter gateway + ATP-pocket gate + cross-bridge force sleeve \u2014 S1 head core, S2 hinge gel, bare-zone island, bipolar thick-filament ring) -> myosin free-energy crown (power-stroke force crest); pure-C src/cubalc_smx_myosin.c",
   "pure_c": "src/cubalc_smx_myosin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_myosin_life.cubalc",
@@ -28,5 +28,9 @@
   "item": "228 smx myosin",
   "item_id": "mi_228_smx_myosin",
   "title": "228 smx myosin",
-  "summary": "MESH_MYOSIN SMX mesh stability life-force — power-stroke force free-energy crown after tropomyosin continuum"
+  "summary": "MESH_MYOSIN SMX mesh stability life-force \u2014 power-stroke force free-energy crown after tropomyosin continuum",
+  "commit": "c057da5e97f8a41699eb0cb3a19dafe01437710b",
+  "sha": "c057da5e97f8a41699eb0cb3a19dafe01437710b",
+  "head": "c057da5e97f8a41699eb0cb3a19dafe01437710b",
+  "pin": "c057da5e97f8a41699eb0cb3a19dafe01437710b"
 }
