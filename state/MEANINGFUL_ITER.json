@@ -20,7 +20,7 @@
   "flagship_asserts_ok": 12,
   "flagship_ok": 12,
   "flagship_fail": 0,
-  "notes": "MESH_PROFILIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW vasp free-energy crown origin -> profilin tunnel (WH2 G-actin dock wall + ATP-exchange gate + poly-Pro VASP-dock sleeve + barbed-end handoff ring — nucleotide recharge core, sequester-to-feed gel, FP4 partner island, lamellipod supply crest) -> profilin free-energy crown (G-actin recharge FA tip crest); pure-C src/cubalc_smx_profilin.c",
+  "notes": "MESH_PROFILIN dual-autoheal soft-OOB stability life-force; MESH_EXCHANGE C(4,2); STABILIZE; dual WE_AUTOHEAL after second storm; ENERGYFLOW vasp free-energy crown origin -> profilin tunnel (WH2 G-actin dock wall + ATP-exchange gate + poly-Pro VASP-dock sleeve + barbed-end handoff ring \u2014 nucleotide recharge core, sequester-to-feed gel, FP4 partner island, lamellipod supply crest) -> profilin free-energy crown (G-actin recharge FA tip crest); pure-C src/cubalc_smx_profilin.c",
   "pure_c": "src/cubalc_smx_profilin.c",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_mesh_profilin_life.cubalc",
@@ -28,7 +28,7 @@
   "item": "239 smx profilin",
   "item_id": "mi_239_smx_profilin",
   "title": "239 smx profilin",
-  "summary": "MESH_PROFILIN SMX mesh stability life-force — G-actin recharge FA tip free-energy crown after vasp actin-polymerization crest",
-  "commit": "PENDING",
-  "sha": "PENDING"
+  "summary": "MESH_PROFILIN SMX mesh stability life-force \u2014 G-actin recharge FA tip free-energy crown after vasp actin-polymerization crest",
+  "commit": "0550dc1d757b9ffd4b95ff78fbea6bb4a38cacd8",
+  "sha": "0550dc1d757b"
 }
