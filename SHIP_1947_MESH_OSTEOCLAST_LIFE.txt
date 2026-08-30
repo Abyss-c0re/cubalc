@@ -1,0 +1,6 @@
+MESH_OSTEOCLAST 1947
+feat — pure-C src/cubalc_smx_osteoclast.c
+proofs 99+1947 asserts_ok=64 fail=0; science; flagship 1620 PASS 12/0
+selftest howship_ready=1 resorption_front_coupled=1 dual_autoheal=1 bonds=6
+energy: periosteum → endosteum → marrow → RANKL → osteoclast → Howship → resorption front
+pin MEANINGFUL_ITER 1947 · VERSION 1.15.1427-usability
