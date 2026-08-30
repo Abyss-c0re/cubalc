@@ -1,6 +1,6 @@
 MESH_OSTEOBLAST 1946
-feat 45035b857 — pure-C src/cubalc_smx_osteoblast.c
-proofs 99+1946 asserts_ok=64 fail=0; science; flagship 1620 PASS 12/0
-pin 45035b857 MEANINGFUL_ITER 1946 · VERSION 1.15.1426-usability
-HEAD 45035b857e07991b74f9f4d7dc0286822a2ef417
+feat — pure-C src/cubalc_smx_osteoblast.c
+proofs 99+1946; science; flagship 1620 PASS
+MEANINGFUL_ITER 1946 · VERSION 1.15.1426-usability
 selftest osteoid_ready=1 mineral_front_coupled=1 dual_autoheal=1 bonds=6
+path: periosteum → osteoprogenitor → osteoblast seam → osteoid → mineral front
