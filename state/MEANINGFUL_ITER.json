@@ -29,8 +29,8 @@
   "item_id": "mi_261_smx_macf1",
   "title": "261 smx macf1",
   "summary": "MESH_MACF1 giant-plakin MT-actin cytolinker free-energy crown soft-OOB mesh stability life-force",
-  "commit": "PENDING",
-  "commit_short": "PENDING",
-  "HEAD": "PENDING",
-  "pin": "PENDING"
+  "commit": "eb66f59ecda2fe6f71bebf4d1c0a03e92321ca26",
+  "commit_short": "eb66f59ec",
+  "HEAD": "eb66f59ecda2fe6f71bebf4d1c0a03e92321ca26",
+  "pin": "eb66f59ec"
 }
