@@ -1,0 +1,164 @@
+// atomic_printer_life_homeostat.cubalc
+// Science board: cellular homeostat under atomic printer.
+// Feast-regulate-famine-restore-mitosis wonder. Free energy seeks setpoint.
+// Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=homeostat | type=atomic_printer_life_homeostat | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 4 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+SEND seed feed 8
+ASSERT LAST_N == 20 "feast 20"
+SEND seed bias
+ASSERT LAST_N == 10 "bias +10"
+SEND seed regulate
+ASSERT LAST_N == 10 "homeostat 10"
+SEND seed stores
+ASSERT LAST_N == 10 "stores 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr"
+
+SEND seed gift 3
+ASSERT LAST_N == 3 "gifted 3"
+SEND ally feed 3
+ASSERT LAST_N == 7 "ally fed"
+GETF seed energy
+ASSERT LAST_N == 7 "seed active 7"
+SEND seed stores
+ASSERT LAST_N == 10 "stores intact after gift"
+SEND seed bias
+ASSERT LAST_N == -3 "hungry -3"
+
+SEND seed regulate
+ASSERT LAST_N == 10 "restored 10"
+SEND seed stores
+ASSERT LAST_N == 7 "stores 10-3"
+SEND seed bias
+ASSERT LAST_N == 0 "balanced"
+
+SEND seed set_setpoint 16
+ASSERT LAST_N == 16 "sp 16"
+SEND seed regulate
+ASSERT LAST_N == 16 "drew toward 16"
+GETF seed energy
+ASSERT LAST_N == 16 "active 16"
+SEND seed stores
+ASSERT LAST_N == 1 "stores 1 left"
+GETF seed ready
+ASSERT LAST_N == 1 "ready"
+
+SEND seed pulse 2
+ASSERT LAST_N == 18 "pulse 18"
+SEND seed stores
+ASSERT LAST_N == 1 "stores still 1"
+SEND seed regulate
+ASSERT LAST_N == 16 "rebank to sp"
+SEND seed stores
+ASSERT LAST_N == 3 "stores 1+2"
+
+SEND ally set_setpoint 6
+ASSERT LAST_N == 6 "ally sp 6"
+SEND ally bias
+ASSERT LAST_N == 1 "ally bias +1"
+SEND ally regulate
+ASSERT LAST_N == 6 "ally banks 1"
+SEND ally stores
+ASSERT LAST_N == 1 "ally stores 1"
+
+SEND seed gift 4
+ASSERT LAST_N == 4 "seed gifts 4"
+GETF seed energy
+ASSERT LAST_N == 12 "seed 12"
+SEND ally feed 4
+ASSERT LAST_N == 10 "ally 10"
+SEND ally regulate
+ASSERT LAST_N == 6 "ally homeostat 6"
+SEND ally stores
+ASSERT LAST_N == 5 "ally stores 5"
+
+SEND seed bias
+ASSERT LAST_N == -4 "seed hungry vs 16"
+SEND seed regulate
+ASSERT LAST_N == 15 "seed took last 3 stores"
+SEND seed stores
+ASSERT LAST_N == 0 "seed stores empty"
+
+SEND seed feed 5
+ASSERT LAST_N == 20 "seed 20"
+SEND seed regulate
+ASSERT LAST_N == 16 "bank surplus 4"
+SEND seed stores
+ASSERT LAST_N == 4 "stores 4"
+GETF seed ready
+ASSERT LAST_N == 1 "mitosis armed"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter live"
+GETF d1 energy
+ASSERT LAST_N == 8 "daughter half 16"
+SEND d1 regulate
+ASSERT LAST_N == 8 "daughter below default sp keeps 8"
+SEND d1 bias
+ASSERT LAST_N == -2 "daughter hungry -2"
+GETF seed energy
+ASSERT LAST_N == 8 "parent half"
+SEND seed stores
+ASSERT LAST_N == 4 "parent stores survive mitosis"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity"
+ASSERT SMX_OK == 1 "smx sealed"
+ASSERT SMX_LIFE_FORCE == 1 "life_force holds"

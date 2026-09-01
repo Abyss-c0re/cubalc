@@ -1,0 +1,193 @@
+// 2033_life_cell_homeostat_regulate.cubalc
+// Life-force usability: homeostat setpoint + regulate + bias.
+// AGI retunes preferred energy, banks surplus, draws deficit, arms mitosis.
+// Extends life_cell. Cube is SoT. free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_homeostat_regulate | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: default setpoint 10; bias = energy - setpoint
+GETF seed energy
+ASSERT LAST_N == 16 "founder energy 16"
+SEND seed bias
+ASSERT LAST_N == 6 "bias +6 vs default sp 10"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+
+// Phase B: regulate banks surplus down to setpoint
+SEND seed regulate
+ASSERT LAST_N == 10 "regulated to 10"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10"
+SEND seed stores
+ASSERT LAST_N == 6 "banked surplus 6"
+SEND seed bias
+ASSERT LAST_N == 0 "bias 0 at setpoint"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr 10"
+
+// Phase C: retune setpoint higher - hungry bias, draw from stores
+SEND seed set_setpoint 14
+ASSERT LAST_N == 14 "setpoint 14"
+SEND seed bias
+ASSERT LAST_N == -4 "bias -4 hungry"
+SEND seed regulate
+ASSERT LAST_N == 14 "drew to 14"
+GETF seed energy
+ASSERT LAST_N == 14 "active 14"
+SEND seed stores
+ASSERT LAST_N == 2 "stores 6-4=2"
+SEND seed bias
+ASSERT LAST_N == 0 "bias 0 after fill"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 14"
+
+// Phase D: feast then regulate banks again
+SEND seed feed 10
+ASSERT LAST_N == 24 "feast 24"
+SEND seed bias
+ASSERT LAST_N == 10 "bias +10"
+SEND seed regulate
+ASSERT LAST_N == 14 "back to sp 14"
+SEND seed stores
+ASSERT LAST_N == 12 "stores 2+10=12"
+SEND seed bias
+ASSERT LAST_N == 0 "balanced"
+
+// Phase E: pulse then regulate rebanks
+SEND seed pulse 4
+ASSERT LAST_N == 18 "pulse active net +4"
+GETF seed age
+ASSERT LAST_N == 4 "age 4"
+SEND seed stores
+ASSERT LAST_N == 12 "stores untouched by pulse"
+SEND seed regulate
+ASSERT LAST_N == 14 "rebalance to 14"
+SEND seed stores
+ASSERT LAST_N == 16 "stores 12+4"
+
+// Phase F: deep bank then regulate restores
+SEND seed bank 100
+ASSERT LAST_N == 13 "bank retain spark"
+GETF seed energy
+ASSERT LAST_N == 1 "spark 1"
+SEND seed stores
+ASSERT LAST_N == 29 "stores 16+13"
+SEND seed bias
+ASSERT LAST_N == -13 "very hungry"
+SEND seed regulate
+ASSERT LAST_N == 14 "homeostat restored 14"
+SEND seed stores
+ASSERT LAST_N == 16 "stores 29-13"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after restore"
+
+// Phase G: G0 regulate keeps ready 0
+SEND seed quiesce
+ASSERT LAST_N == 1 "G0"
+SEND seed feed 8
+ASSERT LAST_N == 22 "G0 feed 22"
+SEND seed regulate
+ASSERT LAST_N == 14 "G0 regulate to sp"
+GETF seed ready
+ASSERT LAST_N == 0 "G0 not ready"
+SEND seed stores
+ASSERT LAST_N == 24 "G0 banked 8 into stores"
+
+// Phase H: wake and arm mitosis via setpoint draw
+SEND seed wake
+ASSERT LAST_N == 1 "wake ready at 14"
+SEND seed set_setpoint 8
+ASSERT LAST_N == 8 "setpoint 8"
+SEND seed regulate
+ASSERT LAST_N == 8 "active 8"
+SEND seed stores
+ASSERT LAST_N == 30 "stores 24+6"
+SEND seed set_setpoint 20
+ASSERT LAST_N == 20 "setpoint 20"
+SEND seed regulate
+ASSERT LAST_N == 20 "drew to 20"
+SEND seed stores
+ASSERT LAST_N == 18 "stores 30-12"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 20"
+SEND seed bias
+ASSERT LAST_N == 0 "bias 0"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen 1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 10 "daughter half of 20"
+SEND d1 bias
+ASSERT LAST_N == 0 "daughter default sp 10 bias 0"
+SEND d1 stores
+ASSERT LAST_N == 0 "daughter stores empty"
+GETF seed energy
+ASSERT LAST_N == 10 "parent halved"
+SEND seed stores
+ASSERT LAST_N == 18 "parent stores held across mitosis"
+
+SEND d1 die
+SEND d1 set_setpoint 5
+ASSERT LAST_N == 0 "dead setpoint 0"
+SEND d1 regulate
+ASSERT LAST_N == 0 "dead regulate 0"
+SEND d1 bias
+ASSERT LAST_N == 0 "dead bias 0"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"

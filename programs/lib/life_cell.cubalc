@@ -31,6 +31,10 @@
 #   bank n               move n active energy into reserve (keep life spark)
 #   draw n               pull n from reserve into active energy (stress recovery)
 #   stores               report reserve balance for ASSERT science
+#   setpoint             FIELD preferred active energy (homeostasis target)
+#   set_setpoint s       retune homeostat target (min 1)
+#   regulate             bank surplus above setpoint / draw deficit from reserve
+#   bias                 active energy minus setpoint (neg=hungry, pos=surplus)
 
 CLASS Cell
   FIELD alive 0
@@ -42,6 +46,7 @@ CLASS Cell
   FIELD threshold 10
   FIELD quiescent 0
   FIELD reserve 0
+  FIELD setpoint 10
   ROLE body
 
   METHOD init a e g
@@ -54,6 +59,7 @@ CLASS Cell
     SETF THIS threshold 10
     SETF THIS quiescent 0
     SETF THIS reserve 0
+    SETF THIS setpoint 10
   END
 
   METHOD tick
@@ -119,6 +125,7 @@ CLASS Cell
     SETF THIS ready 0
     SETF THIS quiescent 0
     SETF THIS reserve 0
+    SETF THIS setpoint 10
     RET 1
   END
 
@@ -548,5 +555,97 @@ CLASS Cell
     END
     GETF THIS reserve
     RET LAST_N
+  END
+
+  # Retune homeostasis target energy (preferred active pool).
+  METHOD set_setpoint s
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF s < 1 THEN
+      LET s = 1
+    END
+    SETF THIS setpoint s
+    RET s
+  END
+
+  # Homeostat: bank surplus above setpoint into reserve; draw deficit from reserve.
+  # Keeps life spark. Returns active energy after regulation.
+  # Free energy seeks the preferred living level — AGI wonder under feast/famine.
+  METHOD regulate
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 1 THEN
+      LET sp = 10
+      SETF THIS setpoint sp
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    IF e > sp THEN
+      LET move = e - sp
+      # retain spark if setpoint somehow under 1 (defensive)
+      IF sp < 1 THEN
+        IF e > 1 THEN
+          LET move = e - 1
+        ELSE
+          LET move = 0
+        END
+      END
+      LET e = e - move
+      LET r = r + move
+      SETF THIS energy e
+      SETF THIS reserve r
+    END
+    IF e < sp THEN
+      LET need = sp - e
+      LET take = need
+      IF take > r THEN
+        LET take = r
+      END
+      LET r = r - take
+      LET e = e + take
+      SETF THIS energy e
+      SETF THIS reserve r
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET e
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET e
+  END
+
+  # Bias vs homeostat setpoint: positive = surplus, negative = hungry.
+  METHOD bias
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 1 THEN
+      LET sp = 10
+    END
+    LET b = e - sp
+    RET b
   END
 END
