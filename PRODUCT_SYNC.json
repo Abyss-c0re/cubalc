@@ -1,13 +1,13 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1255-usability",
+  "version": "1.15.1512-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 1777,
-  "feature": "SMX_DISSE_MESH_LIFE_CASCADE",
+  "meaningful_iter": 2031,
+  "feature": "LIFE_CELL_SENSE_REPAIR_PULSE",
   "proof_status": "PASS",
-  "asserts_ok": 1358,
+  "asserts_ok": 52,
   "flagship_1620_asserts_ok": 12,
-  "head": "4664e06c69db78e4187fae450ecc3af47d8f1538"
+  "head": "b9e31f8392e97a63ea01699a801b6c0d2487eb00"
 }
