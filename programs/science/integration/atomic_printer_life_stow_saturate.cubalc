@@ -1,0 +1,121 @@
+// atomic_printer_life_stow_saturate.cubalc
+// Science board: stow hibernate + saturate flood under atomic printer.
+// Total wealth conserved across rest/flood; free energy seeks life.
+// Cube is SoT. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=stow | type=atomic_printer_life_stow_saturate | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 18 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 8 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+SEND seed total
+ASSERT LAST_N == 18 "seed total 18"
+SEND seed stow
+ASSERT LAST_N == 17 "stow keep spark"
+SEND seed stores
+ASSERT LAST_N == 17 "stores 17"
+SEND seed total
+ASSERT LAST_N == 18 "wealth holds"
+SEND ally gift 0
+SEND seed gift 5
+ASSERT LAST_N == 0 "spark cannot gift below 1"
+
+// ally banks then stows
+SEND ally bank 3
+ASSERT LAST_N == 3 "ally bank"
+SEND ally total
+ASSERT LAST_N == 8 "ally total"
+SEND ally stow
+ASSERT LAST_N == 4 "ally stow to spark"
+SEND ally saturate
+ASSERT LAST_N == 7 "ally flood"
+GETF ally energy
+ASSERT LAST_N == 8 "ally restored"
+GETF ally ready
+ASSERT LAST_N == 0 "ally thr 10 not met"
+
+SEND seed saturate
+ASSERT LAST_N == 17 "seed flood"
+GETF seed energy
+ASSERT LAST_N == 18 "seed 18"
+GETF seed ready
+ASSERT LAST_N == 1 "seed ready"
+SEND seed feed 6
+ASSERT LAST_N == 24 "feast"
+SEND seed regulate
+ASSERT LAST_N == 10 "homeostat"
+SEND seed total
+ASSERT LAST_N == 24 "total after regulate"
+SEND seed stow
+ASSERT LAST_N == 9 "rest again"
+SEND seed saturate
+ASSERT LAST_N == 23 "wake flood"
+GETF seed ready
+ASSERT LAST_N == 1 "armed for mitosis"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter live"
+SEND d1 total
+ASSERT LAST_N == half "d total = birth energy"
+SEND d1 stow
+SEND d1 saturate
+GETF d1 energy
+ASSERT LAST_N == half "d cycle conserved"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity"
+ASSERT SMX_OK == 1 "smx sealed"
+ASSERT SMX_LIFE_FORCE == 1 "life_force holds"
+HOLD_FLASH 0

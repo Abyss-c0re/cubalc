@@ -2,16 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2034,
   "MEANINGFUL_ITER": 2034,
-  "iter": 2034,
-  "version": "1.15.1516-usability",
+  "iter": 2035,
+  "version": "1.15.1517-usability",
   "VERSION": "1.15.1516-usability",
   "feature": "LIFE_CELL_TOTAL_STOW_SATURATE",
   "FEATURE": "LIFE_CELL_TOTAL_STOW_SATURATE",
   "ship": "2034_life_cell_total_stow_saturate",
   "proof": "programs/proof/2034_life_cell_total_stow_saturate.cubalc",
   "proofs": [
-    "programs/proof/2034_life_cell_total_stow_saturate.cubalc",
-    "programs/science/integration/atomic_printer_life_total_stow.cubalc"
+    "programs/science/integration/atomic_printer_life_stow_saturate.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 54,
@@ -25,9 +24,12 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_total_stow.cubalc",
   "science_asserts_ok": 41,
-  "item": "280 life cell total stow saturate",
-  "item_id": "mi_280_life_cell_total_stow_saturate",
-  "title": "280 life cell total stow saturate",
-  "summary": "life_cell total/stow/saturate + atomic printer science",
-  "commit": "ed452e87a"
+  "item": "atomic printer life stow saturate",
+  "item_id": "mi_atomic_printer_life_stow_saturate",
+  "title": "atomic printer life stow saturate",
+  "summary": "Host-finished MI ship after nanobot partial (atomic_printer_life_stow_saturate).",
+  "commit": "78db588f1",
+  "ts": "2026-09-01T22:25:52Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
