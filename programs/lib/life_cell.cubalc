@@ -2,19 +2,23 @@
 # INCLUDE life_cell
 #
 # Fields:
-#   alive  0|1
-#   energy metabolic energy (integer)
-#   age    ticks lived
-#   gen    generation from seed (0 = founder)
-#   ready  1 when energy >= threshold → candidate for division
-#   kind   0=prokaryote-like simple split
+#   alive      0|1
+#   energy     metabolic energy (integer)
+#   age        ticks lived
+#   gen        generation from seed (0 = founder)
+#   ready      1 when energy >= threshold → candidate for division
+#   kind       0=prokaryote-like simple split
+#   threshold  mitosis energy floor (default 10; set_threshold to retune)
 #
 # Methods:
 #   init alive energy gen
-#   tick           grow / age / mark ready
-#   birth energy gen   activate a free slot as daughter
-#   after_div      parent halves energy after successful mitosis
-#   die            apoptosis / resource death
+#   tick                 grow / age / mark ready vs threshold
+#   birth energy gen     activate a free slot as daughter
+#   after_div            parent halves energy after successful mitosis
+#   die                  apoptosis / resource death
+#   set_threshold t      life-force usability: retune mitosis energy floor
+#   feed n               nutrient pulse — add energy, recompute ready
+#   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
 
 CLASS Cell
   FIELD alive 0
@@ -23,6 +27,7 @@ CLASS Cell
   FIELD gen 0
   FIELD ready 0
   FIELD kind 0
+  FIELD threshold 10
   ROLE body
 
   METHOD init a e g
@@ -32,6 +37,7 @@ CLASS Cell
     SETF THIS gen g
     SETF THIS ready 0
     SETF THIS kind 0
+    SETF THIS threshold 10
   END
 
   METHOD tick
@@ -63,9 +69,14 @@ CLASS Cell
       SETF THIS ready 0
       RET 0
     END
-    # mitosis threshold
+    # mitosis threshold (configurable via set_threshold)
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
     LET rd = 0
-    IF e >= 10 THEN
+    IF e >= th THEN
       LET rd = 1
     END
     SETF THIS ready rd
@@ -97,5 +108,60 @@ CLASS Cell
     SETF THIS energy 0
     SETF THIS ready 0
     RET 0
+  END
+
+  # Usability: AGI retunes mitosis energy floor without rewriting CLASS
+  METHOD set_threshold t
+    IF t < 1 THEN
+      LET t = 1
+    END
+    SETF THIS threshold t
+    GETF THIS energy
+    LET e = LAST_N
+    LET rd = 0
+    IF e >= t THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET t
+  END
+
+  # Nutrient pulse — free energy must flow into the cell
+  METHOD feed n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N + n
+    SETF THIS energy e
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET e
+  END
+
+  # Lineage fingerprint for ASSERT science (gen*1000 + energy*10 + age)
+  METHOD checkpoint
+    GETF THIS gen
+    LET g = LAST_N
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS age
+    LET a = LAST_N
+    LET fp = g * 1000
+    LET fp = fp + e * 10
+    LET fp = fp + a
+    RET fp
   END
 END

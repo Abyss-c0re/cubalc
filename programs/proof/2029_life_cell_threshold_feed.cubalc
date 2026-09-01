@@ -1,0 +1,138 @@
+// 2029_life_cell_threshold_feed.cubalc
+// Life-force usability: configurable mitosis threshold + nutrient feed +
+// lineage checkpoint fingerprint. AGI RUNS to see starve→retune→feed→divide.
+// Extends life_cell without dual ladders. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_threshold_feed | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+// Founder starts at energy 6 — below default threshold 10
+ENTITY seed OF Cell 1 6 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: default threshold 10 — energy 6 not ready
+GETF seed energy
+ASSERT LAST_N == 6 "founder energy 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "default mitosis threshold 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready under default threshold"
+
+// Phase B: retune threshold down to 6 — becomes ready without extra energy
+SEND seed set_threshold 6
+ASSERT LAST_N == 6 "threshold retuned to 6"
+GETF seed threshold
+ASSERT LAST_N == 6 "threshold field 6"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after threshold retune"
+
+// Phase C: raise threshold to 20 — drops ready; feed nutrient to cross
+SEND seed set_threshold 20
+ASSERT LAST_N == 20 "threshold raised to 20"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready under high threshold"
+
+SEND seed feed 10
+ASSERT LAST_N == 16 "feed +10 → energy 16"
+GETF seed energy
+ASSERT LAST_N == 16 "energy after feed"
+GETF seed ready
+ASSERT LAST_N == 0 "still below threshold 20"
+
+SEND seed feed 8
+ASSERT LAST_N == 24 "feed +8 → energy 24"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after nutrient crosses threshold 20"
+
+// Phase D: checkpoint fingerprint before mitosis
+SEND seed checkpoint
+LET fp0 = LAST_N
+// gen=0 energy=24 age=0 → 0*1000 + 24*10 + 0 = 240
+ASSERT fp0 == 240 "checkpoint fingerprint pre-mitosis"
+
+// Phase E: mitosis under retuned threshold
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen 1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 gen
+ASSERT LAST_N == 1 "daughter gen field"
+GETF d1 energy
+ASSERT LAST_N == 12 "daughter half energy"
+GETF seed energy
+ASSERT LAST_N == 12 "parent halved after_div"
+GETF seed ready
+ASSERT LAST_N == 0 "parent not ready post-div"
+
+// Phase F: tick advances age + metabolism; checkpoint moves
+SEND seed tick
+GETF seed age
+ASSERT LAST_N == 1 "parent aged one tick"
+SEND seed checkpoint
+LET fp1 = LAST_N
+// gen=0 energy~(12+2-1=13) age=1 → 0 + 130 + 1 = 131
+ASSERT fp1 == 131 "checkpoint after tick"
+ASSERT fp1 != fp0 "fingerprint changed after life tick"
+
+// Phase G: daughter inherits default threshold 10 via birth (no set)
+GETF d1 threshold
+ASSERT LAST_N == 10 "daughter default threshold"
+SEND d1 feed 0
+GETF d1 ready
+// energy 12 >= 10 → ready
+ASSERT LAST_N == 1 "daughter ready at default threshold"
+
+// Colony energy still flows
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present after mitosis"
+
+// Final unity of printer spine
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"

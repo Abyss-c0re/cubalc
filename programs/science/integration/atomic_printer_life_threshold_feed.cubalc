@@ -1,0 +1,130 @@
+// atomic_printer_life_threshold_feed.cubalc
+// Science board: energy-aware mitosis with AGI-tunable threshold + feed.
+// Demonstrates life_cell set_threshold / feed / checkpoint under atomic printer.
+// Free energy must flow. Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_threshold_feed | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 5 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY d2 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Starved under default threshold
+GETF seed energy
+ASSERT LAST_N == 5 "founder energy 5"
+GETF seed threshold
+ASSERT LAST_N == 10 "default threshold"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready starved"
+
+// Retune for sparse-nutrient niche (threshold 8) still not ready at 5
+SEND seed set_threshold 8
+GETF seed ready
+ASSERT LAST_N == 0 "still below retuned 8"
+
+// Feed crosses retuned floor
+SEND seed feed 4
+ASSERT LAST_N == 9 "energy 9 after feed"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at threshold 8"
+
+// Checkpoint lineage stamp
+SEND seed checkpoint
+// gen0 e9 a0 → 90
+ASSERT LAST_N == 90 "checkpoint 90"
+
+// Mitosis
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "gen1 birth"
+
+// Second nutrient wave + second division under same threshold
+SEND seed feed 10
+GETF seed ready
+ASSERT LAST_N == 1 "parent ready again"
+GETF seed energy
+LET half2 = LAST_N / 2
+IF half2 < 1 THEN
+  LET half2 = 1
+END
+GETF seed gen
+LET dg2 = LAST_N + 1
+SEND d2 birth half2 dg2
+SEND seed after_div
+PLUG bed d2
+ASSERT dg2 == 1 "second daughter gen1 (parent still gen0)"
+
+GETF d1 alive
+LET a1 = LAST_N
+GETF d2 alive
+LET a2 = LAST_N
+LET live = a1 + a2
+ASSERT live == 2 "two daughters alive"
+
+// Age one generation of ticks; fingerprints diverge
+SEND d1 tick
+SEND d2 tick
+SEND seed tick
+SEND d1 checkpoint
+LET fp_d1 = LAST_N
+SEND d2 checkpoint
+LET fp_d2 = LAST_N
+SEND seed checkpoint
+LET fp_s = LAST_N
+ASSERT fp_d1 > 1000 "d1 gen bit set in fingerprint"
+ASSERT fp_d2 > 1000 "d2 gen bit set in fingerprint"
+ASSERT fp_s < 1000 "seed remains gen0 fingerprint"
+
+ENERGYFLOW 2
+FLOW 1
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force after colony growth"
+ASSERT UNITY >= 30 "mesh unity"
+ASSERT DECIDE >= 0 "decide"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_OK == 1 "smx sealed"
