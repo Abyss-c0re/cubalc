@@ -1,0 +1,114 @@
+// atomic_printer_life_sense_repair_pulse.cubalc
+// Science board: sense/repair/pulse under atomic printer life-force mesh.
+// Free energy must flow. Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_sense_repair_pulse | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 6 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 4 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Sense starvation pressure
+SEND seed sense
+ASSERT LAST_N == -4 "seed gap -4 at e6"
+SEND ally sense
+ASSERT LAST_N == -6 "ally gap -6 at e4"
+
+// Nutrient + batch pulse growth
+SEND seed feed 10
+ASSERT LAST_N == 16 "seed fed to 16"
+SEND seed pulse 2
+ASSERT LAST_N == 18 "seed pulse to 18"
+GETF seed age
+ASSERT LAST_N == 2 "seed age 2"
+SEND seed sense
+ASSERT LAST_N == 8 "surplus +8"
+
+// Repair youth for colony stability
+SEND seed repair 1
+ASSERT LAST_N == 1 "repaired 1"
+GETF seed age
+ASSERT LAST_N == 1 "age 1"
+GETF seed energy
+ASSERT LAST_N == 17 "energy 17"
+
+// Symbiosis: gift surplus sensed gap into ally
+SEND seed gift 5
+ASSERT LAST_N == 5 "gifted 5"
+SEND ally feed 5
+ASSERT LAST_N == 9 "ally 9"
+SEND ally sense
+ASSERT LAST_N == -1 "ally still short 1"
+SEND ally feed 2
+ASSERT LAST_N == 11 "ally armed"
+SEND ally sense
+ASSERT LAST_N == 1 "ally surplus"
+
+// Mitosis under sensed readiness
+SEND seed feed 0
+GETF seed ready
+ASSERT LAST_N == 1 "seed ready"
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+SEND d1 sense
+// half of 12 = 6 → gap -4
+ASSERT LAST_N == -4 "daughter sense"
+
+SEND seed vitality
+ASSERT LAST_N > 1000 "parent vitality alive"
+SEND d1 vitality
+ASSERT LAST_N > 1000 "daughter vitality alive"
+
+ENERGYFLOW 2
+FLOW 1
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "unity holds"
+ASSERT SMX_OK == 1 "smx sealed"
+ASSERT ENERGY > 0 "free energy flows"

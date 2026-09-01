@@ -1,0 +1,171 @@
+// 2031_life_cell_sense_repair_pulse.cubalc
+// Life-force usability: sense (energy gap), repair (age shed), pulse (batch ticks).
+// AGI RUNS sense→feed→pulse→repair→divide wonder without dual ladders.
+// Extends life_cell. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_sense_repair_pulse | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 8 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: sense gap below default threshold 10 (energy 8 → gap -2)
+GETF seed energy
+ASSERT LAST_N == 8 "founder energy 8"
+GETF seed threshold
+ASSERT LAST_N == 10 "default threshold 10"
+SEND seed sense
+ASSERT LAST_N == -2 "sense gap -2"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready at init"
+
+// Phase B: feed to surplus and sense positive gap
+SEND seed feed 7
+ASSERT LAST_N == 15 "energy 15 after feed"
+SEND seed sense
+ASSERT LAST_N == 5 "sense surplus +5"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after feed"
+
+// Phase C: pulse 3 active ticks — each tick +1 net energy, age+3
+// start e15 a0 → after 3: e18 a3, still ready
+SEND seed pulse 3
+ASSERT LAST_N == 18 "pulse energy 18"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after pulse"
+GETF seed energy
+ASSERT LAST_N == 18 "energy held 18"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready"
+SEND seed sense
+ASSERT LAST_N == 8 "sense 18-10=8"
+
+// Phase D: repair sheds age for energy (spend 2 → age 1, energy 16)
+SEND seed repair 2
+ASSERT LAST_N == 2 "repaired 2"
+GETF seed age
+ASSERT LAST_N == 1 "age 3-2=1"
+GETF seed energy
+ASSERT LAST_N == 16 "energy 18-2=16"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 16"
+SEND seed vitality
+// 1000 + 16*10 + 0 - 1 + 50 = 1000+160-1+50 = 1209
+ASSERT LAST_N == 1209 "vitality after repair"
+
+// Phase E: repair refuses to kill spark
+SEND seed repair 100
+// energy 16 → keep 1, spend 15; age 1 → 0
+ASSERT LAST_N == 15 "repair capped retain spark"
+GETF seed energy
+ASSERT LAST_N == 1 "spark retained"
+GETF seed age
+ASSERT LAST_N == 0 "age floored"
+GETF seed alive
+ASSERT LAST_N == 1 "alive after deep repair"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready at 1"
+
+// Phase F: sense at floor energy
+SEND seed sense
+ASSERT LAST_N == -9 "sense 1-10=-9"
+
+// Phase G: restore, pulse under G0 conserves energy
+SEND seed feed 14
+ASSERT LAST_N == 15 "restored 15"
+SEND seed quiesce
+ASSERT LAST_N == 1 "enter G0"
+SEND seed pulse 4
+ASSERT LAST_N == 15 "G0 pulse conserves energy"
+GETF seed age
+ASSERT LAST_N == 4 "age advanced 4 in G0"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready in G0"
+SEND seed sense
+ASSERT LAST_N == 5 "sense still 15-10 even in G0"
+
+// Phase H: wake + mitosis board
+SEND seed wake
+ASSERT LAST_N == 1 "wake ready"
+GETF seed ready
+ASSERT LAST_N == 1 "ready field"
+SEND seed checkpoint
+// gen0 e15 a4 → 0 + 150 + 4 = 154
+ASSERT LAST_N == 154 "checkpoint pre-div"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen 1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 7 "daughter half"
+GETF seed energy
+ASSERT LAST_N == 7 "parent halved"
+SEND d1 sense
+ASSERT LAST_N == -3 "daughter sense 7-10"
+SEND d1 pulse 2
+// active: +1/tick → e9 a2
+ASSERT LAST_N == 9 "daughter pulse energy"
+GETF d1 age
+ASSERT LAST_N == 2 "daughter age 2"
+
+// dead cell contracts
+SEND d1 die
+SEND d1 sense
+ASSERT LAST_N == 0 "dead sense 0"
+SEND d1 repair 3
+ASSERT LAST_N == 0 "dead repair 0"
+SEND d1 pulse 2
+ASSERT LAST_N == 0 "dead pulse 0"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"

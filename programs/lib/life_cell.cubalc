@@ -24,6 +24,9 @@
 #   wake                 exit G0 — recompute ready from energy/threshold
 #   gift n               donate n energy outward (symbiosis); returns gifted amt
 #   vitality             life-force score for ASSERT science boards
+#   sense                energy gap vs mitosis threshold (neg=below, pos=surplus)
+#   repair n             spend energy to shed age (life-force restoration)
+#   pulse n              advance n metabolic ticks in one CALL (batch usability)
 
 CLASS Cell
   FIELD alive 0
@@ -300,5 +303,146 @@ CLASS Cell
       LET v = 0
     END
     RET v
+  END
+
+  # Sense mitosis pressure: energy - threshold (0 if dead).
+  # Negative ⇒ need nutrients; zero/positive ⇒ at/above floor (still may be G0).
+  METHOD sense
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET gap = e - th
+    RET gap
+  END
+
+  # Repair: convert free energy into youth (reduce age). Retains life spark.
+  # Costs min(n, energy-1) energy; sheds the same amount of age (floor 0).
+  METHOD repair n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET spend = n
+    IF spend > e THEN
+      LET spend = e
+    END
+    # retain spark of life when possible
+    IF e - spend < 1 THEN
+      IF e > 1 THEN
+        LET spend = e - 1
+      ELSE
+        LET spend = 0
+      END
+    END
+    LET e = e - spend
+    SETF THIS energy e
+    GETF THIS age
+    LET a = LAST_N
+    IF a < spend THEN
+      LET a = 0
+    ELSE
+      LET a = a - spend
+    END
+    SETF THIS age a
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET spend
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET spend
+  END
+
+  # Pulse: batch metabolic ticks (usability — AGI advances n ages in one SEND).
+  # Returns final energy (0 if died mid-pulse). Caps n to 32 per call.
+  METHOD pulse n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    IF n > 32 THEN
+      LET n = 32
+    END
+    LET i = 0
+    LET last_e = 0
+    GETF THIS energy
+    LET last_e = LAST_N
+    WHILE i < n
+      GETF THIS alive
+      IF LAST_N == 0 THEN
+        RET 0
+      END
+      # --- inlined tick body (SEND self not available mid-method) ---
+      GETF THIS age
+      LET ag = LAST_N + 1
+      SETF THIS age ag
+      GETF THIS energy
+      LET e = LAST_N
+      GETF THIS quiescent
+      LET q = LAST_N
+      IF q == 1 THEN
+        LET e = e + 1
+        LET e = e - 1
+      ELSE
+        LET e = e + 2
+        LET e = e - 1
+      END
+      IF e < 0 THEN
+        LET e = 0
+      END
+      SETF THIS energy e
+      IF e == 0 THEN
+        SETF THIS alive 0
+        SETF THIS ready 0
+        SETF THIS quiescent 0
+        RET 0
+      END
+      IF ag > 40 THEN
+        SETF THIS alive 0
+        SETF THIS ready 0
+        SETF THIS quiescent 0
+        RET 0
+      END
+      LET rd = 0
+      IF q == 0 THEN
+        GETF THIS threshold
+        LET th = LAST_N
+        IF th < 1 THEN
+          LET th = 10
+        END
+        IF e >= th THEN
+          LET rd = 1
+        END
+      END
+      SETF THIS ready rd
+      LET last_e = e
+      LET i = i + 1
+    END
+    RET last_e
   END
 END
