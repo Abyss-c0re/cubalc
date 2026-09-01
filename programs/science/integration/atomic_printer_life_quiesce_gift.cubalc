@@ -1,0 +1,142 @@
+// atomic_printer_life_quiesce_gift.cubalc
+// Science board: G0 quiesce/wake + symbiotic gift under atomic printer.
+// Demonstrates life_cell metabolic rest and free-energy donation.
+// Free energy must flow. Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_quiesce_gift | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 2 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Active founder armed
+SEND seed feed 0
+GETF seed ready
+ASSERT LAST_N == 1 "seed ready at 14"
+SEND seed vitality
+ASSERT LAST_N == 1190 "vitality 1000+140+50"
+
+// Stress → G0 rest (conserve under load)
+SEND seed quiesce
+ASSERT LAST_N == 1 "enter G0"
+GETF seed ready
+ASSERT LAST_N == 0 "mitosis suppressed"
+SEND seed tick
+SEND seed tick
+GETF seed age
+ASSERT LAST_N == 2 "aged in rest"
+GETF seed energy
+ASSERT LAST_N == 14 "energy conserved across G0 ticks"
+SEND seed vitality
+// 1000 + 140 - 2 = 1138 (no active bonus)
+ASSERT LAST_N == 1138 "vitality G0 after age"
+
+// Wake into nutrient flush
+SEND seed wake
+ASSERT LAST_N == 1 "wake ready"
+SEND seed feed 4
+ASSERT LAST_N == 18 "energy 18"
+
+// Symbiosis: seed gifts ally so colony can grow together
+SEND seed gift 8
+ASSERT LAST_N == 8 "gifted 8"
+GETF seed energy
+ASSERT LAST_N == 10 "seed 10 post-gift"
+SEND ally feed 8
+ASSERT LAST_N == 10 "ally reaches 10"
+GETF ally ready
+ASSERT LAST_N == 1 "ally now division-ready via gift"
+
+// Seed still ready — mitosis while ally holds
+GETF seed ready
+ASSERT LAST_N == 1 "seed ready for split"
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 5 "daughter half"
+
+// Lineage fingerprints diverge
+SEND seed tick
+SEND d1 tick
+SEND ally tick
+SEND seed checkpoint
+LET fp_s = LAST_N
+SEND d1 checkpoint
+LET fp_d = LAST_N
+SEND ally checkpoint
+LET fp_a = LAST_N
+ASSERT fp_d > 1000 "daughter gen bit"
+ASSERT fp_s < 1000 "seed gen0"
+ASSERT fp_a < 1000 "ally gen0"
+ASSERT fp_s != fp_a "seed and ally diverge"
+
+// Colony vitality sum proves life-force after gift path
+SEND seed vitality
+LET vs = LAST_N
+SEND d1 vitality
+LET vd = LAST_N
+SEND ally vitality
+LET va = LAST_N
+LET colony = vs + vd + va
+ASSERT colony > 3000 "colony vitality strong"
+ASSERT vs > 0 "seed lives"
+ASSERT vd > 0 "daughter lives"
+ASSERT va > 0 "ally lives"
+
+ENERGYFLOW 2
+FLOW 1
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT ENERGY > 0 "life force after quiesce-gift mitosis"
+ASSERT UNITY >= 30 "mesh unity"
+ASSERT DECIDE >= 0 "decide"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT SMX_OK == 1 "smx sealed"

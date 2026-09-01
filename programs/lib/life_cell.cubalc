@@ -2,23 +2,28 @@
 # INCLUDE life_cell
 #
 # Fields:
-#   alive      0|1
-#   energy     metabolic energy (integer)
-#   age        ticks lived
-#   gen        generation from seed (0 = founder)
-#   ready      1 when energy >= threshold → candidate for division
-#   kind       0=prokaryote-like simple split
-#   threshold  mitosis energy floor (default 10; set_threshold to retune)
+#   alive       0|1
+#   energy      metabolic energy (integer)
+#   age         ticks lived
+#   gen         generation from seed (0 = founder)
+#   ready       1 when energy >= threshold and not quiescent → division candidate
+#   kind        0=prokaryote-like simple split
+#   threshold   mitosis energy floor (default 10; set_threshold to retune)
+#   quiescent   1 = G0 rest — alive, low metabolism, never ready
 #
 # Methods:
 #   init alive energy gen
-#   tick                 grow / age / mark ready vs threshold
+#   tick                 grow / age / mark ready vs threshold (quiescent slows burn)
 #   birth energy gen     activate a free slot as daughter
 #   after_div            parent halves energy after successful mitosis
 #   die                  apoptosis / resource death
-#   set_threshold t      life-force usability: retune mitosis energy floor
+#   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
+#   quiesce              enter G0 rest — suppress mitosis, damp metabolism
+#   wake                 exit G0 — recompute ready from energy/threshold
+#   gift n               donate n energy outward (symbiosis); returns gifted amt
+#   vitality             life-force score for ASSERT science boards
 
 CLASS Cell
   FIELD alive 0
@@ -28,6 +33,7 @@ CLASS Cell
   FIELD ready 0
   FIELD kind 0
   FIELD threshold 10
+  FIELD quiescent 0
   ROLE body
 
   METHOD init a e g
@@ -38,6 +44,7 @@ CLASS Cell
     SETF THIS ready 0
     SETF THIS kind 0
     SETF THIS threshold 10
+    SETF THIS quiescent 0
   END
 
   METHOD tick
@@ -45,15 +52,23 @@ CLASS Cell
     IF LAST_N == 0 THEN
       RET 0
     END
-    # age
+    # age always advances while alive
     GETF THIS age
     LET ag = LAST_N + 1
     SETF THIS age ag
-    # absorb nutrient + metabolism cost
     GETF THIS energy
-    LET e = LAST_N + 2
-    # basal cost
-    LET e = e - 1
+    LET e = LAST_N
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 1 THEN
+      # G0: basal drip only — free energy conserved, no growth surge
+      LET e = e + 1
+      LET e = e - 1
+    ELSE
+      # active: absorb nutrient + basal cost
+      LET e = e + 2
+      LET e = e - 1
+    END
     IF e < 0 THEN
       LET e = 0
     END
@@ -62,22 +77,26 @@ CLASS Cell
     IF e == 0 THEN
       SETF THIS alive 0
       SETF THIS ready 0
+      SETF THIS quiescent 0
       RET 0
     END
     IF ag > 40 THEN
       SETF THIS alive 0
       SETF THIS ready 0
+      SETF THIS quiescent 0
       RET 0
     END
-    # mitosis threshold (configurable via set_threshold)
-    GETF THIS threshold
-    LET th = LAST_N
-    IF th < 1 THEN
-      LET th = 10
-    END
+    # mitosis threshold — blocked while quiescent
     LET rd = 0
-    IF e >= th THEN
-      LET rd = 1
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
     END
     SETF THIS ready rd
     RET e
@@ -89,6 +108,7 @@ CLASS Cell
     SETF THIS age 0
     SETF THIS gen g
     SETF THIS ready 0
+    SETF THIS quiescent 0
     RET 1
   END
 
@@ -107,6 +127,7 @@ CLASS Cell
     SETF THIS alive 0
     SETF THIS energy 0
     SETF THIS ready 0
+    SETF THIS quiescent 0
     RET 0
   END
 
@@ -116,6 +137,11 @@ CLASS Cell
       LET t = 1
     END
     SETF THIS threshold t
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET t
+    END
     GETF THIS energy
     LET e = LAST_N
     LET rd = 0
@@ -138,6 +164,11 @@ CLASS Cell
     GETF THIS energy
     LET e = LAST_N + n
     SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET e
+    END
     GETF THIS threshold
     LET th = LAST_N
     IF th < 1 THEN
@@ -163,5 +194,111 @@ CLASS Cell
     LET fp = fp + e * 10
     LET fp = fp + a
     RET fp
+  END
+
+  # G0 metabolic rest — alive, mitosis suppressed, damp tick burn
+  METHOD quiesce
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    SETF THIS quiescent 1
+    SETF THIS ready 0
+    RET 1
+  END
+
+  # Exit G0 — free energy may again drive division candidacy
+  METHOD wake
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    SETF THIS quiescent 0
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET rd
+  END
+
+  # Symbiosis gift: donate n energy outward (returns actual gifted amount).
+  # Free energy flows cell→colony without mitosis. Keeps at least 1 if alive.
+  METHOD gift n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET give = n
+    IF give > e THEN
+      LET give = e
+    END
+    # retain spark of life when possible
+    IF e - give < 1 THEN
+      IF e > 1 THEN
+        LET give = e - 1
+      ELSE
+        LET give = 0
+      END
+    END
+    LET e = e - give
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET give
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET give
+  END
+
+  # Life-force vitality score for science ASSERT:
+  # alive*1000 + energy*10 + gen*100 - age + (active?50:0)
+  METHOD vitality
+    GETF THIS alive
+    LET al = LAST_N
+    IF al == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS gen
+    LET g = LAST_N
+    GETF THIS age
+    LET a = LAST_N
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET v = 1000
+    LET v = v + e * 10
+    LET v = v + g * 100
+    LET v = v - a
+    IF q == 0 THEN
+      LET v = v + 50
+    END
+    IF v < 0 THEN
+      LET v = 0
+    END
+    RET v
   END
 END

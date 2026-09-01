@@ -1,0 +1,193 @@
+// 2030_life_cell_quiesce_gift.cubalc
+// Life-force usability: G0 quiesce/wake, symbiotic gift, vitality score.
+// AGI RUNS starve→quiesce→wake→gift→feed→divide wonder.
+// Extends life_cell without dual ladders. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_quiesce_gift | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+// Founder energy 12 — ready under default threshold 10
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 3 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: active founder ready at energy 12
+GETF seed energy
+ASSERT LAST_N == 12 "founder energy 12"
+GETF seed threshold
+ASSERT LAST_N == 10 "default threshold 10"
+GETF seed ready
+ASSERT LAST_N == 0 "ready not auto at init"
+GETF seed quiescent
+ASSERT LAST_N == 0 "not quiescent at init"
+
+// feed 0 recomputes ready from energy/threshold
+SEND seed feed 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after feed0 recompute"
+
+// vitality active: 1000 + 12*10 + 0 - 0 + 50 = 1170
+SEND seed vitality
+ASSERT LAST_N == 1170 "vitality active baseline"
+
+// Phase B: quiesce — G0 rest suppresses mitosis
+SEND seed quiesce
+ASSERT LAST_N == 1 "quiesce ok"
+GETF seed quiescent
+ASSERT LAST_N == 1 "quiescent field"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready while quiescent"
+// vitality drops active bonus: 1000 + 120 + 0 - 0 = 1120
+SEND seed vitality
+ASSERT LAST_N == 1120 "vitality quiescent"
+
+// Phase C: feed while quiescent does not arm mitosis
+SEND seed feed 5
+ASSERT LAST_N == 17 "energy 17 after feed in G0"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready in G0"
+GETF seed energy
+ASSERT LAST_N == 17 "energy held"
+
+// Phase D: tick in G0 — age advances, energy net-zero drip
+SEND seed tick
+GETF seed age
+ASSERT LAST_N == 1 "aged one tick in G0"
+GETF seed energy
+ASSERT LAST_N == 17 "energy conserved in G0 tick"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready after G0 tick"
+GETF seed alive
+ASSERT LAST_N == 1 "alive through G0"
+
+// Phase E: wake — exit G0, recompute ready (energy 17 >= 10)
+SEND seed wake
+ASSERT LAST_N == 1 "wake returns ready=1"
+GETF seed quiescent
+ASSERT LAST_N == 0 "no longer quiescent"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after wake"
+
+// Phase F: symbiotic gift — donate to ally colony mate
+GETF ally energy
+ASSERT LAST_N == 3 "ally starts sparse"
+SEND seed gift 6
+ASSERT LAST_N == 6 "gifted 6"
+GETF seed energy
+ASSERT LAST_N == 11 "seed after gift 17-6=11"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready at 11>=10"
+// transfer gifted energy into ally via feed (colony free-energy flow)
+SEND ally feed 6
+ASSERT LAST_N == 9 "ally energy 3+6=9"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still below threshold 10"
+
+// gift refuses to extinguish life spark
+SEND seed gift 100
+// energy was 11 → keep 1, gift 10
+ASSERT LAST_N == 10 "gift capped retain spark"
+GETF seed energy
+ASSERT LAST_N == 1 "seed retains 1"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready at energy 1"
+GETF seed alive
+ASSERT LAST_N == 1 "still alive after generous gift"
+
+// Phase G: restore seed via feed, mitosis under wake state
+SEND seed feed 20
+ASSERT LAST_N == 21 "seed restored to 21"
+GETF seed ready
+ASSERT LAST_N == 1 "ready for mitosis"
+SEND seed checkpoint
+// gen0 e21 a1 → 0 + 210 + 1 = 211
+ASSERT LAST_N == 211 "checkpoint pre-mitosis"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen 1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 gen
+ASSERT LAST_N == 1 "daughter gen field"
+GETF d1 energy
+ASSERT LAST_N == 10 "daughter half energy"
+GETF d1 quiescent
+ASSERT LAST_N == 0 "daughter starts active"
+GETF seed energy
+ASSERT LAST_N == 10 "parent halved"
+GETF seed ready
+ASSERT LAST_N == 0 "parent not ready post-div"
+
+// Phase H: daughter vitality + ally still sparse until feed
+SEND d1 vitality
+// alive 1000 + 10*10 + gen1*100 - age0 + 50 = 1000+100+100+50 = 1250
+ASSERT LAST_N == 1250 "daughter vitality"
+SEND ally vitality
+// ally e9 a0 gen0 active: 1000+90+0-0+50 = 1140
+ASSERT LAST_N == 1140 "ally vitality"
+
+// dead cell vitality is zero
+SEND d1 die
+SEND d1 vitality
+ASSERT LAST_N == 0 "dead vitality zero"
+SEND d1 quiesce
+ASSERT LAST_N == 0 "quiesce on dead fails"
+SEND d1 wake
+ASSERT LAST_N == 0 "wake on dead fails"
+SEND d1 gift 5
+ASSERT LAST_N == 0 "gift on dead fails"
+
+// Colony energy still flows
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present after gift mitosis"
+
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"
