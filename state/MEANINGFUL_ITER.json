@@ -29,5 +29,5 @@
   "item_id": "mi_280_life_cell_total_stow_saturate",
   "title": "280 life cell total stow saturate",
   "summary": "life_cell total/stow/saturate + atomic printer science",
-  "commit": "PENDING"
+  "commit": "ed452e87a"
 }
