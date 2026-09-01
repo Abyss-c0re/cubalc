@@ -2,16 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2033,
   "MEANINGFUL_ITER": 2033,
-  "iter": 2036,
-  "version": "1.15.1514-usability",
+  "iter": 2037,
+  "version": "1.15.1515-usability",
   "VERSION": "1.15.1514-usability",
   "feature": "LIFE_CELL_HOMEOSTAT_REGULATE",
   "FEATURE": "LIFE_CELL_HOMEOSTAT_REGULATE",
   "ship": "2033_life_cell_homeostat_regulate",
   "proof": "programs/proof/2033_life_cell_homeostat_regulate.cubalc",
   "proofs": [
-    "programs/proof/2033_life_cell_homeostat_regulate.cubalc",
-    "programs/science/integration/atomic_printer_life_homeostat.cubalc"
+    "programs/science/proof/1798_smx_mesh_cecum_life.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 66,
@@ -25,9 +24,12 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_homeostat.cubalc",
   "science_asserts_ok": 53,
-  "item": "279 life cell homeostat regulate",
-  "item_id": "mi_279_life_cell_homeostat_regulate",
-  "title": "279 life cell homeostat regulate",
-  "summary": "life_cell homeostat setpoint/regulate/bias + atomic printer science",
-  "commit": "88b220688"
+  "item": "1798 smx mesh cecum life",
+  "item_id": "mi_1798_smx_mesh_cecum_life",
+  "title": "1798 smx mesh cecum life",
+  "summary": "Host-finished MI ship after nanobot partial (1798_smx_mesh_cecum_life).",
+  "commit": "ce7848bd8",
+  "ts": "2026-09-01T06:42:28Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
