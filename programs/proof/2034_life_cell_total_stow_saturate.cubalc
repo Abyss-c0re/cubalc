@@ -1,0 +1,168 @@
+// 2034_life_cell_total_stow_saturate.cubalc
+// Life-force usability: total wealth + stow hibernate + saturate flood.
+// AGI measures full metabolic pool, hibernates above spark, floods reserve.
+// Extends life_cell. Cube is SoT. free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_total_stow_saturate | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: total = energy + empty reserve
+GETF seed energy
+ASSERT LAST_N == 16 "founder energy 16"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+SEND seed total
+ASSERT LAST_N == 16 "total 16"
+
+// Phase B: bank then total grows stores side
+SEND seed bank 6
+ASSERT LAST_N == 6 "banked 6"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10"
+SEND seed stores
+ASSERT LAST_N == 6 "stores 6"
+SEND seed total
+ASSERT LAST_N == 16 "total conserved 16"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr 10"
+
+// Phase C: stow hibernates above spark
+SEND seed stow
+ASSERT LAST_N == 9 "stowed 9 (10-1)"
+GETF seed energy
+ASSERT LAST_N == 1 "spark 1"
+SEND seed stores
+ASSERT LAST_N == 15 "stores 6+9"
+SEND seed total
+ASSERT LAST_N == 16 "total still 16"
+GETF seed ready
+ASSERT LAST_N == 0 "spark not ready"
+
+// Phase D: saturate floods reserve into active
+SEND seed saturate
+ASSERT LAST_N == 15 "flooded 15"
+GETF seed energy
+ASSERT LAST_N == 16 "active 16"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+SEND seed total
+ASSERT LAST_N == 16 "total 16"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after flood"
+
+// Phase E: feast, stow, partial draw, total holds
+SEND seed feed 8
+ASSERT LAST_N == 24 "feast 24"
+SEND seed total
+ASSERT LAST_N == 24 "total 24"
+SEND seed stow
+ASSERT LAST_N == 23 "stow 23"
+SEND seed total
+ASSERT LAST_N == 24 "total conserved"
+SEND seed draw 5
+ASSERT LAST_N == 5 "drew 5"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed stores
+ASSERT LAST_N == 18 "stores 18"
+SEND seed total
+ASSERT LAST_N == 24 "total 24"
+
+// Phase F: saturate arms mitosis pool
+SEND seed saturate
+ASSERT LAST_N == 18 "sat 18"
+GETF seed energy
+ASSERT LAST_N == 24 "active 24"
+SEND seed stores
+ASSERT LAST_N == 0 "empty"
+GETF seed ready
+ASSERT LAST_N == 1 "ready 24"
+
+// Phase G: G0 stow/saturate keep ready 0
+SEND seed quiesce
+ASSERT LAST_N == 1 "G0"
+SEND seed stow
+ASSERT LAST_N == 23 "G0 stow 23"
+GETF seed ready
+ASSERT LAST_N == 0 "G0 not ready"
+SEND seed saturate
+ASSERT LAST_N == 23 "G0 sat"
+GETF seed ready
+ASSERT LAST_N == 0 "G0 still not ready"
+GETF seed energy
+ASSERT LAST_N == 24 "G0 energy 24"
+SEND seed wake
+ASSERT LAST_N == 1 "wake ready"
+
+// Phase H: dead cell zeros
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+SEND d1 total
+ASSERT LAST_N == half "daughter total = energy"
+SEND d1 stow
+ASSERT LAST_N == half - 1 "daughter stow"
+SEND d1 total
+ASSERT LAST_N == half "daughter total conserved"
+SEND d1 die
+SEND d1 total
+ASSERT LAST_N == 0 "dead total 0"
+SEND d1 stow
+ASSERT LAST_N == 0 "dead stow 0"
+SEND d1 saturate
+ASSERT LAST_N == 0 "dead saturate 0"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"

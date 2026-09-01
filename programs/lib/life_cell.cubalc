@@ -35,6 +35,17 @@
 #   set_setpoint s       retune homeostat target (min 1)
 #   regulate             bank surplus above setpoint / draw deficit from reserve
 #   bias                 active energy minus setpoint (neg=hungry, pos=surplus)
+#   atp                  FIELD charged work currency (not burned by tick)
+#   charge n             convert active energy into ATP (retain life spark)
+#   spend n              burn ATP for work units (returns spent)
+#   charged              report ATP balance for ASSERT science
+#   catalyze             spend 1 ATP to nudge ready if energy near thr (work gift)
+#   total                active + reserve metabolic wealth
+#   stow                 hibernate: bank all but life spark into reserve
+#   saturate             pour entire reserve into active energy
+#   total                full metabolic wealth = energy + reserve
+#   stow                 hibernate prep: bank all above spark (1) into reserve
+#   saturate             emergency: draw entire reserve into active energy
 
 CLASS Cell
   FIELD alive 0
@@ -647,5 +658,86 @@ CLASS Cell
     END
     LET b = e - sp
     RET b
+  END
+
+  # Full metabolic wealth (active + glycogen stores) for science ASSERT.
+  METHOD total
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    LET s = e + r
+    RET s
+  END
+
+  # Hibernate prep: move all active energy above life-spark (1) into reserve.
+  # Returns amount stowed. Ready clears unless spark alone meets threshold.
+  METHOD stow
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET move = 0
+    IF e > 1 THEN
+      LET move = e - 1
+      LET e = 1
+    END
+    GETF THIS reserve
+    LET r = LAST_N + move
+    SETF THIS energy e
+    SETF THIS reserve r
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET move
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET move
+  END
+
+  # Emergency saturate: pour entire reserve into active energy. Arms mitosis if able.
+  # Returns amount drawn. Free energy floods the living pool.
+  METHOD saturate
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET take = LAST_N
+    SETF THIS reserve 0
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
   END
 END
