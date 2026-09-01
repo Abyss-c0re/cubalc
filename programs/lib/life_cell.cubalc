@@ -27,6 +27,10 @@
 #   sense                energy gap vs mitosis threshold (neg=below, pos=surplus)
 #   repair n             spend energy to shed age (life-force restoration)
 #   pulse n              advance n metabolic ticks in one CALL (batch usability)
+#   reserve              FIELD glycogen-like energy bank (protected from tick burn)
+#   bank n               move n active energy into reserve (keep life spark)
+#   draw n               pull n from reserve into active energy (stress recovery)
+#   stores               report reserve balance for ASSERT science
 
 CLASS Cell
   FIELD alive 0
@@ -37,6 +41,7 @@ CLASS Cell
   FIELD kind 0
   FIELD threshold 10
   FIELD quiescent 0
+  FIELD reserve 0
   ROLE body
 
   METHOD init a e g
@@ -48,6 +53,7 @@ CLASS Cell
     SETF THIS kind 0
     SETF THIS threshold 10
     SETF THIS quiescent 0
+    SETF THIS reserve 0
   END
 
   METHOD tick
@@ -112,6 +118,7 @@ CLASS Cell
     SETF THIS gen g
     SETF THIS ready 0
     SETF THIS quiescent 0
+    SETF THIS reserve 0
     RET 1
   END
 
@@ -131,6 +138,7 @@ CLASS Cell
     SETF THIS energy 0
     SETF THIS ready 0
     SETF THIS quiescent 0
+    SETF THIS reserve 0
     RET 0
   END
 
@@ -444,5 +452,101 @@ CLASS Cell
       LET i = i + 1
     END
     RET last_e
+  END
+
+  # Glycogen-like reserve: bank free energy away from tick metabolism.
+  # Keeps at least 1 active energy if alive (life spark). Returns banked amt.
+  METHOD bank n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET move = n
+    IF move > e THEN
+      LET move = e
+    END
+    # retain spark of life when possible
+    IF e - move < 1 THEN
+      IF e > 1 THEN
+        LET move = e - 1
+      ELSE
+        LET move = 0
+      END
+    END
+    LET e = e - move
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + move
+    SETF THIS reserve r
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET move
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET move
+  END
+
+  # Draw stored reserve back into active energy (stress recovery / feast).
+  # Returns amount actually drawn.
+  METHOD draw n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Report reserve balance (glycogen stores) for science ASSERT boards.
+  METHOD stores
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    RET LAST_N
   END
 END

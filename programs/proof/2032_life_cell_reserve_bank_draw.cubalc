@@ -1,0 +1,181 @@
+// 2032_life_cell_reserve_bank_draw.cubalc
+// Life-force usability: glycogen-like reserve bank/draw/stores.
+// AGI banks surplus, survives famine ticks, draws stores, then divides.
+// Extends life_cell. Cube is SoT. free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+
+GENESIS "NEXUS_COORD v1 | from=proof | type=life_cell_reserve_bank_draw | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx live"
+ASSERT ENERGY > 0 "energy flows"
+
+COMPARE bed hive
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+ASSERT HARMONY >= 0 "harmony"
+ASSERT UNITY >= 40 "unity"
+
+// Phase A: empty stores at birth; feed 0 recomputes ready from energy
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+GETF seed energy
+ASSERT LAST_N == 16 "founder energy 16"
+SEND seed feed 0
+ASSERT LAST_N == 16 "feed0 keeps 16"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 16"
+
+// Phase B: bank 6 into glycogen reserve
+SEND seed bank 6
+ASSERT LAST_N == 6 "banked 6"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10"
+SEND seed stores
+ASSERT LAST_N == 6 "stores 6"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready at thr 10"
+SEND seed sense
+ASSERT LAST_N == 0 "sense gap 0 at thr"
+
+// Phase C: bank refuses to kill spark
+SEND seed bank 100
+ASSERT LAST_N == 9 "bank capped retain spark"
+GETF seed energy
+ASSERT LAST_N == 1 "spark retained"
+SEND seed stores
+ASSERT LAST_N == 15 "stores 15"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready at 1"
+GETF seed alive
+ASSERT LAST_N == 1 "alive after deep bank"
+
+// Phase D: pulse under low active energy - reserve protected
+SEND seed pulse 3
+ASSERT LAST_N == 4 "pulse grew active only"
+GETF seed age
+ASSERT LAST_N == 3 "age 3"
+SEND seed stores
+ASSERT LAST_N == 15 "reserve untouched by pulse"
+SEND seed sense
+ASSERT LAST_N == -6 "sense 4-10"
+
+// Phase E: draw half the stores back
+SEND seed draw 8
+ASSERT LAST_N == 8 "drew 8"
+GETF seed energy
+ASSERT LAST_N == 12 "active 4+8=12"
+SEND seed stores
+ASSERT LAST_N == 7 "stores 15-8=7"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after draw"
+SEND seed sense
+ASSERT LAST_N == 2 "sense +2"
+
+// Phase F: draw overshoot clamps
+SEND seed draw 100
+ASSERT LAST_N == 7 "draw drained stores"
+GETF seed energy
+ASSERT LAST_N == 19 "active 12+7"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 19"
+
+// Phase G: vitality active-only
+SEND seed vitality
+ASSERT LAST_N == 1237 "vitality active-only"
+
+// Phase H: bank under G0
+SEND seed quiesce
+ASSERT LAST_N == 1 "enter G0"
+SEND seed bank 5
+ASSERT LAST_N == 5 "G0 bank 5"
+GETF seed energy
+ASSERT LAST_N == 14 "active 14"
+SEND seed stores
+ASSERT LAST_N == 5 "stores 5"
+GETF seed ready
+ASSERT LAST_N == 0 "G0 not ready"
+SEND seed pulse 2
+ASSERT LAST_N == 14 "G0 pulse conserves active"
+SEND seed stores
+ASSERT LAST_N == 5 "G0 pulse leaves stores"
+
+// Phase I: wake + draw arm mitosis
+SEND seed wake
+ASSERT LAST_N == 1 "wake ready at 14"
+SEND seed draw 5
+ASSERT LAST_N == 5 "drew remaining"
+GETF seed energy
+ASSERT LAST_N == 19 "armed 19"
+SEND seed stores
+ASSERT LAST_N == 0 "stores spent"
+GETF seed ready
+ASSERT LAST_N == 1 "ready for mitosis"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+ASSERT dg == 1 "daughter gen 1"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 9 "daughter half of 19"
+SEND d1 stores
+ASSERT LAST_N == 0 "daughter stores empty at birth"
+GETF seed energy
+ASSERT LAST_N == 9 "parent halved"
+SEND seed stores
+ASSERT LAST_N == 0 "parent stores held"
+
+SEND d1 die
+SEND d1 bank 3
+ASSERT LAST_N == 0 "dead bank 0"
+SEND d1 draw 3
+ASSERT LAST_N == 0 "dead draw 0"
+SEND d1 stores
+ASSERT LAST_N == 0 "dead stores 0"
+
+ENERGYFLOW 2
+FLOW 1
+ASSERT ENERGY > 0 "life force present"
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "mesh unity holds"
+ASSERT SMX_OK == 1 "smx still sealed"

@@ -1,0 +1,126 @@
+// atomic_printer_life_reserve_bank.cubalc
+// Science board: glycogen reserve bank/draw under atomic printer.
+// Feast-bank-famine-draw-mitosis wonder. Free energy must flow.
+// Cube is SoT. matrix is key. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=reserve | type=atomic_printer_life_reserve_bank | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 3 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+SEND seed feed 8
+ASSERT LAST_N == 20 "feast 20"
+SEND seed bank 10
+ASSERT LAST_N == 10 "banked 10"
+GETF seed energy
+ASSERT LAST_N == 10 "active at thr"
+SEND seed stores
+ASSERT LAST_N == 10 "stores 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr"
+
+SEND seed gift 4
+ASSERT LAST_N == 4 "gifted 4 to field"
+SEND ally feed 4
+ASSERT LAST_N == 7 "ally fed"
+GETF seed energy
+ASSERT LAST_N == 6 "seed active 6"
+SEND seed stores
+ASSERT LAST_N == 10 "stores still 10 after gift"
+
+SEND seed pulse 3
+ASSERT LAST_N == 9 "famine pulse active"
+GETF seed age
+ASSERT LAST_N == 3 "aged 3"
+SEND seed stores
+ASSERT LAST_N == 10 "reserve survives famine"
+SEND seed sense
+ASSERT LAST_N == -1 "still short thr"
+
+SEND seed draw 6
+ASSERT LAST_N == 6 "drew 6"
+GETF seed energy
+ASSERT LAST_N == 15 "active 15"
+SEND seed stores
+ASSERT LAST_N == 4 "stores 4 left"
+GETF seed ready
+ASSERT LAST_N == 1 "ready post-draw"
+SEND seed vitality
+ASSERT LAST_N == 1197 "vitality recovered"
+
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG bed d1
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 7 "daughter half"
+SEND d1 stores
+ASSERT LAST_N == 0 "newborn no stores"
+GETF seed energy
+ASSERT LAST_N == 7 "parent half"
+SEND seed stores
+ASSERT LAST_N == 4 "parent keeps insurance"
+
+SEND ally bank 2
+ASSERT LAST_N == 2 "ally banked 2"
+GETF ally energy
+ASSERT LAST_N == 5 "ally active 5"
+SEND ally draw 2
+ASSERT LAST_N == 2 "ally drew back"
+GETF ally energy
+ASSERT LAST_N == 7 "ally 7"
+SEND ally stores
+ASSERT LAST_N == 0 "ally stores empty"
+
+ENERGYFLOW 2
+FLOW 1
+COMPARE bed hive
+HARMONY hive
+ASSERT UNITY >= 30 "unity holds"
+ASSERT SMX_OK == 1 "smx sealed"
+ASSERT ENERGY > 0 "free energy flows"
