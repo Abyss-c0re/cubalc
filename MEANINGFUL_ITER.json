@@ -11,6 +11,17 @@
   "c_slice": "programs/lib/life_cell.cubalc",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
-  "feat_note": "total/stow/saturate free-energy pool usability on Cell"
+  "sealed": true,
+  "feat_note": "total/stow/saturate free-energy pool usability on Cell",
+  "head": "8fc62e33ece2ea8018cc3b125102b0b9f7e3367f",
+  "tip": "8fc62e33ece2ea8018cc3b125102b0b9f7e3367f",
+  "pin": "8fc62e33ece2ea8018cc3b125102b0b9f7e3367f",
+  "tip_equals_pin": true,
+  "feat_head": "8fc62e33ece2ea8018cc3b125102b0b9f7e3367f",
+  "proofs": {
+    "1949_life_cell_total_stow": "PASS 19/0",
+    "880_life_cell_atp": "PASS 15/0",
+    "1948_life_cell_atp": "PASS 12/0",
+    "1620": "PASS 12/0"
+  }
 }
