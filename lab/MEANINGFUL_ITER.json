@@ -13,9 +13,9 @@
   "next": "we_autoheal",
   "sealed": true,
   "feat_note": "total/stow/saturate free-energy pool usability on Cell",
-  "head": "0fc36f2edbf20c2f41cfedf6384362d5ac14461c",
-  "tip": "0fc36f2edbf20c2f41cfedf6384362d5ac14461c",
-  "pin": "0fc36f2edbf20c2f41cfedf6384362d5ac14461c",
+  "head": "598c29d0145195cd93f97479cec2393998422326",
+  "tip": "598c29d0145195cd93f97479cec2393998422326",
+  "pin": "598c29d0145195cd93f97479cec2393998422326",
   "tip_equals_pin": true,
   "feat_head": "8fc62e33ece2ea8018cc3b125102b0b9f7e3367f",
   "proofs": {
