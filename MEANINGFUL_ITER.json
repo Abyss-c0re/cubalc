@@ -8,7 +8,7 @@
   "c_slice": "programs/lib/life_cell.cubalc",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
+  "sealed": true,
   "atp_charge": 1,
   "atp_spend": 1,
   "atp_catalyze": 1,
@@ -17,9 +17,9 @@
     "1948": "PASS 12/0",
     "1620": "PASS 12/0"
   },
-  "head": "0feba581b0956505785214ef7658e100f45190e6",
-  "tip": "0feba581b0956505785214ef7658e100f45190e6",
-  "pin": "0feba581b0956505785214ef7658e100f45190e6",
+  "head": "be283db2d7c3467e71b62557f23a82fff4440ce1",
+  "tip": "be283db2d7c3467e71b62557f23a82fff4440ce1",
+  "pin": "be283db2d7c3467e71b62557f23a82fff4440ce1",
   "tip_equals_pin": true,
   "feat_head": "016b7a39312995a06318668752cd986f9866a59d"
 }
