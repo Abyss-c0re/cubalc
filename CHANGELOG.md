@@ -1,3 +1,11 @@
+## 1.15.1428-usability — 1948 LIFE_CELL_ATP
+- Cell.atp free-energy currency: charge / spend / catalyze
+- charge n adds ATP; spend n burns if enough else 0 (fail-closed)
+- catalyze converts 2 energy → 1 atp; recomputes ready
+- die/birth clear atp; parent ATP sticky through mitosis
+- Proofs: 880_life_cell_atp 15/0 + 1948_life_cell_atp 12/0; flagship 1620 = 12/0 PASS
+- pure .cubalc life_cell surface (no new C slice)
+
 ## 1.15.1373-usability — 1894 SMX mesh optic chiasm life
 - SMX OPTIC_CHIASM|MESH_OPTIC_CHIASM|RAISE_OPTIC_CHIASM
 - Fail-closed soft-OOB: storms never ghost-place; MESH_EXCHANGE C(4,2)=6

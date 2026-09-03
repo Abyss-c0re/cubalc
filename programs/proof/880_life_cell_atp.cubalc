@@ -1,0 +1,54 @@
+# Proof 880 — life_cell ATP charge / spend / catalyze usability
+# Free energy must flow as countable ATP under feast and work.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+SCIENCE LOAD
+SCENE petri
+CUBE medium ROLE host PROTON 1
+ENTITY c0 OF Cell 1 12 0
+PLUG medium c0
+IMPULSE medium 1
+
+GETF c0 atp
+ASSERT LAST_N == 0 "atp starts empty"
+
+SEND c0 charge 5
+ASSERT LAST_N == 5 "charge 5"
+GETF c0 atp
+ASSERT LAST_N == 5 "atp sticky after charge"
+
+SEND c0 spend 2
+ASSERT LAST_N == 3 "spend 2 leaves 3"
+GETF c0 atp
+ASSERT LAST_N == 3 "atp after spend"
+
+# overspend fail-closed (no negative)
+SEND c0 spend 99
+ASSERT LAST_N == 0 "overspend returns 0"
+GETF c0 atp
+ASSERT LAST_N == 3 "atp unchanged on overspend"
+
+# catalyze: 2 energy → 1 atp
+GETF c0 energy
+LET e_before = LAST_N
+ASSERT e_before >= 2 "energy for catalyze"
+SEND c0 catalyze
+ASSERT LAST_N == 4 "catalyze yields atp 4"
+GETF c0 energy
+LET e_after = LAST_N
+LET de = e_before - e_after
+ASSERT de == 2 "catalyze burns 2 energy"
+GETF c0 atp
+ASSERT LAST_N == 4 "atp after catalyze"
+
+# dead cell cannot charge
+SEND c0 die
+SEND c0 charge 3
+ASSERT LAST_N == 0 "dead charge blocked"
+GETF c0 atp
+ASSERT LAST_N == 0 "die clears atp"
+
+PRINT "life_cell_atp" 1
+ASSERT OK == 1

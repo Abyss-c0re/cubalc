@@ -1,0 +1,54 @@
+# 1948_life_cell_atp.cubalc
+# LIFE_CELL_ATP — charge/spend/catalyze free-energy currency on Cell.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed charge 4
+ASSERT LAST_N == 4 "seed charged"
+SEND seed catalyze
+ASSERT LAST_N == 5 "catalyze after charge"
+GETF seed energy
+ASSERT LAST_N == 14 "energy after catalyze 16-2"
+
+SEND seed spend 3
+ASSERT LAST_N == 2 "spend leaves 2 atp"
+
+# mitosis still works with ATP present
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+SEND seed after_div
+PLUG medium d1
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 atp
+ASSERT LAST_N == 0 "daughter atp starts 0"
+GETF seed atp
+ASSERT LAST_N == 2 "parent atp sticky through mitosis"
+
+SEND d1 charge 1
+SEND d1 catalyze
+GETF d1 atp
+ASSERT LAST_N >= 1 "daughter can charge+catalyze"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 3
+ASSERT OK == 1
+PRINT "life_cell_atp_1948" CUBES ENERGY
+PASS

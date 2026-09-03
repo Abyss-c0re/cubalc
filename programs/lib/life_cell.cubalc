@@ -1,4 +1,4 @@
-# life_cell.cubalc — COP cell unit for life_engine (biology: growth + mitosis)
+# life_cell.cubalc — COP cell unit for life_engine (biology: growth + mitosis + ATP)
 # INCLUDE life_cell
 #
 # Fields:
@@ -8,6 +8,7 @@
 #   gen    generation from seed (0 = founder)
 #   ready  1 when energy >= threshold → candidate for division
 #   kind   0=prokaryote-like simple split
+#   atp    usable free-energy currency (charge/spend/catalyze)
 #
 # Methods:
 #   init alive energy gen
@@ -15,6 +16,9 @@
 #   birth energy gen   activate a free slot as daughter
 #   after_div      parent halves energy after successful mitosis
 #   die            apoptosis / resource death
+#   charge n       add n to atp (gift / nutrient phosphorylation)
+#   spend n        burn n atp if enough; else 0
+#   catalyze       convert 2 energy → 1 atp when energy >= 2
 
 CLASS Cell
   FIELD alive 0
@@ -23,6 +27,7 @@ CLASS Cell
   FIELD gen 0
   FIELD ready 0
   FIELD kind 0
+  FIELD atp 0
   ROLE body
 
   METHOD init a e g
@@ -32,6 +37,7 @@ CLASS Cell
     SETF THIS gen g
     SETF THIS ready 0
     SETF THIS kind 0
+    SETF THIS atp 0
   END
 
   METHOD tick
@@ -78,6 +84,7 @@ CLASS Cell
     SETF THIS age 0
     SETF THIS gen g
     SETF THIS ready 0
+    SETF THIS atp 0
     RET 1
   END
 
@@ -96,6 +103,63 @@ CLASS Cell
     SETF THIS alive 0
     SETF THIS energy 0
     SETF THIS ready 0
+    SETF THIS atp 0
     RET 0
+  END
+
+  METHOD charge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS atp
+    LET a = LAST_N + n
+    SETF THIS atp a
+    RET a
+  END
+
+  METHOD spend n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < n THEN
+      RET 0
+    END
+    LET a = a - n
+    SETF THIS atp a
+    RET a
+  END
+
+  METHOD catalyze
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 2
+    SETF THIS energy e
+    GETF THIS atp
+    LET a = LAST_N + 1
+    SETF THIS atp a
+    # recompute ready after energy drop
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
   END
 END

@@ -1,0 +1,6 @@
+LIFE_CELL_ATP 1948
+feat — Cell ATP free-energy currency (charge/spend/catalyze)
+proofs 880+1948 asserts_ok=27 fail=0; flagship 1620 PASS 12/0
+atp field + charge n / spend n / catalyze (2 energy → 1 atp)
+die/birth clear atp; overspend fail-closed; parent atp sticky through mitosis
+pin MEANINGFUL_ITER 1948 · VERSION 1.15.1428-usability
