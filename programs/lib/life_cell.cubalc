@@ -19,6 +19,9 @@
 #   charge n       add n to atp (gift / nutrient phosphorylation)
 #   spend n        burn n atp if enough; else 0
 #   catalyze       convert 2 energy → 1 atp when energy >= 2
+#   total          energy + atp (countable free-energy pool)
+#   stow n         move n energy → atp (storage; fail-closed)
+#   saturate cap   fill atp up to cap from energy (feast→store)
 
 CLASS Cell
   FIELD alive 0
@@ -155,6 +158,78 @@ CLASS Cell
     LET a = LAST_N + 1
     SETF THIS atp a
     # recompute ready after energy drop
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
+  END
+
+  METHOD total
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS atp
+    LET a = LAST_N
+    LET t = e + a
+    RET t
+  END
+
+  METHOD stow n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < n THEN
+      RET 0
+    END
+    LET e = e - n
+    SETF THIS energy e
+    GETF THIS atp
+    LET a = LAST_N + n
+    SETF THIS atp a
+    # recompute ready after energy drop
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
+  END
+
+  METHOD saturate cap
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF cap < 0 THEN
+      LET cap = 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a >= cap THEN
+      RET a
+    END
+    LET need = cap - a
+    GETF THIS energy
+    LET e = LAST_N
+    LET move = need
+    IF e < move THEN
+      LET move = e
+    END
+    LET e = e - move
+    SETF THIS energy e
+    LET a = a + move
+    SETF THIS atp a
     LET rd = 0
     IF e >= 10 THEN
       LET rd = 1

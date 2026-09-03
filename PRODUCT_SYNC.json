@@ -1,19 +1,20 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1948,
-  "feature": "LIFE_CELL_ATP",
-  "version": "1.15.1428-usability",
+  "meaningful_iter": 1949,
+  "feature": "LIFE_CELL_TOTAL_STOW_SATURATE",
+  "version": "1.15.1429-usability",
   "c_slice": "programs/lib/life_cell.cubalc",
   "proofs": [
+    "1949_life_cell_total_stow",
     "880_life_cell_atp",
     "1948_life_cell_atp",
     "1620_atomic_printer_life_force"
   ],
-  "atp_charge": 1,
-  "atp_spend": 1,
-  "atp_catalyze": 1,
+  "total": 1,
+  "stow": 1,
+  "saturate": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "ship": "1948_life_cell_atp",
-  "head_note": "LIFE_CELL_ATP charge/spend/catalyze free-energy currency on Cell"
+  "ship": "1949_life_cell_total_stow",
+  "head_note": "LIFE_CELL total/stow/saturate countable free-energy pool"
 }

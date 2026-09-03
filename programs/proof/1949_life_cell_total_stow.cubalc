@@ -1,0 +1,65 @@
+# 1949_life_cell_total_stow.cubalc
+# LIFE_CELL_TOTAL_STOW_SATURATE — countable free-energy pool + storage under feast.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 20 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+# total = energy + atp
+GETF seed energy
+ASSERT LAST_N == 20 "seed energy 20"
+SEND seed total
+ASSERT LAST_N == 20 "total equals energy when atp empty"
+
+SEND seed charge 3
+SEND seed total
+ASSERT LAST_N == 23 "total energy+atp after charge"
+
+# stow moves energy → atp fail-closed
+SEND seed stow 5
+ASSERT LAST_N == 8 "stow 5 → atp 3+5=8"
+GETF seed energy
+ASSERT LAST_N == 15 "energy after stow 20-5"
+SEND seed total
+ASSERT LAST_N == 23 "total conserved across stow"
+
+# overstow fail-closed
+SEND seed stow 99
+ASSERT LAST_N == 0 "overstow returns 0"
+GETF seed energy
+ASSERT LAST_N == 15 "energy unchanged on overstow"
+
+# saturate fills atp up to cap from energy
+SEND seed saturate 12
+ASSERT LAST_N == 12 "saturate to cap 12"
+GETF seed energy
+ASSERT LAST_N == 11 "energy paid 4 to reach cap"
+SEND seed total
+ASSERT LAST_N == 23 "total conserved across saturate"
+
+# already at/above cap is no-op
+SEND seed saturate 10
+ASSERT LAST_N == 12 "saturate below current leaves atp"
+
+# dead cell blocked
+SEND seed die
+SEND seed total
+ASSERT LAST_N == 0 "dead total 0"
+SEND seed stow 1
+ASSERT LAST_N == 0 "dead stow blocked"
+SEND seed saturate 5
+ASSERT LAST_N == 0 "dead saturate blocked"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_total_stow_1949" CUBES ENERGY
+PASS
