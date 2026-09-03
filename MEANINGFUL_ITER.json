@@ -13,17 +13,14 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "head": "1c295bf8d3759f71e5844759d48e86e62aaf9856",
-  "tip": "1c295bf8d3759f71e5844759d48e86e62aaf9856",
-  "pin": "1c295bf8d3759f71e5844759d48e86e62aaf9856",
+  "head": "f8b0e4653ff4090ad349f527c476353281d52906",
+  "tip": "f8b0e4653ff4090ad349f527c476353281d52906",
+  "pin": "f8b0e4653ff4090ad349f527c476353281d52906",
   "tip_equals_pin": true,
   "feat_head": "016b7a39312995a06318668752cd986f9866a59d",
   "proofs": {
-    "880": "PASS 15/0",
-    "1948": "PASS 12/0",
+    "880_life_cell_atp": "PASS 15/0",
+    "1948_life_cell_atp": "PASS 12/0",
     "1620": "PASS 12/0"
-  },
-  "atp_charge": 1,
-  "atp_spend": 1,
-  "atp_catalyze": 1
+  }
 }
