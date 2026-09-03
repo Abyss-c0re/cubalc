@@ -13,9 +13,9 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "head": "1090f867eb7f404006d2fbd4451708f25b829d0b",
-  "tip": "1090f867eb7f404006d2fbd4451708f25b829d0b",
-  "pin": "1090f867eb7f404006d2fbd4451708f25b829d0b",
+  "head": "65f400b17e0726cb331db2d90c907eccb979ea9c",
+  "tip": "65f400b17e0726cb331db2d90c907eccb979ea9c",
+  "pin": "65f400b17e0726cb331db2d90c907eccb979ea9c",
   "tip_equals_pin": true,
   "feat_head": "016b7a39312995a06318668752cd986f9866a59d",
   "proofs": {
