@@ -1,21 +1,19 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1947,
-  "feature": "MESH_OSTEOCLAST",
-  "version": "1.15.1427-usability",
-  "c_slice": "src/cubalc_smx_osteoclast.c",
+  "meaningful_iter": 1948,
+  "feature": "LIFE_CELL_ATP",
+  "version": "1.15.1428-usability",
+  "c_slice": "programs/lib/life_cell.cubalc",
   "proofs": [
-    "1947_smx_mesh_osteoclast_life",
-    "99_smx_osteoclast",
+    "880_life_cell_atp",
+    "1948_life_cell_atp",
     "1620_atomic_printer_life_force"
   ],
-  "soft_oob": 1,
-  "bonds": 6,
-  "dual_autoheal": 1,
-  "howship_ready": 1,
-  "resorption_front_coupled": 1,
+  "atp_charge": 1,
+  "atp_spend": 1,
+  "atp_catalyze": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "ship": "1947_smx_mesh_osteoclast_life",
-  "head_note": "MESH_OSTEOCLAST dual-autoheal howship_ready resorption_front_coupled"
+  "ship": "1948_life_cell_atp",
+  "head_note": "LIFE_CELL_ATP charge/spend/catalyze free-energy currency on Cell"
 }
