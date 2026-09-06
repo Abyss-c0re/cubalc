@@ -1,0 +1,6 @@
+LIFE_CELL_SPARE_GLYCOLYSE 1954
+feat — programs/lib/life_cell.cubalc METHOD spare + glycolyse n
+proofs 1954 asserts_ok=33 fail=0; 1952 PASS 24/0; 1951 PASS 22/0; 1950 PASS 20/0; 1949 PASS 19/0; 1948 PASS 12/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 1954 · VERSION 1.15.1434-usability
+free energy: spare = max(0, energy-10) above mitosis; glycolyse = anaerobic burn n → floor(n/4) atp (half respire yield)
+HEAD tip==pin sealed

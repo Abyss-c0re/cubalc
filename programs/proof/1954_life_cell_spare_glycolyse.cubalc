@@ -1,0 +1,109 @@
+# 1954_life_cell_spare_glycolyse.cubalc
+# LIFE_CELL_SPARE_GLYCOLYSE — surplus above mitosis + anaerobic ATP yield.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 14 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 14 "seed energy 14"
+GETF seed ready
+ASSERT LAST_N == 0 "ready not set until energy-touch"
+
+# spare = max(0, energy-10) working surplus above mitosis threshold
+SEND seed spare
+ASSERT LAST_N == 4 "spare 14-10 = 4"
+SEND seed budget
+ASSERT LAST_N == 0 "budget 0 when energy >= 10"
+
+# force ready recompute via stow 0
+SEND seed stow 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after stow0 at energy 14"
+SEND seed spare
+ASSERT LAST_N == 4 "spare still 4"
+
+# glycolyse: anaerobic burn n energy → floor(n/4) atp (half aerobic yield)
+SEND seed glycolyse 8
+ASSERT LAST_N == 2 "glycolyse 8 → +2 atp"
+GETF seed energy
+ASSERT LAST_N == 6 "energy 14-8=6"
+GETF seed atp
+ASSERT LAST_N == 2 "atp after glycolyse"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready after drop below 10"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 below threshold"
+SEND seed budget
+ASSERT LAST_N == 4 "budget 10-6=4"
+SEND seed total
+ASSERT LAST_N == 8 "total 6+2"
+# potential = energy + 2*atp
+SEND seed potential
+ASSERT LAST_N == 10 "potential 6+4=10"
+
+# odd n floors gain
+SEND seed charge 0
+# restore some energy via mobilize after charging atp already 2
+# charge more then mobilize to raise energy for next glycolyse
+SEND seed charge 6
+SEND seed mobilize 6
+ASSERT LAST_N == 12 "mobilize → energy 6+6=12"
+GETF seed atp
+ASSERT LAST_N == 2 "atp left 2 after mobilize 6 from 8"
+SEND seed spare
+ASSERT LAST_N == 2 "spare 12-10=2"
+
+# glycolyse 5 → floor(5/4)=1 atp
+SEND seed glycolyse 5
+ASSERT LAST_N == 3 "glycolyse 5 → atp 2+1=3"
+GETF seed energy
+ASSERT LAST_N == 7 "energy 12-5=7"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 at 7"
+
+# over-glycolyse fail-closed
+SEND seed glycolyse 99
+ASSERT LAST_N == 0 "over-glycolyse returns 0"
+GETF seed energy
+ASSERT LAST_N == 7 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 3 "atp unchanged on fail"
+
+# exact threshold spare 0
+SEND seed die
+ENTITY cell2 OF Cell 1 10 0
+PLUG medium cell2
+SEND cell2 spare
+ASSERT LAST_N == 0 "spare 0 at exact threshold 10"
+SEND cell2 glycolyse 4
+ASSERT LAST_N == 1 "glycolyse 4 → +1 atp"
+GETF cell2 energy
+ASSERT LAST_N == 6 "energy 10-4"
+
+# dead blocked
+SEND cell2 die
+SEND cell2 spare
+ASSERT LAST_N == 0 "dead spare 0"
+SEND cell2 glycolyse 2
+ASSERT LAST_N == 0 "dead glycolyse 0"
+
+# below threshold spare 0
+ENTITY cell3 OF Cell 1 3 0
+PLUG medium cell3
+SEND cell3 spare
+ASSERT LAST_N == 0 "spare 0 when energy 3 < 10"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_spare_glycolyse_1954" CUBES ENERGY
+PASS

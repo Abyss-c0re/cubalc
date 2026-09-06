@@ -1,0 +1,28 @@
+# Biology 09 — Life cell spare surplus + anaerobic glycolysis usability
+# Pure .cubalc science board: mitosis spare + glycolyse free-energy path
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 14 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed stow 0
+SEND seed spare
+ASSERT LAST_N == 4 "spare above mitosis"
+SEND seed glycolyse 4
+ASSERT LAST_N == 1 "anaerobic +1 atp"
+GETF seed energy
+ASSERT LAST_N == 10 "at threshold after glycolyse"
+SEND seed spare
+ASSERT LAST_N == 0 "no spare at threshold"
+SEND seed potential
+ASSERT LAST_N == 12 "potential conserved path 10+2*1"
+
+PRINT "bio09_spare_glycolyse" ENERGY
+PASS
