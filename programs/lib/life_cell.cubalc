@@ -30,6 +30,7 @@
 #   endow          daughter energy gift if ready (= parent energy/2, min 1); else 0
 #   spare          working energy above mitosis threshold (max(0, energy-10); 0 if dead)
 #   glycolyse n    anaerobic: burn n energy → floor(n/4) atp (fail-closed; 1/2 respire yield)
+#   phosphorylate n  substrate-level: burn n energy → n atp 1:1 (fail-closed; full yield)
 
 CLASS Cell
   FIELD alive 0
@@ -388,6 +389,33 @@ CLASS Cell
     LET gain = n / 4
     GETF THIS atp
     LET a = LAST_N + gain
+    SETF THIS atp a
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
+  END
+
+  METHOD phosphorylate n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < n THEN
+      RET 0
+    END
+    LET e = e - n
+    SETF THIS energy e
+    # substrate-level phosphorylation: 1 energy → 1 atp (full yield)
+    GETF THIS atp
+    LET a = LAST_N + n
     SETF THIS atp a
     LET rd = 0
     IF e >= 10 THEN

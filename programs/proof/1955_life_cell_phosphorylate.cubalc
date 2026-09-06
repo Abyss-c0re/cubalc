@@ -1,0 +1,131 @@
+# 1955_life_cell_phosphorylate.cubalc
+# LIFE_CELL_PHOSPHORYLATE — substrate-level 1:1 energy→atp (full yield).
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 14 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 14 "seed energy 14"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+GETF seed ready
+ASSERT LAST_N == 0 "ready not set until energy-touch"
+SEND seed spare
+ASSERT LAST_N == 4 "spare 14-10=4"
+
+# force ready recompute via stow 0 (energy-touch)
+SEND seed stow 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after stow0 at energy 14"
+SEND seed spare
+ASSERT LAST_N == 4 "spare still 4"
+
+# phosphorylate 3 → +3 atp, energy 11
+SEND seed phosphorylate 3
+ASSERT LAST_N == 3 "phosphorylate 3 → atp 3"
+GETF seed energy
+ASSERT LAST_N == 11 "energy 14-3=11"
+GETF seed atp
+ASSERT LAST_N == 3 "atp 3"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready at 11"
+SEND seed spare
+ASSERT LAST_N == 1 "spare 11-10=1"
+SEND seed total
+ASSERT LAST_N == 14 "total conserved 11+3"
+SEND seed potential
+ASSERT LAST_N == 17 "potential 11+2*3=17"
+
+# phosphorylate 1 → energy 10 exact threshold
+SEND seed phosphorylate 1
+ASSERT LAST_N == 4 "atp 3+1=4"
+GETF seed energy
+ASSERT LAST_N == 10 "energy 10"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 at threshold"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at exact 10"
+SEND seed budget
+ASSERT LAST_N == 0 "budget 0 at threshold"
+
+# drop below ready via phosphorylate 2
+SEND seed phosphorylate 2
+ASSERT LAST_N == 6 "atp 4+2=6"
+GETF seed energy
+ASSERT LAST_N == 8 "energy 8"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below 10"
+SEND seed budget
+ASSERT LAST_N == 2 "budget 10-8=2"
+SEND seed total
+ASSERT LAST_N == 14 "total still 8+6"
+
+# zero n is no-op gain 0 but returns atp
+SEND seed phosphorylate 0
+ASSERT LAST_N == 6 "phosphorylate 0 keeps atp"
+GETF seed energy
+ASSERT LAST_N == 8 "energy unchanged on 0"
+
+# over-burn fail-closed
+SEND seed phosphorylate 99
+ASSERT LAST_N == 0 "over-phosphorylate returns 0"
+GETF seed energy
+ASSERT LAST_N == 8 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 6 "atp unchanged on fail"
+
+# negative clamped
+SEND seed phosphorylate -3
+ASSERT LAST_N == 6 "neg n clamps to 0 gain path returns atp"
+GETF seed energy
+ASSERT LAST_N == 8 "energy unchanged on neg"
+
+# dead blocked
+SEND seed die
+SEND seed phosphorylate 1
+ASSERT LAST_N == 0 "dead phosphorylate 0"
+
+# fresh cell full convert
+ENTITY cell2 OF Cell 1 5 0
+PLUG medium cell2
+SEND cell2 phosphorylate 5
+ASSERT LAST_N == 5 "full convert energy→atp"
+GETF cell2 energy
+ASSERT LAST_N == 0 "energy 0 after full phosphorylate"
+GETF cell2 atp
+ASSERT LAST_N == 5 "atp 5"
+GETF cell2 ready
+ASSERT LAST_N == 0 "not ready"
+SEND cell2 total
+ASSERT LAST_N == 5 "total 5"
+SEND cell2 potential
+ASSERT LAST_N == 10 "potential 0+10=10"
+
+# compare yield vs glycolyse on twin: glycolyse 4 → +1; phosphorylate 4 → +4
+ENTITY g OF Cell 1 12 0
+ENTITY p OF Cell 1 12 0
+PLUG medium g
+PLUG medium p
+SEND g glycolyse 4
+ASSERT LAST_N == 1 "glycolyse 4 → 1 atp"
+SEND p phosphorylate 4
+ASSERT LAST_N == 4 "phosphorylate 4 → 4 atp"
+GETF g energy
+ASSERT LAST_N == 8 "g energy 8"
+GETF p energy
+ASSERT LAST_N == 8 "p energy 8"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_phosphorylate_1955" CUBES ENERGY
+PASS

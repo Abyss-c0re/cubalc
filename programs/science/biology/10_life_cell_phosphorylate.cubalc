@@ -1,0 +1,30 @@
+# Biology 10 — Life cell substrate-level phosphorylation usability
+# Pure .cubalc science board: 1:1 energy→atp full-yield free-energy path
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 12 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed stow 0
+SEND seed spare
+ASSERT LAST_N == 2 "spare above mitosis"
+SEND seed phosphorylate 2
+ASSERT LAST_N == 2 "substrate-level +2 atp"
+GETF seed energy
+ASSERT LAST_N == 10 "at threshold after phosphorylate"
+SEND seed spare
+ASSERT LAST_N == 0 "no spare at threshold"
+SEND seed total
+ASSERT LAST_N == 12 "total conserved"
+SEND seed potential
+ASSERT LAST_N == 14 "potential 10+2*2"
+
+PRINT "bio10_phosphorylate" ENERGY
+PASS
