@@ -49,6 +49,7 @@
 #   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
 #   respire n            reserve → energy (mitochondrial respiration shortcut)
 #   photosynth n         light quanta → reserve (free-energy fixation gift)
+#   photophos n          light quanta → ATP (photophosphorylation / solar work)
 
 CLASS Cell
   FIELD alive 0
@@ -1024,6 +1025,26 @@ CLASS Cell
     GETF THIS reserve
     LET r = LAST_N + n
     SETF THIS reserve r
+    RET n
+  END
+
+
+  # Photophos: fix n light-quanta directly into ATP (photophosphorylation).
+  # Solar work-currency path — companion to photosynth (carbon/reserve fixation).
+  # Does not consume active energy, reserve, or life spark. Yield rises by n.
+  # Usability: AGI solar budget → charged ATP for catalyze/spend/oxidize.
+  # Returns amount phosphorylated. Dead/zero/neg → 0.
+  METHOD photophos n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N + n
+    SETF THIS atp a
     RET n
   END
 

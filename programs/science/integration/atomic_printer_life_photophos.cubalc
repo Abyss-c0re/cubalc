@@ -1,0 +1,107 @@
+// atomic_printer_life_photophos.cubalc
+// Science board: atomic printer + life_cell photophosphorylation.
+// Light quanta → ATP work currency; harvest via oxidize/catalyze arms mitosis.
+// Companion to photosynth (reserve). Gift: CubalC life-force substrate.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_photophos | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE sun ROLE energy PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS sun    "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG sun bed
+
+ENTITY seed OF Cell 1 3 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE sun 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Solar photophosphorylation: light → ATP without spending spark
+GETF seed energy
+ASSERT LAST_N == 3 "life spark 3"
+SEND seed photophos 6
+ASSERT LAST_N == 6 "photophos 6"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+GETF seed energy
+ASSERT LAST_N == 3 "spark held"
+SEND seed yield
+ASSERT LAST_N == 9 "yield gift"
+
+// Harvest ATP into active path and arm mitosis
+SEND seed oxidize 5
+ASSERT LAST_N == 5 "oxidize harvest"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+SEND seed feed 2
+ASSERT LAST_N == 10 "feed to thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after photophos+oxidize"
+SEND seed yield
+ASSERT LAST_N == 11 "yield ledger"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter born"
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == half "daughter energy"
+SEND d1 photophos 3
+ASSERT LAST_N == 3 "daughter solar atp"
+SEND d1 charged
+ASSERT LAST_N == 3 "daughter atp"
+SEND d1 catalyze
+// may or may not arm depending on energy vs thr; just exercise path
+SEND d1 yield
+ASSERT LAST_N >= 3 "daughter yield solar"
+
+// Dual solar paths on founder remnant: photosynth + photophos
+SEND seed photosynth 2
+ASSERT LAST_N == 2 "parent photo reserve"
+SEND seed photophos 2
+ASSERT LAST_N == 2 "parent more atp"
+SEND seed yield
+ASSERT LAST_N >= 5 "parent multi-path yield"
+
+// SMX still clean after life cascade
+SMX EXCHANGE bed hive
+ASSERT SMX_OK == 1 "smx post-mitosis ok"
+
+ASSERT 1 == 1 "atomic_printer_life_photophos PASS"

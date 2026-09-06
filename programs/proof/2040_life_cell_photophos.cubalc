@@ -1,0 +1,132 @@
+// 2040_life_cell_photophos.cubalc
+// Proof: life_cell photophos — light quanta → ATP photophosphorylation.
+// Solar work-currency path. Companion to photosynth (reserve fixation).
+// Yield conserved. Arms catalyze/oxidize without burning spark.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 6 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 4 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 6 "spark 6"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+SEND seed yield
+ASSERT LAST_N == 6 "yield 6"
+
+// Photophos fixes light into ATP work currency
+SEND seed photophos 4
+ASSERT LAST_N == 4 "photophos 4"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4"
+GETF seed energy
+ASSERT LAST_N == 6 "spark held"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed yield
+ASSERT LAST_N == 10 "yield +4 solar"
+
+// Stack more light into ATP
+SEND seed photophos 3
+ASSERT LAST_N == 3 "photophos 3"
+SEND seed charged
+ASSERT LAST_N == 7 "atp 7"
+SEND seed yield
+ASSERT LAST_N == 13 "yield 13"
+
+// Oxidize harvests photophos ATP into active energy
+SEND seed oxidize 5
+ASSERT LAST_N == 5 "oxidize harvest"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2 left"
+GETF seed energy
+ASSERT LAST_N == 11 "active 11"
+SEND seed yield
+ASSERT LAST_N == 13 "yield conserved after oxidize"
+
+// Catalyze via solar ATP near threshold
+ENTITY cat OF Cell 1 9 0
+SEND cat set_threshold 10
+ASSERT LAST_N == 10 "thr 10"
+GETF cat ready
+ASSERT LAST_N == 0 "not ready yet"
+SEND cat photophos 2
+ASSERT LAST_N == 2 "cat solar atp"
+SEND cat catalyze
+ASSERT LAST_N == 1 "catalyze armed"
+GETF cat ready
+ASSERT LAST_N == 1 "ready via photophos"
+SEND cat charged
+ASSERT LAST_N == 1 "1 atp spent on catalyze"
+
+// Dual path: photosynth reserve + photophos ATP, yield sum
+ENTITY dual OF Cell 1 5 0
+SEND dual photosynth 4
+ASSERT LAST_N == 4 "dual photo reserve"
+SEND dual photophos 3
+ASSERT LAST_N == 3 "dual photo atp"
+SEND dual stores
+ASSERT LAST_N == 4 "dual reserve 4"
+SEND dual charged
+ASSERT LAST_N == 3 "dual atp 3"
+SEND dual yield
+ASSERT LAST_N == 12 "dual yield 5+4+3"
+SEND dual respire 2
+ASSERT LAST_N == 2 "dual respire"
+SEND dual oxidize 1
+ASSERT LAST_N == 1 "dual oxidize"
+GETF dual energy
+ASSERT LAST_N == 8 "dual active 5+2+1"
+SEND dual yield
+ASSERT LAST_N == 12 "dual yield conserved"
+
+// Dead / bounds
+SEND dead photophos 3
+ASSERT LAST_N == 0 "dead no photophos"
+SEND seed photophos 0
+ASSERT LAST_N == 0 "zero n"
+SEND seed photophos -5
+ASSERT LAST_N == 0 "neg n"
+SEND ally yield
+ASSERT LAST_N == 8 "ally intact"
+
+// Quiescent still phosphorylates (ATP for wake work)
+SEND quiet photophos 5
+ASSERT LAST_N == 5 "quiet photophos"
+SEND quiet charged
+ASSERT LAST_N == 5 "quiet atp"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet photophos 2
+ASSERT LAST_N == 2 "quiet photophos G0"
+SEND quiet charged
+ASSERT LAST_N == 7 "quiet atp 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet never ready"
+GETF quiet energy
+ASSERT LAST_N == 4 "quiet spark held"
+SEND quiet yield
+ASSERT LAST_N == 11 "quiet yield 4+7"
+
+// Spend solar ATP for work without touching spark
+ENTITY work OF Cell 1 3 0
+SEND work photophos 6
+ASSERT LAST_N == 6 "work solar"
+SEND work spend 4
+ASSERT LAST_N == 4 "work spend"
+SEND work charged
+ASSERT LAST_N == 2 "work atp left"
+GETF work energy
+ASSERT LAST_N == 3 "work spark held"
+SEND work yield
+ASSERT LAST_N == 5 "work yield after spend"
+
+ASSERT 1 == 1 "life_cell photophos PASS"

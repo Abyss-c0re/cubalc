@@ -1,0 +1,18 @@
+// 2040_atomic_printer_life_photophos.cubalc — science proof shim
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY s OF Cell 1 4 0
+SEND s photophos 5
+ASSERT LAST_N == 5 "photophos"
+SEND s charged
+ASSERT LAST_N == 5 "atp"
+GETF s energy
+ASSERT LAST_N == 4 "spark held"
+SEND s oxidize 3
+ASSERT LAST_N == 3 "oxidize"
+GETF s energy
+ASSERT LAST_N == 7 "energy"
+SEND s yield
+ASSERT LAST_N == 9 "yield"
+ASSERT 1 == 1 "science proof photophos PASS"
