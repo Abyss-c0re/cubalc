@@ -1,0 +1,139 @@
+// 2042_life_cell_reverse.cubalc
+// Proof: life_cell reverse F1Fo — ATP → pmf (ATP-hydrolysis driven gradient).
+// Reversible chemiosmotic coupling: pump→synthase→reverse→synthase cycle.
+// Yield conserved. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Build ATP via pump + synthase
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+SEND seed synthase 5
+ASSERT LAST_N == 5 "synthase 5"
+SEND seed charged
+ASSERT LAST_N == 5 "atp 5"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1 left"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after synthase"
+
+// Reverse: spend ATP to rebuild gradient
+SEND seed reverse 3
+ASSERT LAST_N == 3 "reverse 3"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed gradient
+ASSERT LAST_N == 4 "pmf 4"
+GETF seed energy
+ASSERT LAST_N == 6 "spark path held"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved after reverse"
+
+// Full reverse drain of remaining ATP
+SEND seed reverse 9
+ASSERT LAST_N == 2 "reverse drains 2"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield still 12"
+
+// Synthase harvests reversed gradient back to ATP
+SEND seed synthase 4
+ASSERT LAST_N == 4 "resynthase 4"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after resynthase"
+
+// Dead cell: reverse is noop
+SEND dead reverse 3
+ASSERT LAST_N == 0 "dead reverse 0"
+SEND dead gradient
+ASSERT LAST_N == 0 "dead pmf 0"
+SEND dead charged
+ASSERT LAST_N == 0 "dead atp 0"
+
+// Zero / neg args
+SEND seed reverse 0
+ASSERT LAST_N == 0 "zero reverse"
+SEND seed reverse -2
+ASSERT LAST_N == 0 "neg reverse"
+
+// Quiescent path still allows reverse (membrane work independent of G0)
+SEND quiet photophos 4
+ASSERT LAST_N == 4 "quiet solar atp"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet reverse 2
+ASSERT LAST_N == 2 "quiet reverse"
+SEND quiet gradient
+ASSERT LAST_N == 2 "quiet pmf 2"
+SEND quiet charged
+ASSERT LAST_N == 2 "quiet atp 2"
+SEND quiet yield
+ASSERT LAST_N == 10 "quiet yield 6+4"
+
+// Ally: photophos → reverse → synthase cycle (solar → gradient → work)
+SEND ally photophos 5
+ASSERT LAST_N == 5 "ally solar"
+SEND ally reverse 3
+ASSERT LAST_N == 3 "ally reverse"
+SEND ally synthase 2
+ASSERT LAST_N == 2 "ally synthase"
+SEND ally charged
+ASSERT LAST_N == 4 "ally atp 5-3+2"
+SEND ally gradient
+ASSERT LAST_N == 1 "ally pmf 1"
+SEND ally yield
+ASSERT LAST_N == 13 "ally yield 8+5"
+
+// Oxidize after reverse-resynthase arms mitosis path
+ENTITY cat OF Cell 1 11 0
+SEND cat set_threshold 10
+ASSERT LAST_N == 10 "thr 10"
+SEND cat pump 3
+ASSERT LAST_N == 3 "cat pump"
+SEND cat synthase 3
+ASSERT LAST_N == 3 "cat synthase"
+SEND cat reverse 2
+ASSERT LAST_N == 2 "cat reverse"
+SEND cat synthase 2
+ASSERT LAST_N == 2 "cat resynth"
+SEND cat oxidize 2
+ASSERT LAST_N == 2 "cat oxidize"
+GETF cat energy
+ASSERT LAST_N == 10 "cat energy 10"
+GETF cat ready
+ASSERT LAST_N == 1 "ready via reverse cycle"
+SEND cat charged
+ASSERT LAST_N == 1 "cat atp 1"
+SEND cat gradient
+ASSERT LAST_N == 0 "cat pmf 0"
+SEND cat yield
+ASSERT LAST_N == 11 "cat yield 11"
+
+ASSERT 1 == 1 "life_cell reverse PASS"

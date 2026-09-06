@@ -1,0 +1,22 @@
+// 2042_atomic_printer_life_reverse.cubalc
+// Science proof wrapper: reverse F1Fo life force on atomic printer.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+ENTITY c OF Cell 1 10 0
+SEND c pump 4
+ASSERT LAST_N == 4 "sci pump"
+SEND c synthase 4
+ASSERT LAST_N == 4 "sci synthase"
+SEND c reverse 2
+ASSERT LAST_N == 2 "sci reverse"
+SEND c gradient
+ASSERT LAST_N == 2 "sci pmf"
+SEND c charged
+ASSERT LAST_N == 2 "sci atp"
+SEND c synthase 2
+ASSERT LAST_N == 2 "sci resynth"
+SEND c charged
+ASSERT LAST_N == 4 "sci atp full"
+SEND c yield
+ASSERT LAST_N == 10 "sci yield"
+ASSERT 1 == 1 "science reverse PASS"
