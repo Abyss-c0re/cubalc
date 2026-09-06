@@ -1,0 +1,165 @@
+// 2043_life_cell_uncouple.cubalc
+// Science proof: atomic printer life uncouple - pmf to heat (UCP thermogenesis / proton leak).
+// Non-shivering heat dump sheds yield; synthase remains on residual gradient.
+// Cube is SoT. Free energy must flow (and may leave as warmth).
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed heat
+ASSERT LAST_N == 0 "heat empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Build gradient via pump
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after pump"
+
+// Uncouple half the gradient as thermogenesis (yield sheds)
+SEND seed uncouple 3
+ASSERT LAST_N == 3 "uncouple 3"
+SEND seed gradient
+ASSERT LAST_N == 3 "pmf 3 left"
+GETF seed heat
+ASSERT LAST_N == 3 "heat 3"
+SEND seed yield
+ASSERT LAST_N == 9 "yield shed 3"
+// Residual gradient still couples to ATP
+SEND seed synthase 2
+ASSERT LAST_N == 2 "synthase 2"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1"
+GETF seed heat
+ASSERT LAST_N == 3 "heat held"
+SEND seed yield
+ASSERT LAST_N == 9 "yield after synthase"
+
+// Drain remaining pmf as heat
+SEND seed uncouple 9
+ASSERT LAST_N == 1 "uncouple drains 1"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed heat
+ASSERT LAST_N == 4 "heat 4"
+SEND seed yield
+ASSERT LAST_N == 8 "yield 6e+2atp"
+
+// Empty gradient uncouple is noop
+SEND seed uncouple 2
+ASSERT LAST_N == 0 "empty uncouple 0"
+GETF seed heat
+ASSERT LAST_N == 4 "heat still 4"
+
+// Dead cell: uncouple noop
+SEND dead uncouple 3
+ASSERT LAST_N == 0 "dead uncouple 0"
+GETF dead heat
+ASSERT LAST_N == 0 "dead heat 0"
+SEND dead gradient
+ASSERT LAST_N == 0 "dead pmf 0"
+
+// Zero / neg args
+SEND seed uncouple 0
+ASSERT LAST_N == 0 "zero uncouple"
+SEND seed uncouple -4
+ASSERT LAST_N == 0 "neg uncouple"
+
+// Quiescent path still allows thermogenesis
+SEND quiet photophos 4
+ASSERT LAST_N == 4 "quiet solar atp"
+SEND quiet reverse 4
+ASSERT LAST_N == 4 "quiet reverse to pmf"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet uncouple 3
+ASSERT LAST_N == 3 "quiet uncouple"
+GETF quiet heat
+ASSERT LAST_N == 3 "quiet heat 3"
+SEND quiet gradient
+ASSERT LAST_N == 1 "quiet pmf 1"
+SEND quiet yield
+ASSERT LAST_N == 7 "quiet yield 6+1pmf"
+
+// Ally: solar -> reverse -> partial uncouple -> synthase
+SEND ally photophos 6
+ASSERT LAST_N == 6 "ally solar"
+SEND ally reverse 5
+ASSERT LAST_N == 5 "ally reverse"
+SEND ally uncouple 2
+ASSERT LAST_N == 2 "ally uncouple"
+SEND ally synthase 2
+ASSERT LAST_N == 2 "ally synthase"
+SEND ally charged
+ASSERT LAST_N == 3 "ally atp 6-5+2"
+SEND ally gradient
+ASSERT LAST_N == 1 "ally pmf 1"
+GETF ally heat
+ASSERT LAST_N == 2 "ally heat 2"
+SEND ally yield
+ASSERT LAST_N == 12 "ally yield 8+3atp+1pmf"
+
+// Full pump->uncouple pure thermogenesis
+ENTITY bat OF Cell 1 11 0
+SEND bat pump 8
+ASSERT LAST_N == 8 "bat pump"
+SEND bat uncouple 8
+ASSERT LAST_N == 8 "bat full uncouple"
+SEND bat gradient
+ASSERT LAST_N == 0 "bat pmf 0"
+GETF bat heat
+ASSERT LAST_N == 8 "bat heat 8"
+SEND bat charged
+ASSERT LAST_N == 0 "bat no atp"
+GETF bat energy
+ASSERT LAST_N == 3 "bat spark path 3"
+SEND bat yield
+ASSERT LAST_N == 3 "bat yield only spark"
+
+// Heat does not arm mitosis; oxidize/feed still can
+ENTITY cat OF Cell 1 9 0
+SEND cat set_threshold 10
+ASSERT LAST_N == 10 "thr 10"
+SEND cat pump 4
+ASSERT LAST_N == 4 "cat pump"
+SEND cat uncouple 4
+ASSERT LAST_N == 4 "cat heat dump"
+GETF cat ready
+ASSERT LAST_N == 0 "not ready after heat"
+SEND cat photophos 3
+ASSERT LAST_N == 3 "cat solar"
+SEND cat oxidize 3
+ASSERT LAST_N == 3 "cat oxidize"
+GETF cat energy
+ASSERT LAST_N == 8 "cat energy 5+3"
+GETF cat ready
+ASSERT LAST_N == 0 "still below thr"
+SEND cat feed 2
+ASSERT LAST_N == 10 "fed to thr"
+GETF cat ready
+ASSERT LAST_N == 1 "ready at thr"
+GETF cat heat
+ASSERT LAST_N == 4 "cat heat ledger"
+SEND cat yield
+ASSERT LAST_N == 10 "cat yield active only"
+
+ASSERT 1 == 1 "life_cell uncouple PASS"

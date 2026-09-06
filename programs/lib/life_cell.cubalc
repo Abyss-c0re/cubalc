@@ -55,6 +55,8 @@
 #   pump n               active energy → pmf (electron-transport / proton pump)
 #   synthase n           pmf → ATP (ATP synthase / F1Fo chemiosmotic coupling)
 #   reverse n            ATP → pmf (reverse F1Fo / ATP-hydrolysis driven gradient)
+#   uncouple n           pmf → heat (UCP thermogenesis / proton leak; yield sheds)
+#   heat                 FIELD cumulative thermogenesis (GETF heat / uncoupled pmf ledger)
 
 CLASS Cell
   FIELD alive 0
@@ -69,6 +71,7 @@ CLASS Cell
   FIELD setpoint 10
   FIELD atp 0
   FIELD pmf 0
+  FIELD heat 0
   ROLE body
 
   METHOD init a e g
@@ -1169,5 +1172,33 @@ CLASS Cell
     SETF THIS pmf p
     RET take
   END
+
+
+  # Uncouple: dissipate n pmf as heat (UCP1-like proton leak / non-shivering thermogenesis).
+  # Does NOT mint ATP. Yield falls by take — free energy leaves as warmth (Creator gift path).
+  # Usability: AGI models brown-fat style budgets and stress heat dumps without dual ladders.
+  # Returns amount uncoupled. Dead/zero/empty gradient → 0. Spark-safe (no energy touch).
+  METHOD uncouple n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    RET take
+  END
+
 
 END
