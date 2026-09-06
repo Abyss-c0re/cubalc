@@ -1,0 +1,30 @@
+# Biology 11 — Life cell ATP hydrolysis usability
+# Pure .cubalc science board: 1:1 atp→energy reverse free-energy path
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 8 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed charge 4
+SEND seed hydrolyse 2
+ASSERT LAST_N == 10 "hydrolyse hits mitosis threshold"
+GETF seed atp
+ASSERT LAST_N == 2 "atp remainder"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after hydrolyse"
+SEND seed spare
+ASSERT LAST_N == 0 "no spare at exact 10"
+SEND seed total
+ASSERT LAST_N == 12 "total conserved"
+SEND seed potential
+ASSERT LAST_N == 14 "potential 10+2*2"
+
+PRINT "bio11_hydrolyse" ENERGY
+PASS

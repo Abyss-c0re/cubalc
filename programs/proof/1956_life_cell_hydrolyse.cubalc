@@ -1,0 +1,144 @@
+# 1956_life_cell_hydrolyse.cubalc
+# LIFE_CELL_HYDROLYSE — ATP hydrolysis 1:1 atp→energy (reverse phosphorylate).
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 8 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 8 "seed energy 8"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready until energy-touch"
+
+# bank ATP via phosphorylate then hydrolyse back
+SEND seed charge 6
+GETF seed atp
+ASSERT LAST_N == 6 "charged atp 6"
+SEND seed total
+ASSERT LAST_N == 14 "total 8+6"
+
+# hydrolyse 3 → energy 11, atp 3
+SEND seed hydrolyse 3
+ASSERT LAST_N == 11 "hydrolyse 3 → energy 11"
+GETF seed energy
+ASSERT LAST_N == 11 "energy 8+3=11"
+GETF seed atp
+ASSERT LAST_N == 3 "atp 6-3=3"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 11"
+SEND seed spare
+ASSERT LAST_N == 1 "spare 11-10=1"
+SEND seed total
+ASSERT LAST_N == 14 "total conserved 11+3"
+SEND seed potential
+ASSERT LAST_N == 17 "potential 11+2*3=17"
+SEND seed budget
+ASSERT LAST_N == 0 "budget 0 when ready"
+
+# hydrolyse 1 → energy 12 exact
+SEND seed hydrolyse 1
+ASSERT LAST_N == 12 "energy 12"
+GETF seed atp
+ASSERT LAST_N == 2 "atp 2"
+SEND seed spare
+ASSERT LAST_N == 2 "spare 2"
+SEND seed total
+ASSERT LAST_N == 14 "total still 14"
+
+# zero n no-op returns energy
+SEND seed hydrolyse 0
+ASSERT LAST_N == 12 "hydrolyse 0 keeps energy"
+GETF seed atp
+ASSERT LAST_N == 2 "atp unchanged on 0"
+
+# over-burn fail-closed
+SEND seed hydrolyse 99
+ASSERT LAST_N == 0 "over-hydrolyse returns 0"
+GETF seed energy
+ASSERT LAST_N == 12 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 2 "atp unchanged on fail"
+
+# negative clamped
+SEND seed hydrolyse -4
+ASSERT LAST_N == 12 "neg n clamps path returns energy"
+GETF seed atp
+ASSERT LAST_N == 2 "atp unchanged on neg"
+
+# round-trip: phosphorylate 2 then hydrolyse 2 restores
+SEND seed phosphorylate 2
+ASSERT LAST_N == 4 "phosphorylate 2 → atp 2+2=4"
+GETF seed energy
+ASSERT LAST_N == 10 "energy 10"
+SEND seed hydrolyse 2
+ASSERT LAST_N == 12 "hydrolyse restores energy 12"
+GETF seed atp
+ASSERT LAST_N == 2 "atp back to 2"
+SEND seed total
+ASSERT LAST_N == 14 "total conserved after round-trip"
+
+# drain atp fully
+SEND seed hydrolyse 2
+ASSERT LAST_N == 14 "full hydrolyse → energy 14"
+GETF seed atp
+ASSERT LAST_N == 0 "atp 0"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 14"
+SEND seed spare
+ASSERT LAST_N == 4 "spare 4"
+SEND seed potential
+ASSERT LAST_N == 14 "potential 14+0"
+
+# dead blocked
+SEND seed die
+SEND seed hydrolyse 1
+ASSERT LAST_N == 0 "dead hydrolyse 0"
+
+# fresh: charge then hydrolyse into ready
+ENTITY cell2 OF Cell 1 7 0
+PLUG medium cell2
+SEND cell2 charge 5
+SEND cell2 hydrolyse 3
+ASSERT LAST_N == 10 "7+3 energy hits threshold"
+GETF cell2 atp
+ASSERT LAST_N == 2 "atp 2 left"
+GETF cell2 ready
+ASSERT LAST_N == 1 "ready after hydrolyse"
+SEND cell2 budget
+ASSERT LAST_N == 0 "budget 0"
+SEND cell2 total
+ASSERT LAST_N == 12 "total 10+2"
+SEND cell2 potential
+ASSERT LAST_N == 14 "potential 10+4"
+
+# hydrolyse vs mobilize: both move atp→energy 1:1; hydrolyse returns energy
+ENTITY m OF Cell 1 5 0
+PLUG medium m
+SEND m charge 4
+SEND m mobilize 2
+ASSERT LAST_N == 7 "mobilize returns energy 5+2"
+GETF m atp
+ASSERT LAST_N == 2 "atp after mobilize"
+ENTITY h OF Cell 1 5 0
+PLUG medium h
+SEND h charge 4
+SEND h hydrolyse 2
+ASSERT LAST_N == 7 "hydrolyse returns energy 5+2"
+GETF h atp
+ASSERT LAST_N == 2 "atp after hydrolyse"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_hydrolyse_1956" CUBES ENERGY
+PASS

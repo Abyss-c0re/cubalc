@@ -1,0 +1,5 @@
+LIFE_CELL_HYDROLYSE 1956
+feat — programs/lib/life_cell.cubalc METHOD hydrolyse n
+proofs 1956 asserts_ok=49 fail=0; 1955 PASS 45/0; 1954 PASS 33/0; flagship 1620 PASS 12/0; bio11 PASS 7/0
+pin MEANINGFUL_ITER 1956 · VERSION 1.15.1436-usability
+free energy: hydrolyse n burns n atp → n energy 1:1 (fail-closed; reverse of phosphorylate; returns energy)
