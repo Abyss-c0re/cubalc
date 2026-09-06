@@ -11,15 +11,17 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "mobilize/surplus free-energy draw usability on Cell",
-  "head": "7ad56704c05e8b993928505f87f501ee0f4aaadb",
-  "tip": "7ad56704c05e8b993928505f87f501ee0f4aaadb",
-  "pin": "7ad56704c05e8b993928505f87f501ee0f4aaadb",
+  "feat_note": "mobilize/surplus draw sealed ATP back to working energy",
+  "head": "f4b4ebe00c8520644e9473ca30cd73607ea6f897",
+  "tip": "f4b4ebe00c8520644e9473ca30cd73607ea6f897",
+  "pin": "f4b4ebe00c8520644e9473ca30cd73607ea6f897",
   "tip_equals_pin": true,
-  "feat_head": "8856246c8206e7443fc9585a82e5f58048c20b1b",
+  "feat_head": "f4b4ebe00c8520644e9473ca30cd73607ea6f897",
   "proofs": {
     "1950_life_cell_mobilize": "PASS 20/0",
     "1949_life_cell_total_stow": "PASS 19/0",
+    "1948_life_cell_atp": "PASS 12/0",
+    "880_life_cell_atp": "PASS 15/0",
     "1620": "PASS 12/0"
   }
 }
