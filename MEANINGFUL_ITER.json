@@ -16,9 +16,9 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 56,
+  "asserts_ok": 55,
   "asserts_fail": 0,
-  "notes": "life_cell METHOD futile n: ATP\u2192heat (futile cycling / non-work ATPase); METHOD warmth reports heat; yield sheds; energy/pmf/pcr untouched; distinct from shiver/uncouple; pure .cubalc",
+  "notes": "life_cell METHOD futile: ATP→heat (futile cycling thermogenesis); warmth ledger; energy/pmf/pcr untouched; yield sheds; distinct from shiver/uncouple; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_futile.cubalc",
@@ -26,9 +26,8 @@
   "item": "2046 life cell futile",
   "item_id": "mi_2046_life_cell_futile",
   "title": "2046 life cell futile",
-  "summary": "life_cell futile ATP\u2192heat + warmth + atomic printer science + 1620 flagship",
-  "head": "74d03e46d344cc31a65d3e8990e3161a2357a36f",
-  "head_note": "futile ATP\u2192heat thermogenesis + warmth ledger",
-  "updated": 1788734018,
+  "summary": "life_cell futile ATP→heat + atomic printer science + 1620 flagship",
+  "head_note": "futile ATP→heat thermogenesis",
+  "updated": 1788734000,
   "parent_head": "b49bc8a49"
 }
