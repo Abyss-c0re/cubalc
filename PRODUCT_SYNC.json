@@ -5,12 +5,12 @@
   "paradigm": "COP/flow",
   "ok": true,
   "meaningful_iter": 2047,
-  "feature": "life_cell_boost",
+  "feature": "LIFE_CELL_BOOST",
   "proof_status": "PASS",
   "asserts_ok": 64,
   "science_asserts_ok": 38,
   "flagship_1620_asserts_ok": 12,
-  "head": "6b0a085ecd12d6e067a01fefd1d797fb10a4b738",
+  "head": "595e1cd4f5dea654c432d7831af327a31f97ecf5",
   "MEANINGFUL_ITER": 2047,
   "VERSION": "1.15.1530-usability"
 }
