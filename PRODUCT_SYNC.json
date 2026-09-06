@@ -3,6 +3,8 @@
   "meaningful_iter": 1955,
   "version": "1.15.1435-usability",
   "feature": "LIFE_CELL_PHOSPHORYLATE",
+  "head": "c49db03513e8907be7bee08cba2395768f3fc2b0",
+  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e",
   "unity": 1.0,
   "flagship_1620": "PASS"
 }

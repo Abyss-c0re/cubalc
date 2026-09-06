@@ -7,12 +7,16 @@
   "c_slice": "programs/lib/life_cell.cubalc",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
+  "sealed": true,
   "feat_note": "phosphorylate n = substrate-level burn n energy \u2192 n atp 1:1 full yield (fail-closed); contrasts glycolyse floor(n/4)",
   "proofs": {
     "1955_life_cell_phosphorylate": "PASS 45/0",
     "1954_life_cell_spare_glycolyse": "PASS 33/0",
     "flagship_1620": "PASS 12/0"
   },
-  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e"
+  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e",
+  "head": "c49db03513e8907be7bee08cba2395768f3fc2b0",
+  "tip": "c49db03513e8907be7bee08cba2395768f3fc2b0",
+  "pin": "c49db03513e8907be7bee08cba2395768f3fc2b0",
+  "tip_equals_pin": true
 }
