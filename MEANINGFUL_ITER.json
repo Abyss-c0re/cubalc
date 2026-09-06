@@ -5,19 +5,20 @@
   "iter": 2045,
   "version": "1.15.1528-usability",
   "VERSION": "1.15.1528-usability",
-  "feature": "LIFE_CELL_SHIVER",
+  "feature": "life_cell_shiver",
   "FEATURE": "LIFE_CELL_SHIVER",
   "ship": "2045_life_cell_shiver",
   "proof": "programs/proof/2045_life_cell_shiver.cubalc",
   "proofs": [
     "programs/proof/2045_life_cell_shiver.cubalc",
     "programs/science/integration/atomic_printer_life_shiver.cubalc",
-    "programs/science/proof/2045_atomic_printer_life_shiver.cubalc"
+    "programs/science/proof/2045_atomic_printer_life_shiver.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 42,
   "asserts_fail": 0,
-  "notes": "life_cell usability: METHOD shiver n burns active energy to FIELD heat (shivering thermogenesis); preserves life spark; distinct from uncouple pmf\u2192heat; yield sheds; pure .cubalc; CUBALC_MAX_METHODS 64; flagship 1620 PASS 12/0; science 26/0",
+  "notes": "life_cell METHOD shiver: active energy\u2192heat (shivering thermogenesis); spark clamp; yield sheds; ATP/pmf/pcr untouched; distinct from uncouple; CUBALC_MAX_METHODS 64; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_shiver.cubalc",
@@ -25,7 +26,9 @@
   "item": "2045 life cell shiver",
   "item_id": "mi_2045_life_cell_shiver",
   "title": "2045 life cell shiver",
-  "summary": "life_cell shiver thermogenesis + atomic printer science",
-  "flagship_1620": "PASS 12/0",
-  "max_methods": 64
+  "summary": "life_cell shiver energy\u2192heat + atomic printer science + 1620 flagship",
+  "head": "0640ba2c799e8edfe7d62c5ba6b5a9f37e67bf6c",
+  "head_note": "shiver energy\u2192heat thermogenesis",
+  "updated": 1788732303,
+  "parent_head": "dedccf2d1"
 }

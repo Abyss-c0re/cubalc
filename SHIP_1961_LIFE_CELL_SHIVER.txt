@@ -1,7 +1,10 @@
-SHIP 1961 LIFE_CELL_SHIVER
-HEAD=ba60f28e8abfcc156e1129dd275f619f60b65635
-feat=Cell.shiver energy→heat (shivering thermogenesis)
-proofs=2045_life_cell_shiver PASS asserts_ok=42; 2045_atomic_printer_life_shiver PASS asserts_ok=26; 1620 PASS
-MAX_METHODS=64
-MEANINGFUL_ITER=1961
-VERSION=1.15.1441-usability
+SHIP 1961 / MEANINGFUL_ITER 2045
+feat(life_cell): shiver n — active energy → heat (shivering thermogenesis)
+- Distinct from uncouple (pmf→heat / UCP)
+- Clamps to leave life spark (energy>=1)
+- Yield sheds; ATP/pmf/pcr untouched
+- Proofs: 2045_life_cell_shiver PASS (42 asserts)
+          2045_atomic_printer_life_shiver PASS (26)
+          1620 flagship PASS
+- CUBALC_MAX_METHODS 40→64 (life_cell at 44 methods)
+- VERSION 1.15.1528-usability
