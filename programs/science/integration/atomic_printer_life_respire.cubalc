@@ -1,0 +1,111 @@
+// atomic_printer_life_respire.cubalc
+// Science board: atomic printer + life_cell respire aerobic path.
+// Reserve glycogen → active energy in one CALL; arms mitosis under ENERGYFLOW.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_respire | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Bank nutrients into reserve then respire to mitosis threshold
+SEND seed bank 3
+ASSERT LAST_N == 3 "bank 3 spark-keep"
+GETF seed energy
+ASSERT LAST_N == 1 "life spark 1"
+SEND seed feed 2
+ASSERT LAST_N == 3 "feed 2"
+SEND seed bank 2
+ASSERT LAST_N == 2 "bank more"
+SEND seed stores
+ASSERT LAST_N == 5 "reserve 5"
+GETF seed energy
+ASSERT LAST_N == 1 "spark held"
+
+// Aerobic burst: respire floods active energy past threshold
+SEND seed respire 4
+ASSERT LAST_N == 4 "respire 4"
+GETF seed energy
+ASSERT LAST_N == 5 "active 5"
+SEND seed stores
+ASSERT LAST_N == 1 "reserve 1"
+SEND seed feed 5
+ASSERT LAST_N == 10 "feed to thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after respire path"
+SEND seed yield
+ASSERT LAST_N == 11 "yield ledger"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter born"
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 gen
+ASSERT LAST_N == 1 "daughter gen 1"
+GETF seed ready
+ASSERT LAST_N == 0 "parent not ready post-div"
+
+// Equivalence science: respire vs glycolyse+oxidize on sibling
+ENTITY a OF Cell 1 10 0
+ENTITY b OF Cell 1 10 0
+SEND a bank 5
+SEND b bank 5
+SEND a respire 3
+SEND b glycolyse 3
+SEND b oxidize 3
+GETF a energy
+LET ea = LAST_N
+GETF b energy
+ASSERT LAST_N == ea "printer energy match"
+SEND a stores
+LET ra = LAST_N
+SEND b stores
+ASSERT LAST_N == ra "printer reserve match"
+SEND a yield
+LET ya = LAST_N
+SEND b yield
+ASSERT LAST_N == ya "printer yield match"
+
+HARMONY hive
+RESOLVE hive
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT UNITY >= 0 "unity floor"
+ASSERT 1 == 1 "atomic_printer_life_respire PASS"

@@ -1,0 +1,130 @@
+// 2038_life_cell_respire.cubalc
+// Proof: life_cell respire — reserve → energy mitochondrial shortcut.
+// Fused glycolyse+oxidize path in one CALL. Yield conserved. Arms mitosis.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 6 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 4 0
+
+// Seed reserve via bank + anabolize path
+SEND seed bank 4
+ASSERT LAST_N == 4 "bank 4"
+GETF seed energy
+ASSERT LAST_N == 2 "spark 2"
+SEND seed charge 1
+ASSERT LAST_N == 1 "charge 1"
+SEND seed anabolize 1
+ASSERT LAST_N == 1 "anabolize 1"
+SEND seed stores
+ASSERT LAST_N == 5 "reserve 5"
+GETF seed energy
+ASSERT LAST_N == 1 "active 1"
+SEND seed charged
+ASSERT LAST_N == 0 "atp 0"
+SEND seed yield
+ASSERT LAST_N == 6 "yield 6 baseline"
+
+// Respire: reserve → energy (aerobic shortcut)
+SEND seed respire 3
+ASSERT LAST_N == 3 "respire 3"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2"
+GETF seed energy
+ASSERT LAST_N == 4 "active 4"
+SEND seed yield
+ASSERT LAST_N == 6 "yield conserved respire"
+GETF seed ready
+ASSERT LAST_N == 0 "below thr 10"
+
+// Respire flood arms mitosis
+SEND seed respire 2
+ASSERT LAST_N == 2 "respire rest"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed feed 4
+ASSERT LAST_N == 10 "feed to thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready armed by respire+feed"
+SEND seed yield
+ASSERT LAST_N == 10 "yield after feed gift"
+
+// Equivalence: respire n == glycolyse n then oxidize n (same ledger)
+ENTITY twin OF Cell 1 12 0
+SEND twin bank 6
+ASSERT LAST_N == 6 "twin bank"
+// path A: respire 4
+SEND twin respire 4
+ASSERT LAST_N == 4 "twin respire"
+GETF twin energy
+LET ea = LAST_N
+SEND twin stores
+LET ra = LAST_N
+SEND twin yield
+LET ya = LAST_N
+
+ENTITY twinb OF Cell 1 12 0
+SEND twinb bank 6
+ASSERT LAST_N == 6 "twinb bank"
+SEND twinb glycolyse 4
+ASSERT LAST_N == 4 "twinb glycolyse"
+SEND twinb oxidize 4
+ASSERT LAST_N == 4 "twinb oxidize"
+GETF twinb energy
+ASSERT LAST_N == ea "energy match fused path"
+SEND twinb stores
+ASSERT LAST_N == ra "reserve match fused path"
+SEND twinb yield
+ASSERT LAST_N == ya "yield match fused path"
+
+// Cap: cannot exceed reserve
+ENTITY bare OF Cell 1 5 0
+SEND bare bank 2
+ASSERT LAST_N == 2 "bare bank"
+SEND bare respire 9
+ASSERT LAST_N == 2 "respire cap reserve"
+SEND bare stores
+ASSERT LAST_N == 0 "bare reserve 0"
+GETF bare energy
+ASSERT LAST_N == 5 "bare energy full"
+SEND bare yield
+ASSERT LAST_N == 5 "bare yield conserved"
+
+// Dead / empty / n bounds
+SEND dead respire 3
+ASSERT LAST_N == 0 "dead no respire"
+SEND ally respire 1
+ASSERT LAST_N == 0 "ally no reserve"
+SEND ally yield
+ASSERT LAST_N == 8 "ally yield intact"
+SEND seed respire 0
+ASSERT LAST_N == 0 "zero n"
+SEND seed respire -2
+ASSERT LAST_N == 0 "neg n"
+
+// Quiescent: respire moves energy but ready stays 0
+// bank keeps life spark: energy 4 → bank max 3
+SEND quiet bank 8
+ASSERT LAST_N == 3 "quiet bank spark-keep"
+SEND quiet stores
+ASSERT LAST_N == 3 "quiet reserve 3"
+GETF quiet energy
+ASSERT LAST_N == 1 "quiet spark 1"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet respire 2
+ASSERT LAST_N == 2 "quiet respire"
+GETF quiet energy
+ASSERT LAST_N == 3 "quiet energy up"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet never ready"
+SEND quiet stores
+ASSERT LAST_N == 1 "quiet reserve left"
+
+ASSERT 1 == 1 "life_cell respire PASS"

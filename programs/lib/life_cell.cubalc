@@ -47,6 +47,7 @@
 #   glycolyse n          phosphorylate: reserve → ATP (mitochondrial path)
 #   oxidize n            ATP → active energy (work heat return)
 #   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
+#   respire n            reserve → energy (mitochondrial respiration shortcut)
 
 CLASS Cell
   FIELD alive 0
@@ -963,6 +964,47 @@ CLASS Cell
     GETF THIS reserve
     LET r = LAST_N + take
     SETF THIS reserve r
+    RET take
+  END
+
+
+  # Respire: mitochondrial shortcut reserve → active energy (fused glycolyse+oxidize).
+  # 1:1 yield conservation. Arms mitosis ready when flooded past threshold.
+  # Usability: one CALL aerobic path for AGI energy budgets. Returns amount respired.
+  METHOD respire n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
     RET take
   END
 
