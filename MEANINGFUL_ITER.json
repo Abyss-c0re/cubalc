@@ -8,7 +8,7 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "spare=max(0,energy-10) mitosis surplus; glycolyse anaerobic n→floor(n/4) atp half of respire",
+  "feat_note": "spare=max(0,energy-10) mitosis surplus; glycolyse anaerobic n\u2192floor(n/4) atp half of respire",
   "proofs": {
     "1954_life_cell_spare_glycolyse": "PASS 33/0",
     "1952_life_cell_budget": "PASS 24/0",
@@ -17,8 +17,8 @@
     "flagship_1620": "PASS 12/0"
   },
   "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
-  "head": "17610514043027b7628498b34c1e494ab73d4584",
-  "tip": "17610514043027b7628498b34c1e494ab73d4584",
-  "pin": "17610514043027b7628498b34c1e494ab73d4584",
+  "head": "0b404f313bfacf7c65565f7fc5e64d46c9b0a6ef",
+  "tip": "0b404f313bfacf7c65565f7fc5e64d46c9b0a6ef",
+  "pin": "0b404f313bfacf7c65565f7fc5e64d46c9b0a6ef",
   "tip_equals_pin": true
 }
