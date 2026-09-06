@@ -1,0 +1,31 @@
+# Biology 15 — Life cell complete aerobic oxidation usability
+# Pure .cubalc science board: oxidise burns energy → floor((n*3)/4) atp (stronger than respire)
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 24 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed oxidise 12
+ASSERT LAST_N == 9 "oxidise 12 → atp 9"
+GETF seed energy
+ASSERT LAST_N == 12 "energy remainder 12"
+GETF seed ready
+ASSERT LAST_N == 1 "ready above threshold"
+SEND seed total
+ASSERT LAST_N == 21 "total 12+9"
+SEND seed potential
+ASSERT LAST_N == 30 "potential 12+18"
+SEND seed nourish 3
+ASSERT LAST_N == 15 "nourish tops energy"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready"
+
+PRINT "bio15_oxidise" ENERGY
+PASS

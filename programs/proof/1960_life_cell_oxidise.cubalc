@@ -1,0 +1,105 @@
+# 1960_life_cell_oxidise.cubalc
+# LIFE_CELL_OXIDISE — complete aerobic oxidation: burn n energy → floor((n*3)/4) atp.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 24 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 24 "seed energy 24"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+
+SEND seed stow 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after stow0 at energy 24"
+SEND seed spare
+ASSERT LAST_N == 14 "spare 24-10=14"
+
+# oxidise 12 → floor(36/4)=9 atp; energy 12
+SEND seed oxidise 12
+ASSERT LAST_N == 9 "oxidise 12 → +9 atp"
+GETF seed energy
+ASSERT LAST_N == 12 "energy 24-12=12"
+GETF seed atp
+ASSERT LAST_N == 9 "atp 9"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at energy 12"
+SEND seed spare
+ASSERT LAST_N == 2 "spare 12-10=2"
+SEND seed total
+ASSERT LAST_N == 21 "total 12+9"
+SEND seed potential
+ASSERT LAST_N == 30 "potential 12+18=30"
+
+# odd/floor: oxidise 5 → floor(15/4)=3
+SEND seed nourish 8
+ASSERT LAST_N == 20 "nourish → energy 20"
+SEND seed oxidise 5
+ASSERT LAST_N == 12 "oxidise 5 → +3 → atp 12"
+GETF seed energy
+ASSERT LAST_N == 15 "energy 20-5=15"
+GETF seed atp
+ASSERT LAST_N == 12 "atp 12"
+SEND seed spare
+ASSERT LAST_N == 5 "spare 15-10=5"
+
+# zero n no-op
+SEND seed oxidise 0
+ASSERT LAST_N == 12 "oxidise 0 keeps atp"
+GETF seed energy
+ASSERT LAST_N == 15 "energy unchanged on 0"
+
+# over-oxidise fail-closed
+SEND seed oxidise 99
+ASSERT LAST_N == 0 "over-oxidise returns 0"
+GETF seed energy
+ASSERT LAST_N == 15 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 12 "atp unchanged on fail"
+
+# negative clamped
+SEND seed oxidise -4
+ASSERT LAST_N == 12 "neg n clamps returns atp"
+GETF seed energy
+ASSERT LAST_N == 15 "energy unchanged on neg"
+
+# yield ladder on 12: respire 6, oxidise 9, phosphorylate 12
+ENTITY r OF Cell 1 20 0
+PLUG medium r
+SEND r respire 12
+ASSERT LAST_N == 6 "respire 12 → 6"
+ENTITY o OF Cell 1 20 0
+PLUG medium o
+SEND o oxidise 12
+ASSERT LAST_N == 9 "oxidise 12 → 9"
+ENTITY p OF Cell 1 20 0
+PLUG medium p
+SEND p phosphorylate 12
+ASSERT LAST_N == 12 "phosphorylate 12 → 12"
+
+# stronger than respire on 8: oxidise floor(24/4)=6, respire floor(8/2)=4
+ENTITY o2 OF Cell 1 18 0
+PLUG medium o2
+SEND o2 oxidise 8
+ASSERT LAST_N == 6 "oxidise 8 → 6"
+ENTITY r2 OF Cell 1 18 0
+PLUG medium r2
+SEND r2 respire 8
+ASSERT LAST_N == 4 "respire 8 → 4"
+
+# dead cell fail-closed
+SEND seed die
+SEND seed oxidise 3
+ASSERT LAST_N == 0 "dead oxidise returns 0"
+
+PRINT "life_cell_oxidise_1960" ENERGY
+PASS

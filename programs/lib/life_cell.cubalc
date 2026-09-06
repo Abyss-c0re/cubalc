@@ -35,6 +35,7 @@
 #   nourish n        external nutrient: add n energy (fail-closed; not via atp)
 #   ferment n         mixed-acid fermentation: burn n energy → floor(n/6) atp (fail-closed; weaker than glycolyse)
 #   lactate n          lactic fermentation: burn n energy → floor(n/5) atp (fail-closed; between glycolyse n/4 and ferment n/6)
+#   oxidise n           complete aerobic oxidation: burn n energy → floor((n*3)/4) atp (fail-closed; stronger than respire n/2)
 
 CLASS Cell
   FIELD alive 0
@@ -523,6 +524,36 @@ CLASS Cell
     SETF THIS energy e
     # lactic fermentation: floor(n/5) atp (between glycolyse n/4 and ferment n/6)
     LET gain = n / 5
+    GETF THIS atp
+    LET a = LAST_N + gain
+    SETF THIS atp a
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
+  END
+
+
+
+  METHOD oxidise n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < n THEN
+      RET 0
+    END
+    LET e = e - n
+    SETF THIS energy e
+    # complete aerobic oxidation: floor((n*3)/4) atp (stronger than respire n/2)
+    LET gain = (n * 3) / 4
     GETF THIS atp
     LET a = LAST_N + gain
     SETF THIS atp a

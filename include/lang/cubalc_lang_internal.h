@@ -55,7 +55,7 @@ typedef struct {
  * Game engines: ENTITY/SPAWN/TICK/SCENE ride the same plane; FLOW is law. */
 #define CUBALC_MAX_FNS      48
 #define CUBALC_MAX_CLASSES  24
-#define CUBALC_MAX_METHODS  24
+#define CUBALC_MAX_METHODS  64
 #define CUBALC_MAX_FIELDS   24
 #define CUBALC_MAX_OBJS     64
 
