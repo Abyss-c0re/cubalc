@@ -1,0 +1,130 @@
+// 2036_life_cell_yield_glycolyse_oxidize.cubalc
+// Proof: life_cell yield + glycolyse + oxidize metabolic cycle.
+// Reserve glycogen → ATP (glycolyse); ATP → active energy (oxidize);
+// yield = energy + reserve + atp full life-force ledger.
+// Cube is SoT. Free energy must flow. Pure .cubalc lib extend.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 16 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+
+// Baseline yield = active only
+SEND seed yield
+ASSERT LAST_N == 16 "seed yield 16"
+SEND seed charged
+ASSERT LAST_N == 0 "atp 0"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve 0"
+
+// Bank glycogen, charge some ATP from active
+SEND seed bank 6
+ASSERT LAST_N == 6 "bank 6"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10 spark path"
+SEND seed stores
+ASSERT LAST_N == 6 "reserve 6"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved bank"
+
+// Charge 3 active → ATP (spark retain)
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+GETF seed energy
+ASSERT LAST_N == 7 "active 7"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+SEND seed yield
+ASSERT LAST_N == 16 "yield still 16 after charge"
+
+// Glycolyse: reserve → ATP without touching active
+SEND seed glycolyse 4
+ASSERT LAST_N == 4 "glycolyse 4"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2"
+SEND seed charged
+ASSERT LAST_N == 7 "atp 7"
+GETF seed energy
+ASSERT LAST_N == 7 "active untouched"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved glycolyse"
+
+// Oxidize: ATP → active free energy (work-heat return)
+SEND seed oxidize 5
+ASSERT LAST_N == 5 "oxidize 5"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved oxidize"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after oxidize flood"
+
+// Ally near-threshold path: bank, glycolyse, oxidize arms mitosis
+SEND ally bank 3
+ASSERT LAST_N == 3 "ally bank"
+GETF ally energy
+ASSERT LAST_N == 5 "ally 5"
+SEND ally glycolyse 3
+ASSERT LAST_N == 3 "ally glycolyse"
+SEND ally charged
+ASSERT LAST_N == 3 "ally atp 3"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready"
+SEND ally oxidize 5
+ASSERT LAST_N == 3 "ally oxidize cap atp"
+GETF ally energy
+ASSERT LAST_N == 8 "ally 8"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still below thr 10"
+SEND ally feed 2
+ASSERT LAST_N == 10 "ally feast thr"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally yield
+ASSERT LAST_N == 10 "ally yield"
+
+// Dead cell yields/glycolyses/oxidizes 0
+SEND dead yield
+ASSERT LAST_N == 0 "dead yield 0"
+SEND dead glycolyse 4
+ASSERT LAST_N == 0 "dead no glycolyse"
+SEND dead oxidize 4
+ASSERT LAST_N == 0 "dead no oxidize"
+
+// Empty reserve glycolyse 0; empty atp oxidize 0
+ENTITY bare OF Cell 1 4 0
+SEND bare glycolyse 2
+ASSERT LAST_N == 0 "no reserve"
+SEND bare oxidize 1
+ASSERT LAST_N == 0 "no atp"
+SEND bare yield
+ASSERT LAST_N == 4 "bare yield"
+
+// Mitosis: daughter birth clears ATP/reserve; parent keeps yield parts
+SEND seed after_div
+GETF seed energy
+LET half = LAST_N
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+ENTITY d1 OF Cell 0 0 0
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter live"
+SEND d1 yield
+ASSERT LAST_N == half "daughter yield = birth energy"
+SEND d1 charged
+ASSERT LAST_N == 0 "daughter atp clear"
+SEND d1 stores
+ASSERT LAST_N == 0 "daughter reserve clear"
+SEND seed charged
+ASSERT LAST_N == 2 "parent keeps atp"
+SEND seed stores
+ASSERT LAST_N == 2 "parent keeps reserve"
+
+ASSERT 1 == 1 "life_cell yield glycolyse oxidize PASS"

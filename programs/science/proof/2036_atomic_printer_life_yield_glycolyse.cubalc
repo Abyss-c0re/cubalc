@@ -1,0 +1,89 @@
+// atomic_printer_life_yield_glycolyse.cubalc
+// Science board: yield ledger + glycolyse/oxidize cycle under atomic printer.
+// Reserve → ATP → active free energy; free energy must flow.
+// Cube is SoT. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=science | type=atomic_printer_life_yield_glycolyse | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY ally OF Cell 1 8 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+SEND seed yield
+ASSERT LAST_N == 16 "seed yield 16"
+SEND seed bank 6
+ASSERT LAST_N == 6 "bank 6"
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved"
+SEND seed glycolyse 4
+ASSERT LAST_N == 4 "glycolyse 4"
+SEND seed charged
+ASSERT LAST_N == 7 "atp 7"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2"
+GETF seed energy
+ASSERT LAST_N == 7 "active 7"
+SEND seed oxidize 5
+ASSERT LAST_N == 5 "oxidize 5"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed yield
+ASSERT LAST_N == 16 "yield still 16"
+GETF seed ready
+ASSERT LAST_N == 1 "ready"
+
+// Ally: glycolyse path arms via oxidize + feed
+SEND ally bank 3
+SEND ally glycolyse 3
+ASSERT LAST_N == 3 "ally glycolyse"
+SEND ally oxidize 3
+ASSERT LAST_N == 3 "ally oxidize"
+GETF ally energy
+ASSERT LAST_N == 8 "ally 8"
+SEND ally feed 2
+ASSERT LAST_N == 10 "ally thr"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally yield
+ASSERT LAST_N == 10 "ally yield"
+
+ASSERT 1 == 1 "atomic printer life yield glycolyse PASS"
