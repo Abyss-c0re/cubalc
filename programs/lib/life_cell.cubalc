@@ -32,6 +32,7 @@
 #   glycolyse n    anaerobic: burn n energy → floor(n/4) atp (fail-closed; 1/2 respire yield)
 #   phosphorylate n  substrate-level: burn n energy → n atp 1:1 (fail-closed; full yield)
 #   hydrolyse n      ATP hydrolysis: burn n atp → n energy 1:1 (fail-closed; reverse phosphorylate)
+#   nourish n        external nutrient: add n energy (fail-closed; not via atp)
 
 CLASS Cell
   FIELD alive 0
@@ -442,6 +443,26 @@ CLASS Cell
     LET a = a - n
     SETF THIS atp a
     # ATP hydrolysis: 1 atp → 1 energy (drive work back into metabolic pool)
+    GETF THIS energy
+    LET e = LAST_N + n
+    SETF THIS energy e
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET e
+  END
+
+  METHOD nourish n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    # external nutrient uptake: add n metabolic energy (not routed through atp)
     GETF THIS energy
     LET e = LAST_N + n
     SETF THIS energy e

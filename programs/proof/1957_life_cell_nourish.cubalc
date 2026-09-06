@@ -1,0 +1,130 @@
+# 1957_life_cell_nourish.cubalc
+# LIFE_CELL_NOURISH — external nutrient uptake adds energy directly (not via atp).
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 6 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 6 "seed energy 6"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below 10"
+GETF seed alive
+ASSERT LAST_N == 1 "alive"
+
+# nourish 4 → energy 10 hits mitosis threshold; atp untouched
+SEND seed nourish 4
+ASSERT LAST_N == 10 "nourish 4 → energy 10"
+GETF seed energy
+ASSERT LAST_N == 10 "energy 10"
+GETF seed atp
+ASSERT LAST_N == 0 "atp untouched by nourish"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at exact 10"
+SEND seed budget
+ASSERT LAST_N == 0 "budget 0 at threshold"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 at threshold"
+SEND seed total
+ASSERT LAST_N == 10 "total 10+0"
+SEND seed potential
+ASSERT LAST_N == 10 "potential 10+0"
+
+# nourish 3 more → energy 13, spare 3
+SEND seed nourish 3
+ASSERT LAST_N == 13 "nourish 3 → 13"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready"
+SEND seed spare
+ASSERT LAST_N == 3 "spare 13-10=3"
+GETF seed atp
+ASSERT LAST_N == 0 "atp still 0"
+
+# zero n is no-op return current energy
+SEND seed nourish 0
+ASSERT LAST_N == 13 "nourish 0 keeps energy"
+GETF seed energy
+ASSERT LAST_N == 13 "energy unchanged on 0"
+
+# negative clamped to 0
+SEND seed nourish -5
+ASSERT LAST_N == 13 "neg n clamps; returns energy"
+GETF seed energy
+ASSERT LAST_N == 13 "energy unchanged on neg"
+
+# nourish does not touch atp even when atp present
+SEND seed charge 5
+ASSERT LAST_N == 5 "charge → atp 5"
+SEND seed nourish 2
+ASSERT LAST_N == 15 "nourish 2 → energy 15"
+GETF seed atp
+ASSERT LAST_N == 5 "atp still 5 after nourish"
+SEND seed total
+ASSERT LAST_N == 20 "total 15+5"
+SEND seed potential
+ASSERT LAST_N == 25 "potential 15+2*5=25"
+SEND seed spare
+ASSERT LAST_N == 5 "spare 15-10=5"
+
+# nourish vs charge: charge hits atp, nourish hits energy
+ENTITY c OF Cell 1 4 0
+PLUG medium c
+SEND c charge 6
+ASSERT LAST_N == 6 "charge → atp 6"
+GETF c energy
+ASSERT LAST_N == 4 "energy untouched by charge"
+ENTITY n OF Cell 1 4 0
+PLUG medium n
+SEND n nourish 6
+ASSERT LAST_N == 10 "nourish → energy 10"
+GETF n atp
+ASSERT LAST_N == 0 "atp untouched by nourish"
+GETF n ready
+ASSERT LAST_N == 1 "ready after nourish to 10"
+
+# round-trip with hydrolyse/phosphorylate path: nourish feeds phosphorylate
+ENTITY r OF Cell 1 5 0
+PLUG medium r
+SEND r nourish 7
+ASSERT LAST_N == 12 "nourish 7 → 12"
+SEND r phosphorylate 2
+ASSERT LAST_N == 2 "phosphorylate 2 → atp 2"
+GETF r energy
+ASSERT LAST_N == 10 "energy 10"
+SEND r hydrolyse 1
+ASSERT LAST_N == 11 "hydrolyse restores 1 energy"
+GETF r atp
+ASSERT LAST_N == 1 "atp 1 left"
+SEND r total
+ASSERT LAST_N == 12 "total conserved 11+1"
+
+# dead blocked
+SEND seed die
+SEND seed nourish 3
+ASSERT LAST_N == 0 "dead nourish 0"
+
+# fresh cell from low energy to ready in one feed
+ENTITY young OF Cell 1 1 0
+PLUG medium young
+SEND young nourish 9
+ASSERT LAST_N == 10 "1+9=10 ready"
+GETF young ready
+ASSERT LAST_N == 1 "young ready"
+SEND young budget
+ASSERT LAST_N == 0 "budget 0"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_nourish_1957" CUBES ENERGY
+PASS

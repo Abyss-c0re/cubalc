@@ -1,0 +1,5 @@
+LIFE_CELL_NOURISH 1957
+feat — programs/lib/life_cell.cubalc METHOD nourish n
+proofs 1957 asserts_ok=46 fail=0; 1956 PASS 49/0; 1955 PASS 45/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 1957 · VERSION 1.15.1437-usability
+free energy: nourish n adds n metabolic energy directly (external nutrient; atp untouched; fail-closed on dead/neg)
