@@ -7,9 +7,14 @@
   "c_slice": "src/lang/lang_ops_math.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": false,
+  "sealed": true,
   "feat_note": "MINN/MAXN two-arg integer bounds + CLAMPN aliases; free energy lattice clamp without shell glue",
   "proofs": {
     "1953_minmax_clamp": "PASS 40/0"
-  }
+  },
+  "feat_head": "ae0a2047d0337af7a8a75dd13452b67bc4c11744",
+  "head": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
+  "tip": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
+  "pin": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
+  "tip_equals_pin": true
 }
