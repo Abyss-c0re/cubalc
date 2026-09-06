@@ -3,9 +3,9 @@
   "iter": 1959,
   "feature": "LIFE_CELL_LACTATE",
   "version": "1.15.1439-usability",
-  "head": "e12ada011cdfd37adc12fa763903e528f609ee99",
-  "tip": "e12ada011cdfd37adc12fa763903e528f609ee99",
-  "pin": "e12ada011cdfd37adc12fa763903e528f609ee99",
+  "head": "de19de63316c66924bf8169a89e6dd08e08c2341",
+  "tip": "de19de63316c66924bf8169a89e6dd08e08c2341",
+  "pin": "de19de63316c66924bf8169a89e6dd08e08c2341",
   "tip_equals_pin": true,
   "proof": "PASS 29/0",
   "sealed": true
