@@ -1,0 +1,94 @@
+// atomic_printer_life_photosynth.cubalc
+// Science board: atomic printer + life_cell photosynth free-energy fixation.
+// Light quanta → reserve; harvest via respire arms mitosis under ENERGYFLOW.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_photosynth | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE sun ROLE energy PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS sun    "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG sun bed
+
+ENTITY seed OF Cell 1 3 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE sun 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Solar gift: photosynth fills reserve without spending spark
+GETF seed energy
+ASSERT LAST_N == 3 "life spark 3"
+SEND seed photosynth 6
+ASSERT LAST_N == 6 "photosynth 6"
+SEND seed stores
+ASSERT LAST_N == 6 "reserve 6"
+GETF seed energy
+ASSERT LAST_N == 3 "spark held"
+SEND seed yield
+ASSERT LAST_N == 9 "yield gift"
+
+// Harvest light stores into active path
+SEND seed respire 5
+ASSERT LAST_N == 5 "respire harvest"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+SEND seed stores
+ASSERT LAST_N == 1 "reserve 1"
+SEND seed feed 2
+ASSERT LAST_N == 10 "feed to thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after photo+respire"
+SEND seed yield
+ASSERT LAST_N == 11 "yield ledger"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter born"
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == half "daughter energy"
+SEND d1 photosynth 2
+ASSERT LAST_N == 2 "daughter photo gift"
+SEND d1 stores
+ASSERT LAST_N == 2 "daughter reserve"
+
+// SMX still clean after life cascade
+SMX EXCHANGE bed hive
+ASSERT SMX_OK == 1 "smx post-mitosis ok"
+
+ASSERT 1 == 1 "atomic_printer_life_photosynth PASS"

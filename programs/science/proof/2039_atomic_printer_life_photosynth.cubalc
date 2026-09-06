@@ -1,0 +1,18 @@
+// 2039_atomic_printer_life_photosynth.cubalc — science proof shim
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY s OF Cell 1 4 0
+SEND s photosynth 5
+ASSERT LAST_N == 5 "photosynth"
+SEND s stores
+ASSERT LAST_N == 5 "reserve"
+GETF s energy
+ASSERT LAST_N == 4 "spark held"
+SEND s respire 3
+ASSERT LAST_N == 3 "respire"
+GETF s energy
+ASSERT LAST_N == 7 "energy"
+SEND s yield
+ASSERT LAST_N == 9 "yield"
+ASSERT 1 == 1 "science proof photosynth PASS"

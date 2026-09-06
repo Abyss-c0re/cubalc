@@ -48,6 +48,7 @@
 #   oxidize n            ATP → active energy (work heat return)
 #   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
 #   respire n            reserve → energy (mitochondrial respiration shortcut)
+#   photosynth n         light quanta → reserve (free-energy fixation gift)
 
 CLASS Cell
   FIELD alive 0
@@ -1006,6 +1007,24 @@ CLASS Cell
     END
     SETF THIS ready rd
     RET take
+  END
+
+
+  # Photosynth: fix n light-quanta into reserve (glycogen from free-energy gift).
+  # Does not consume active energy or ATP. Yield rises by n. Creator gift path.
+  # Usability: AGI solar/gift budget → stores for later respire. Returns fixed amt.
+  METHOD photosynth n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N + n
+    SETF THIS reserve r
+    RET n
   END
 
 END

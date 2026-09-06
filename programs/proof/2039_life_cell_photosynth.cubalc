@@ -1,0 +1,108 @@
+// 2039_life_cell_photosynth.cubalc
+// Proof: life_cell photosynth — light quanta → reserve free-energy fixation.
+// Creator gift path. Does not spend energy/ATP. Yield rises. Pairs with respire.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 6 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 4 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 6 "spark 6"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+SEND seed yield
+ASSERT LAST_N == 6 "yield 6"
+
+// Photosynth fixes light into reserve
+SEND seed photosynth 4
+ASSERT LAST_N == 4 "photosynth 4"
+SEND seed stores
+ASSERT LAST_N == 4 "reserve 4"
+GETF seed energy
+ASSERT LAST_N == 6 "spark held"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed yield
+ASSERT LAST_N == 10 "yield +4 gift"
+
+// Stack more light
+SEND seed photosynth 3
+ASSERT LAST_N == 3 "photosynth 3"
+SEND seed stores
+ASSERT LAST_N == 7 "reserve 7"
+SEND seed yield
+ASSERT LAST_N == 13 "yield 13"
+
+// Respire consumes photosynth stores (aerobic harvest)
+SEND seed respire 5
+ASSERT LAST_N == 5 "respire harvest"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2 left"
+GETF seed energy
+ASSERT LAST_N == 11 "active 11"
+SEND seed yield
+ASSERT LAST_N == 13 "yield conserved after respire"
+
+// Equivalence cycle: photosynth then respire grows active without bank
+ENTITY sun OF Cell 1 2 0
+SEND sun photosynth 8
+ASSERT LAST_N == 8 "sun fix"
+SEND sun stores
+ASSERT LAST_N == 8 "sun reserve"
+SEND sun respire 8
+ASSERT LAST_N == 8 "sun respire all"
+GETF sun energy
+ASSERT LAST_N == 10 "sun active 2+8"
+SEND sun stores
+ASSERT LAST_N == 0 "sun reserve empty"
+SEND sun yield
+ASSERT LAST_N == 10 "sun yield"
+
+// Dead / bounds
+SEND dead photosynth 3
+ASSERT LAST_N == 0 "dead no photo"
+SEND seed photosynth 0
+ASSERT LAST_N == 0 "zero n"
+SEND seed photosynth -5
+ASSERT LAST_N == 0 "neg n"
+SEND ally yield
+ASSERT LAST_N == 8 "ally intact"
+
+// Quiescent still fixes light (stores for wake)
+SEND quiet photosynth 5
+ASSERT LAST_N == 5 "quiet photo"
+SEND quiet stores
+ASSERT LAST_N == 5 "quiet reserve"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet photosynth 2
+ASSERT LAST_N == 2 "quiet photo G0"
+SEND quiet stores
+ASSERT LAST_N == 7 "quiet reserve 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet never ready"
+GETF quiet energy
+ASSERT LAST_N == 4 "quiet spark held"
+
+// Full triangle: photosynth → glycolyse → oxidize yield match
+ENTITY tri OF Cell 1 5 0
+SEND tri photosynth 6
+ASSERT LAST_N == 6 "tri photo"
+SEND tri glycolyse 4
+ASSERT LAST_N == 4 "tri glycolyse"
+SEND tri oxidize 4
+ASSERT LAST_N == 4 "tri oxidize"
+SEND tri yield
+ASSERT LAST_N == 11 "tri yield 5+6"
+SEND tri stores
+ASSERT LAST_N == 2 "tri reserve 2"
+SEND tri charged
+ASSERT LAST_N == 0 "tri atp 0"
+
+ASSERT 1 == 1 "life_cell photosynth PASS"

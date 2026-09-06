@@ -2,17 +2,15 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2038,
   "MEANINGFUL_ITER": 2038,
-  "iter": 2038,
-  "version": "1.15.1521-usability",
+  "iter": 2039,
+  "version": "1.15.1522-usability",
   "VERSION": "1.15.1521-usability",
   "feature": "LIFE_CELL_RESPIRE",
   "FEATURE": "LIFE_CELL_RESPIRE",
   "ship": "2038_life_cell_respire",
   "proof": "programs/proof/2038_life_cell_respire.cubalc",
   "proofs": [
-    "programs/proof/2038_life_cell_respire.cubalc",
-    "programs/science/integration/atomic_printer_life_respire.cubalc",
-    "programs/science/proof/2038_atomic_printer_life_respire.cubalc"
+    "programs/science/proof/2039_atomic_printer_life_photosynth.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 47,
@@ -22,12 +20,14 @@
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_respire.cubalc",
   "science_asserts_ok": 26,
-  "item": "284 life cell respire",
-  "item_id": "mi_284_life_cell_respire",
-  "title": "284 life cell respire",
-  "summary": "life_cell respire reserve\u2192energy aerobic shortcut + metabolic equivalence + atomic printer science",
-  "commit": "2b104e7bf",
+  "item": "2039 atomic printer life photosynth",
+  "item_id": "mi_2039_atomic_printer_life_photosynth",
+  "title": "2039 atomic printer life photosynth",
+  "summary": "Host-finished MI ship after nanobot partial (2039_atomic_printer_life_photosynth).",
+  "commit": "6a51a8a7e",
   "head": "2b104e7bf637b98c7fa91c8bca4b675411f572dc",
   "commit_full": "2b104e7bf637b98c7fa91c8bca4b675411f572dc",
-  "ts": "2026-09-06T16:32:06Z"
+  "ts": "2026-09-06T16:35:33Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
