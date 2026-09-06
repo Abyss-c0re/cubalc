@@ -43,7 +43,7 @@
 #   total                active + reserve metabolic wealth
 #   stow                 hibernate: bank all but life spark into reserve
 #   saturate             pour entire reserve into active energy
-#   yield                full energetic capacity = energy + reserve + atp + pmf
+#   yield                full energetic capacity = energy + reserve + atp + pmf + pcr
 #   glycolyse n          phosphorylate: reserve → ATP (mitochondrial path)
 #   oxidize n            ATP → active energy (work heat return)
 #   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
@@ -57,6 +57,10 @@
 #   reverse n            ATP → pmf (reverse F1Fo / ATP-hydrolysis driven gradient)
 #   uncouple n           pmf → heat (UCP thermogenesis / proton leak; yield sheds)
 #   heat                 FIELD cumulative thermogenesis (GETF heat / uncoupled pmf ledger)
+#   pcr                  FIELD phosphagen / phosphocreatine (~P buffer)
+#   phosphagen           report pcr balance for ASSERT science
+#   charge_pcr n         ATP → PCr (creatine kinase load; rapid ~P store)
+#   discharge n          PCr → ATP (creatine kinase burst; work currency)
 
 CLASS Cell
   FIELD alive 0
@@ -72,6 +76,7 @@ CLASS Cell
   FIELD atp 0
   FIELD pmf 0
   FIELD heat 0
+  FIELD pcr 0
   ROLE body
 
   METHOD init a e g
@@ -87,6 +92,8 @@ CLASS Cell
     SETF THIS setpoint 10
     SETF THIS atp 0
     SETF THIS pmf 0
+    SETF THIS heat 0
+    SETF THIS pcr 0
   END
 
   METHOD tick
@@ -155,6 +162,8 @@ CLASS Cell
     SETF THIS setpoint 10
     SETF THIS atp 0
     SETF THIS pmf 0
+    SETF THIS heat 0
+    SETF THIS pcr 0
     RET 1
   END
 
@@ -177,6 +186,8 @@ CLASS Cell
     SETF THIS reserve 0
     SETF THIS atp 0
     SETF THIS pmf 0
+    SETF THIS heat 0
+    SETF THIS pcr 0
     RET 0
   END
 
@@ -890,9 +901,12 @@ CLASS Cell
     LET a = LAST_N
     GETF THIS pmf
     LET p = LAST_N
+    GETF THIS pcr
+    LET c = LAST_N
     LET y = e + r
     LET y = y + a
     LET y = y + p
+    LET y = y + c
     RET y
   END
 
@@ -1197,6 +1211,71 @@ CLASS Cell
     GETF THIS heat
     LET h = LAST_N + take
     SETF THIS heat h
+    RET take
+  END
+
+
+  # Report phosphagen / phosphocreatine (~P buffer) for science ASSERT boards.
+  METHOD phosphagen
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    RET LAST_N
+  END
+
+
+  # Charge_pcr: load n ATP into PCr (creatine kinase forward / phosphagen store).
+  # Yield conserved (atp→pcr). Does not touch active energy or life spark.
+  # Usability: AGI banks rapid ~P buffer from work currency for burst discharge.
+  # Returns amount loaded. Dead/zero/empty ATP → 0.
+  METHOD charge_pcr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS pcr
+    LET c = LAST_N + take
+    SETF THIS pcr c
+    RET take
+  END
+
+
+  # Discharge: release n PCr into ATP (creatine kinase reverse / burst work).
+  # Yield conserved (pcr→atp). Does not touch active energy or life spark.
+  # Usability: AGI fires phosphagen burst into work currency for oxidize/catalyze
+  # or mitosis budgets under sudden demand. Dead/zero/empty buffer → 0.
+  METHOD discharge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS atp
+    LET a = LAST_N + take
+    SETF THIS atp a
     RET take
   END
 

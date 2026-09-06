@@ -1,0 +1,162 @@
+// 2044_life_cell_phosphagen.cubalc
+// Proof: life_cell phosphagen — ATP ↔ PCr creatine kinase buffer.
+// charge_pcr loads ~P store; discharge bursts ATP for work/mitosis budgets.
+// Yield conserved. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Charge ATP then load phosphagen
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after charge"
+
+SEND seed charge_pcr 4
+ASSERT LAST_N == 4 "charge_pcr 4"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "pcr 4"
+SEND seed yield
+ASSERT LAST_N == 12 "yield with pcr"
+
+// Burst discharge restores ATP
+SEND seed discharge 3
+ASSERT LAST_N == 3 "discharge 3"
+SEND seed charged
+ASSERT LAST_N == 5 "atp 5"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "pcr 1"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after discharge"
+
+// Drain remaining buffer
+SEND seed discharge 9
+ASSERT LAST_N == 1 "discharge drains 1"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield restored path"
+
+// Empty buffer discharge is noop
+SEND seed discharge 2
+ASSERT LAST_N == 0 "empty discharge 0"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr still 0"
+
+// Dead cell: phosphagen ops noop
+SEND dead charge_pcr 3
+ASSERT LAST_N == 0 "dead charge_pcr 0"
+SEND dead discharge 3
+ASSERT LAST_N == 0 "dead discharge 0"
+SEND dead phosphagen
+ASSERT LAST_N == 0 "dead pcr 0"
+
+// Zero / neg args
+SEND seed charge_pcr 0
+ASSERT LAST_N == 0 "zero charge_pcr"
+SEND seed charge_pcr -4
+ASSERT LAST_N == 0 "neg charge_pcr"
+SEND seed discharge 0
+ASSERT LAST_N == 0 "zero discharge"
+SEND seed discharge -2
+ASSERT LAST_N == 0 "neg discharge"
+
+// Quiescent path still banks and bursts phosphagen
+SEND quiet photophos 5
+ASSERT LAST_N == 5 "quiet solar atp"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet charge_pcr 4
+ASSERT LAST_N == 4 "quiet charge_pcr"
+SEND quiet phosphagen
+ASSERT LAST_N == 4 "quiet pcr 4"
+SEND quiet charged
+ASSERT LAST_N == 1 "quiet atp 1"
+SEND quiet discharge 2
+ASSERT LAST_N == 2 "quiet discharge"
+SEND quiet charged
+ASSERT LAST_N == 3 "quiet atp 3"
+SEND quiet phosphagen
+ASSERT LAST_N == 2 "quiet pcr 2"
+SEND quiet yield
+ASSERT LAST_N == 11 "quiet yield 6e+3atp+2pcr"
+
+// Ally: solar → charge_pcr → discharge → oxidize toward ready
+SEND ally photophos 6
+ASSERT LAST_N == 6 "ally solar"
+SEND ally charge_pcr 5
+ASSERT LAST_N == 5 "ally charge_pcr"
+SEND ally discharge 4
+ASSERT LAST_N == 4 "ally discharge"
+SEND ally charged
+ASSERT LAST_N == 5 "ally atp 6-5+4"
+SEND ally phosphagen
+ASSERT LAST_N == 1 "ally pcr 1"
+SEND ally oxidize 4
+ASSERT LAST_N == 4 "ally oxidize"
+GETF ally energy
+ASSERT LAST_N == 12 "ally energy 8+4"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready at thr"
+SEND ally yield
+ASSERT LAST_N == 14 "ally yield 12e+1atp+1pcr"
+
+// Over-charge clamps to available ATP
+ENTITY bat OF Cell 1 4 0
+SEND bat feed 6
+ASSERT LAST_N == 10 "bat fed"
+SEND bat charge 4
+ASSERT LAST_N == 4 "bat charge"
+SEND bat charge_pcr 9
+ASSERT LAST_N == 4 "bat clamp charge_pcr"
+SEND bat phosphagen
+ASSERT LAST_N == 4 "bat pcr 4"
+SEND bat charged
+ASSERT LAST_N == 0 "bat atp 0"
+SEND bat yield
+ASSERT LAST_N == 10 "bat yield 6e+4pcr"
+SEND bat discharge 2
+ASSERT LAST_N == 2 "bat discharge"
+SEND bat oxidize 2
+ASSERT LAST_N == 2 "bat oxidize"
+GETF bat energy
+ASSERT LAST_N == 8 "bat energy 6+2"
+GETF bat ready
+ASSERT LAST_N == 0 "bat below thr"
+SEND bat discharge 2
+ASSERT LAST_N == 2 "bat rest discharge"
+SEND bat oxidize 2
+ASSERT LAST_N == 2 "bat rest oxidize"
+GETF bat energy
+ASSERT LAST_N == 10 "bat energy thr"
+GETF bat ready
+ASSERT LAST_N == 1 "bat ready"
+SEND bat phosphagen
+ASSERT LAST_N == 0 "bat pcr empty"
+SEND bat yield
+ASSERT LAST_N == 10 "bat yield active"
+
+ASSERT 1 == 1 "life_cell phosphagen PASS"
