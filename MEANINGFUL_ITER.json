@@ -18,7 +18,7 @@
   "proof_status": "PASS",
   "asserts_ok": 64,
   "asserts_fail": 0,
-  "notes": "life_cell METHOD boost: PCr→energy (phosphagen mitosis shortcut); bypasses ATP; yield conserved; arms ready past thr; distinct from discharge/oxidize; pure .cubalc",
+  "notes": "life_cell METHOD boost: PCr\u2192energy (phosphagen mitosis shortcut); bypasses ATP; yield conserved; arms ready past thr; distinct from discharge/oxidize; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_boost.cubalc",
@@ -26,9 +26,12 @@
   "item": "2047 life cell boost",
   "item_id": "mi_2047_life_cell_boost",
   "title": "2047 life cell boost",
-  "summary": "life_cell boost PCr→energy phosphagen mitosis + atomic printer science + 1620 flagship",
-  "head_note": "boost PCr→energy phosphagen mitosis shortcut",
-  "updated": 1788736800,
+  "summary": "life_cell boost PCr\u2192energy phosphagen mitosis + atomic printer science + 1620 flagship",
+  "head_note": "boost PCr\u2192energy phosphagen mitosis shortcut",
+  "updated": 1788736900,
   "parent_head": "1141dc047",
-  "feat_commit": "pending"
+  "feat_commit": "1f6483f51cc13a65191c2aa792ed3cfae80731d5",
+  "head": "55e80583f40311d97e04f6464c79bbf4fb506bb1",
+  "pin_head": "55e80583f40311d97e04f6464c79bbf4fb506bb1",
+  "tip": "55e80583f40311d97e04f6464c79bbf4fb506bb1"
 }
