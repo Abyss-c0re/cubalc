@@ -11,21 +11,24 @@
   "proof": "programs/proof/2035_life_cell_atp_charge.cubalc",
   "proofs": [
     "programs/proof/2035_life_cell_atp_charge.cubalc",
-    "programs/science/integration/atomic_printer_life_atp_charge.cubalc"
+    "programs/science/integration/atomic_printer_life_atp_charge.cubalc",
+    "programs/science/proof/2035_atomic_printer_life_atp_charge.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 33,
   "asserts_fail": 0,
-  "science_asserts_ok": 33,
-  "science_asserts_fail": 0,
-  "notes": "life_cell usability: METHOD charge converts free energy to ATP work currency retaining spark; METHOD spend burns ATP; METHOD charged reports balance; METHOD catalyze spends 1 ATP to arm ready near threshold; COP method ceiling raised 24->40 fields 24->32; pure .cubalc lib extend no IF*P duals",
+  "flagship_1620": "PASS",
+  "notes": "life_cell usability: FIELD atp + METHOD charge/spend/charged/catalyze; free energy to work currency; spark retain; catalyze arms near-threshold mitosis; CUBALC_MAX_METHODS 40; pure .cubalc no C duals",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_atp_charge.cubalc",
-  "item": "281 life cell atp charge",
-  "item_id": "mi_281_life_cell_atp_charge",
-  "title": "281 life cell atp charge",
-  "summary": "life_cell charge/spend/charged/catalyze + atomic printer science",
-  "commit": "2183912f0",
-  "HEAD": "2183912f07d4eba7da178c4b0e96a92b61054960"
+  "science_asserts_ok": 33,
+  "item": "life cell atp charge",
+  "item_id": "mi_life_cell_atp_charge",
+  "title": "life cell atp charge",
+  "summary": "ATP charge/spend/charged/catalyze \u2014 free energy to work currency for mitosis arm.",
+  "commit": "919260af2",
+  "commit_full": "919260af257426845d06256b9a7db81c403f3f97",
+  "ts": "2026-09-06T14:49:42Z",
+  "anti_bloat": true
 }
