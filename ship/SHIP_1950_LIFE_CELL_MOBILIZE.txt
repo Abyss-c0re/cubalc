@@ -1,5 +1,5 @@
-SHIP 1950 LIFE_CELL_MOBILIZE_SURPLUS
-methods: mobilize surplus
-proofs: 1950 PASS 20/0; 1949 PASS 19/0; 1948 PASS 12/0; 1620 PASS 12/0
-c_slice: programs/lib/life_cell.cubalc
-draw sealed ATP surplus back to working energy without tearing voids
+LIFE_CELL_MOBILIZE_SURPLUS 1950
+feat 8856246c8206e7443fc9585a82e5f58048c20b1b — programs/lib/life_cell.cubalc mobilize+surplus
+proofs 1950 asserts_ok=20 fail=0; 1949 PASS; flagship 1620 PASS 12/0
+pin 8856246c8206e7443fc9585a82e5f58048c20b1b MEANINGFUL_ITER 1950 · VERSION 1.15.1430-usability
+HEAD 8856246c8206e7443fc9585a82e5f58048c20b1b

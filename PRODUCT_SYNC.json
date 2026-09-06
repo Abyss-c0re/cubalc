@@ -7,6 +7,7 @@
   "proofs": [
     "1950_life_cell_mobilize",
     "1949_life_cell_total_stow",
+    "880_life_cell_atp",
     "1948_life_cell_atp",
     "1620_atomic_printer_life_force"
   ],
@@ -15,5 +16,5 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "ship": "1950_life_cell_mobilize",
-  "head_note": "LIFE_CELL mobilize/surplus draw sealed free-energy to work"
+  "head_note": "LIFE_CELL mobilize/surplus free-energy draw from sealed bank"
 }
