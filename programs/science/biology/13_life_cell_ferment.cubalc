@@ -1,0 +1,31 @@
+# Biology 13 — Life cell mixed-acid fermentation usability
+# Pure .cubalc science board: ferment burns energy → floor(n/6) atp (weaker than glycolyse)
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 18 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed ferment 12
+ASSERT LAST_N == 2 "ferment 12 → atp 2"
+GETF seed energy
+ASSERT LAST_N == 6 "energy remainder 6"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below 10"
+SEND seed total
+ASSERT LAST_N == 8 "total 6+2"
+SEND seed potential
+ASSERT LAST_N == 10 "potential 6+4"
+SEND seed nourish 6
+ASSERT LAST_N == 12 "nourish restores above threshold"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after nourish"
+
+PRINT "bio13_ferment" ENERGY
+PASS

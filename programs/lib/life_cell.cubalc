@@ -33,6 +33,7 @@
 #   phosphorylate n  substrate-level: burn n energy → n atp 1:1 (fail-closed; full yield)
 #   hydrolyse n      ATP hydrolysis: burn n atp → n energy 1:1 (fail-closed; reverse phosphorylate)
 #   nourish n        external nutrient: add n energy (fail-closed; not via atp)
+#   ferment n         mixed-acid fermentation: burn n energy → floor(n/6) atp (fail-closed; weaker than glycolyse)
 
 CLASS Cell
   FIELD alive 0
@@ -472,6 +473,35 @@ CLASS Cell
     END
     SETF THIS ready rd
     RET e
+  END
+
+
+  METHOD ferment n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < n THEN
+      RET 0
+    END
+    LET e = e - n
+    SETF THIS energy e
+    # mixed-acid fermentation: floor(n/6) atp (weaker than glycolyse n/4)
+    LET gain = n / 6
+    GETF THIS atp
+    LET a = LAST_N + gain
+    SETF THIS atp a
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
   END
 
 END

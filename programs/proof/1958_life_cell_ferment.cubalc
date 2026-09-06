@@ -1,0 +1,120 @@
+# 1958_life_cell_ferment.cubalc
+# LIFE_CELL_FERMENT — mixed-acid fermentation: burn n energy → floor(n/6) atp.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 18 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 18 "seed energy 18"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+GETF seed ready
+ASSERT LAST_N == 0 "ready not set until energy-touch"
+
+# force ready via stow 0
+SEND seed stow 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after stow0 at energy 18"
+SEND seed spare
+ASSERT LAST_N == 8 "spare 18-10=8"
+
+# ferment 12 → floor(12/6)=2 atp; energy 6
+SEND seed ferment 12
+ASSERT LAST_N == 2 "ferment 12 → +2 atp"
+GETF seed energy
+ASSERT LAST_N == 6 "energy 18-12=6"
+GETF seed atp
+ASSERT LAST_N == 2 "atp 2"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below 10"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 below threshold"
+SEND seed total
+ASSERT LAST_N == 8 "total 6+2"
+SEND seed potential
+ASSERT LAST_N == 10 "potential 6+4=10"
+
+# restore energy via nourish then ferment odd n floors
+SEND seed nourish 12
+ASSERT LAST_N == 18 "nourish → energy 18"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 18"
+SEND seed ferment 7
+ASSERT LAST_N == 3 "ferment 7 → floor(7/6)=1 → atp 2+1=3"
+GETF seed energy
+ASSERT LAST_N == 11 "energy 18-7=11"
+GETF seed atp
+ASSERT LAST_N == 3 "atp 3"
+SEND seed spare
+ASSERT LAST_N == 1 "spare 11-10=1"
+
+# zero n no-op returns current atp
+SEND seed ferment 0
+ASSERT LAST_N == 3 "ferment 0 keeps atp"
+GETF seed energy
+ASSERT LAST_N == 11 "energy unchanged on 0"
+
+# over-ferment fail-closed
+SEND seed ferment 99
+ASSERT LAST_N == 0 "over-ferment returns 0"
+GETF seed energy
+ASSERT LAST_N == 11 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 3 "atp unchanged on fail"
+
+# negative clamped to 0 path returns atp
+SEND seed ferment -5
+ASSERT LAST_N == 3 "neg n clamps returns atp"
+GETF seed energy
+ASSERT LAST_N == 11 "energy unchanged on neg"
+
+# weaker than glycolyse: ferment 12 yields 2; glycolyse 12 would yield 3
+# restore clean cell for yield compare
+SEND seed die
+ENTITY cell2 OF Cell 1 20 0
+PLUG medium cell2
+SEND cell2 ferment 12
+ASSERT LAST_N == 2 "ferment 12 → +2 atp"
+GETF cell2 energy
+ASSERT LAST_N == 8 "energy 20-12=8"
+GETF cell2 atp
+ASSERT LAST_N == 2 "atp 2 from ferment"
+
+ENTITY cell3 OF Cell 1 20 0
+PLUG medium cell3
+SEND cell3 glycolyse 12
+ASSERT LAST_N == 3 "glycolyse 12 → +3 atp (stronger)"
+GETF cell3 atp
+ASSERT LAST_N == 3 "atp 3 from glycolyse"
+GETF cell3 energy
+ASSERT LAST_N == 8 "energy 20-12=8"
+
+# dead blocked
+SEND cell2 die
+SEND cell2 ferment 6
+ASSERT LAST_N == 0 "dead ferment 0"
+
+# exact 6 → +1 atp
+ENTITY cell4 OF Cell 1 12 0
+PLUG medium cell4
+SEND cell4 ferment 6
+ASSERT LAST_N == 1 "ferment 6 → +1 atp"
+GETF cell4 energy
+ASSERT LAST_N == 6 "energy 12-6=6"
+GETF cell4 atp
+ASSERT LAST_N == 1 "atp 1"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_ferment_1958" CUBES ENERGY
+PASS
