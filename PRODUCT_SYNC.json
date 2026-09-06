@@ -1,20 +1,19 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1949,
-  "feature": "LIFE_CELL_TOTAL_STOW_SATURATE",
-  "version": "1.15.1429-usability",
+  "meaningful_iter": 1950,
+  "feature": "LIFE_CELL_MOBILIZE_SURPLUS",
+  "version": "1.15.1430-usability",
   "c_slice": "programs/lib/life_cell.cubalc",
   "proofs": [
+    "1950_life_cell_mobilize",
     "1949_life_cell_total_stow",
-    "880_life_cell_atp",
     "1948_life_cell_atp",
     "1620_atomic_printer_life_force"
   ],
-  "total": 1,
-  "stow": 1,
-  "saturate": 1,
+  "mobilize": 1,
+  "surplus": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "ship": "1949_life_cell_total_stow",
-  "head_note": "LIFE_CELL total/stow/saturate countable free-energy pool"
+  "ship": "1950_life_cell_mobilize",
+  "head_note": "LIFE_CELL mobilize/surplus draw sealed free-energy to work"
 }

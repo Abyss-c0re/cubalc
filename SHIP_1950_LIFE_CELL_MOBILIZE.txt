@@ -1,0 +1,5 @@
+SHIP 1950 LIFE_CELL_MOBILIZE_SURPLUS
+methods: mobilize surplus
+proofs: 1950 PASS 20/0; 1949 PASS 19/0; 1948 PASS 12/0; 1620 PASS 12/0
+c_slice: programs/lib/life_cell.cubalc
+draw sealed ATP surplus back to working energy without tearing voids
