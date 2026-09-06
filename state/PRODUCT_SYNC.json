@@ -3,9 +3,9 @@
   "iter": 1960,
   "feature": "LIFE_CELL_OXIDISE",
   "version": "1.15.1440-usability",
-  "head": "b0640523236b5cde68fda1d66a9bbf05e7d447b6",
-  "tip": "b0640523236b5cde68fda1d66a9bbf05e7d447b6",
-  "pin": "b0640523236b5cde68fda1d66a9bbf05e7d447b6",
+  "head": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
+  "tip": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
+  "pin": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
   "tip_equals_pin": true,
   "proof": "PASS 30/0",
   "sealed": true
