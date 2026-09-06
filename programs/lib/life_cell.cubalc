@@ -46,6 +46,7 @@
 #   yield                full energetic capacity = energy + reserve + atp
 #   glycolyse n          phosphorylate: reserve → ATP (mitochondrial path)
 #   oxidize n            ATP → active energy (work heat return)
+#   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
 
 CLASS Cell
   FIELD alive 0
@@ -937,6 +938,31 @@ CLASS Cell
       LET rd = 1
     END
     SETF THIS ready rd
+    RET take
+  END
+
+
+  # Anabolize: store n ATP as glycogen reserve (synthesis / storage path).
+  # Reverse companion of glycolyse. Yield conserved. Returns amount stored.
+  METHOD anabolize n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS reserve
+    LET r = LAST_N + take
+    SETF THIS reserve r
     RET take
   END
 

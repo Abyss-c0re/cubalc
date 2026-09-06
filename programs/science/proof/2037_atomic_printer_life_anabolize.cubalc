@@ -1,0 +1,46 @@
+// 2037_atomic_printer_life_anabolize.cubalc
+// Science proof wrapper: anabolize metabolic triangle on atomic printer.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=science_proof | type=2037_atomic_printer_life_anabolize | hold_flash=1 |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+PLUG bed nozzle
+
+ENTITY seed OF Cell 1 16 0
+PLUG bed seed
+
+IMPULSE bed 1
+ENERGYFLOW 2
+FLOW 1
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle
+ASSERT SMX_OK == 1 "smx ok"
+
+SEND seed bank 4
+SEND seed charge 3
+SEND seed glycolyse 2
+SEND seed anabolize 4
+ASSERT LAST_N == 4 "anabolize 4"
+SEND seed yield
+ASSERT LAST_N == 16 "yield"
+SEND seed stores
+ASSERT LAST_N == 6 "reserve 6"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+SEND seed oxidize 1
+GETF seed energy
+ASSERT LAST_N == 10 "armed path energy"
+GETF seed ready
+ASSERT LAST_N == 1 "ready"
+
+ASSERT 1 == 1 "2037 atomic printer life anabolize PASS"

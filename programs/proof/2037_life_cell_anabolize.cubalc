@@ -1,0 +1,100 @@
+// 2037_life_cell_anabolize.cubalc
+// Proof: life_cell anabolize — ATP → reserve glycogen synthesis.
+// Completes metabolic triangle with glycolyse (reserve→ATP) and oxidize (ATP→energy).
+// Yield ledger conserved across anabolize. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 16 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+
+// Prime ATP via charge + glycolyse path
+SEND seed bank 6
+ASSERT LAST_N == 6 "bank 6"
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+SEND seed glycolyse 3
+ASSERT LAST_N == 3 "glycolyse 3"
+SEND seed charged
+ASSERT LAST_N == 7 "atp 7"
+SEND seed stores
+ASSERT LAST_N == 3 "reserve 3"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6 spark path"
+SEND seed yield
+ASSERT LAST_N == 16 "yield 16 baseline"
+
+// Anabolize: ATP → reserve (storage synthesis)
+SEND seed anabolize 5
+ASSERT LAST_N == 5 "anabolize 5"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed stores
+ASSERT LAST_N == 8 "reserve 8"
+GETF seed energy
+ASSERT LAST_N == 6 "active untouched"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved anabolize"
+
+// Closed loop: anabolize then glycolyse returns ATP stock
+SEND seed anabolize 2
+ASSERT LAST_N == 2 "anabolize rest atp"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed stores
+ASSERT LAST_N == 10 "reserve 10"
+SEND seed glycolyse 4
+ASSERT LAST_N == 4 "re-glycolyse 4"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4 again"
+SEND seed stores
+ASSERT LAST_N == 6 "reserve 6"
+SEND seed yield
+ASSERT LAST_N == 16 "yield still 16 loop"
+
+// Oxidize after anabolize path still arms mitosis from ATP branch
+SEND seed oxidize 3
+ASSERT LAST_N == 3 "oxidize 3"
+GETF seed energy
+ASSERT LAST_N == 9 "active 9"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+GETF seed ready
+ASSERT LAST_N == 0 "below thr 10"
+SEND seed feed 1
+ASSERT LAST_N == 10 "feed thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready armed"
+SEND seed yield
+ASSERT LAST_N == 17 "yield after feed gift"
+
+// Cap: anabolize cannot exceed ATP
+ENTITY bare OF Cell 1 5 0
+SEND bare charge 2
+ASSERT LAST_N == 2 "bare charge"
+SEND bare anabolize 9
+ASSERT LAST_N == 2 "anabolize cap atp"
+SEND bare charged
+ASSERT LAST_N == 0 "bare atp 0"
+SEND bare stores
+ASSERT LAST_N == 2 "bare reserve 2"
+SEND bare yield
+ASSERT LAST_N == 5 "bare yield conserved"
+
+// Dead / empty ATP
+SEND dead anabolize 3
+ASSERT LAST_N == 0 "dead no anabolize"
+SEND ally anabolize 1
+ASSERT LAST_N == 0 "ally no atp"
+SEND ally yield
+ASSERT LAST_N == 8 "ally yield intact"
+
+// n < 1 → 0
+SEND seed anabolize 0
+ASSERT LAST_N == 0 "zero n"
+SEND seed anabolize -3
+ASSERT LAST_N == 0 "neg n"
+
+ASSERT 1 == 1 "life_cell anabolize PASS"

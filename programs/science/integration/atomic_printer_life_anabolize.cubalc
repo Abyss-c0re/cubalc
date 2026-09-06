@@ -1,0 +1,100 @@
+// atomic_printer_life_anabolize.cubalc
+// Science board: anabolize ATP→reserve under atomic printer life-force lattice.
+// Metabolic triangle: glycolyse / oxidize / anabolize. Free energy must flow.
+// Cube is SoT. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=science | type=atomic_printer_life_anabolize | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY ally OF Cell 1 8 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+SEND seed yield
+ASSERT LAST_N == 16 "seed yield 16"
+SEND seed bank 6
+ASSERT LAST_N == 6 "bank 6"
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+SEND seed glycolyse 3
+ASSERT LAST_N == 3 "glycolyse 3"
+SEND seed charged
+ASSERT LAST_N == 7 "atp 7"
+SEND seed anabolize 5
+ASSERT LAST_N == 5 "anabolize 5"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed stores
+ASSERT LAST_N == 8 "reserve 8"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed yield
+ASSERT LAST_N == 16 "yield conserved"
+
+// Loop: anabolize remainder then glycolyse recovers work currency
+SEND seed anabolize 2
+ASSERT LAST_N == 2 "store rest"
+SEND seed glycolyse 5
+ASSERT LAST_N == 5 "glycolyse back"
+SEND seed charged
+ASSERT LAST_N == 5 "atp 5"
+SEND seed yield
+ASSERT LAST_N == 16 "yield loop"
+
+// Oxidize branch arms mitosis
+SEND seed oxidize 4
+ASSERT LAST_N == 4 "oxidize 4"
+GETF seed energy
+ASSERT LAST_N == 10 "active thr"
+GETF seed ready
+ASSERT LAST_N == 1 "ready"
+SEND seed yield
+ASSERT LAST_N == 16 "yield final"
+
+// Ally: charge then anabolize storage gift path
+SEND ally charge 3
+ASSERT LAST_N == 3 "ally charge"
+SEND ally anabolize 3
+ASSERT LAST_N == 3 "ally anabolize"
+SEND ally stores
+ASSERT LAST_N == 3 "ally reserve"
+SEND ally charged
+ASSERT LAST_N == 0 "ally atp clear"
+SEND ally yield
+ASSERT LAST_N == 8 "ally yield"
+
+ASSERT 1 == 1 "atomic printer life anabolize PASS"
