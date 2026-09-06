@@ -3,8 +3,8 @@
   "meaningful_iter": 2047,
   "MEANINGFUL_ITER": 2047,
   "iter": 2047,
-  "version": "1.15.1531-usability",
-  "VERSION": "1.15.1531-usability",
+  "version": "1.15.1530-usability",
+  "VERSION": "1.15.1530-usability",
   "feature": "life_cell_boost",
   "FEATURE": "LIFE_CELL_BOOST",
   "ship": "2047_life_cell_boost",
@@ -16,9 +16,9 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 81,
+  "asserts_ok": 64,
   "asserts_fail": 0,
-  "notes": "life_cell METHOD boost: PCr→energy direct (phosphagen mitosis shortcut); yield conserved; arms ready; ATP/pmf/heat untouched; distinct from discharge; pure .cubalc",
+  "notes": "life_cell METHOD boost: PCr\u2192energy phosphagen mitosis shortcut; yield conserved; ATP/pmf/heat untouched; arms ready; distinct from discharge/oxidize; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_boost.cubalc",
@@ -26,9 +26,9 @@
   "item": "2047 life cell boost",
   "item_id": "mi_2047_life_cell_boost",
   "title": "2047 life cell boost",
-  "summary": "life_cell boost PCr→energy + atomic printer science + 1620 flagship",
-  "head_note": "boost PCr→energy phosphagen mitosis",
-  "updated": 1788736779,
-  "parent_head": "1141dc047c81fe543ae5c200f57bf4825b3a5e94",
-  "feat_commit": "4838eb527ba9929e6b7c26878d792cb2b904969b"
+  "summary": "life_cell boost PCr\u2192energy + atomic printer science + 1620 flagship",
+  "head_note": "boost PCr\u2192energy phosphagen mitosis",
+  "updated": 1788736800,
+  "parent_head": "1141dc047",
+  "feat_commit": "pending"
 }
