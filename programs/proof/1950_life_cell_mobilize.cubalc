@@ -1,0 +1,64 @@
+# 1950_life_cell_mobilize.cubalc
+# LIFE_CELL_MOBILIZE_SURPLUS — draw sealed ATP back to working energy.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 12 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 12 "seed energy 12"
+SEND seed surplus
+ASSERT LAST_N == 0 "surplus empty at start"
+
+# bank free energy then read surplus
+SEND seed stow 4
+ASSERT LAST_N == 4 "stow banks 4 atp"
+SEND seed surplus
+ASSERT LAST_N == 4 "surplus is banked atp"
+GETF seed energy
+ASSERT LAST_N == 8 "energy after stow"
+
+# mobilize draws sealed surplus into working energy
+SEND seed mobilize 3
+ASSERT LAST_N == 11 "mobilize 3 → energy 8+3"
+GETF seed atp
+ASSERT LAST_N == 1 "atp left 1"
+SEND seed total
+ASSERT LAST_N == 12 "total conserved across mobilize"
+SEND seed surplus
+ASSERT LAST_N == 1 "surplus after partial mobilize"
+
+# over-mobilize fail-closed
+SEND seed mobilize 9
+ASSERT LAST_N == 0 "over-mobilize returns 0"
+GETF seed energy
+ASSERT LAST_N == 11 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 1 "atp unchanged on fail"
+
+# full drain of surplus
+SEND seed mobilize 1
+ASSERT LAST_N == 12 "full mobilize restores energy"
+SEND seed surplus
+ASSERT LAST_N == 0 "surplus empty"
+
+# dead cell blocked
+SEND seed die
+SEND seed mobilize 1
+ASSERT LAST_N == 0 "dead mobilize blocked"
+SEND seed surplus
+ASSERT LAST_N == 0 "dead surplus 0"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_mobilize_1950" CUBES ENERGY
+PASS

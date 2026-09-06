@@ -22,6 +22,8 @@
 #   total          energy + atp (countable free-energy pool)
 #   stow n         move n energy → atp (storage; fail-closed)
 #   saturate cap   fill atp up to cap from energy (feast→store)
+#   mobilize n     draw n atp → energy (spend sealed surplus; fail-closed)
+#   surplus        banked free-energy (atp) available to mobilize
 
 CLASS Cell
   FIELD alive 0
@@ -236,5 +238,40 @@ CLASS Cell
     END
     SETF THIS ready rd
     RET a
+  END
+
+  METHOD mobilize n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < n THEN
+      RET 0
+    END
+    LET a = a - n
+    SETF THIS atp a
+    GETF THIS energy
+    LET e = LAST_N + n
+    SETF THIS energy e
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET e
+  END
+
+  METHOD surplus
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS atp
+    RET LAST_N
   END
 END
