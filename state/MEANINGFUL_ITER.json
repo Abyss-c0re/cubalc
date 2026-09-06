@@ -12,9 +12,9 @@
   "next": "we_autoheal",
   "sealed": true,
   "feat_note": "mobilize/surplus free-energy draw usability on Cell",
-  "head": "70beefa1c1fd7479b99f195eb0b6e756c2528b4c",
-  "tip": "70beefa1c1fd7479b99f195eb0b6e756c2528b4c",
-  "pin": "70beefa1c1fd7479b99f195eb0b6e756c2528b4c",
+  "head": "b91b74829e31011813cb55b3dbe04e3c54021a19",
+  "tip": "b91b74829e31011813cb55b3dbe04e3c54021a19",
+  "pin": "b91b74829e31011813cb55b3dbe04e3c54021a19",
   "tip_equals_pin": true,
   "feat_head": "8856246c8206e7443fc9585a82e5f58048c20b1b",
   "proofs": {
