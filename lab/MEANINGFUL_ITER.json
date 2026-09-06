@@ -1,24 +1,27 @@
 {
   "meaningful_iter": 1954,
   "feature": "LIFE_CELL_SPARE_GLYCOLYSE",
-  "ship": "1954_life_cell_spare_glycolyse",
+  "ship": "1954_spare_glycolyse",
   "version": "1.15.1434-usability",
   "proofs_pass": true,
   "c_slice": "programs/lib/life_cell.cubalc",
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "spare=max(0,energy-10) mitosis surplus; glycolyse anaerobic n\u2192floor(n/4) atp half of respire",
+  "feat_note": "SPARE max(0,energy-10) mitosis surplus; GLYCOLYSE anaerobic n->floor(n/4) atp (half respire)",
   "proofs": {
     "1954_life_cell_spare_glycolyse": "PASS 33/0",
     "1952_life_cell_budget": "PASS 24/0",
     "1951_life_cell_respire": "PASS 22/0",
     "1950_life_cell_mobilize": "PASS 20/0",
-    "flagship_1620": "PASS 12/0"
+    "1949_life_cell_total_stow": "PASS 19/0",
+    "1948_life_cell_atp": "PASS 12/0",
+    "1620_atomic_printer_life_force": "PASS 12/0",
+    "bio09_spare_glycolyse": "PASS 6/0"
   },
   "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
-  "head": "d7cd7d3e874646d0b270cbc2a1a41c31b9dc3e0e",
-  "tip": "d7cd7d3e874646d0b270cbc2a1a41c31b9dc3e0e",
-  "pin": "d7cd7d3e874646d0b270cbc2a1a41c31b9dc3e0e",
+  "head": "a36d4d8f7f0f3f7700c1ab29d27ab20bf1568323",
+  "tip": "a36d4d8f7f0f3f7700c1ab29d27ab20bf1568323",
+  "pin": "a36d4d8f7f0f3f7700c1ab29d27ab20bf1568323",
   "tip_equals_pin": true
 }
