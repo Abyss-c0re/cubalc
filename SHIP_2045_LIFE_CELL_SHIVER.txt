@@ -1,0 +1,9 @@
+LIFE_CELL_SHIVER 2045
+feat — programs/lib/life_cell.cubalc METHOD shiver n
+proofs 2045 asserts_ok=42 fail=0; science 26/0; uncouple 2043 PASS 65/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2045 · VERSION 1.15.1528-usability
+free energy: shiver n burns n active energy → heat (shivering thermogenesis); spark floor holds; ATP/pmf/pcr untouched; yield sheds
+CUBALC_MAX_METHODS 40→64
+programs/proof/2045_life_cell_shiver.cubalc
+programs/science/proof/2045_atomic_printer_life_shiver.cubalc
+programs/science/integration/atomic_printer_life_shiver.cubalc
