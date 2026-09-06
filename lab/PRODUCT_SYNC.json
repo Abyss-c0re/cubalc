@@ -1,16 +1,10 @@
 {
-  "feature": "LIFE_CELL_RESPIRE_POTENTIAL",
-  "iter": 1862,
-  "version": "1.15.1431-usability",
-  "head": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
-  "tip_equals_pin": true,
-  "soft_oob": 1,
-  "bonds": 6,
-  "chiasm_ready": 1,
-  "proofs_pass": true,
-  "sealed": true,
-  "meaningful_iter": 1951,
-  "ship": "1951_life_cell_respire",
-  "head_note": "MESH_OPTIC_CHIASM dual-autoheal decussation_ready"
+  "product": "cubalc",
+  "meaningful_iter": 1954,
+  "version": "1.15.1434-usability",
+  "feature": "LIFE_CELL_SPARE_GLYCOLYSE",
+  "head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "unity": 1.0,
+  "flagship_1620": "PASS"
 }

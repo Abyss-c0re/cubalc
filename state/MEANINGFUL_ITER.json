@@ -1,20 +1,24 @@
 {
-  "meaningful_iter": 1953,
-  "feature": "MINN_MAXN_CLAMPN",
-  "ship": "1953_minmax_clamp",
-  "version": "1.15.1433-usability",
+  "meaningful_iter": 1954,
+  "feature": "LIFE_CELL_SPARE_GLYCOLYSE",
+  "ship": "1954_life_cell_spare_glycolyse",
+  "version": "1.15.1434-usability",
   "proofs_pass": true,
-  "c_slice": "src/lang/lang_ops_math.c",
+  "c_slice": "programs/lib/life_cell.cubalc",
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "MINN/MAXN two-arg integer bounds + CLAMPN aliases; free energy lattice clamp without shell glue",
+  "feat_note": "spare=max(0,energy-10) mitosis surplus; glycolyse anaerobic n\u2192floor(n/4) atp half of respire",
   "proofs": {
-    "1953_minmax_clamp": "PASS 40/0"
+    "1954_life_cell_spare_glycolyse": "PASS 33/0",
+    "1952_life_cell_budget": "PASS 24/0",
+    "1951_life_cell_respire": "PASS 22/0",
+    "1950_life_cell_mobilize": "PASS 20/0",
+    "flagship_1620": "PASS 12/0"
   },
-  "feat_head": "ae0a2047d0337af7a8a75dd13452b67bc4c11744",
-  "head": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
-  "tip": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
-  "pin": "b434f11bd04fcac2d1dfec1d40bd91ea13ca6171",
+  "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "tip": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "pin": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
   "tip_equals_pin": true
 }

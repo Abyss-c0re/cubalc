@@ -1,10 +1,10 @@
 {
   "product": "cubalc",
-  "meaningful_iter": 1953,
-  "version": "1.15.1433-usability",
-  "feature": "MINN_MAXN_CLAMPN",
-  "head": "b77a9c2a37649b25bf313e5333c24e1509b1d4c3",
-  "feat_head": "d85caf05c6cd37b4c1ca90345400a3f67f1ae80d",
+  "meaningful_iter": 1954,
+  "version": "1.15.1434-usability",
+  "feature": "LIFE_CELL_SPARE_GLYCOLYSE",
+  "head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
   "unity": 1.0,
   "flagship_1620": "PASS"
 }
