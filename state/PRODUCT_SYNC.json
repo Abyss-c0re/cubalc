@@ -1,8 +1,11 @@
 {
-  "meaningful_iter": 1957,
-  "version": "1.15.1437-usability",
-  "feature": "LIFE_CELL_NOURISH",
-  "head": "10f037cabc9bc0753b947f387fff86ff00a985e1",
-  "proof": "1957_life_cell_nourish.cubalc",
-  "flagship_1620": "PASS"
+  "product": "cubalc",
+  "iter": 1959,
+  "feature": "LIFE_CELL_LACTATE",
+  "version": "1.15.1439-usability",
+  "head": "415af4555135bbbd3233bd8cf337a98635267aa5",
+  "tip": "415af4555135bbbd3233bd8cf337a98635267aa5",
+  "pin": "415af4555135bbbd3233bd8cf337a98635267aa5",
+  "tip_equals_pin": true,
+  "proof": "PASS 29/0"
 }
