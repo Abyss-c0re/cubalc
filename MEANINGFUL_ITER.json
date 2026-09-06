@@ -1,11 +1,11 @@
 {
   "iter": 1960,
   "feature": "LIFE_CELL_OXIDISE",
-  "head": "4a75e60960356b28001e51d540ff55becdf58168",
+  "head": "4eaf577e56c495b73f36373870316b845bc7d1f5",
   "version": "1.15.1440-usability",
   "proof": "1960_life_cell_oxidise.cubalc",
-  "tip": "4a75e60960356b28001e51d540ff55becdf58168",
-  "pin": "4a75e60960356b28001e51d540ff55becdf58168",
+  "tip": "4eaf577e56c495b73f36373870316b845bc7d1f5",
+  "pin": "4eaf577e56c495b73f36373870316b845bc7d1f5",
   "tip_equals_pin": true,
   "proofs": {
     "1960": "PASS 30/0",
