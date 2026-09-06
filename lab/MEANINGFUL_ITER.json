@@ -1,11 +1,24 @@
 {
   "meaningful_iter": 1955,
-  "version": "1.15.1435-usability",
   "feature": "LIFE_CELL_PHOSPHORYLATE",
-  "head": "d41c6e5444358b523f529518eebcf0cfdfb04811",
-  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e",
-  "proof": "1955_life_cell_phosphorylate.cubalc",
-  "asserts_ok": 45,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS"
+  "ship": "1955_life_cell_phosphorylate",
+  "version": "1.15.1435-usability",
+  "proofs_pass": true,
+  "c_slice": "programs/lib/life_cell.cubalc",
+  "unity": 1.0,
+  "next": "we_autoheal",
+  "sealed": true,
+  "feat_note": "phosphorylate n: burn n energy \u2192 n atp 1:1 substrate-level full yield (fail-closed)",
+  "proofs": {
+    "1955_life_cell_phosphorylate": "PASS 45/0",
+    "1954_life_cell_spare_glycolyse": "PASS 33/0",
+    "1952_life_cell_budget": "PASS 24/0",
+    "flagship_1620": "PASS 12/0",
+    "bio10_phosphorylate": "PASS 7/0"
+  },
+  "feat_head": "bd2bcb3d19231e2ac17fe968d5877b1bda4b4b56",
+  "head": "e5ab12598b14a2f22735fb15bc271946150c9d60",
+  "tip": "e5ab12598b14a2f22735fb15bc271946150c9d60",
+  "pin": "e5ab12598b14a2f22735fb15bc271946150c9d60",
+  "tip_equals_pin": true
 }
