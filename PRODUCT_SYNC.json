@@ -1,13 +1,14 @@
 {
   "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1512-usability",
+  "version": "1.15.1530-usability",
   "paradigm": "COP/flow",
   "ok": true,
-  "meaningful_iter": 2031,
-  "feature": "LIFE_CELL_SENSE_REPAIR_PULSE",
+  "meaningful_iter": 2047,
+  "feature": "LIFE_CELL_BOOST",
   "proof_status": "PASS",
-  "asserts_ok": 52,
+  "asserts_ok": 64,
+  "science_asserts_ok": 38,
   "flagship_1620_asserts_ok": 12,
-  "head": "b9e31f8392e97a63ea01699a801b6c0d2487eb00"
+  "head": "pending"
 }
