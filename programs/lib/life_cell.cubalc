@@ -26,6 +26,8 @@
 #   surplus        banked free-energy (atp) available to mobilize
 #   respire n      oxidize n energy → floor(n/2) atp (fail-closed)
 #   potential      free-energy work capacity in energy-units (energy + 2*atp)
+#   budget         energy still needed to hit mitosis threshold 10 (0 if ready)
+#   endow          daughter energy gift if ready (= parent energy/2, min 1); else 0
 
 CLASS Cell
   FIELD alive 0
@@ -316,5 +318,37 @@ CLASS Cell
     # catalyze costs 2 energy per 1 atp → reverse work units
     LET p = e + (a * 2)
     RET p
+  END
+
+  METHOD budget
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # mitosis threshold is 10 energy
+    IF e >= 10 THEN
+      RET 0
+    END
+    LET need = 10 - e
+    RET need
+  END
+
+  METHOD endow
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS ready
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET half = LAST_N / 2
+    IF half < 1 THEN
+      LET half = 1
+    END
+    RET half
   END
 END

@@ -1,0 +1,5 @@
+LIFE_CELL_BUDGET_ENDOW 1952
+feat — programs/lib/life_cell.cubalc METHOD budget + endow
+proofs 1952 asserts_ok=24 fail=0; 1951 PASS 22/0; 1950 PASS 20/0; 1949 PASS 19/0; 1948 PASS 12/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 1952 · VERSION 1.15.1432-usability
+free energy: budget = max(0, 10-energy) mitosis gap; endow = ready ? max(1, energy/2) : 0 daughter gift

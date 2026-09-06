@@ -1,0 +1,89 @@
+# 1952_life_cell_budget.cubalc
+# LIFE_CELL_BUDGET_ENDOW — mitosis energy gap + daughter endowment slice.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 7 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 7 "seed energy 7"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below threshold"
+
+# budget = energy units still needed to hit mitosis threshold 10
+SEND seed budget
+ASSERT LAST_N == 3 "budget 10-7 = 3"
+SEND seed endow
+ASSERT LAST_N == 0 "endow blocked when not ready"
+
+# charge working energy to threshold via mobilize path: stow then... just charge energy by respire reverse
+# use charge/stow/mobilize carefully: seed energy 7 — stow 0, mobilize needs atp
+SEND seed charge 0
+# raise energy by reverse of stow: put atp then mobilize
+SEND seed charge 5
+SEND seed mobilize 5
+ASSERT LAST_N == 12 "mobilize gifts → energy 7+5=12"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at energy >= 10"
+SEND seed budget
+ASSERT LAST_N == 0 "budget 0 when at/above threshold"
+
+# endow = floor(energy/2) daughter package when ready (min 1)
+SEND seed endow
+ASSERT LAST_N == 6 "endow half of 12"
+# endow is pure query — state unchanged
+GETF seed energy
+ASSERT LAST_N == 12 "endow does not mutate energy"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready after endow peek"
+
+# after_div halves parent; budget re-opens if below threshold
+SEND seed after_div
+ASSERT LAST_N == 6 "after_div halves to 6"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready after half"
+SEND seed budget
+ASSERT LAST_N == 4 "budget 10-6 = 4"
+SEND seed endow
+ASSERT LAST_N == 0 "endow blocked after after_div"
+
+# exact threshold
+SEND seed die
+ENTITY cell2 OF Cell 1 10 0
+PLUG medium cell2
+GETF cell2 energy
+ASSERT LAST_N == 10 "cell2 energy 10"
+GETF cell2 ready
+# ready only set by tick/catalyze/stow paths — birth leaves ready 0
+# force via tick path or direct: use mobilize 0 then check budget
+SEND cell2 budget
+ASSERT LAST_N == 0 "budget 0 at exact threshold 10"
+# make ready by a no-op energy touch: catalyze needs >=2, use stow 0 path — charge+mobilize 0
+# SET ready via tick would change energy; instead stow 0:
+SEND cell2 stow 0
+# stow 0 still recomputes ready from energy>=10
+GETF cell2 ready
+ASSERT LAST_N == 1 "ready after stow0 recompute at 10"
+SEND cell2 endow
+ASSERT LAST_N == 5 "endow half of 10"
+
+# dead cell blocked
+SEND cell2 die
+SEND cell2 budget
+ASSERT LAST_N == 0 "dead budget 0"
+SEND cell2 endow
+ASSERT LAST_N == 0 "dead endow 0"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_budget_1952" CUBES ENERGY
+PASS

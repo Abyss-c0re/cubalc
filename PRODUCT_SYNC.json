@@ -1,8 +1,8 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1951,
-  "feature": "LIFE_CELL_RESPIRE_POTENTIAL",
-  "version": "1.15.1431-usability",
+  "meaningful_iter": 1952,
+  "feature": "LIFE_CELL_BUDGET_ENDOW",
+  "version": "1.15.1432-usability",
   "c_slice": "programs/lib/life_cell.cubalc",
   "proofs": [
     "1950_life_cell_mobilize",
