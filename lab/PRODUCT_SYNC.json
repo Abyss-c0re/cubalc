@@ -1,10 +1,8 @@
 {
-  "product": "cubalc",
-  "meaningful_iter": 1955,
-  "version": "1.15.1435-usability",
-  "feature": "LIFE_CELL_PHOSPHORYLATE",
-  "head": "0aa9418d93fb47bd31d732575dec591190fec8c6",
-  "feat_head": "bd2bcb3d19231e2ac17fe968d5877b1bda4b4b56",
-  "unity": 1.0,
-  "flagship_1620": "PASS"
+  "product": "cubalc-flow",
+  "meaningful_iter": 1956,
+  "version": "1.15.1436-usability",
+  "head": "d6eeb9440ddf92bdaa75582950099f766c21d68f",
+  "ship": "LIFE_CELL_HYDROLYSE",
+  "status": "PASS"
 }

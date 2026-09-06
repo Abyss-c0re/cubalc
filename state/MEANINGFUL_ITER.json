@@ -1,11 +1,9 @@
 {
-  "meaningful_iter": 1955,
-  "version": "1.15.1435-usability",
-  "feature": "LIFE_CELL_PHOSPHORYLATE",
-  "head": "0aa9418d93fb47bd31d732575dec591190fec8c6",
-  "feat_head": "bd2bcb3d19231e2ac17fe968d5877b1bda4b4b56",
-  "proof": "1955_life_cell_phosphorylate.cubalc",
-  "asserts_ok": 45,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS"
+  "meaningful_iter": 1956,
+  "version": "1.15.1436-usability",
+  "head": "d6eeb9440ddf92bdaa75582950099f766c21d68f",
+  "feat": "LIFE_CELL_HYDROLYSE",
+  "proof": "1956 asserts_ok=49 fail=0",
+  "ts": 1788723341,
+  "unity_note": "hydrolyse 1:1 atp->energy"
 }
