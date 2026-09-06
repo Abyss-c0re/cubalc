@@ -27,7 +27,7 @@
   "summary": "Reverse F1Fo coupling: reverse spends ATP to rebuild proton-motive force; synthase re-harvests for atomic printer life budgets.",
   "ts": "2026-09-06T18:07:04Z",
   "anti_bloat": true,
-  "commit": "80be22637",
-  "head": "80be22637b1cb819f10524d1064de98951798d82",
-  "commit_full": "80be22637b1cb819f10524d1064de98951798d82"
+  "commit": "609a2136a",
+  "head": "609a2136af811cc9fcc98fecc415cf6d3580462a",
+  "commit_full": "609a2136af811cc9fcc98fecc415cf6d3580462a"
 }
