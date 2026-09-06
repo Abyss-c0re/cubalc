@@ -1,0 +1,137 @@
+// 2046_life_cell_futile.cubalc
+// Proof: life_cell futile — ATP → heat (futile cycling thermogenesis).
+// Distinct from shiver (energy→heat) and uncouple (pmf→heat). Yield sheds.
+// warmth reports heat ledger. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Charge ATP then futile-cycle to heat
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after charge"
+
+SEND seed futile 4
+ASSERT LAST_N == 4 "futile 4"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed warmth
+ASSERT LAST_N == 4 "warmth 4"
+GETF seed heat
+ASSERT LAST_N == 4 "heat 4"
+GETF seed energy
+ASSERT LAST_N == 6 "active held"
+SEND seed yield
+ASSERT LAST_N == 8 "yield shed 4"
+
+// Drain remaining ATP as heat
+SEND seed futile 9
+ASSERT LAST_N == 2 "futile drains 2"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+SEND seed yield
+ASSERT LAST_N == 6 "yield 6e"
+
+// Empty ATP futile is noop
+SEND seed futile 3
+ASSERT LAST_N == 0 "empty futile 0"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth held"
+
+// ATP/pmf/pcr/energy isolation vs shiver path
+SEND seed feed 6
+ASSERT LAST_N == 12 "fed 12"
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+SEND seed charge_pcr 1
+ASSERT LAST_N == 1 "pcr load 1"
+SEND seed charged
+ASSERT LAST_N == 3 "atp after pcr"
+SEND seed synthase 2
+ASSERT LAST_N == 2 "synthase 2"
+SEND seed charged
+ASSERT LAST_N == 5 "atp 5"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "pcr 1"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1"
+SEND seed futile 2
+ASSERT LAST_N == 2 "futile 2"
+SEND seed charged
+ASSERT LAST_N == 3 "atp left 3"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "pcr untouched"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf untouched"
+GETF seed energy
+ASSERT LAST_N == 5 "energy untouched by futile"
+SEND seed warmth
+ASSERT LAST_N == 8 "warmth 6+2"
+
+// Dead / zero / neg
+SEND dead futile 3
+ASSERT LAST_N == 0 "dead futile 0"
+SEND dead warmth
+ASSERT LAST_N == 0 "dead warmth 0"
+SEND seed futile 0
+ASSERT LAST_N == 0 "zero futile"
+SEND seed futile -3
+ASSERT LAST_N == 0 "neg futile"
+
+// Quiescent still futile-cycles (G0 heat dump)
+SEND quiet photophos 6
+ASSERT LAST_N == 6 "quiet solar"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet futile 4
+ASSERT LAST_N == 4 "quiet futile"
+SEND quiet charged
+ASSERT LAST_N == 2 "quiet atp 2"
+SEND quiet warmth
+ASSERT LAST_N == 4 "quiet warmth 4"
+SEND quiet yield
+ASSERT LAST_N == 8 "quiet yield 6e+2atp"
+
+// Ally: photophos, futile, shiver orthogonal heat paths
+SEND ally photophos 8
+ASSERT LAST_N == 8 "ally solar"
+SEND ally futile 3
+ASSERT LAST_N == 3 "ally futile"
+SEND ally charged
+ASSERT LAST_N == 5 "ally atp 5"
+SEND ally warmth
+ASSERT LAST_N == 3 "ally warmth 3"
+SEND ally oxidize 4
+ASSERT LAST_N == 4 "ally oxidize"
+GETF ally energy
+ASSERT LAST_N == 12 "ally 12"
+SEND ally shiver 2
+ASSERT LAST_N == 2 "ally shiver"
+SEND ally warmth
+ASSERT LAST_N == 5 "ally warmth 3+2"
+SEND ally charged
+ASSERT LAST_N == 1 "ally atp 1"
+SEND ally yield
+ASSERT LAST_N == 11 "ally yield 10e+1atp"

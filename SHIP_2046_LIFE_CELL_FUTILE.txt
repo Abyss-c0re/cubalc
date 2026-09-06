@@ -1,0 +1,6 @@
+LIFE_CELL_FUTILE 2046
+feat — programs/lib/life_cell.cubalc METHOD futile n + METHOD warmth
+proofs 2046 asserts_ok=56 fail=0; science 27/0; uncouple 2043 PASS 65/0; shiver 2045 PASS 42/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2046 · VERSION 1.15.1529-usability
+free energy: futile n burns n ATP → heat (futile cycling / non-work ATPase); warmth reports heat ledger; energy/pmf/pcr untouched; yield sheds
+distinct from shiver (energy→heat) and uncouple (pmf→heat)

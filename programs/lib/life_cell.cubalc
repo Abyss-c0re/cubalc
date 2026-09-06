@@ -62,6 +62,8 @@
 #   charge_pcr n         ATP → PCr (creatine kinase load; rapid ~P store)
 #   discharge n          PCr → ATP (creatine kinase burst; work currency)
 #   shiver n             energy → heat (shivering thermogenesis; yield sheds)
+#   warmth               report heat ledger for ASSERT science boards
+#   futile n             ATP → heat (futile cycling / non-work ATPase; yield sheds)
 
 CLASS Cell
   FIELD alive 0
@@ -1324,6 +1326,47 @@ CLASS Cell
       END
     END
     SETF THIS ready rd
+    RET take
+  END
+
+
+  # Report cumulative thermogenesis heat ledger for science ASSERT boards.
+  METHOD warmth
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS heat
+    RET LAST_N
+  END
+
+
+  # Futile: burn n ATP as heat (futile cycling / non-work ATPase thermogenesis).
+  # Distinct from shiver (energy→heat) and uncouple (pmf→heat). Yield sheds by take.
+  # Usability: AGI models myosin/SERCA-style heat dumps without dual ladders.
+  # Returns amount burned. Dead/zero/empty ATP → 0. Does not touch energy/pmf/pcr.
+  METHOD futile n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
     RET take
   END
 
