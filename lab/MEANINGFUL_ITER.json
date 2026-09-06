@@ -13,7 +13,7 @@
   "next": "we_autoheal",
   "sealed": true,
   "feat_note": "budget reports energy gap to mitosis threshold 10; endow previews daughter gift when ready",
-  "feat_head": "PENDING",
+  "feat_head": "d85caf05c6cd37b4c1ca90345400a3f67f1ae80d",
   "proofs": {
     "1952_life_cell_budget": "PASS 31/0",
     "1951_life_cell_respire": "PASS 22/0",
@@ -22,8 +22,8 @@
     "1948_life_cell_atp": "PASS 12/0",
     "1620": "PASS 12/0"
   },
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING",
+  "head": "3401a6b119088cdb09e8f32ce9f52d4cb41d1888",
+  "tip": "3401a6b119088cdb09e8f32ce9f52d4cb41d1888",
+  "pin": "3401a6b119088cdb09e8f32ce9f52d4cb41d1888",
   "tip_equals_pin": true
 }
