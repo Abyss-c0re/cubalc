@@ -8,17 +8,15 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "phosphorylate n: burn n energy \u2192 n atp 1:1 substrate-level full yield (fail-closed)",
+  "feat_note": "phosphorylate n = substrate-level burn n energy \u2192 n atp 1:1 full yield (fail-closed); contrasts glycolyse floor(n/4)",
   "proofs": {
     "1955_life_cell_phosphorylate": "PASS 45/0",
     "1954_life_cell_spare_glycolyse": "PASS 33/0",
-    "1952_life_cell_budget": "PASS 24/0",
-    "flagship_1620": "PASS 12/0",
-    "bio10_phosphorylate": "PASS 7/0"
+    "flagship_1620": "PASS 12/0"
   },
   "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e",
-  "head": "a000a6393621bac67b7f720fd7c73e01fcfb37d0",
-  "tip": "a000a6393621bac67b7f720fd7c73e01fcfb37d0",
-  "pin": "a000a6393621bac67b7f720fd7c73e01fcfb37d0",
+  "head": "977ae74bdfef430c9141e9574521e380b3ddc713",
+  "tip": "977ae74bdfef430c9141e9574521e380b3ddc713",
+  "pin": "977ae74bdfef430c9141e9574521e380b3ddc713",
   "tip_equals_pin": true
 }
