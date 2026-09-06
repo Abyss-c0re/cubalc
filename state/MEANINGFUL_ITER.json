@@ -26,8 +26,8 @@
   "item_id": "mi_282_life_cell_yield_glycolyse_oxidize",
   "title": "282 life cell yield glycolyse oxidize",
   "summary": "life_cell yield ledger + glycolyse/oxidize metabolic cycle + atomic printer science",
-  "commit": "",
-  "head": "",
-  "commit_full": "",
-  "ts": "2026-09-06T15:02:40Z"
+  "commit": "27124d188",
+  "head": "27124d188230c937e1d9425969e565c42d2061ba",
+  "commit_full": "27124d188230c937e1d9425969e565c42d2061ba",
+  "ts": "2026-09-06T15:02:50Z"
 }
