@@ -61,6 +61,7 @@
 #   phosphagen           report pcr balance for ASSERT science
 #   charge_pcr n         ATP → PCr (creatine kinase load; rapid ~P store)
 #   discharge n          PCr → ATP (creatine kinase burst; work currency)
+#   shiver n             energy → heat (shivering thermogenesis; yield sheds)
 
 CLASS Cell
   FIELD alive 0
@@ -1276,6 +1277,53 @@ CLASS Cell
     GETF THIS atp
     LET a = LAST_N + take
     SETF THIS atp a
+    RET take
+  END
+
+
+
+  # Shiver: burn n active energy as heat (shivering thermogenesis / muscle cold response).
+  # Distinct from uncouple (pmf→heat). Yield sheds by take — free energy leaves as warmth.
+  # Usability: AGI models cold-stress budgets and non-UCP heat without dual ladders.
+  # Returns amount shivered. Dead/zero/empty energy → 0. Does not touch ATP/pmf/pcr.
+  METHOD shiver n
+    GETF THIS alive
+    LET al = LAST_N
+    IF al == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 2 THEN
+      RET 0
+    END
+    LET take = n
+    LET maxburn = e - 1
+    IF take > maxburn THEN
+      LET take = maxburn
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
     RET take
   END
 

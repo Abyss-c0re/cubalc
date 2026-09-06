@@ -1,0 +1,95 @@
+// atomic_printer_life_shiver.cubalc
+// Science board: atomic printer + life_cell shivering thermogenesis.
+// Active energy → heat; distinct from UCP uncouple. Yield sheds as warmth.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_shiver | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Feed -> charge -> shiver heat -> oxidize toward mitosis
+GETF seed energy
+ASSERT LAST_N == 4 "life spark 4"
+SEND seed feed 8
+ASSERT LAST_N == 12 "fed to 12"
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved"
+
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+GETF seed heat
+ASSERT LAST_N == 3 "heat 3"
+GETF seed energy
+ASSERT LAST_N == 5 "active 5"
+SEND seed charged
+ASSERT LAST_N == 4 "atp held"
+SEND seed yield
+ASSERT LAST_N == 9 "yield shed heat"
+
+SEND seed oxidize 5
+ASSERT LAST_N == 4 "oxidize clamps atp"
+GETF seed energy
+ASSERT LAST_N == 9 "active 9"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready yet"
+SEND seed feed 1
+ASSERT LAST_N == 10 "fed to 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr"
+SEND seed yield
+ASSERT LAST_N == 10 "yield 10e"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "birth ok"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 5 "daughter half"
+GETF seed heat
+ASSERT LAST_N == 3 "parent heat ledger"
+SEND seed after_div
+ASSERT LAST_N == 5 "parent after_div"

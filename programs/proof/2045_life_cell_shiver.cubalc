@@ -1,0 +1,109 @@
+// 2045_life_cell_shiver.cubalc
+// Proof: life_cell shiver — active energy → heat (shivering thermogenesis).
+// Distinct from uncouple (pmf→heat). Yield sheds; life spark preserved.
+// Cube is SoT. Free energy must flow (and may leave as warmth).
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+GETF seed heat
+ASSERT LAST_N == 0 "heat empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Shiver burns active energy as heat; spark floor holds
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+GETF seed heat
+ASSERT LAST_N == 4 "heat 4"
+SEND seed yield
+ASSERT LAST_N == 8 "yield shed 4"
+
+// ATP/pmf/pcr untouched by shiver
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+GETF seed energy
+ASSERT LAST_N == 5 "active 5"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+SEND seed yield
+ASSERT LAST_N == 8 "yield after charge"
+SEND seed shiver 2
+ASSERT LAST_N == 2 "shiver 2"
+GETF seed energy
+ASSERT LAST_N == 3 "active 3"
+SEND seed charged
+ASSERT LAST_N == 3 "atp held"
+GETF seed heat
+ASSERT LAST_N == 6 "heat 6"
+SEND seed yield
+ASSERT LAST_N == 6 "yield 3e+3atp"
+
+// Clamp: never burns last life spark
+ENTITY thin OF Cell 1 3 0
+SEND thin shiver 9
+ASSERT LAST_N == 2 "thin clamp spark"
+GETF thin energy
+ASSERT LAST_N == 1 "thin spark 1"
+GETF thin heat
+ASSERT LAST_N == 2 "thin heat 2"
+SEND thin shiver 5
+ASSERT LAST_N == 0 "thin no burn spark"
+GETF thin energy
+ASSERT LAST_N == 1 "thin spark held"
+
+// Dead / zero / neg
+SEND dead shiver 3
+ASSERT LAST_N == 0 "dead shiver 0"
+GETF dead heat
+ASSERT LAST_N == 0 "dead heat 0"
+SEND seed shiver 0
+ASSERT LAST_N == 0 "zero shiver"
+SEND seed shiver -3
+ASSERT LAST_N == 0 "neg shiver"
+
+// Quiescent still shivers (cold G0)
+SEND quiet feed 6
+ASSERT LAST_N == 12 "quiet fed"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet shiver 5
+ASSERT LAST_N == 5 "quiet shiver"
+GETF quiet energy
+ASSERT LAST_N == 7 "quiet active 7"
+GETF quiet heat
+ASSERT LAST_N == 5 "quiet heat 5"
+SEND quiet yield
+ASSERT LAST_N == 7 "quiet yield shed"
+
+// Ally: photophos ATP, oxidize to energy, shiver, ready clears below thr
+SEND ally photophos 6
+ASSERT LAST_N == 6 "ally solar"
+SEND ally oxidize 4
+ASSERT LAST_N == 4 "ally oxidize"
+GETF ally energy
+ASSERT LAST_N == 12 "ally 12"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally shiver 6
+ASSERT LAST_N == 6 "ally shiver"
+GETF ally energy
+ASSERT LAST_N == 6 "ally 6"
+GETF ally ready
+ASSERT LAST_N == 0 "ally ready cleared"
+GETF ally heat
+ASSERT LAST_N == 6 "ally heat 6"
+SEND ally charged
+ASSERT LAST_N == 2 "ally atp 2 left"
+SEND ally yield
+ASSERT LAST_N == 8 "ally yield 6e+2atp"
