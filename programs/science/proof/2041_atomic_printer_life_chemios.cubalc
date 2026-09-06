@@ -1,0 +1,20 @@
+// 2041_atomic_printer_life_chemios.cubalc
+// Science proof wrapper: chemiosmotic life force on atomic printer.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+ENTITY c OF Cell 1 10 0
+SEND c pump 4
+ASSERT LAST_N == 4 "sci pump"
+SEND c synthase 4
+ASSERT LAST_N == 4 "sci synthase"
+SEND c charged
+ASSERT LAST_N == 4 "sci atp"
+SEND c gradient
+ASSERT LAST_N == 0 "sci pmf drained"
+SEND c yield
+ASSERT LAST_N == 10 "sci yield"
+SEND c oxidize 2
+ASSERT LAST_N == 2 "sci oxidize"
+GETF c energy
+ASSERT LAST_N == 8 "sci active"
+ASSERT 1 == 1 "science chemios PASS"

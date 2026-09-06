@@ -43,13 +43,17 @@
 #   total                active + reserve metabolic wealth
 #   stow                 hibernate: bank all but life spark into reserve
 #   saturate             pour entire reserve into active energy
-#   yield                full energetic capacity = energy + reserve + atp
+#   yield                full energetic capacity = energy + reserve + atp + pmf
 #   glycolyse n          phosphorylate: reserve → ATP (mitochondrial path)
 #   oxidize n            ATP → active energy (work heat return)
 #   anabolize n          ATP → reserve (glycogen synthesis / storage anabolism)
 #   respire n            reserve → energy (mitochondrial respiration shortcut)
 #   photosynth n         light quanta → reserve (free-energy fixation gift)
 #   photophos n          light quanta → ATP (photophosphorylation / solar work)
+#   pmf                  FIELD proton-motive force (chemiosmotic gradient)
+#   gradient             report pmf balance for ASSERT science
+#   pump n               active energy → pmf (electron-transport / proton pump)
+#   synthase n           pmf → ATP (ATP synthase / F1Fo chemiosmotic coupling)
 
 CLASS Cell
   FIELD alive 0
@@ -63,6 +67,7 @@ CLASS Cell
   FIELD reserve 0
   FIELD setpoint 10
   FIELD atp 0
+  FIELD pmf 0
   ROLE body
 
   METHOD init a e g
@@ -77,6 +82,7 @@ CLASS Cell
     SETF THIS reserve 0
     SETF THIS setpoint 10
     SETF THIS atp 0
+    SETF THIS pmf 0
   END
 
   METHOD tick
@@ -144,6 +150,7 @@ CLASS Cell
     SETF THIS reserve 0
     SETF THIS setpoint 10
     SETF THIS atp 0
+    SETF THIS pmf 0
     RET 1
   END
 
@@ -165,6 +172,7 @@ CLASS Cell
     SETF THIS quiescent 0
     SETF THIS reserve 0
     SETF THIS atp 0
+    SETF THIS pmf 0
     RET 0
   END
 
@@ -876,8 +884,11 @@ CLASS Cell
     LET r = LAST_N
     GETF THIS atp
     LET a = LAST_N
+    GETF THIS pmf
+    LET p = LAST_N
     LET y = e + r
     LET y = y + a
+    LET y = y + p
     RET y
   END
 
@@ -1046,6 +1057,89 @@ CLASS Cell
     LET a = LAST_N + n
     SETF THIS atp a
     RET n
+  END
+
+
+  # Report proton-motive force (chemiosmotic gradient) for science ASSERT boards.
+  METHOD gradient
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    RET LAST_N
+  END
+
+
+  # Pump: push n active free energy into pmf (ETC proton pump / membrane charge).
+  # Retains life spark of 1. Yield conserved (energy→pmf). Returns amount pumped.
+  # Usability: AGI builds chemiosmotic gradient before ATP synthase coupling.
+  METHOD pump n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET take = n
+    IF e <= 1 THEN
+      RET 0
+    END
+    IF take > e - 1 THEN
+      LET take = e - 1
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS pmf
+    LET p = LAST_N + take
+    SETF THIS pmf p
+    # recompute ready after energy drop
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Synthase: couple n pmf into ATP (F1Fo ATP synthase / chemiosmotic work).
+  # Does not touch active energy or life spark. Yield conserved (pmf→atp).
+  # Usability: AGI harvests membrane gradient into work currency for catalyze/spend.
+  # Returns amount synthesized. Dead/zero/empty gradient → 0.
+  METHOD synthase n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS atp
+    LET a = LAST_N + take
+    SETF THIS atp a
+    RET take
   END
 
 END

@@ -1,0 +1,129 @@
+// atomic_printer_life_chemios.cubalc
+// Science board: atomic printer + life_cell chemiosmotic ATP synthesis.
+// Pump builds proton-motive force; synthase couples pmf -> ATP work currency.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_chemios | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Chemiosmotic path: feed -> pump -> synthase -> oxidize/catalyze -> mitosis
+GETF seed energy
+ASSERT LAST_N == 4 "life spark 4"
+SEND seed feed 8
+ASSERT LAST_N == 12 "fed to 12"
+SEND seed pump 5
+ASSERT LAST_N == 5 "pump 5"
+SEND seed gradient
+ASSERT LAST_N == 5 "pmf 5"
+GETF seed energy
+ASSERT LAST_N == 7 "active 7"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved"
+
+SEND seed synthase 4
+ASSERT LAST_N == 4 "synthase 4"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after synthase"
+
+// Harvest ATP into active path and arm mitosis
+SEND seed oxidize 3
+ASSERT LAST_N == 3 "oxidize harvest"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr"
+SEND seed yield
+ASSERT LAST_N == 12 "yield ledger"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter born"
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == half "daughter energy"
+
+// Daughter builds own chemios gradient
+SEND d1 feed 6
+SEND d1 pump 3
+ASSERT LAST_N == 3 "daughter pump"
+SEND d1 synthase 3
+ASSERT LAST_N == 3 "daughter synthase"
+SEND d1 charged
+ASSERT LAST_N == 3 "daughter atp"
+SEND d1 gradient
+ASSERT LAST_N == 0 "daughter pmf spent"
+SEND d1 yield
+ASSERT LAST_N >= 3 "daughter yield chemios"
+
+// Parent remnant: solar + chemios dual paths
+SEND seed photophos 2
+ASSERT LAST_N == 2 "parent solar atp"
+SEND seed synthase 1
+ASSERT LAST_N == 1 "parent last pmf"
+SEND seed charged
+ASSERT LAST_N >= 3 "parent atp stack"
+SEND seed yield
+ASSERT LAST_N >= 3 "parent yield remnant"
+
+// Colony gift of chemios ATP work
+ENTITY peer OF Cell 1 3 0
+PLUG bed peer
+SEND seed spend 1
+SEND peer feed 1
+SEND peer pump 1
+SEND peer synthase 1
+SEND peer charged
+ASSERT LAST_N == 1 "peer chemios atp"
+SEND peer catalyze
+
+ASSERT 1 == 1 "atomic_printer_life_chemios PASS"

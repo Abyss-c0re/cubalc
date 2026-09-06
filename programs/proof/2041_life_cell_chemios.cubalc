@@ -1,0 +1,183 @@
+// 2041_life_cell_chemios.cubalc
+// Proof: life_cell chemiosmotic coupling — pump (energy->pmf) + synthase (pmf->ATP).
+// Proton-motive force gradient bridges free energy to work currency.
+// Yield conserved across pump/synthase. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 6 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Pump builds proton-motive force from active energy (retain spark)
+SEND seed pump 5
+ASSERT LAST_N == 5 "pump 5"
+GETF seed energy
+ASSERT LAST_N == 7 "active 7"
+SEND seed gradient
+ASSERT LAST_N == 5 "pmf 5"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved after pump"
+
+// Synthase couples pmf into ATP work currency
+SEND seed synthase 3
+ASSERT LAST_N == 3 "synthase 3"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2 left"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+GETF seed energy
+ASSERT LAST_N == 7 "spark path held"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved after synthase"
+
+// Full drain of remaining gradient
+SEND seed synthase 9
+ASSERT LAST_N == 2 "synthase drains 2"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+SEND seed charged
+ASSERT LAST_N == 5 "atp 5"
+SEND seed yield
+ASSERT LAST_N == 12 "yield still 12"
+
+// Oxidize ATP harvest arms mitosis path
+SEND seed oxidize 4
+ASSERT LAST_N == 4 "oxidize harvest"
+GETF seed energy
+ASSERT LAST_N == 11 "active 11"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+SEND seed yield
+ASSERT LAST_N == 12 "yield after oxidize"
+
+// Catalyze via chemiosmotic ATP near threshold
+// catalyze needs energy + 2 >= thr; keep energy at 9, build ATP via pump/synthase carefully
+ENTITY cat OF Cell 1 11 0
+SEND cat set_threshold 10
+ASSERT LAST_N == 10 "thr 10"
+SEND cat pump 2
+ASSERT LAST_N == 2 "cat pump"
+// energy now 9 — within catalyze window (need >= 8)
+SEND cat synthase 2
+ASSERT LAST_N == 2 "cat synthase"
+GETF cat energy
+ASSERT LAST_N == 9 "cat energy 9 near thr"
+GETF cat ready
+ASSERT LAST_N == 0 "not ready yet"
+SEND cat catalyze
+ASSERT LAST_N == 1 "catalyze armed via chemios"
+GETF cat ready
+ASSERT LAST_N == 1 "ready via pmf->atp"
+SEND cat charged
+ASSERT LAST_N == 1 "1 atp spent on catalyze"
+SEND cat gradient
+ASSERT LAST_N == 0 "cat pmf spent"
+
+// Dual path: photophos ATP + chemios pmf in one ledger
+ENTITY dual OF Cell 1 10 0
+SEND dual photophos 3
+ASSERT LAST_N == 3 "dual solar atp"
+SEND dual pump 4
+ASSERT LAST_N == 4 "dual pump"
+SEND dual gradient
+ASSERT LAST_N == 4 "dual pmf 4"
+SEND dual synthase 2
+ASSERT LAST_N == 2 "dual synthase"
+SEND dual charged
+ASSERT LAST_N == 5 "dual atp 3+2"
+SEND dual gradient
+ASSERT LAST_N == 2 "dual pmf 2"
+SEND dual yield
+ASSERT LAST_N == 13 "dual yield 6+0+5+2"
+GETF dual energy
+ASSERT LAST_N == 6 "dual active 6"
+
+// Pump cannot steal life spark
+ENTITY spark OF Cell 1 1 0
+SEND spark pump 3
+ASSERT LAST_N == 0 "spark-only no pump"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+SEND spark gradient
+ASSERT LAST_N == 0 "no pmf from spark"
+
+// Dead / bounds
+SEND dead pump 3
+ASSERT LAST_N == 0 "dead no pump"
+SEND dead synthase 3
+ASSERT LAST_N == 0 "dead no synthase"
+SEND dead gradient
+ASSERT LAST_N == 0 "dead gradient 0"
+SEND seed pump 0
+ASSERT LAST_N == 0 "zero pump"
+SEND seed synthase -2
+ASSERT LAST_N == 0 "neg synthase"
+SEND ally yield
+ASSERT LAST_N == 8 "ally intact"
+
+// Quiescent still pumps/synthases (gradient for wake work)
+SEND quiet pump 3
+ASSERT LAST_N == 3 "quiet pump"
+SEND quiet gradient
+ASSERT LAST_N == 3 "quiet pmf"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet synthase 2
+ASSERT LAST_N == 2 "quiet synthase G0"
+SEND quiet charged
+ASSERT LAST_N == 2 "quiet atp"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet never ready"
+GETF quiet energy
+ASSERT LAST_N == 3 "quiet energy 6-3"
+SEND quiet yield
+ASSERT LAST_N == 6 "quiet yield 3+0+2+1"
+
+// Spend chemios ATP without touching spark
+ENTITY work OF Cell 1 5 0
+SEND work pump 2
+ASSERT LAST_N == 2 "work pump"
+SEND work synthase 2
+ASSERT LAST_N == 2 "work synthase"
+SEND work spend 1
+ASSERT LAST_N == 1 "work spend"
+SEND work charged
+ASSERT LAST_N == 1 "work atp 1"
+GETF work energy
+ASSERT LAST_N == 3 "work spark path 5-2"
+SEND work yield
+ASSERT LAST_N == 4 "work yield 3+1"
+
+// Respire + pump fusion: reserve fuel -> energy -> pmf -> ATP
+ENTITY fuse OF Cell 1 4 0
+SEND fuse photosynth 6
+ASSERT LAST_N == 6 "fuse photo reserve"
+SEND fuse respire 4
+ASSERT LAST_N == 4 "fuse respire"
+GETF fuse energy
+ASSERT LAST_N == 8 "fuse active 8"
+SEND fuse pump 3
+ASSERT LAST_N == 3 "fuse pump"
+SEND fuse synthase 3
+ASSERT LAST_N == 3 "fuse synthase"
+SEND fuse charged
+ASSERT LAST_N == 3 "fuse atp"
+SEND fuse stores
+ASSERT LAST_N == 2 "fuse reserve left"
+SEND fuse yield
+ASSERT LAST_N == 10 "fuse yield conserved 5+2+3+0"
+
+ASSERT 1 == 1 "life_cell chemios PASS"
