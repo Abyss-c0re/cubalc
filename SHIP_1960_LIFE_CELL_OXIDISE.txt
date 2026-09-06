@@ -1,0 +1,7 @@
+LIFE_CELL_OXIDISE 1960
+feat — programs/lib/life_cell.cubalc METHOD oxidise n
+proofs 1960 asserts_ok=30 fail=0; 1959 PASS 29/0; bio15 PASS 8/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 1960 · VERSION 1.15.1440-usability
+free energy: oxidise n burns n energy → floor((n*3)/4) atp (complete aerobic; stronger than respire n/2; fail-closed on dead/neg/insufficient)
+programs/proof/1960_life_cell_oxidise.cubalc
+programs/science/biology/15_life_cell_oxidise.cubalc

@@ -1,12 +1,12 @@
 {
   "product": "cubalc",
-  "iter": 1959,
-  "feature": "LIFE_CELL_LACTATE",
-  "version": "1.15.1439-usability",
-  "head": "de19de63316c66924bf8169a89e6dd08e08c2341",
-  "tip": "de19de63316c66924bf8169a89e6dd08e08c2341",
-  "pin": "de19de63316c66924bf8169a89e6dd08e08c2341",
+  "iter": 1960,
+  "feature": "LIFE_CELL_OXIDISE",
+  "version": "1.15.1440-usability",
+  "head": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
+  "tip": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
+  "pin": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
   "tip_equals_pin": true,
-  "proof": "PASS 29/0",
+  "proof": "PASS 30/0",
   "sealed": true
 }

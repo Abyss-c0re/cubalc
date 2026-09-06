@@ -1,18 +1,18 @@
 {
-  "iter": 1959,
-  "feature": "LIFE_CELL_LACTATE",
-  "head": "de19de63316c66924bf8169a89e6dd08e08c2341",
-  "version": "1.15.1439-usability",
-  "proof": "1959_life_cell_lactate.cubalc",
-  "tip": "de19de63316c66924bf8169a89e6dd08e08c2341",
-  "pin": "de19de63316c66924bf8169a89e6dd08e08c2341",
+  "iter": 1960,
+  "feature": "LIFE_CELL_OXIDISE",
+  "head": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
+  "version": "1.15.1440-usability",
+  "proof": "1960_life_cell_oxidise.cubalc",
+  "tip": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
+  "pin": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6",
   "tip_equals_pin": true,
   "proofs": {
+    "1960": "PASS 30/0",
     "1959": "PASS 29/0",
-    "1958": "PASS 39/0",
     "1620": "PASS 12/0",
-    "bio14": "PASS 8/0"
+    "bio15": "PASS 8/0"
   },
   "sealed": true,
-  "feat_commit": "6c63622f54e06a8f98fd69be3bd0762cbcc5fed4"
+  "feat_commit": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6"
 }
