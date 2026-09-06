@@ -1,29 +1,15 @@
 {
-  "meaningful_iter": 1952,
-  "feature": "LIFE_CELL_BUDGET_ENDOW",
-  "ship": "1952_life_cell_budget",
-  "version": "1.15.1432-usability",
-  "budget": 1,
-  "endow": 1,
-  "mitosis_threshold": 10,
+  "meaningful_iter": 1953,
+  "feature": "MINN_MAXN_CLAMPN",
+  "ship": "1953_minmax_clamp",
+  "version": "1.15.1433-usability",
   "proofs_pass": true,
-  "flagship_1620": "PASS",
-  "c_slice": "programs/lib/life_cell.cubalc",
+  "c_slice": "src/lang/lang_ops_math.c",
   "unity": 1.0,
   "next": "we_autoheal",
-  "sealed": true,
-  "feat_note": "budget reports energy gap to mitosis threshold 10; endow previews daughter gift when ready",
-  "feat_head": "cec421e6de94fe1a4caa75729308019ea055d979",
+  "sealed": false,
+  "feat_note": "MINN/MAXN two-arg integer bounds + CLAMPN aliases; free energy lattice clamp without shell glue",
   "proofs": {
-    "1952_life_cell_budget": "PASS 31/0",
-    "1951_life_cell_respire": "PASS 22/0",
-    "1950_life_cell_mobilize": "PASS 20/0",
-    "1949_life_cell_total_stow": "PASS 19/0",
-    "1948_life_cell_atp": "PASS 12/0",
-    "1620": "PASS 12/0"
-  },
-  "head": "31cb818001211a5b983f087d8b435d1c8cab9b8d",
-  "tip": "31cb818001211a5b983f087d8b435d1c8cab9b8d",
-  "pin": "31cb818001211a5b983f087d8b435d1c8cab9b8d",
-  "tip_equals_pin": true
+    "1953_minmax_clamp": "PASS 40/0"
+  }
 }

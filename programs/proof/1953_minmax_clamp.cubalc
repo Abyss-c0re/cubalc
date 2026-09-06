@@ -1,0 +1,112 @@
+# 1953_minmax_clamp.cubalc
+# MINN / MAXN two-arg integer bounds + CLAMPN usability
+# Cube is SoT · matrix is key · free energy must flow.
+
+HOLD_FLASH 1
+
+# MINN
+MINN 3 7
+ASSERT LAST_N == 3
+ASSERT MINN_OK == 1
+ASSERT MINN_A == 3
+ASSERT MINN_B == 7
+
+MINN 9 2
+ASSERT LAST_N == 2
+
+MINN -4 -1
+ASSERT LAST_N == -4
+
+MINN -3 5
+ASSERT LAST_N == -3
+
+MINN 8 8
+ASSERT LAST_N == 8
+
+# aliases
+MIN2N 10 4
+ASSERT LAST_N == 4
+IMINN 1 0
+ASSERT LAST_N == 0
+
+# MAXN
+MAXN 3 7
+ASSERT LAST_N == 7
+ASSERT MAXN_OK == 1
+ASSERT MAXN_A == 3
+ASSERT MAXN_B == 7
+
+MAXN 9 2
+ASSERT LAST_N == 9
+
+MAXN -4 -1
+ASSERT LAST_N == -1
+
+MAXN -3 5
+ASSERT LAST_N == 5
+
+MAXN 8 8
+ASSERT LAST_N == 8
+
+MAX2N 10 4
+ASSERT LAST_N == 10
+IMAXN 1 0
+ASSERT LAST_N == 1
+
+# CLAMPN in range (existing core form)
+CLAMPN 5 0 10
+ASSERT LAST_N == 5
+ASSERT CLAMPN_X == 5
+ASSERT CLAMPN_LO == 0
+ASSERT CLAMPN_HI == 10
+
+# below lo
+CLAMPN -3 0 10
+ASSERT LAST_N == 0
+ASSERT CLAMPN_CHANGED == 1
+
+# above hi
+CLAMPN 99 0 10
+ASSERT LAST_N == 10
+
+# inverted bounds auto-swap
+CLAMPN 5 10 0
+ASSERT LAST_N == 5
+ASSERT CLAMPN_LO == 0
+ASSERT CLAMPN_HI == 10
+
+CLAMPN -1 10 0
+ASSERT LAST_N == 0
+
+CLAMPN 50 10 0
+ASSERT LAST_N == 10
+
+# aliases
+CLIPN 12 0 9
+ASSERT LAST_N == 9
+BOUNDN -2 -5 5
+ASSERT LAST_N == -2
+
+# var subjects
+LET a = 4
+LET b = 11
+LET x = 20
+MINN a b
+ASSERT LAST_N == 4
+MAXN a b
+ASSERT LAST_N == 11
+CLAMPN x a b
+ASSERT LAST_N == 11
+
+# pipeline
+LET lo = 2
+LET hi = 8
+LET v = 100
+CLAMPN v lo hi
+ASSERT LAST_N == 8
+MINN LAST_N lo
+ASSERT LAST_N == 2
+
+ASSERT OK == 1
+PRINT "minmax_clamp_1953" LAST_N
+PASS

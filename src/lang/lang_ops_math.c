@@ -6480,5 +6480,108 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* MINN|MIN2N a b — integer min → LAST_N.
+   * MAXN|MAX2N a b — integer max → LAST_N.
+   * CLAMPN|CLIPN|BOUNDN x lo hi — clamp x into [lo,hi] (lo/hi swapped if inverted).
+   * Soft-OK always for finite long. Usability: lo = MINN a b; hi = MAXN a b; mid = CLAMPN x lo hi. */
+  if (kw(&L->cur,"MINN") || kw(&L->cur,"MIN2N") || kw(&L->cur,"IMINN") ||
+      kw(&L->cur,"MAXN") || kw(&L->cur,"MAX2N") || kw(&L->cur,"IMAXN") ||
+      kw(&L->cur,"CLAMPN") || kw(&L->cur,"CLIPN") || kw(&L->cur,"BOUNDN") ||
+      kw(&L->cur,"CLAMP_N") || kw(&L->cur,"MIN_N") || kw(&L->cur,"MAX_N")){
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_min = (strcmp(op,"MINN")==0 || strcmp(op,"MIN2N")==0 || strcmp(op,"IMINN")==0 || strcmp(op,"MIN_N")==0);
+    int is_max = (strcmp(op,"MAXN")==0 || strcmp(op,"MAX2N")==0 || strcmp(op,"IMAXN")==0 || strcmp(op,"MAX_N")==0);
+    int is_clamp = (strcmp(op,"CLAMPN")==0 || strcmp(op,"CLIPN")==0 || strcmp(op,"BOUNDN")==0 || strcmp(op,"CLAMP_N")==0);
+    long a = 0, b = 0, c = 0, out = 0;
+    char nbuf[32];
+    lex_next(L);
+    /* arg a / x */
+    if (L->cur.kind == TK_NUM) { a = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      a = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, is_clamp ? "CLAMPN x lo hi — unknown x" : "MINN/MAXN a b — unknown a"); return -1; }
+      a = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, is_clamp ? "CLAMPN x lo hi — CLAMPN val lo hi" : "MINN/MAXN a b — MINN a b");
+      return -1;
+    }
+    /* arg b / lo */
+    if (L->cur.kind == TK_NUM) { b = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      b = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, is_clamp ? "CLAMPN x lo hi — unknown lo" : "MINN/MAXN a b — unknown b"); return -1; }
+      b = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, is_clamp ? "CLAMPN x lo hi — missing lo" : "MINN/MAXN a b — missing b");
+      return -1;
+    }
+    if (is_clamp) {
+      /* arg c / hi */
+      if (L->cur.kind == TK_NUM) { c = L->cur.num; lex_next(L); }
+      else if (L->cur.kind == TK_MINUS) {
+        lex_next(L);
+        if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+        c = -L->cur.num; lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (!v) { fail_at(vm, L, "CLAMPN x lo hi — unknown hi"); return -1; }
+        c = v->val; lex_next(L);
+      } else {
+        fail_at(vm, L, "CLAMPN x lo hi — missing hi");
+        return -1;
+      }
+      long lo = b, hi = c;
+      if (lo > hi) { long t = lo; lo = hi; hi = t; }
+      out = a;
+      if (out < lo) out = lo;
+      if (out > hi) out = hi;
+      var_set_num(vm, "CLAMPN_X", a);
+      var_set_num(vm, "CLAMPN_LO", lo);
+      var_set_num(vm, "CLAMPN_HI", hi);
+      var_set_num(vm, "CLAMPN", out);
+      var_set_num(vm, "CLIPN", out);
+      var_set_num(vm, "BOUNDN", out);
+      var_set_num(vm, "CLAMPN_OK", 1L);
+    } else if (is_max) {
+      out = (a > b) ? a : b;
+      var_set_num(vm, "MAXN_A", a);
+      var_set_num(vm, "MAXN_B", b);
+      var_set_num(vm, "MAXN", out);
+      var_set_num(vm, "MAX2N", out);
+      var_set_num(vm, "IMAXN", out);
+      var_set_num(vm, "MAXN_OK", 1L);
+    } else {
+      /* min default */
+      out = (a < b) ? a : b;
+      var_set_num(vm, "MINN_A", a);
+      var_set_num(vm, "MINN_B", b);
+      var_set_num(vm, "MINN", out);
+      var_set_num(vm, "MIN2N", out);
+      var_set_num(vm, "IMINN", out);
+      var_set_num(vm, "MINN_OK", 1L);
+      (void)is_min;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# minmaxclamp %s %ld %ld %ld -> %ld\n", op, a, b, c, out);
+    bump(vm); return 1;
+  }
+
   return 0;
 }

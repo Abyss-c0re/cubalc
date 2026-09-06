@@ -1,0 +1,5 @@
+MINN_MAXN_CLAMPN 1953
+feat — src/lang/lang_ops_math.c MINN|MIN2N|IMINN MAXN|MAX2N|IMAXN CLAMPN|CLIPN|BOUNDN
+proof 1953_minmax_clamp asserts_ok=40 fail=0
+pin MEANINGFUL_ITER 1953 · VERSION 1.15.1433-usability
+free energy: lo=MINN a b; hi=MAXN a b; mid=CLAMPN x lo hi without shell glue

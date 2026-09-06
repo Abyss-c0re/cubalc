@@ -1,8 +1,8 @@
 {
   "product": "cubalc",
-  "meaningful_iter": 1952,
-  "version": "1.15.1432-usability",
-  "feature": "LIFE_CELL_BUDGET_ENDOW",
+  "meaningful_iter": 1953,
+  "version": "1.15.1433-usability",
+  "feature": "MINN_MAXN_CLAMPN",
   "head": "b77a9c2a37649b25bf313e5333c24e1509b1d4c3",
   "feat_head": "d85caf05c6cd37b4c1ca90345400a3f67f1ae80d",
   "unity": 1.0,
