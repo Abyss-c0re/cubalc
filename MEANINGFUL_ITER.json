@@ -12,9 +12,9 @@
   "next": "we_autoheal",
   "sealed": true,
   "feat_note": "mobilize/surplus draw sealed ATP back to working energy",
-  "head": "15ae1da792430b16d7812d2c18e09c3f30af3cd9",
-  "tip": "15ae1da792430b16d7812d2c18e09c3f30af3cd9",
-  "pin": "15ae1da792430b16d7812d2c18e09c3f30af3cd9",
+  "head": "8322ed367ed25dd6761be84f0ec336b53b26474d",
+  "tip": "8322ed367ed25dd6761be84f0ec336b53b26474d",
+  "pin": "8322ed367ed25dd6761be84f0ec336b53b26474d",
   "tip_equals_pin": true,
   "feat_head": "7482334249f2ad7e5d99c18221aaa645b0c3ebcb",
   "proofs": {
