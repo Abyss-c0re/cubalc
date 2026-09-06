@@ -26,10 +26,10 @@
   "item": "2046 life cell futile",
   "item_id": "mi_2046_life_cell_futile",
   "title": "2046 life cell futile",
-  "summary": "life_cell futile ATP\u2192heat + atomic printer science + 1620 flagship",
+  "summary": "life_cell futile ATP\u2192heat + warmth + atomic printer science + 1620 flagship",
   "head_note": "futile ATP\u2192heat thermogenesis",
-  "updated": 1788734125,
+  "updated": 1788734200,
   "parent_head": "b49bc8a49",
-  "head": "64ae1b08531aa08e937db723e620efad715a7583",
+  "head": "e973183f9a83b04e0a46c509fcf023f8272ea24a",
   "feat_commit": "19e071782b19b2a0426e6b7fa757862f8672330e"
 }
