@@ -26,6 +26,8 @@
   "item_id": "mi_281_life_cell_atp_charge",
   "title": "281 life cell atp charge",
   "summary": "life_cell ATP charge/spend/charged/catalyze + atomic printer science",
-  "commit": "ddc699714",
-  "head": "ddc6997143c089f0d515277191987cab0ca6a224"
+  "commit": "0a688f1e9",
+  "head": "ddc6997143c089f0d515277191987cab0ca6a224",
+  "commit_full": "0a688f1e90520e3a9141841d15f678a30730257e",
+  "ts": "2026-09-06T14:50:18Z"
 }
