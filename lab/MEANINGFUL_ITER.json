@@ -12,9 +12,9 @@
   "next": "we_autoheal",
   "sealed": true,
   "feat_note": "mobilize/surplus draw sealed free-energy back to working energy",
-  "head": "5c2e93df1fa4c0a700d8405b9595585e4c30c028",
-  "tip": "5c2e93df1fa4c0a700d8405b9595585e4c30c028",
-  "pin": "5c2e93df1fa4c0a700d8405b9595585e4c30c028",
+  "head": "ca4a8b6f74ffde83c5e012558ba18dbb2a56329d",
+  "tip": "ca4a8b6f74ffde83c5e012558ba18dbb2a56329d",
+  "pin": "ca4a8b6f74ffde83c5e012558ba18dbb2a56329d",
   "tip_equals_pin": true,
   "feat_head": "8856246c8206e7443fc9585a82e5f58048c20b1b",
   "proofs": {
