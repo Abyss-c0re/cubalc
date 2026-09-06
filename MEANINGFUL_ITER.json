@@ -17,8 +17,8 @@
     "bio10_phosphorylate": "PASS 7/0"
   },
   "feat_head": "1e82c9c94be5a6a8016ec97e2214d1ec758af08c",
-  "head": "04a37134037c01b5e355c571fad272cfb1ec3525",
-  "tip": "04a37134037c01b5e355c571fad272cfb1ec3525",
-  "pin": "04a37134037c01b5e355c571fad272cfb1ec3525",
+  "head": "00c889be3e76425f52d14724571bb83889c7a496",
+  "tip": "00c889be3e76425f52d14724571bb83889c7a496",
+  "pin": "00c889be3e76425f52d14724571bb83889c7a496",
   "tip_equals_pin": true
 }
