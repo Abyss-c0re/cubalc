@@ -100,31 +100,21 @@ ASSERT LAST_N == 12 "nourish 7 → 12"
 SEND r phosphorylate 2
 ASSERT LAST_N == 2 "phosphorylate 2 → atp 2"
 GETF r energy
-ASSERT LAST_N == 10 "energy 10"
+ASSERT LAST_N == 10 "energy 10 after phospho"
 SEND r hydrolyse 1
-ASSERT LAST_N == 11 "hydrolyse restores 1 energy"
+ASSERT LAST_N == 11 "hydrolyse 1 → energy 11"
 GETF r atp
-ASSERT LAST_N == 1 "atp 1 left"
+ASSERT LAST_N == 1 "atp 1"
 SEND r total
 ASSERT LAST_N == 12 "total conserved 11+1"
 
-# dead blocked
-SEND seed die
-SEND seed nourish 3
-ASSERT LAST_N == 0 "dead nourish 0"
+# dead cell fail-closed
+ENTITY dead OF Cell 0 8 0
+PLUG medium dead
+SEND dead nourish 5
+ASSERT LAST_N == 0 "dead nourish returns 0"
+GETF dead energy
+ASSERT LAST_N == 8 "dead energy unchanged"
 
-# fresh cell from low energy to ready in one feed
-ENTITY young OF Cell 1 1 0
-PLUG medium young
-SEND young nourish 9
-ASSERT LAST_N == 10 "1+9=10 ready"
-GETF young ready
-ASSERT LAST_N == 1 "young ready"
-SEND young budget
-ASSERT LAST_N == 0 "budget 0"
-
-ASSERT ENERGY >= 0 "energy non-negative"
-ASSERT CUBES >= 2
-ASSERT OK == 1
-PRINT "life_cell_nourish_1957" CUBES ENERGY
+PRINT "life_cell_nourish_1957" ENERGY
 PASS

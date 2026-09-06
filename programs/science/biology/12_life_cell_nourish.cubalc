@@ -1,0 +1,29 @@
+# Biology 12 — Life cell external nutrient nourish usability
+# Pure .cubalc science board: nourish adds energy directly (not via atp)
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 6 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed nourish 4
+ASSERT LAST_N == 10 "nourish hits mitosis threshold"
+GETF seed atp
+ASSERT LAST_N == 0 "atp untouched"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after nourish"
+SEND seed spare
+ASSERT LAST_N == 0 "no spare at exact 10"
+SEND seed total
+ASSERT LAST_N == 10 "total is energy only"
+SEND seed potential
+ASSERT LAST_N == 10 "potential equals energy"
+
+PRINT "bio12_nourish" ENERGY
+PASS

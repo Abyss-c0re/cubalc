@@ -1,9 +1,13 @@
 {
-  "meaningful_iter": 1956,
-  "version": "1.15.1436-usability",
-  "head": "d6eeb9440ddf92bdaa75582950099f766c21d68f",
-  "feat": "LIFE_CELL_HYDROLYSE",
-  "proof": "1956 asserts_ok=49 fail=0",
-  "ts": 1788723341,
-  "unity_note": "hydrolyse 1:1 atp->energy"
+  "meaningful_iter": 1957,
+  "version": "1.15.1437-usability",
+  "feature": "LIFE_CELL_NOURISH",
+  "head": "52e58888233f7a855ab05791136602da71d01a0c",
+  "feat_head": "52e58888233f7a855ab05791136602da71d01a0c",
+  "proof": "1957_life_cell_nourish.cubalc",
+  "asserts_ok": 40,
+  "asserts_fail": 0,
+  "flagship_1620": "PASS",
+  "bio12": "PASS 7/0",
+  "prior": "1956 hydrolyse PASS 49/0; 1955 phosphorylate PASS 45/0"
 }
