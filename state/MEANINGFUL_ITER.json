@@ -11,8 +11,8 @@
   "unity": 1.0,
   "next": "we_autoheal",
   "sealed": true,
-  "feat_note": "budget = mitosis energy gap to 10; endow = ready daughter gift floor(energy/2)",
-  "feat_head": "d85caf05c6cd37b4c1ca90345400a3f67f1ae80d",
+  "feat_note": "budget = gap to mitosis threshold 10; endow = daughter gift floor(energy/2) when ready",
+  "feat_head": "a9a20474bd08c4ec5b8d6e991c153c77ff984b9d",
   "proofs": {
     "1952_life_cell_budget": "PASS 24/0",
     "1951_life_cell_respire": "PASS 22/0",
@@ -21,8 +21,8 @@
     "1948_life_cell_atp": "PASS 12/0",
     "1620": "PASS 12/0"
   },
-  "head": "bc51d4d433f43d9f8fd1367dc9320c38c00bc9fd",
-  "tip": "bc51d4d433f43d9f8fd1367dc9320c38c00bc9fd",
-  "pin": "bc51d4d433f43d9f8fd1367dc9320c38c00bc9fd",
+  "head": "a9a20474bd08c4ec5b8d6e991c153c77ff984b9d",
+  "tip": "a9a20474bd08c4ec5b8d6e991c153c77ff984b9d",
+  "pin": "a9a20474bd08c4ec5b8d6e991c153c77ff984b9d",
   "tip_equals_pin": true
 }
