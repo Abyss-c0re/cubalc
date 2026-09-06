@@ -1,12 +1,7 @@
 {
-  "meaningful_iter": 1957,
-  "version": "1.15.1437-usability",
-  "feature": "LIFE_CELL_NOURISH",
-  "head": "10f037cabc9bc0753b947f387fff86ff00a985e1",
-  "feat_head": "10f037cabc9bc0753b947f387fff86ff00a985e1",
-  "proof": "1957_life_cell_nourish.cubalc",
-  "asserts_ok": 40,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS",
-  "bio12": "PASS 7/0"
+  "iter": 1959,
+  "feature": "LIFE_CELL_LACTATE",
+  "head": "6c63622f54e06a8f98fd69be3bd0762cbcc5fed4",
+  "version": "1.15.1439-usability",
+  "proof": "1959_life_cell_lactate.cubalc"
 }

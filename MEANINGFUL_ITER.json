@@ -1,7 +1,7 @@
 {
-  "iter": 1958,
-  "feature": "LIFE_CELL_FERMENT",
-  "head": "ff4247bdb8e80a88863ab4aa312fb1160be78c0c",
-  "version": "1.15.1438-usability",
-  "proof": "1958_life_cell_ferment.cubalc"
+  "iter": 1959,
+  "feature": "LIFE_CELL_LACTATE",
+  "head": "6c63622f54e06a8f98fd69be3bd0762cbcc5fed4",
+  "version": "1.15.1439-usability",
+  "proof": "1959_life_cell_lactate.cubalc"
 }
