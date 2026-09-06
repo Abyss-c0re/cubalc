@@ -1,8 +1,8 @@
 {
   "product": "CubalC",
-  "meaningful_iter": 1950,
-  "feature": "LIFE_CELL_MOBILIZE_SURPLUS",
-  "version": "1.15.1430-usability",
+  "meaningful_iter": 1951,
+  "feature": "LIFE_CELL_RESPIRE_POTENTIAL",
+  "version": "1.15.1431-usability",
   "c_slice": "programs/lib/life_cell.cubalc",
   "proofs": [
     "1950_life_cell_mobilize",
@@ -15,6 +15,6 @@
   "surplus": 1,
   "unity": 1.0,
   "next": "we_autoheal",
-  "ship": "1950_life_cell_mobilize",
+  "ship": "1951_life_cell_respire",
   "head_note": "LIFE_CELL mobilize/surplus free-energy draw from sealed bank"
 }

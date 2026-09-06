@@ -24,6 +24,8 @@
 #   saturate cap   fill atp up to cap from energy (feast→store)
 #   mobilize n     draw n atp → energy (spend sealed surplus; fail-closed)
 #   surplus        banked free-energy (atp) available to mobilize
+#   respire n      oxidize n energy → floor(n/2) atp (fail-closed)
+#   potential      free-energy work capacity in energy-units (energy + 2*atp)
 
 CLASS Cell
   FIELD alive 0
@@ -273,5 +275,46 @@ CLASS Cell
     END
     GETF THIS atp
     RET LAST_N
+  END
+
+  METHOD respire n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 0 THEN
+      LET n = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < n THEN
+      RET 0
+    END
+    LET e = e - n
+    SETF THIS energy e
+    LET gain = n / 2
+    GETF THIS atp
+    LET a = LAST_N + gain
+    SETF THIS atp a
+    LET rd = 0
+    IF e >= 10 THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET a
+  END
+
+  METHOD potential
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS atp
+    LET a = LAST_N
+    # catalyze costs 2 energy per 1 atp → reverse work units
+    LET p = e + (a * 2)
+    RET p
   END
 END

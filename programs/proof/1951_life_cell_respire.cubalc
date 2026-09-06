@@ -1,0 +1,69 @@
+# 1951_life_cell_respire.cubalc
+# LIFE_CELL_RESPIRE_POTENTIAL — oxidative phosphorylation slice + work capacity.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 16 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 16 "seed energy 16"
+SEND seed potential
+ASSERT LAST_N == 16 "potential equals energy when atp empty"
+SEND seed surplus
+ASSERT LAST_N == 0 "surplus empty"
+
+# respire oxidizes n energy → floor(n/2) atp (fail-closed)
+SEND seed respire 6
+ASSERT LAST_N == 3 "respire 6 → +3 atp"
+GETF seed energy
+ASSERT LAST_N == 10 "energy after respire 16-6"
+GETF seed atp
+ASSERT LAST_N == 3 "atp after respire"
+SEND seed total
+ASSERT LAST_N == 13 "total energy+atp after respire"
+# potential = energy + 2*atp (reverse of catalyze 2e→1atp)
+SEND seed potential
+ASSERT LAST_N == 16 "potential conserved 10+2*3"
+
+# odd n floors gain
+SEND seed respire 3
+ASSERT LAST_N == 4 "respire 3 → +1 atp (floor)"
+GETF seed energy
+ASSERT LAST_N == 7 "energy 10-3"
+SEND seed potential
+ASSERT LAST_N == 15 "potential 7+2*4=15 (1 energy lost to floor)"
+
+# over-respire fail-closed
+SEND seed respire 99
+ASSERT LAST_N == 0 "over-respire returns 0"
+GETF seed energy
+ASSERT LAST_N == 7 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 4 "atp unchanged on fail"
+
+# mobilize still works with respired surplus
+SEND seed mobilize 2
+ASSERT LAST_N == 9 "mobilize 2 → energy 7+2"
+SEND seed potential
+ASSERT LAST_N == 13 "potential 9+2*2=13"
+
+# dead cell blocked
+SEND seed die
+SEND seed respire 2
+ASSERT LAST_N == 0 "dead respire blocked"
+SEND seed potential
+ASSERT LAST_N == 0 "dead potential 0"
+
+ASSERT ENERGY >= 0 "energy non-negative"
+ASSERT CUBES >= 2
+ASSERT OK == 1
+PRINT "life_cell_respire_1951" CUBES ENERGY
+PASS
