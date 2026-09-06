@@ -1,11 +1,11 @@
 {
   "iter": 1959,
   "feature": "LIFE_CELL_LACTATE",
-  "head": "9925eb256542be96a3520cea7fdb8fca58419e6e",
+  "head": "0b2572c28cbe55875f1700159a6d259aacfd4c4a",
   "version": "1.15.1439-usability",
   "proof": "1959_life_cell_lactate.cubalc",
-  "tip": "9925eb256542be96a3520cea7fdb8fca58419e6e",
-  "pin": "9925eb256542be96a3520cea7fdb8fca58419e6e",
+  "tip": "0b2572c28cbe55875f1700159a6d259aacfd4c4a",
+  "pin": "0b2572c28cbe55875f1700159a6d259aacfd4c4a",
   "tip_equals_pin": true,
   "proofs": {
     "1959": "PASS 29/0",
