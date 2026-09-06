@@ -1,0 +1,5 @@
+LIFE_CELL_FERMENT 1958
+feat — programs/lib/life_cell.cubalc METHOD ferment n
+proofs 1958 asserts_ok=41 fail=0; 1957 PASS 40/0; 1956 PASS 49/0; flagship 1620 PASS 12/0; bio13 PASS 8/0
+pin MEANINGFUL_ITER 1958 · VERSION 1.15.1438-usability
+free energy: ferment n burns n energy → floor(n/6) atp (mixed-acid; weaker than glycolyse n/4; fail-closed on dead/neg/insufficient)
