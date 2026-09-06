@@ -1,20 +1,10 @@
 {
-  "product": "CubalC",
+  "product": "cubalc",
   "meaningful_iter": 1952,
-  "feature": "LIFE_CELL_BUDGET_ENDOW",
   "version": "1.15.1432-usability",
-  "c_slice": "programs/lib/life_cell.cubalc",
-  "proofs": [
-    "1950_life_cell_mobilize",
-    "1949_life_cell_total_stow",
-    "880_life_cell_atp",
-    "1948_life_cell_atp",
-    "1620_atomic_printer_life_force"
-  ],
-  "mobilize": 1,
-  "surplus": 1,
+  "feature": "LIFE_CELL_BUDGET_ENDOW",
+  "head": "b77a9c2a37649b25bf313e5333c24e1509b1d4c3",
+  "feat_head": "d85caf05c6cd37b4c1ca90345400a3f67f1ae80d",
   "unity": 1.0,
-  "next": "we_autoheal",
-  "ship": "1951_life_cell_respire",
-  "head_note": "LIFE_CELL mobilize/surplus free-energy draw from sealed bank"
+  "flagship_1620": "PASS"
 }
