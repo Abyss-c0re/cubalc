@@ -1,8 +1,8 @@
 {
-  "feature": "LIFE_CELL_RESPIRE_POTENTIAL",
+  "feature": "LIFE_CELL_PHOSPHORYLATE",
   "iter": 1862,
-  "version": "1.15.1431-usability",
-  "head": "977ae74bdfef430c9141e9574521e380b3ddc713",
+  "version": "1.15.1435-usability",
+  "head": "0d8c787eff1b593ed6c8b7513635b579f7cff471",
   "pin": "8a6850fca5873894beab2ee87a4f4ce6fcfbeaac",
   "tip_equals_pin": true,
   "soft_oob": 1,
@@ -12,5 +12,8 @@
   "sealed": true,
   "meaningful_iter": 1955,
   "ship": "1951_life_cell_respire",
-  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e"
+  "feat_head": "471c587d3df77f83d25c2c5d5f3093648e01133e",
+  "product": "cubalc",
+  "unity": 1.0,
+  "flagship_1620": "PASS"
 }
