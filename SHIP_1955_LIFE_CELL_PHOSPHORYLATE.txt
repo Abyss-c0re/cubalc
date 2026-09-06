@@ -1,6 +1,5 @@
 LIFE_CELL_PHOSPHORYLATE 1955
-feat — programs/lib/life_cell.cubalc METHOD phosphorylate
-proofs 1955 asserts_ok=45 fail=0; 1954 PASS 33/0; flagship 1620 PASS 12/0; bio10 PASS 7/0
+feat — programs/lib/life_cell.cubalc METHOD phosphorylate n
+proofs 1955 asserts_ok=45 fail=0; 1954 PASS 33/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 1955 · VERSION 1.15.1435-usability
-free energy: phosphorylate n = burn n energy → n atp 1:1 substrate-level (fail-closed; full yield vs glycolyse 1/4)
-HEAD tip==pin sealed
+free energy: phosphorylate n burns n energy → n atp 1:1 substrate-level (full yield; fail-closed); vs glycolyse floor(n/4)

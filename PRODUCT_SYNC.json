@@ -1,10 +1,8 @@
 {
   "product": "cubalc",
-  "meaningful_iter": 1954,
-  "version": "1.15.1434-usability",
-  "feature": "LIFE_CELL_SPARE_GLYCOLYSE",
-  "head": "53d3b80d931955d6f48210ffc7e763712ff0b9a8",
-  "feat_head": "bbbc0ec6fceaf7ceef054082550b901a3551d2c0",
+  "meaningful_iter": 1955,
+  "version": "1.15.1435-usability",
+  "feature": "LIFE_CELL_PHOSPHORYLATE",
   "unity": 1.0,
   "flagship_1620": "PASS"
 }
