@@ -1,0 +1,7 @@
+LIFE_CELL_LACTATE 1959
+feat — programs/lib/life_cell.cubalc METHOD lactate n
+proofs 1959 asserts_ok=29 fail=0; 1958 PASS 39/0; bio14 PASS 8/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 1959 · VERSION 1.15.1439-usability
+free energy: lactate n burns n energy → floor(n/5) atp (lactic; between glycolyse n/4 and ferment n/6; fail-closed on dead/neg/insufficient)
+programs/proof/1959_life_cell_lactate.cubalc
+programs/science/biology/14_life_cell_lactate.cubalc

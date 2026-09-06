@@ -1,0 +1,102 @@
+# 1959_life_cell_lactate.cubalc
+# LIFE_CELL_LACTATE — lactic fermentation: burn n energy → floor(n/5) atp.
+# Cube is SoT · matrix is key · free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 20 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+GETF seed energy
+ASSERT LAST_N == 20 "seed energy 20"
+GETF seed atp
+ASSERT LAST_N == 0 "seed atp 0"
+
+SEND seed stow 0
+GETF seed ready
+ASSERT LAST_N == 1 "ready after stow0 at energy 20"
+SEND seed spare
+ASSERT LAST_N == 10 "spare 20-10=10"
+
+# lactate 10 → floor(10/5)=2 atp; energy 10
+SEND seed lactate 10
+ASSERT LAST_N == 2 "lactate 10 → +2 atp"
+GETF seed energy
+ASSERT LAST_N == 10 "energy 20-10=10"
+GETF seed atp
+ASSERT LAST_N == 2 "atp 2"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at energy 10"
+SEND seed spare
+ASSERT LAST_N == 0 "spare 0 at threshold"
+SEND seed total
+ASSERT LAST_N == 12 "total 10+2"
+SEND seed potential
+ASSERT LAST_N == 14 "potential 10+4=14"
+
+# odd n floors: lactate 7 → floor(7/5)=1
+SEND seed nourish 10
+ASSERT LAST_N == 20 "nourish → energy 20"
+SEND seed lactate 7
+ASSERT LAST_N == 3 "lactate 7 → +1 → atp 3"
+GETF seed energy
+ASSERT LAST_N == 13 "energy 20-7=13"
+GETF seed atp
+ASSERT LAST_N == 3 "atp 3"
+SEND seed spare
+ASSERT LAST_N == 3 "spare 13-10=3"
+
+# zero n no-op
+SEND seed lactate 0
+ASSERT LAST_N == 3 "lactate 0 keeps atp"
+GETF seed energy
+ASSERT LAST_N == 13 "energy unchanged on 0"
+
+# over-lactate fail-closed
+SEND seed lactate 99
+ASSERT LAST_N == 0 "over-lactate returns 0"
+GETF seed energy
+ASSERT LAST_N == 13 "energy unchanged on fail"
+GETF seed atp
+ASSERT LAST_N == 3 "atp unchanged on fail"
+
+# negative clamped
+SEND seed lactate -3
+ASSERT LAST_N == 3 "neg n clamps returns atp"
+GETF seed energy
+ASSERT LAST_N == 13 "energy unchanged on neg"
+
+# yield ladder: glycolyse 10 → 2, lactate 10 → 2, ferment 10 → 1
+# glycolyse floor(10/4)=2, lactate floor(10/5)=2, ferment floor(10/6)=1
+SEND seed die
+ENTITY g OF Cell 1 15 0
+PLUG medium g
+SEND g glycolyse 10
+ASSERT LAST_N == 2 "glycolyse 10 → 2"
+ENTITY L OF Cell 1 15 0
+PLUG medium L
+SEND L lactate 10
+ASSERT LAST_N == 2 "lactate 10 → 2"
+ENTITY f OF Cell 1 15 0
+PLUG medium f
+SEND f ferment 10
+ASSERT LAST_N == 1 "ferment 10 → 1"
+
+# stronger than ferment on 15: lactate 15 → 3, ferment 15 → 2
+ENTITY L2 OF Cell 1 20 0
+PLUG medium L2
+SEND L2 lactate 15
+ASSERT LAST_N == 3 "lactate 15 → 3"
+ENTITY f2 OF Cell 1 20 0
+PLUG medium f2
+SEND f2 ferment 15
+ASSERT LAST_N == 2 "ferment 15 → 2"
+
+PRINT "life_cell_lactate_1959" ENERGY
+PASS

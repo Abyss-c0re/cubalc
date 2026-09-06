@@ -1,0 +1,31 @@
+# Biology 14 — Life cell lactic fermentation usability
+# Pure .cubalc science board: lactate burns energy → floor(n/5) atp (between glycolyse and ferment)
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+SCENE dish
+CUBE medium ROLE host PROTON 1
+ENTITY seed OF Cell 1 20 0
+PLUG medium seed
+IMPULSE medium 1
+ENERGYFLOW 2
+FLOW 1
+
+SEND seed lactate 10
+ASSERT LAST_N == 2 "lactate 10 → atp 2"
+GETF seed energy
+ASSERT LAST_N == 10 "energy remainder 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at threshold"
+SEND seed total
+ASSERT LAST_N == 12 "total 10+2"
+SEND seed potential
+ASSERT LAST_N == 14 "potential 10+4"
+SEND seed nourish 5
+ASSERT LAST_N == 15 "nourish tops energy"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready"
+
+PRINT "bio14_lactate" ENERGY
+PASS

@@ -1,12 +1,7 @@
 {
-  "meaningful_iter": 1958,
-  "version": "1.15.1438-usability",
+  "iter": 1958,
   "feature": "LIFE_CELL_FERMENT",
-  "head": "c280461fdb735a7edaf4d30658d269ac42168ffd",
-  "feat_head": "c280461fdb735a7edaf4d30658d269ac42168ffd",
-  "proof": "1958_life_cell_ferment.cubalc",
-  "asserts_ok": 41,
-  "asserts_fail": 0,
-  "flagship_1620": "PASS",
-  "bio13": "PASS 8/0"
+  "head": "ff4247bdb8e80a88863ab4aa312fb1160be78c0c",
+  "version": "1.15.1438-usability",
+  "proof": "1958_life_cell_ferment.cubalc"
 }
