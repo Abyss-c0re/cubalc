@@ -64,6 +64,7 @@
 #   shiver n             energy → heat (shivering thermogenesis; yield sheds)
 #   warmth               report heat ledger for ASSERT science boards
 #   futile n             ATP → heat (futile cycling / non-work ATPase; yield sheds)
+#   boost n              PCr → energy (phosphagen mitosis boost; yield conserved)
 
 CLASS Cell
   FIELD alive 0
@@ -1370,5 +1371,50 @@ CLASS Cell
     RET take
   END
 
+
+
+  # Boost: dump n PCr straight into active energy (phosphagen mitosis shortcut).
+  # Bypasses ATP intermediate — creatine kinase + rapid energy arm for division.
+  # Yield conserved (pcr→energy). Does not touch ATP/pmf/heat. Arms ready if past thr.
+  # Usability: AGI fires stored ~P buffer into mitosis budget under sudden demand.
+  # Returns amount boosted. Dead/zero/empty buffer → 0. Keeps life spark rules via ready.
+  METHOD boost n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END

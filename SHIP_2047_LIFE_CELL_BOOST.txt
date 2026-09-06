@@ -1,0 +1,9 @@
+LIFE_CELL_BOOST 2047
+feat — programs/lib/life_cell.cubalc METHOD boost n
+proofs 2047 asserts_ok=81 fail=0; science 38/0; phosphagen 2044 PASS 65/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2047 · VERSION 1.15.1530-usability
+free energy: boost n dumps n PCr → active energy (phosphagen mitosis shortcut); yield conserved; arms ready at thr; ATP/pmf/heat untouched
+distinct from discharge (pcr→atp) and oxidize (atp→energy) — one-stroke ~P work
+programs/proof/2047_life_cell_boost.cubalc
+programs/science/proof/2047_atomic_printer_life_boost.cubalc
+programs/science/integration/atomic_printer_life_boost.cubalc
