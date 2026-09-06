@@ -2,7 +2,7 @@
   "meaningful_iter": 1955,
   "version": "1.15.1435-usability",
   "feature": "LIFE_CELL_PHOSPHORYLATE",
-  "head": "3e50ea330e3e7f52df2e5d86b4f17e54d6be9d55",
+  "head": "0aa9418d93fb47bd31d732575dec591190fec8c6",
   "feat_head": "bd2bcb3d19231e2ac17fe968d5877b1bda4b4b56",
   "proof": "1955_life_cell_phosphorylate.cubalc",
   "asserts_ok": 45,
