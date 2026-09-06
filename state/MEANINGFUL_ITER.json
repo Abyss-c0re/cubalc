@@ -1,11 +1,11 @@
 {
   "iter": 1960,
   "feature": "LIFE_CELL_OXIDISE",
-  "head": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
+  "head": "4a75e60960356b28001e51d540ff55becdf58168",
   "version": "1.15.1440-usability",
   "proof": "1960_life_cell_oxidise.cubalc",
-  "tip": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
-  "pin": "2b3793cc01a7c75dc0aeb1a5e1239594f5a60dbf",
+  "tip": "4a75e60960356b28001e51d540ff55becdf58168",
+  "pin": "4a75e60960356b28001e51d540ff55becdf58168",
   "tip_equals_pin": true,
   "proofs": {
     "1960": "PASS 30/0",
@@ -14,5 +14,5 @@
     "bio15": "PASS 8/0"
   },
   "sealed": true,
-  "feat_commit": "778fe8380b9ed0a0a0c66252e7387f9c06163dd6"
+  "feat_commit": "69288598bd1ef078ce412f2acde0aa4069a470b4"
 }
