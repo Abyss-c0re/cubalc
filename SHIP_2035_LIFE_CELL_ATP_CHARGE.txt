@@ -1,1 +1,1 @@
-LIFE_CELL_ATP_CHARGE
+LIFE_CELL_ATP_CHARGE 2035 PASS asserts=33/0 science=33/0 ceiling=methods40/fields32
