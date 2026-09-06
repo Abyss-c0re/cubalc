@@ -1,0 +1,121 @@
+// atomic_printer_life_atp_charge.cubalc
+// Science board: ATP charge/spend/catalyze under atomic printer life-force.
+// Work currency from free energy; catalyze arms near-threshold mitosis.
+// Cube is SoT. No dual ladders.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+HOLD_FLASH 1
+BUDGET 64
+SHARE state_matrix_only
+
+GENESIS "NEXUS_COORD v1 | from=science | type=atomic_printer_life_atp_charge | hold_flash=1 | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+
+ENTITY seed OF Cell 1 18 0
+ENTITY d1 OF Cell 0 0 0
+ENTITY ally OF Cell 1 12 0
+PLUG bed seed
+PLUG bed ally
+
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX LIFE_FORCE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "life_force live"
+ASSERT SMX_LIFE_FORCE == 1 "life_force latch"
+ASSERT ENERGY > 0 "field energy present"
+
+// Seed charges work currency from feast energy
+SEND seed charged
+ASSERT LAST_N == 0 "seed atp 0"
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+GETF seed ready
+ASSERT LAST_N == 1 "ready"
+
+// Ally near thr: energy 8 after gift/charge, catalyze arms
+SEND ally gift 4
+ASSERT LAST_N == 4 "ally gift"
+GETF ally energy
+ASSERT LAST_N == 8 "ally 8"
+SEND ally charge 2
+ASSERT LAST_N == 2 "ally charge"
+GETF ally energy
+ASSERT LAST_N == 6 "ally 6"
+// 6 is within 2 of thr 10? need >= 8. Feed 2 more
+SEND ally feed 2
+ASSERT LAST_N == 8 "ally 8 near"
+GETF ally ready
+ASSERT LAST_N == 0 "not ready"
+SEND ally catalyze
+ASSERT LAST_N == 1 "catalyze arms"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally charged
+ASSERT LAST_N == 1 "ally atp 1 left"
+
+// Seed spends ATP for work then stows metabolic pool
+SEND seed spend 3
+ASSERT LAST_N == 3 "work 3"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+SEND seed stow
+ASSERT LAST_N == 11 "stow keep spark"
+SEND seed total
+ASSERT LAST_N == 12 "metabolic wealth"
+SEND seed charged
+ASSERT LAST_N == 3 "atp immune to stow"
+SEND seed saturate
+ASSERT LAST_N == 11 "flood"
+GETF seed energy
+ASSERT LAST_N == 12 "restored"
+SEND seed charged
+ASSERT LAST_N == 3 "atp holds"
+
+// Mitosis: parent after_div, daughter birth clears ATP
+SEND seed feed 8
+ASSERT LAST_N == 20 "feast"
+SEND seed after_div
+GETF seed energy
+LET half = LAST_N
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter"
+SEND d1 charged
+ASSERT LAST_N == 0 "daughter fresh atp"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter live"
+GETF seed alive
+ASSERT LAST_N == 1 "parent live"
+SEND seed charged
+ASSERT LAST_N == 3 "parent keeps atp"
+
+ASSERT 1 == 1 "atomic printer life atp PASS"

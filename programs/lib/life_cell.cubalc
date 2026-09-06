@@ -58,6 +58,7 @@ CLASS Cell
   FIELD quiescent 0
   FIELD reserve 0
   FIELD setpoint 10
+  FIELD atp 0
   ROLE body
 
   METHOD init a e g
@@ -71,6 +72,7 @@ CLASS Cell
     SETF THIS quiescent 0
     SETF THIS reserve 0
     SETF THIS setpoint 10
+    SETF THIS atp 0
   END
 
   METHOD tick
@@ -137,6 +139,7 @@ CLASS Cell
     SETF THIS quiescent 0
     SETF THIS reserve 0
     SETF THIS setpoint 10
+    SETF THIS atp 0
     RET 1
   END
 
@@ -157,6 +160,7 @@ CLASS Cell
     SETF THIS ready 0
     SETF THIS quiescent 0
     SETF THIS reserve 0
+    SETF THIS atp 0
     RET 0
   END
 
@@ -740,4 +744,119 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+  # Convert active free energy into ATP work currency; retain life spark.
+  # Returns amount charged. Dead/spark-only cells charge 0.
+  METHOD charge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET take = n
+    # must retain life spark of 1
+    IF e <= 1 THEN
+      RET 0
+    END
+    IF take > e - 1 THEN
+      LET take = e - 1
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS atp
+    LET a = LAST_N + take
+    SETF THIS atp a
+    # recompute ready
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    LET rd = 0
+    IF e >= th THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Burn ATP for work units. Returns amount spent.
+  METHOD spend n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET sp = n
+    IF sp > a THEN
+      LET sp = a
+    END
+    LET a = a - sp
+    SETF THIS atp a
+    RET sp
+  END
+
+  # Report ATP balance for science ASSERT boards.
+  METHOD charged
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS atp
+    RET LAST_N
+  END
+
+  # Spend 1 ATP to arm ready when energy is within 2 of threshold (work gift).
+  # Returns 1 if armed (or already ready), 0 otherwise.
+  METHOD catalyze
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS ready
+    IF LAST_N == 1 THEN
+      RET 1
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # near threshold: energy + 2 >= th
+    LET need = th - 2
+    IF need < 1 THEN
+      LET need = 1
+    END
+    IF e < need THEN
+      RET 0
+    END
+    LET a = a - 1
+    SETF THIS atp a
+    SETF THIS ready 1
+    RET 1
+  END
+
 END

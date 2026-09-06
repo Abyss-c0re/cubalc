@@ -1,0 +1,95 @@
+// 2035_life_cell_atp_charge.cubalc
+// Proof: life_cell ATP charge/spend/charged/catalyze usability.
+// Work currency from free energy; catalyze arms near-threshold mitosis.
+// Cube is SoT. No dual ladders. Pure .cubalc lib extend.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 18 0
+ENTITY ally OF Cell 1 12 0
+ENTITY d1 OF Cell 0 0 0
+
+SEND seed charged
+ASSERT LAST_N == 0 "seed atp 0"
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after charge"
+
+// Ally: gift down, charge, feed near thr, catalyze arms
+SEND ally gift 4
+ASSERT LAST_N == 4 "ally gift"
+GETF ally energy
+ASSERT LAST_N == 8 "ally 8"
+SEND ally charge 2
+ASSERT LAST_N == 2 "ally charge"
+GETF ally energy
+ASSERT LAST_N == 6 "ally 6"
+SEND ally feed 2
+ASSERT LAST_N == 8 "ally 8 near thr"
+GETF ally ready
+ASSERT LAST_N == 0 "not ready"
+SEND ally catalyze
+ASSERT LAST_N == 1 "catalyze arms"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally charged
+ASSERT LAST_N == 1 "ally atp 1 left"
+
+// Seed spends ATP; stow does not touch ATP
+SEND seed spend 3
+ASSERT LAST_N == 3 "work 3"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+SEND seed stow
+ASSERT LAST_N == 11 "stow keep spark"
+SEND seed total
+ASSERT LAST_N == 12 "metabolic wealth"
+SEND seed charged
+ASSERT LAST_N == 3 "atp immune to stow"
+SEND seed saturate
+ASSERT LAST_N == 11 "flood"
+GETF seed energy
+ASSERT LAST_N == 12 "restored"
+SEND seed charged
+ASSERT LAST_N == 3 "atp holds"
+
+// Dead cell cannot charge
+SEND d1 charge 5
+ASSERT LAST_N == 0 "dead no charge"
+SEND d1 catalyze
+ASSERT LAST_N == 0 "dead no catalyze"
+
+// Mitosis: daughter birth clears ATP; parent keeps
+SEND seed feed 8
+ASSERT LAST_N == 20 "feast"
+SEND seed after_div
+GETF seed energy
+LET half = LAST_N
+IF half < 1 THEN
+  LET half = 1
+END
+GETF seed gen
+LET dg = LAST_N + 1
+SEND d1 birth half dg
+ASSERT LAST_N == 1 "daughter"
+SEND d1 charged
+ASSERT LAST_N == 0 "daughter fresh atp"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter live"
+SEND seed charged
+ASSERT LAST_N == 3 "parent keeps atp"
+
+// Spark retain on charge
+ENTITY spark OF Cell 1 1 0
+SEND spark charge 5
+ASSERT LAST_N == 0 "spark cannot charge below 1"
+SEND spark charged
+ASSERT LAST_N == 0 "spark atp 0"
+
+ASSERT 1 == 1 "life_cell atp charge PASS"
