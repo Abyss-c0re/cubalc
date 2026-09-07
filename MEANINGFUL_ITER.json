@@ -18,7 +18,7 @@
   "proof_status": "PASS",
   "asserts_ok": 69,
   "asserts_fail": 0,
-  "notes": "life_cell METHOD load: energy→PCr (phosphagen load shortcut); inverse of boost; yield conserved; life spark guarded; ATP/pmf/heat untouched; ready recomputed; distinct from charge_pcr/bank; pure .cubalc",
+  "notes": "life_cell METHOD load: energy→PCr phosphagen load shortcut; inverse of boost; yield conserved; life spark guarded; ATP/pmf/heat untouched; ready recomputed; distinct from charge_pcr/bank; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_load.cubalc",
@@ -30,7 +30,7 @@
   "summary": "life_cell load energy→PCr phosphagen bank + atomic printer science + 1620 flagship",
   "head_note": "load energy→PCr phosphagen bank shortcut",
   "feat_commit": "82ef55251",
-  "head": "79a0ffb834568c345ba6bae1a503fadce2e57a74",
-  "pin_head": "79a0ffb834568c345ba6bae1a503fadce2e57a74",
-  "tip": "79a0ffb834568c345ba6bae1a503fadce2e57a74"
+  "head": "52c84a9082edd7ab92a9806f824f83d4a4454865",
+  "pin_head": "52c84a9082edd7ab92a9806f824f83d4a4454865",
+  "tip": "52c84a9082edd7ab92a9806f824f83d4a4454865"
 }
