@@ -1,5 +1,5 @@
-MEANINGFUL_ITER=2056
-VERSION=1.15.1538-usability
-HEAD=8a0d2aaf8d77b308c09cee7e1f5d963013b69d01
-FEATURE=LIFE_CELL_RECLAIM
-PROOF=programs/proof/2056_life_cell_reclaim.cubalc
+MEANINGFUL_ITER=2058
+VERSION=1.15.1540-usability
+HEAD=282343aebc5241acff1f3adb16da120bd6ba478b
+FEATURE=LIFE_CELL_HARNESS
+PROOF=programs/proof/2058_life_cell_harness.cubalc

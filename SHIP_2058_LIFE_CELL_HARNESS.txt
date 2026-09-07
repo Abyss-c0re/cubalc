@@ -1,0 +1,9 @@
+LIFE_CELL_HARNESS 2058
+feat — programs/lib/life_cell.cubalc METHOD harness n
+proofs 2058 asserts_ok=65 fail=0; science 30/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2058 · VERSION 1.15.1540-usability
+free energy: harness n salvages heat → pmf (waste-heat → proton gradient); yield restored; energy/atp/reserve/pcr/ready untouched
+inverse of uncouple (pmf→heat); distinct from reclaim (heat→reserve), capture (heat→ATP), thaw (heat→energy), cool (heat leaves)
+programs/proof/2058_life_cell_harness.cubalc
+programs/science/proof/2058_atomic_printer_life_harness.cubalc
+programs/science/integration/atomic_printer_life_harness.cubalc
