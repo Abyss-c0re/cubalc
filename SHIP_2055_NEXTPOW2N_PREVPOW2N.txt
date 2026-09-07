@@ -3,6 +3,6 @@ feature: power-of-two ceil/floor/predicate x → LAST_N
 pure C: src/lang/lang_ops_math.c (+ help catalog lang_ops_core.c)
 proof: programs/proof/2055_nextpow2n_prevpow2n.cubalc asserts_ok=34 asserts_fail=0
 aliases: CEILPOW2N SNEXTPOW2N / FLOORPOW2N SPREVPOW2N / ISPOWER2N POW2PN
-head=d7916def70495d83a99815fd4b28c6042c9f2899
+head=e0c62dba8786f34f40b5565e1521f941353af215
 version=1.15.1537-usability
 MEANINGFUL_ITER=2055

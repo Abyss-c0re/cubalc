@@ -9,7 +9,9 @@
   "FEATURE": "NEXTPOW2N_PREVPOW2N_ISPOW2N",
   "ship": "2055_nextpow2n_prevpow2n",
   "proof": "programs/proof/2055_nextpow2n_prevpow2n.cubalc",
-  "proofs": ["programs/proof/2055_nextpow2n_prevpow2n.cubalc"],
+  "proofs": [
+    "programs/proof/2055_nextpow2n_prevpow2n.cubalc"
+  ],
   "proof_status": "PASS",
   "asserts_ok": 34,
   "asserts_fail": 0,
@@ -21,6 +23,6 @@
   "title": "2055 NEXTPOW2N PREVPOW2N ISPOW2N",
   "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
   "head_note": "NEXTPOW2N page pad without shell arithmetic",
-  "head": "d7916def70495d83a99815fd4b28c6042c9f2899",
-  "updated": 1788795202
+  "head": "e0c62dba8786f34f40b5565e1521f941353af215",
+  "updated": 1788795231
 }
