@@ -1,8 +1,8 @@
-SHIP 2055 NEXTPOW2N / PREVPOW2N / ISPOW2N
-feature: power-of-two ceil/floor/predicate x → LAST_N
-pure C: src/lang/lang_ops_math.c (+ help catalog lang_ops_core.c)
-proof: programs/proof/2055_nextpow2n_prevpow2n.cubalc asserts_ok=34 asserts_fail=0
-aliases: CEILPOW2N SNEXTPOW2N / FLOORPOW2N SPREVPOW2N / ISPOWER2N POW2PN
-head=489246843c9a79871dd5b8492647852d5d131907
-version=1.15.1537-usability
-MEANINGFUL_ITER=2055
+MI=2055
+FEATURE=NEXTPOW2N/PREVPOW2N/ISPOW2N
+HEAD=d9d8d48cda6d8e8ad97fa3614f979d9d8ea38aa8
+VERSION=1.15.1537-usability
+PROOF=programs/proof/2055_nextpow2n_prevpow2n.cubalc
+ASSERTS_OK=34
+STATUS=PASS
+PURE_C=src/lang/lang_ops_math.c
