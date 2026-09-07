@@ -69,6 +69,7 @@
 #   cool n               heat → environment (radiative cooling; yield sheds)
 #   temper t             heat setpoint: radiate excess above t (homeostat; yield sheds)
 #   thaw n               heat → energy (endothermic recovery; yield restored; ready recompute)
+#   reclaim n            heat → reserve (waste-heat salvage to glycogen; yield restored; ready untouched)
 
 CLASS Cell
   FIELD alive 0
@@ -1571,6 +1572,36 @@ CLASS Cell
     RET take
   END
 
+
+  # Reclaim: salvage n heat into glycogen reserve (waste-heat → stores).
+  # Distinct from thaw (heat→energy, arms ready) and cool (heat leaves system).
+  # Yield restored into protected bank. Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI banks thermogenesis ledger as reserve without flooding mitosis.
+  # Returns amount reclaimed. Dead/zero/empty heat → 0.
+  METHOD reclaim n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS reserve
+    LET r = LAST_N + take
+    SETF THIS reserve r
+    RET take
+  END
 
 
 END

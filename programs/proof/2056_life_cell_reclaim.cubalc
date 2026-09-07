@@ -1,0 +1,201 @@
+// 2056_life_cell_reclaim.cubalc
+// Proof: life_cell reclaim — heat → reserve (waste-heat salvage to glycogen).
+// Distinct from thaw (heat→energy) and cool (heat leaves system).
+// Yield restored into protected bank. energy/atp/pmf/pcr/ready untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+// Baseline
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+SEND seed reclaim 3
+ASSERT LAST_N == 0 "empty reclaim 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Shiver then reclaim banks heat into reserve
+SEND seed shiver 6
+ASSERT LAST_N == 6 "shiver 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+SEND seed yield
+ASSERT LAST_N == 6 "yield sheds on shiver"
+
+SEND seed reclaim 4
+ASSERT LAST_N == 4 "reclaim 4"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed stores
+ASSERT LAST_N == 4 "stores 4 after reclaim"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by reclaim"
+SEND seed yield
+ASSERT LAST_N == 10 "yield = energy+reserve 6+4"
+
+// Drain remaining heat via reclaim
+SEND seed reclaim 9
+ASSERT LAST_N == 2 "reclaim drains 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed stores
+ASSERT LAST_N == 6 "stores 6 total"
+GETF seed energy
+ASSERT LAST_N == 6 "energy still 6"
+SEND seed reclaim 1
+ASSERT LAST_N == 0 "empty reclaim 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield full 6+6"
+
+// Dead cell refuses
+SEND dead reclaim 2
+ASSERT LAST_N == 0 "dead reclaim 0"
+
+// Zero / negative guard
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+// e=3 heat=3 stores=6
+SEND seed reclaim 0
+ASSERT LAST_N == 0 "zero reclaim 0"
+SEND seed reclaim -1
+ASSERT LAST_N == 0 "neg reclaim 0"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth held 3"
+SEND seed cool 3
+ASSERT LAST_N == 3 "clear residual heat"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth clear"
+// e=3 stores=6 heat=0
+
+// Futile path: ATP→heat then reclaim to reserve (not energy/ATP)
+SEND seed feed 9
+ASSERT LAST_N == 12 "fed back to 12"
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+// e=8 atp=4 stores=6
+GETF seed energy
+LET e0 = LAST_N
+ASSERT e0 == 8 "e0 8"
+SEND seed charged
+LET a0 = LAST_N
+ASSERT a0 == 4 "atp 4"
+SEND seed futile 3
+ASSERT LAST_N == 3 "futile 3"
+// e=8 atp=1 heat=3
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1 after futile"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+SEND seed reclaim 2
+ASSERT LAST_N == 2 "reclaim 2 from futile"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+SEND seed charged
+ASSERT LAST_N == 1 "atp held (not restored)"
+GETF seed energy
+ASSERT LAST_N == e0 "energy held by reclaim"
+SEND seed stores
+// prior stores 6 + 2 = 8
+ASSERT LAST_N == 8 "stores 8 after futile reclaim"
+SEND seed cool 1
+ASSERT LAST_N == 1 "shed leftover heat"
+// e=8 atp=1 stores=8 heat=0
+
+// Isolation: ready untouched by reclaim
+GETF seed ready
+LET r0 = LAST_N
+SEND seed shiver 2
+// e=6 heat=2
+SEND seed reclaim 2
+// e=6 heat=0 stores=10
+GETF seed ready
+ASSERT LAST_N == r0 "ready unchanged by reclaim"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth cleared"
+SEND seed stores
+ASSERT LAST_N == 10 "stores 10 after ready-iso reclaim"
+
+// Ally independent
+SEND ally shiver 5
+ASSERT LAST_N == 5 "ally shiver 5"
+SEND ally reclaim 3
+ASSERT LAST_N == 3 "ally reclaim 3"
+SEND ally stores
+ASSERT LAST_N == 3 "ally stores 3"
+SEND seed stores
+ASSERT LAST_N == 10 "seed stores independent"
+
+// Quiet path: bank then reclaim stacks
+SEND quiet bank 4
+ASSERT LAST_N == 4 "quiet bank 4"
+SEND quiet shiver 4
+ASSERT LAST_N == 4 "quiet shiver 4"
+SEND quiet reclaim 4
+ASSERT LAST_N == 4 "quiet reclaim 4"
+SEND quiet stores
+ASSERT LAST_N == 8 "quiet stores bank+reclaim"
+
+// Isolation: reclaim leaves atp/pmf/pcr alone
+GETF iso energy
+ASSERT LAST_N == 20 "iso spark 20"
+SEND iso charge 4
+ASSERT LAST_N == 4 "iso charge 4"
+// e=16 atp=4
+SEND iso charge_pcr 2
+ASSERT LAST_N == 2 "iso pcr 2"
+// e=16 atp=2 pcr=2
+SEND iso pump 2
+ASSERT LAST_N == 2 "iso pump 2"
+// e=14 pmf=2
+SEND iso shiver 3
+ASSERT LAST_N == 3 "iso shiver 3"
+// e=11 heat=3
+SEND iso reclaim 2
+ASSERT LAST_N == 2 "iso reclaim 2"
+SEND iso charged
+ASSERT LAST_N == 2 "iso atp held"
+SEND iso phosphagen
+ASSERT LAST_N == 2 "iso pcr held"
+SEND iso gradient
+ASSERT LAST_N == 2 "iso pmf held"
+GETF iso energy
+ASSERT LAST_N == 11 "iso e 11"
+SEND iso warmth
+ASSERT LAST_N == 1 "iso warmth 1"
+SEND iso stores
+ASSERT LAST_N == 2 "iso stores 2"
+
+// Final conservation check on seed
+GETF seed energy
+LET ef = LAST_N
+SEND seed stores
+LET sf = LAST_N
+SEND seed warmth
+LET hf = LAST_N
+SEND seed charged
+LET af = LAST_N
+SEND seed yield
+// yield = energy + reserve + atp + pmf + pcr
+ASSERT LAST_N == ef + sf + af "yield = e+stores+atp"
+ASSERT hf == 0 "no residual heat"
+
+// Draw from reclaimed reserve still works
+SEND seed draw 3
+ASSERT LAST_N == 3 "draw 3 from reclaimed"
+GETF seed energy
+ASSERT LAST_N == ef + 3 "energy rose by draw"
+SEND seed stores
+ASSERT LAST_N == sf - 3 "stores down 3"
