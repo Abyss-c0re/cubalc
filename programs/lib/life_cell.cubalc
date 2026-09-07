@@ -1525,4 +1525,51 @@ CLASS Cell
 
 
 
+
+  # Thaw: recycle n heat back into active energy (endothermic / waste-heat recovery).
+  # Inverse of shiver (energy→heat). Distinct from cool (heat leaves) and temper (setpoint shed).
+  # Yield conserved (heat→energy). Does not touch atp/pmf/pcr. Recomputes ready vs threshold.
+  # Usability: AGI recovers thermogenesis ledger into mitosis budget after cold-stress.
+  # Returns amount thawed. Dead/zero/empty heat → 0.
+  METHOD thaw n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
