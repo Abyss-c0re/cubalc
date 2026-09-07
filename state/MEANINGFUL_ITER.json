@@ -15,15 +15,14 @@
   "proof_status": "PASS",
   "asserts_ok": 34,
   "asserts_fail": 0,
-  "notes": "NEXTPOW2N/PREVPOW2N/ISPOW2N power-of-two ceil/floor/predicate. Soft ERR on non-positive NEXT. Usability: pagesz=NEXTPOW2N nbytes.",
+  "notes": "NEXTPOW2N/PREVPOW2N/ISPOW2N power-of-two ceil/floor/predicate (twin of stack SCEILPOW2). Soft ERR on non-positive NEXT. Aliases CEILPOW2N FLOORPOW2N ISPOWER2N. Usability: pagesz=NEXTPOW2N nbytes after GETFLAGN.",
   "pure_c": "src/lang/lang_ops_math.c",
   "selftest": "PASS",
   "item": "2055 nextpow2n prevpow2n ispow2n",
   "item_id": "mi_2055_nextpow2n_prevpow2n",
-  "head": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
-  "HEAD": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
-  "tip": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
-  "short": "ab3b5ca99",
-  "pinned": true,
-  "tip_eq_pin": true
+  "title": "2055 NEXTPOW2N PREVPOW2N ISPOW2N",
+  "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
+  "head_note": "NEXTPOW2N page pad without shell arithmetic",
+  "head": "c46bdf5f43b3aa8e33e2e3242292653470235fcd",
+  "updated": 1788795400
 }
