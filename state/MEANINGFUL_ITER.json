@@ -13,18 +13,8 @@
     "programs/proof/2068_life_cell_drive.cubalc",
     "programs/science/proof/2068_atomic_printer_life_drive.cubalc"
   ],
-  "head": "1b86ab6884c0a72fba7c59ca6df31f0ee266b3e8",
-  "tip": "1b86ab6884c0a72fba7c59ca6df31f0ee266b3e8",
-  "pinned_head": "538208dbd74825557623735de296a2615119e330",
-  "sha": "1b86ab6884c0a72fba7c59ca6df31f0ee266b3e8",
-  "pin": "1b86ab6884c0a72fba7c59ca6df31f0ee266b3e8",
-  "pin_head": "1b86ab6884c0a72fba7c59ca6df31f0ee266b3e8",
-  "feat_head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
-  "short": "1b86ab6884c0",
-  "tip_eq_pin": true,
-  "commit": "1b86ab6884c",
-  "updated": 1788820694,
-  "ts": 1788820694.1668417,
-  "status": "PASS",
-  "proof_status": "PASS"
+  "head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "tip": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "pinned_head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "feat_head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4"
 }
