@@ -1,3 +1,9 @@
+## 1.15.1549-usability — 2064 LIFE_CELL_HARDEN
+- feat(life): harden heat→raise mitosis thr (thermal hardening / heat-shock fortify)
+- proofs 2064 asserts_ok=69 fail=0; science 21/0; flagship 1620 PASS 12/0
+- thr ceiling 1000; yield unchanged; energy/atp/reserve/pmf/pcr untouched; ready recomputes
+- distinct from set_threshold/ease/anneal/cool/thaw/reclaim/capture/harness/buffer/prime/refold
+
 ## 1844 — MESH_CENTRAL_RETINAL life-force soft-OOB (1.15.1323-usability)
 
 - feat(smx): MESH_CENTRAL_RETINAL soft-OOB fail-closed mesh exchange life-force

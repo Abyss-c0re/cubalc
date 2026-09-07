@@ -75,6 +75,7 @@
 #   buffer n             heat → pcr (waste-heat salvage to phosphagen ~P; yield restored; ready untouched)
 #   anneal n             heat → age repair (chaperone / mild heat-shock refold; yield unchanged; ready untouched)
 #   ease n               heat → lower mitosis threshold (thermal priming / heat-shock ease; yield unchanged; ready recompute)
+#   harden n             heat → raise mitosis threshold (thermal hardening / heat-shock fortify; yield unchanged; ready recompute)
 #   refold n             ATP → age repair (chaperone ATPase / HSP70; yield sheds ATP; ready untouched)
 #   prime n              ATP → lower mitosis threshold (CDK / cycle priming; yield sheds ATP; ready recompute)
 
@@ -1883,6 +1884,65 @@ CLASS Cell
     LET a = a - take
     SETF THIS atp a
     LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Harden: spend n heat to raise mitosis threshold (thermal hardening / heat-shock fortify).
+  # Distinct from set_threshold (direct retune), ease (heat->lower thr), anneal (heat->age),
+  # prime (ATP->lower thr), refold (ATP->age), temper/cool, thaw/reclaim/capture/harness/buffer.
+  # Heat pays; thr ceiling at 1000. Yield unchanged (heat not in yield).
+  # energy/reserve/atp/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends thermogenesis to fortify mitosis bar without flooding energy banks.
+  # Returns amount hardened (threshold rise). Dead/zero/empty heat/thr already 1000 -> 0.
+  METHOD harden n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    LET th = th + take
     SETF THIS threshold th
     LET rd = 0
     GETF THIS quiescent

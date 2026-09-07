@@ -1,0 +1,199 @@
+// 2064_life_cell_harden.cubalc
+// Proof: life_cell harden — heat → raise mitosis threshold (thermal hardening / heat-shock fortify).
+// Distinct from set_threshold (direct), ease (heat→lower thr), anneal (heat→age), temper/cool,
+// thaw/reclaim/capture/harness/buffer. Heat pays; thr ceiling 1000. Yield unchanged.
+// energy/reserve/atp/pmf/pcr untouched. Ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed harden 3
+ASSERT LAST_N == 0 "empty harden 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+// build heat via shiver; energy drops
+SEND seed shiver 8
+ASSERT LAST_N == 8 "shiver 8"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed warmth
+ASSERT LAST_N == 8 "warmth 8"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed harden 5
+ASSERT LAST_N == 5 "harden 5"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+GETF seed threshold
+ASSERT LAST_N == 15 "thr 15 after harden"
+GETF seed energy
+ASSERT LAST_N == 12 "energy untouched by harden"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e12 < thr15"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 "yield unchanged by harden (heat not in yield)"
+
+// drain remaining heat; thr rises further
+SEND seed harden 9
+ASSERT LAST_N == 3 "harden drains remaining heat 3"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed threshold
+ASSERT LAST_N == 18 "thr 18"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready e12 < thr18"
+
+SEND seed harden 1
+ASSERT LAST_N == 0 "empty harden 0"
+
+SEND dead harden 2
+ASSERT LAST_N == 0 "dead harden 0"
+
+// zero/neg
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+SEND seed harden 0
+ASSERT LAST_N == 0 "zero harden 0"
+SEND seed harden -1
+ASSERT LAST_N == 0 "neg harden 0"
+
+// ceiling thr at 1000
+SEND seed set_threshold 995
+ASSERT LAST_N == 995 "retune thr 995"
+GETF seed threshold
+ASSERT LAST_N == 995 "thr 995"
+SEND seed feed 20
+SEND seed shiver 20
+ASSERT LAST_N == 20 "shiver 20 for ceiling"
+SEND seed harden 100
+ASSERT LAST_N == 5 "harden room 5 to ceiling"
+GETF seed threshold
+ASSERT LAST_N == 1000 "thr ceiling 1000"
+SEND seed harden 1
+ASSERT LAST_N == 0 "already ceiling harden 0"
+
+// quiet path
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet shiver 6
+ASSERT LAST_N == 6 "quiet shiver 6"
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet harden 4
+ASSERT LAST_N == 4 "quiet harden 4"
+GETF quiet threshold
+ASSERT LAST_N == 14 "quiet thr 14"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiescent never ready"
+SEND quiet wake
+GETF quiet energy
+ASSERT LAST_N == 24 "quiet e 24"
+GETF quiet ready
+ASSERT LAST_N == 1 "wake ready e24 >= thr14"
+
+// ally isolation
+GETF seed threshold
+LET seed_th_before = LAST_N
+SEND ally shiver 5
+SEND ally harden 3
+GETF ally threshold
+ASSERT LAST_N == 13 "ally thr 13"
+GETF seed threshold
+ASSERT LAST_N == seed_th_before "seed thr unchanged by ally"
+
+// iso
+SEND iso shiver 7
+ASSERT LAST_N == 7 "iso shiver 7"
+SEND iso harden 4
+ASSERT LAST_N == 4 "iso harden 4"
+GETF iso threshold
+ASSERT LAST_N == 14 "iso thr 14"
+SEND iso warmth
+ASSERT LAST_N == 3 "iso heat leftover 7-4"
+GETF iso energy
+ASSERT LAST_N == 8 "iso e 8"
+GETF iso ready
+ASSERT LAST_N == 0 "iso not ready e8 < thr14"
+
+// distinct from set_threshold
+SEND seed set_threshold 10
+ASSERT LAST_N == 10 "retune thr 10"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr 10"
+SEND seed feed 10
+GETF seed energy
+LET e_mid = LAST_N
+SEND seed shiver 5
+ASSERT LAST_N == 5 "shiver 5"
+SEND seed harden 4
+ASSERT LAST_N == 4 "harden heat path 4"
+GETF seed threshold
+ASSERT LAST_N == 14 "thr 14 via heat"
+GETF seed energy
+ASSERT LAST_N == e_mid - 5 "energy only shiver not harden"
+
+// distinct from ease
+SEND seed set_threshold 10
+SEND seed feed 20
+SEND seed shiver 6
+SEND seed ease 3
+ASSERT LAST_N == 3 "ease thr path"
+GETF seed threshold
+ASSERT LAST_N == 7 "thr 7 via ease"
+SEND seed shiver 4
+SEND seed harden 5
+ASSERT LAST_N == 5 "harden thr path"
+GETF seed threshold
+ASSERT LAST_N == 12 "thr 12 via harden after ease"
+
+// distinct from anneal
+SEND seed pulse 5
+GETF seed age
+LET a_before = LAST_N
+SEND seed shiver 2
+SEND seed anneal 2
+ASSERT LAST_N == 2 "anneal age path"
+GETF seed age
+ASSERT LAST_N == a_before - 2 "age shed by anneal"
+GETF seed threshold
+LET th_hold = LAST_N
+SEND seed shiver 2
+SEND seed harden 1
+ASSERT LAST_N == 1 "harden thr path"
+GETF seed threshold
+ASSERT LAST_N == th_hold + 1 "thr raised by harden not age"
+GETF seed age
+ASSERT LAST_N == a_before - 2 "age held through harden"
+
+SEND dead harden 3
+ASSERT LAST_N == 0 "dead harden 0"
+
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"
