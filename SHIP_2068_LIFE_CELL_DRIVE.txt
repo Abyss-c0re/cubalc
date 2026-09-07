@@ -1,0 +1,8 @@
+LIFE_CELL_DRIVE 2068
+feat — programs/lib/life_cell.cubalc METHOD drive n
+proofs 2068 asserts_ok=58 fail=0; science 27/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2068 · VERSION 1.15.1553-usability
+free energy: drive n spends pmf → lower mitosis threshold (chemiosmotic CDK priming); thr floors at 1; yield sheds by take; energy/reserve/atp/heat/pcr untouched; ready recomputes
+distinct from prime/poise/ease/fortify/brace/harden/synthase/pump/uncouple/set_threshold
+programs/proof/2068_life_cell_drive.cubalc
+programs/science/proof/2068_atomic_printer_life_drive.cubalc

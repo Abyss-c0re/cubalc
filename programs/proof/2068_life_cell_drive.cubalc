@@ -1,0 +1,157 @@
+// 2068_life_cell_drive.cubalc
+// Proof: life_cell drive — pmf → lower mitosis threshold (chemiosmotic CDK priming).
+// Distinct from prime (ATP→lower thr), poise (PCr→lower thr), ease (heat→lower thr),
+// fortify/brace/harden (raise thr), synthase/pump/uncouple/set_threshold.
+// pmf pays; thr floors at 1. Yield sheds by take; energy/reserve/atp/heat/pcr untouched.
+// Ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed drive 3
+ASSERT LAST_N == 0 "empty drive 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Build pmf via energy→pmf (pump); keep energy moderate for ready tests
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed drive 4
+ASSERT LAST_N == 4 "drive 4"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6 after drive"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by drive"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e6 >= thr6"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds pmf by drive"
+
+SEND seed drive 9
+ASSERT LAST_N == 2 "drive drains remaining pmf 2"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed threshold
+ASSERT LAST_N == 4 "thr 4"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready e6 >= thr4"
+
+SEND seed drive 1
+ASSERT LAST_N == 0 "empty drive 0"
+
+SEND dead drive 2
+ASSERT LAST_N == 0 "dead drive 0"
+
+SEND seed feed 10
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+SEND seed drive 0
+ASSERT LAST_N == 0 "zero drive 0"
+SEND seed drive -1
+ASSERT LAST_N == 0 "neg drive 0"
+SEND seed gradient
+ASSERT LAST_N == 3 "pmf held 3"
+
+GETF seed threshold
+LET th_now = LAST_N
+SEND seed drive 100
+ASSERT LAST_N == 3 "drive floor room 3"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf spent room only"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e>=1"
+
+SEND seed drive 1
+ASSERT LAST_N == 0 "thr already 1 drive 0"
+
+// quiet path
+SEND quiet feed 5
+SEND quiet pump 6
+ASSERT LAST_N == 6 "quiet pump 6"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet drive 3
+ASSERT LAST_N == 3 "quiet drive 3"
+GETF quiet threshold
+ASSERT LAST_N == 7 "quiet thr 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet gradient
+ASSERT LAST_N == 3 "quiet pmf 3"
+
+// ally: drive opens gate then feed locks ready
+SEND ally pump 5
+ASSERT LAST_N == 5 "ally pump 5"
+GETF ally energy
+ASSERT LAST_N == 3 "ally e 3"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e3 < thr10"
+SEND ally drive 4
+ASSERT LAST_N == 4 "ally drive 4"
+GETF ally threshold
+ASSERT LAST_N == 6 "ally thr 6"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still not ready e3 < thr6"
+SEND ally feed 10
+GETF ally energy
+ASSERT LAST_N == 13 "ally e 13"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e13 >= thr6"
+SEND ally gradient
+ASSERT LAST_N == 1 "ally pmf 1"
+
+// iso: age untouched
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso pump 4
+ASSERT LAST_N == 4 "iso pump 4"
+SEND iso drive 3
+ASSERT LAST_N == 3 "iso drive 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by drive"
+GETF iso threshold
+ASSERT LAST_N == 7 "iso thr 7"
+SEND iso gradient
+ASSERT LAST_N == 1 "iso pmf 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by drive"
+
+PRINT "2068_life_cell_drive PASS"

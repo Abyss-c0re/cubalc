@@ -1,0 +1,100 @@
+// atomic_printer_life_drive.cubalc
+// Science board: atomic printer + life_cell drive pmf lowers mitosis thr (chemiosmotic CDK priming).
+// Distinct from prime poise ease fortify brace harden synthase pump uncouple. Yield sheds pmf. ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_drive | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+
+GETF seed energy
+ASSERT LAST_N == 16 "seed e 16"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr 10"
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+GETF seed energy
+ASSERT LAST_N == 10 "e 10"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e10 >= thr10"
+SEND seed yield
+LET y0 = LAST_N
+SEND seed drive 5
+ASSERT LAST_N == 5 "drive 5"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1"
+GETF seed threshold
+ASSERT LAST_N == 5 "thr 5"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e10 >= thr5"
+SEND seed yield
+ASSERT LAST_N == y0 - 5 "yield sheds pmf"
+GETF seed energy
+ASSERT LAST_N == 10 "energy untouched"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty not prime"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat empty not ease"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty not poise"
+GETF seed age
+ASSERT LAST_N == 0 "age empty not refold"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty"
+
+SEND seed feed 5
+GETF seed energy
+ASSERT LAST_N == 15 "e 15"
+SEND seed pump 4
+ASSERT LAST_N == 4 "pump 4"
+SEND seed set_threshold 3
+SEND seed drive 100
+ASSERT LAST_N == 2 "drive floor room 2"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed gradient
+ASSERT LAST_N == 3 "pmf leftover after floor"
+
+SEND d1 drive 3
+ASSERT LAST_N == 0 "dead drive 0"
+
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"
+
+PRINT "2068_atomic_printer_life_drive PASS"
