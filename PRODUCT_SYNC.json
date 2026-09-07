@@ -5,15 +5,12 @@
   "paradigm": "COP/flow",
   "ok": true,
   "meaningful_iter": 2048,
-  "feature": "life_cell_load",
+  "feature": "LIFE_CELL_LOAD",
   "proof_status": "PASS",
-  "asserts_ok": 68,
+  "asserts_ok": 69,
   "science_asserts_ok": 40,
   "flagship_1620_asserts_ok": 12,
-  "head": "71f79bd9373121881153faf21977a9b751b0e30e",
+  "head": "79a0ffb834568c345ba6bae1a503fadce2e57a74",
   "MEANINGFUL_ITER": 2048,
-  "VERSION": "1.15.1531-usability",
-  "proof": "programs/proof/2048_life_cell_load.cubalc",
-  "status": "shipped",
-  "tip": "71f79bd9373121881153faf21977a9b751b0e30e"
+  "VERSION": "1.15.1531-usability"
 }
