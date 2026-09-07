@@ -1,0 +1,171 @@
+// 2048_life_cell_load.cubalc
+// Proof: life_cell load — energy → PCr (phosphagen load shortcut).
+// Inverse of boost; yield conserved. Keeps life spark. Disarms ready below thr.
+// Distinct from charge_pcr (atp→pcr) and bank (energy→reserve). Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+
+// Baseline spark — init leaves ready=0 until feed/wake/tick arms it
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+SEND seed feed 0
+ASSERT LAST_N == 12 "feed0 holds"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at 12 after arm"
+
+// Load surplus active energy into phosphagen buffer
+SEND seed load 4
+ASSERT LAST_N == 4 "load 4"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "pcr 4"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready below thr"
+SEND seed yield
+ASSERT LAST_N == 12 "yield conserved load"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+
+// Life spark guard: cannot drain last energy unit
+SEND seed load 100
+ASSERT LAST_N == 7 "load keeps spark"
+GETF seed energy
+ASSERT LAST_N == 1 "life spark 1"
+SEND seed phosphagen
+ASSERT LAST_N == 11 "pcr 11"
+SEND seed yield
+ASSERT LAST_N == 12 "yield held"
+SEND seed load 1
+ASSERT LAST_N == 0 "spark blocks load"
+GETF seed energy
+ASSERT LAST_N == 1 "spark still 1"
+
+// Restore via boost (round-trip energy↔pcr)
+SEND seed boost 5
+ASSERT LAST_N == 5 "boost 5"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed phosphagen
+ASSERT LAST_N == 6 "pcr 6"
+SEND seed yield
+ASSERT LAST_N == 12 "yield roundtrip"
+
+// Empty/zero/neg/dead
+SEND seed load 0
+ASSERT LAST_N == 0 "zero load"
+SEND seed load -3
+ASSERT LAST_N == 0 "neg load"
+SEND dead load 3
+ASSERT LAST_N == 0 "dead load 0"
+SEND dead phosphagen
+ASSERT LAST_N == 0 "dead pcr 0"
+
+// Isolation: load leaves ATP/pmf/heat alone
+// seed: e=6 pcr=6 atp=0
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+// e=3 atp=3 pcr=6
+SEND seed pump 1
+ASSERT LAST_N == 1 "pump 1"
+// e=2 atp=3 pmf=1 pcr=6
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat 0"
+SEND seed load 1
+ASSERT LAST_N == 1 "load 1"
+// e=1 atp=3 pmf=1 pcr=7
+SEND seed charged
+ASSERT LAST_N == 3 "atp held"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf held"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 7 "pcr 7"
+GETF seed energy
+ASSERT LAST_N == 1 "energy spark after load"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 1e+3a+1p+7c"
+
+// Quiescent: load still banks energy→PCr; ready stays 0
+SEND quiet feed 0
+ASSERT LAST_N == 14 "quiet arm"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet load 4
+ASSERT LAST_N == 4 "quiet load"
+GETF quiet energy
+ASSERT LAST_N == 10 "quiet active 10"
+SEND quiet phosphagen
+ASSERT LAST_N == 4 "quiet pcr 4"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet load 3
+ASSERT LAST_N == 3 "quiet load again"
+GETF quiet energy
+ASSERT LAST_N == 7 "quiet e 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet still not ready"
+SEND quiet yield
+ASSERT LAST_N == 14 "quiet yield"
+
+// Ally: load surplus then boost back toward mitosis
+SEND ally feed 4
+ASSERT LAST_N == 12 "ally fed 12"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready"
+SEND ally load 5
+ASSERT LAST_N == 5 "ally load 5"
+GETF ally energy
+ASSERT LAST_N == 7 "ally e 7"
+GETF ally ready
+ASSERT LAST_N == 0 "ally disarmed"
+SEND ally phosphagen
+ASSERT LAST_N == 5 "ally pcr 5"
+SEND ally boost 5
+ASSERT LAST_N == 5 "ally boost back"
+GETF ally energy
+ASSERT LAST_N == 12 "ally restored 12"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready again"
+SEND ally yield
+ASSERT LAST_N == 12 "ally yield"
+
+// Distinct from charge_pcr: charge_pcr spends ATP; load spends energy
+// seed currently e=1 atp=3 pmf=1 pcr=7 yield=12
+SEND seed feed 5
+ASSERT LAST_N == 6 "seed fed 6"
+SEND seed charge_pcr 2
+ASSERT LAST_N == 2 "charge_pcr spends atp"
+SEND seed charged
+ASSERT LAST_N == 1 "atp after charge_pcr"
+SEND seed phosphagen
+ASSERT LAST_N == 9 "pcr after charge_pcr"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by charge_pcr"
+SEND seed load 2
+ASSERT LAST_N == 2 "load spends energy"
+GETF seed energy
+ASSERT LAST_N == 4 "energy after load"
+SEND seed charged
+ASSERT LAST_N == 1 "atp untouched by load"
+SEND seed phosphagen
+ASSERT LAST_N == 11 "pcr after load"
+SEND seed yield
+ASSERT LAST_N == 17 "yield 4e+1a+1p+11c"

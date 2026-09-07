@@ -65,6 +65,7 @@
 #   warmth               report heat ledger for ASSERT science boards
 #   futile n             ATP → heat (futile cycling / non-work ATPase; yield sheds)
 #   boost n              PCr → energy (phosphagen mitosis boost; yield conserved)
+#   load n               energy → PCr (phosphagen load shortcut; yield conserved)
 
 CLASS Cell
   FIELD alive 0
@@ -1416,5 +1417,56 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # Load: dump n active energy straight into PCr (phosphagen load shortcut).
+  # Bypasses ATP intermediate — inverse of boost; creatine kinase reverse arm.
+  # Yield conserved (energy→pcr). Does not touch ATP/pmf/heat. Disarms ready if below thr.
+  # Usability: AGI banks surplus mitosis budget into ~P buffer without dual ladders.
+  # Returns amount loaded. Dead/zero/empty energy→0. Keeps life spark (never drains last 1).
+  METHOD load n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # keep life spark — never bank the last unit of active energy
+    LET max_take = e - 1
+    IF max_take < 1 THEN
+      RET 0
+    END
+    LET take = n
+    IF take > max_take THEN
+      LET take = max_take
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS pcr
+    LET c = LAST_N + take
+    SETF THIS pcr c
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

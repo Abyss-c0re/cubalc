@@ -1,0 +1,129 @@
+// atomic_printer_life_load.cubalc
+// Science board: atomic printer + life_cell load energy→PCr phosphagen bank.
+// Inverse of boost; yield conserved; keeps life spark; disarms ready below thr.
+// Distinct from charge_pcr (atp→pcr) and bank (energy→reserve).
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_load | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Feed surplus then load into phosphagen buffer
+GETF seed energy
+ASSERT LAST_N == 4 "life spark 4"
+SEND seed feed 10
+ASSERT LAST_N == 14 "fed to 14"
+GETF seed ready
+ASSERT LAST_N == 1 "ready above thr"
+SEND seed yield
+ASSERT LAST_N == 14 "yield 14"
+
+SEND seed load 5
+ASSERT LAST_N == 5 "load 5"
+GETF seed energy
+ASSERT LAST_N == 9 "active 9"
+SEND seed phosphagen
+ASSERT LAST_N == 5 "pcr 5"
+GETF seed ready
+ASSERT LAST_N == 0 "disarmed below thr"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed yield
+ASSERT LAST_N == 14 "yield conserved load"
+
+// Round-trip: boost restores mitosis budget
+SEND seed boost 3
+ASSERT LAST_N == 3 "boost 3"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "pcr 2"
+GETF seed ready
+ASSERT LAST_N == 1 "ready again"
+SEND seed yield
+ASSERT LAST_N == 14 "yield held"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "birth ok"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 6 "daughter half"
+SEND seed after_div
+ASSERT LAST_N == 6 "parent after_div"
+GETF seed energy
+ASSERT LAST_N == 6 "parent half"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "parent pcr held"
+SEND seed yield
+ASSERT LAST_N == 8 "parent yield 6e+2pcr"
+
+// Daughter loads surplus into PCr then boosts toward ready
+SEND d1 feed 6
+ASSERT LAST_N == 12 "d1 fed 12"
+GETF d1 ready
+ASSERT LAST_N == 1 "d1 ready"
+SEND d1 load 4
+ASSERT LAST_N == 4 "d1 load 4"
+GETF d1 energy
+ASSERT LAST_N == 8 "d1 e 8"
+GETF d1 ready
+ASSERT LAST_N == 0 "d1 disarmed"
+SEND d1 phosphagen
+ASSERT LAST_N == 4 "d1 pcr 4"
+SEND d1 boost 4
+ASSERT LAST_N == 4 "d1 boost back"
+GETF d1 energy
+ASSERT LAST_N == 12 "d1 restored 12"
+GETF d1 ready
+ASSERT LAST_N == 1 "d1 ready again"
+SEND d1 yield
+ASSERT LAST_N == 12 "d1 yield"
+
+// Life spark guard on printer bed
+SEND seed load 100
+ASSERT LAST_N == 5 "seed spark guard"
+GETF seed energy
+ASSERT LAST_N == 1 "seed spark 1"
+SEND seed phosphagen
+ASSERT LAST_N == 7 "seed pcr 7"
+SEND seed yield
+ASSERT LAST_N == 8 "seed yield held"
+
+ASSERT 1 == 1 "atomic_printer_life_load PASS"
