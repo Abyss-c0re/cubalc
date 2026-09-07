@@ -11,15 +11,14 @@
   "proof": "programs/proof/2056_life_cell_reclaim.cubalc",
   "proofs": [
     "programs/proof/2056_life_cell_reclaim.cubalc",
-    "programs/science/proof/2056_atomic_printer_life_reclaim.cubalc",
-    "programs/science/integration/atomic_printer_life_reclaim.cubalc"
+    "programs/science/proof/2056_atomic_printer_life_reclaim.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 69,
   "asserts_fail": 0,
   "science_asserts_ok": 26,
   "flagship_1620": "PASS 12/0",
-  "notes": "reclaim n: heat\u2192reserve (waste-heat salvage to glycogen). Distinct from thaw (heat\u2192energy) and cool (heat leaves). energy/atp/pmf/pcr/ready untouched. Usability: AGI banks thermogenesis as protected store without mitosis flood.",
+  "notes": "reclaim n: heat\u2192reserve waste-heat salvage to glycogen; yield restored; energy/atp/pmf/pcr/ready untouched. Distinct from thaw and cool.",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "item": "2056 life_cell reclaim",
@@ -27,12 +26,17 @@
   "title": "2056 LIFE_CELL RECLAIM",
   "summary": "heat\u2192reserve salvage pure .cubalc + proof 69 asserts",
   "head_note": "reclaim banks thermogenesis without flooding mitosis",
-  "head": "545578c112f3bf34aa0f9a8279b47d55731f4854",
-  "pin_head": "545578c112f3bf34aa0f9a8279b47d55731f4854",
-  "tip": "545578c112f3bf34aa0f9a8279b47d55731f4854",
-  "feat_head": "545578c112f3bf34aa0f9a8279b47d55731f4854",
-  "updated": 1788796296,
-  "ts": 1788796296.0,
+  "head": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "pin_head": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "tip": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "feat_head": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "updated": 1788796800,
+  "ts": 1788796800.0,
   "parent_head": "28f45979b",
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "pin": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "sha": "b5912bd750c771bf0b87efa44b25ce3d122b446e",
+  "short": "b5912bd75",
+  "status": "PASS",
+  "note": "reclaim n \u2014 heat\u2192reserve waste-heat salvage"
 }
