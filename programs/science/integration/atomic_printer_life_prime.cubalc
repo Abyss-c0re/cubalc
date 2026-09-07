@@ -1,0 +1,46 @@
+// atomic_printer_life_prime.cubalc — integration board
+// ATP-dependent CDK priming lowers mitosis threshold; free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_prime | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+
+ENTITY seed OF Cell 1 12 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+ENERGYFLOW 2
+FLOW 1
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+ASSERT SMX_OK == 1 "smx ok"
+
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed ready
+ASSERT LAST_N == 0 "gated"
+SEND seed prime 4
+ASSERT LAST_N == 4 "prime 4"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6"
+GETF seed ready
+ASSERT LAST_N == 1 "open"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+
+PRINT "atomic_printer_life_prime integration PASS"

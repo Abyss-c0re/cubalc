@@ -1,0 +1,156 @@
+// 2063_life_cell_prime.cubalc
+// Proof: life_cell prime ATP lowers mitosis threshold (CDK cycle priming).
+// Distinct from ease/catalyze/set_threshold/refold/spend/futile.
+// ATP pays; thr floors at 1; yield sheds; ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed prime 3
+ASSERT LAST_N == 0 "empty prime 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed prime 4
+ASSERT LAST_N == 4 "prime 4"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6 after prime"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by prime"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e6 >= thr6"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds ATP by prime"
+
+SEND seed prime 9
+ASSERT LAST_N == 2 "prime drains remaining atp 2"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed threshold
+ASSERT LAST_N == 4 "thr 4"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready e6 >= thr4"
+
+SEND seed prime 1
+ASSERT LAST_N == 0 "empty prime 0"
+
+SEND dead prime 2
+ASSERT LAST_N == 0 "dead prime 0"
+
+SEND seed feed 10
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+SEND seed prime 0
+ASSERT LAST_N == 0 "zero prime 0"
+SEND seed prime -1
+ASSERT LAST_N == 0 "neg prime 0"
+SEND seed charged
+ASSERT LAST_N == 3 "atp held 3"
+
+GETF seed threshold
+LET th_now = LAST_N
+SEND seed prime 100
+ASSERT LAST_N == 3 "prime floor room 3"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed charged
+ASSERT LAST_N == 0 "atp spent room only"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e>=1"
+
+SEND seed prime 1
+ASSERT LAST_N == 0 "thr already 1 prime 0"
+
+SEND quiet feed 5
+SEND quiet charge 4
+ASSERT LAST_N == 4 "quiet charge 4"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet prime 3
+ASSERT LAST_N == 3 "quiet prime 3"
+GETF quiet threshold
+ASSERT LAST_N == 7 "quiet thr 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet charged
+ASSERT LAST_N == 1 "quiet atp 1"
+
+SEND ally charge 4
+ASSERT LAST_N == 4 "ally charge 4"
+GETF ally energy
+ASSERT LAST_N == 4 "ally e 4"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e4 < thr10"
+SEND ally prime 6
+ASSERT LAST_N == 4 "ally prime capped by atp 4"
+GETF ally threshold
+ASSERT LAST_N == 6 "ally thr 6"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still not ready e4 < thr6"
+SEND ally feed 2
+GETF ally energy
+ASSERT LAST_N == 6 "ally e 6"
+SEND ally charge 2
+SEND ally prime 2
+ASSERT LAST_N == 2 "ally prime 2"
+GETF ally threshold
+ASSERT LAST_N == 4 "ally thr 4"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e6 >= thr4"
+SEND ally charged
+ASSERT LAST_N == 0 "ally atp empty"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso charge 5
+ASSERT LAST_N == 5 "iso charge 5"
+SEND iso prime 3
+ASSERT LAST_N == 3 "iso prime 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by prime"
+GETF iso threshold
+ASSERT LAST_N == 7 "iso thr 7"
+SEND iso charged
+ASSERT LAST_N == 2 "iso atp 2"
+
+PRINT "2063_life_cell_prime PASS"
+

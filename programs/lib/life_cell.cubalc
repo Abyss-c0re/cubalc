@@ -76,6 +76,7 @@
 #   anneal n             heat → age repair (chaperone / mild heat-shock refold; yield unchanged; ready untouched)
 #   ease n               heat → lower mitosis threshold (thermal priming / heat-shock ease; yield unchanged; ready recompute)
 #   refold n             ATP → age repair (chaperone ATPase / HSP70; yield sheds ATP; ready untouched)
+#   prime n              ATP → lower mitosis threshold (CDK / cycle priming; yield sheds ATP; ready recompute)
 
 CLASS Cell
   FIELD alive 0
@@ -1837,6 +1838,63 @@ CLASS Cell
     SETF THIS atp a
     LET ag = ag - take
     SETF THIS age ag
+    RET take
+  END
+
+
+  # Prime: spend n ATP to lower mitosis threshold (CDK / ATP-dependent cycle priming).
+  # Distinct from ease (heat→thr), catalyze (1 ATP arms ready near thr), set_threshold (direct),
+  # refold (ATP→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; thr floors at 1. Yield sheds by take (ATP in yield). energy/reserve/heat/pmf/pcr untouched.
+  # Recomputes ready so AGI can spend work currency to open mitosis gate without flooding energy.
+  # Returns amount primed (threshold drop). Dead/zero/empty ATP/thr already 1 → 0.
+  METHOD prime n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
     RET take
   END
 
