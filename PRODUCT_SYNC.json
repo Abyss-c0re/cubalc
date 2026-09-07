@@ -1,11 +1,17 @@
 {
   "product": "cubalc",
   "meaningful_iter": 2049,
-  "feature": "life_cell_cool",
+  "feature": "LIFE_CELL_COOL",
   "version": "1.15.1532-usability",
-  "head": "860ec1305c3f6966215561343de92953ade3b63d",
+  "head": "6bd723b52b31dba8eec4848a4451fddc82a4d0cb",
   "tip": "860ec1305c3f6966215561343de92953ade3b63d",
   "pin_head": "860ec1305c3f6966215561343de92953ade3b63d",
   "proof_status": "PASS",
-  "updated": 1788742276
+  "updated": 1788742276,
+  "MEANINGFUL_ITER": 2049,
+  "VERSION": "1.15.1532-usability",
+  "asserts_ok": 66,
+  "science_asserts_ok": 45,
+  "flagship_1620_asserts_ok": 12,
+  "ok": true
 }
