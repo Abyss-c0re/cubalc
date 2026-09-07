@@ -6302,6 +6302,109 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
   }
 
 
+
+  /* ALIGNUPN|CEILALIGNN|SNAPUPN x step — raise x to next multiple of |step| → LAST_N.
+   * ALIGNDOWNN|FLOORALIGNN|SNAPDOWNN x step — lower x to previous multiple of |step|.
+   * step==0 soft keep x + sticky LAST_ERR. Optional TO/BY before step.
+   * Exact multiples stay put. Toward +∞ / −∞ on the number line (sign-aware).
+   * Twin of SNAPN (nearest). Usability: pad = ALIGNUPN size 64; base = ALIGNDOWNN addr 4096. */
+  if (kw(&L->cur,"ALIGNUPN") || kw(&L->cur,"CEILALIGNN") || kw(&L->cur,"SNAPUPN") ||
+      kw(&L->cur,"PADALIGNN") || kw(&L->cur,"ALIGN_UP_N") || kw(&L->cur,"CEIL_TO_N") ||
+      kw(&L->cur,"ALIGNDOWNN") || kw(&L->cur,"FLOORALIGNN") || kw(&L->cur,"SNAPDOWNN") ||
+      kw(&L->cur,"TRUNCALIGNN") || kw(&L->cur,"ALIGN_DOWN_N") || kw(&L->cur,"FLOOR_TO_N")){
+    long x = 0, step = 0, out = 0, astep = 0;
+    int bad = 0, changed = 0, is_up = 0;
+    char nbuf[32];
+    is_up = kw(&L->cur,"ALIGNUPN") || kw(&L->cur,"CEILALIGNN") || kw(&L->cur,"SNAPUPN") ||
+            kw(&L->cur,"PADALIGNN") || kw(&L->cur,"ALIGN_UP_N") || kw(&L->cur,"CEIL_TO_N");
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, is_up ? "ALIGNUPN x step — unknown x" : "ALIGNDOWNN x step — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, is_up ? "ALIGNUPN x step — ALIGNUPN size 64" : "ALIGNDOWNN x step — ALIGNDOWNN addr 4096");
+      return -1;
+    }
+    if (kw(&L->cur,"TO") || kw(&L->cur,"BY") || kw(&L->cur,"STEP") ||
+        kw(&L->cur,"GRID") || kw(&L->cur,"OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) { step = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      step = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, is_up ? "ALIGNUPN x step — unknown step" : "ALIGNDOWNN x step — unknown step"); return -1; }
+      step = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, is_up ? "ALIGNUPN x step — missing step" : "ALIGNDOWNN x step — missing step");
+      return -1;
+    }
+    astep = step < 0 ? -step : step;
+    if (astep == 0) {
+      out = x; bad = 1;
+      var_set_str(vm, "LAST_ERR", is_up ? "ALIGNUPN: step zero" : "ALIGNDOWNN: step zero");
+      var_set_str(vm, "ERR", is_up ? "ALIGNUPN: step zero" : "ALIGNDOWNN: step zero");
+    } else if (x >= 0) {
+      long r = x % astep;
+      if (is_up) {
+        out = (r == 0) ? x : x + (astep - r);
+      } else {
+        out = x - r;
+      }
+    } else {
+      /* negative: toward +∞ for up, toward −∞ for down on the number line */
+      long ax = -x;
+      long r = ax % astep;
+      if (is_up) {
+        /* ceil toward +∞: -17 step 8 → -16 */
+        out = (r == 0) ? x : -(ax - r);
+      } else {
+        /* floor toward −∞: -17 step 8 → -24 */
+        out = (r == 0) ? x : -(ax + (astep - r));
+      }
+    }
+    changed = (out != x) ? 1 : 0;
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    if (is_up) {
+      var_set_num(vm, "ALIGNUPN", out);
+      var_set_num(vm, "CEILALIGNN", out);
+      var_set_num(vm, "SNAPUPN", out);
+      var_set_num(vm, "PADALIGNN", out);
+      var_set_num(vm, "ALIGNUPN_X", x);
+      var_set_num(vm, "ALIGNUPN_STEP", astep);
+      var_set_num(vm, "ALIGNUPN_CHANGED", (long)changed);
+      var_set_num(vm, "ALIGNUPN_OK", bad ? 0L : 1L);
+    } else {
+      var_set_num(vm, "ALIGNDOWNN", out);
+      var_set_num(vm, "FLOORALIGNN", out);
+      var_set_num(vm, "SNAPDOWNN", out);
+      var_set_num(vm, "TRUNCALIGNN", out);
+      var_set_num(vm, "ALIGNDOWNN_X", x);
+      var_set_num(vm, "ALIGNDOWNN_STEP", astep);
+      var_set_num(vm, "ALIGNDOWNN_CHANGED", (long)changed);
+      var_set_num(vm, "ALIGNDOWNN_OK", bad ? 0L : 1L);
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# align%sn %ld step=%ld -> %ld bad=%d\n",
+              is_up ? "up" : "down", x, astep, out, bad);
+    bump(vm); return 1;
+  }
+
+
   /* ISQRTN|SQRTN|IROOT2N|FLOORSQRTN x — floor integer square root → LAST_N.
    * x<0 soft LAST_N=0 + sticky LAST_ERR (ISQRTN_OK=0). Binary-search floor sqrt.
    * Twin of SYS ISQRT without SYS glue. Usability: side = ISQRTN area after GETFLAGN. */
@@ -6359,6 +6462,69 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
     if (vm->trace)
       fprintf(vm->trace, "# isqrtn %ld -> %ld bad=%d\n", x, out, bad);
+    bump(vm); return 1;
+  }
+
+
+  /* ICBRTN|CBRTN|IROOT3N|FLOORCBRTN x — floor integer cube root → LAST_N.
+   * x may be negative (odd root preserves sign). Binary-search |x| then re-sign.
+   * Twin of ISQRTN. Usability: edge = ICBRTN volume after GETFLAGN. */
+  if (kw(&L->cur,"ICBRTN") || kw(&L->cur,"CBRTN") || kw(&L->cur,"IROOT3N") ||
+      kw(&L->cur,"FLOORCBRTN") || kw(&L->cur,"INTCBRTN") || kw(&L->cur,"ROOT3N") ||
+      kw(&L->cur,"ICBRT_N") || kw(&L->cur,"CUBE_ROOT_N")){
+    long x = 0, out = 0, ax = 0;
+    int bad = 0, neg = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) { fail_at(vm, L, "ICBRTN x — unknown x"); return -1; }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "ICBRTN x — ICBRTN volume");
+      return -1;
+    }
+    if (x == 0) {
+      out = 0;
+    } else {
+      if (x < 0) { neg = 1; ax = -x; }
+      else ax = x;
+      /* binary search floor cbrt; hi capped so mid^3 stays in signed 64 (~2^63-1) */
+      {
+        long lo = 1, hi = ax;
+        if (hi > 2097151L) hi = 2097151L; /* 2097151^3 < 2^63-1 < 2097152^3 */
+        out = 1;
+        while (lo <= hi) {
+          long mid = lo + (hi - lo) / 2;
+          unsigned long long m = (unsigned long long)mid;
+          unsigned long long cu = m * m * m;
+          if (cu == (unsigned long long)ax) { out = mid; break; }
+          if (cu < (unsigned long long)ax) { out = mid; lo = mid + 1; }
+          else hi = mid - 1;
+        }
+      }
+      if (neg) out = -out;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    var_set_num(vm, "ICBRTN", out);
+    var_set_num(vm, "CBRTN", out);
+    var_set_num(vm, "IROOT3N", out);
+    var_set_num(vm, "FLOORCBRTN", out);
+    var_set_num(vm, "ICBRTN_X", x);
+    var_set_num(vm, "ICBRTN_OK", bad ? 0L : 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# icbrtn %ld -> %ld bad=%d\n", x, out, bad);
     bump(vm); return 1;
   }
 

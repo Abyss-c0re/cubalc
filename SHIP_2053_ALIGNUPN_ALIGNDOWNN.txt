@@ -1,0 +1,5 @@
+SHIP 2053 ALIGNUPN / ALIGNDOWNN
+feature: ceil/floor align x to step → LAST_N
+pure C: src/lang/lang_ops_math.c (+ help catalog lang_ops_core.c)
+proof: programs/proof/2053_alignupn_aligndownn.cubalc asserts_ok=37 asserts_fail=0
+aliases: CEILALIGNN SNAPUPN PADALIGNN / FLOORALIGNN SNAPDOWNN TRUNCALIGNN
