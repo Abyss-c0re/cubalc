@@ -1,0 +1,141 @@
+// atomic_printer_life_cool.cubalc
+// Science board: atomic printer + life_cell cool heat→environment clearance.
+// Inverse of shiver/futile/uncouple heat creation. Yield sheds. warmth drops.
+// Does not touch energy/atp/pmf/pcr/ready. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_cool | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 4 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Feed surplus, shiver heat, cool clearance, restore toward mitosis
+GETF seed energy
+ASSERT LAST_N == 4 "life spark 4"
+SEND seed feed 10
+ASSERT LAST_N == 14 "fed to 14"
+SEND seed yield
+ASSERT LAST_N == 14 "yield 14"
+
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+GETF seed energy
+ASSERT LAST_N == 10 "active 10"
+SEND seed warmth
+ASSERT LAST_N == 4 "warmth 4"
+SEND seed yield
+ASSERT LAST_N == 10 "yield shed heat"
+
+SEND seed cool 3
+ASSERT LAST_N == 3 "cool 3"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+GETF seed energy
+ASSERT LAST_N == 10 "energy held by cool"
+SEND seed yield
+ASSERT LAST_N == 10 "yield held after cool"
+
+// Clear last heat then arm mitosis
+SEND seed cool 1
+ASSERT LAST_N == 1 "cool last"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed ready
+ASSERT LAST_N == 1 "ready at thr"
+
+// Mitosis on printer bed
+GETF seed energy
+LET half = LAST_N / 2
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "birth ok"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 energy
+ASSERT LAST_N == 5 "daughter half"
+SEND seed after_div
+ASSERT LAST_N == 5 "parent after_div"
+GETF seed energy
+ASSERT LAST_N == 5 "parent half"
+SEND seed warmth
+ASSERT LAST_N == 0 "parent warmth held 0"
+
+// Daughter: futile heat then cool, feed to ready
+SEND d1 feed 7
+ASSERT LAST_N == 12 "d1 fed 12"
+SEND d1 charge 4
+ASSERT LAST_N == 4 "d1 charge 4"
+SEND d1 futile 2
+ASSERT LAST_N == 2 "d1 futile 2"
+SEND d1 warmth
+ASSERT LAST_N == 2 "d1 warmth 2"
+SEND d1 cool 2
+ASSERT LAST_N == 2 "d1 cool 2"
+SEND d1 warmth
+ASSERT LAST_N == 0 "d1 warmth cleared"
+SEND d1 charged
+ASSERT LAST_N == 2 "d1 atp held"
+GETF d1 energy
+ASSERT LAST_N == 8 "d1 e 8"
+SEND d1 feed 2
+ASSERT LAST_N == 10 "d1 fed 10"
+GETF d1 ready
+ASSERT LAST_N == 1 "d1 ready"
+SEND d1 yield
+ASSERT LAST_N == 12 "d1 yield 10e+2atp"
+
+// Isolation on seed: cool leaves pools alone after uncouple heat
+SEND seed feed 7
+ASSERT LAST_N == 12 "seed fed 12"
+SEND seed pump 2
+ASSERT LAST_N == 2 "seed pump 2"
+SEND seed uncouple 2
+ASSERT LAST_N == 2 "seed uncouple 2"
+SEND seed warmth
+ASSERT LAST_N == 2 "seed warmth 2"
+SEND seed cool 2
+ASSERT LAST_N == 2 "seed cool 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "seed warmth 0"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf held 0"
+GETF seed energy
+ASSERT LAST_N == 10 "energy after pump only"
+
+// Life spark path: cool never drains energy
+SEND seed cool 100
+ASSERT LAST_N == 0 "empty cool 0"
+GETF seed energy
+ASSERT LAST_N == 10 "spark energy held"
+
+ASSERT 1 == 1 "atomic_printer_life_cool PASS"

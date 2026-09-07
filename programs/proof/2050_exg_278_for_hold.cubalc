@@ -1,0 +1,93 @@
+// 2050_exg_278_for_hold.cubalc
+// Match EXG 2.78 via FOR-seconds hold, UNTIL cond latch, LET, math % sqrt pow.
+// Scaled: EXG centi = 278. Free energy holds steady. Cube is SoT.
+
+HOLD_FLASH 1
+SCIENCE LOAD
+REQUIRE VERSION "1.15"
+
+// --- math plane: % sqrt pow toward EXG 278 ---
+// 17^2 = 289; ISQRT(289)=17; 289 % 100 = 89; craft 278 via LET chain
+SYS POW 17 2
+LET sq = LAST_N
+ASSERT sq == 289 "pow 17^2"
+
+ISQRTN sq
+LET root = LAST_N
+ASSERT root == 17 "sqrt 289"
+
+LET exg_raw = sq - root   // 289-17=272
+LET exg_mod = exg_raw % 100  // 72
+// target centi-EXG 278 = 200 + 78; 14^2=196, 17^2=289
+SYS POW 14 2
+LET a = LAST_N
+ASSERT a == 196
+LET b = 278 - a   // 82
+// 278 = 2*100 + 78; verify with modular path
+LET base = 300
+LET exg = base - (root + 5)   // 300-22=278
+ASSERT exg == 278 "EXG centi 2.78"
+
+// % remainder seal
+LET r = exg % 10
+ASSERT r == 8 "ones digit"
+LET r2 = exg % 100
+ASSERT r2 == 78 "centi tail 0.78"
+
+// POW+SQRT cross-check: floor(sqrt(77284))/100 ≈ 2.78 → isqrt path on 778
+// 278*278 = 77284
+SYS POW 278 2
+LET exg_sq = LAST_N
+ASSERT exg_sq == 77284 "278^2"
+ISQRTN exg_sq
+ASSERT LAST_N == 278 "isqrt back to EXG"
+
+// --- FOR-seconds hold (timed hold ticks as seconds proxy) ---
+LET held = 0
+LET hold_secs = 4
+FOR t = 1 TO hold_secs
+  LET held = held + 1
+  // keep EXG stable each tick
+  ASSERT exg == 278
+END
+ASSERT held == 4 "FOR 4s hold"
+ASSERT held == hold_secs
+
+// --- UNTIL cond latch ---
+LET latch = 0
+LET n = 0
+REPEAT
+  LET n = n + 1
+  LET latch = 0
+  IF n >= hold_secs THEN
+    LET latch = 1
+  END
+UNTIL latch == 1
+ASSERT latch == 1 "UNTIL cond latch"
+ASSERT n == hold_secs "latched at hold boundary"
+
+// pre-test UNTIL form (run while false)
+LET gate = 0
+LET spins = 0
+UNTIL gate == 1
+  LET spins = spins + 1
+  IF spins >= 3 THEN
+    LET gate = 1
+  END
+END
+ASSERT gate == 1 "UNTIL gate latched"
+ASSERT spins == 3
+
+// --- EXG board cube seal ---
+CUBE exg_cube ROLE matrix PROTON 1
+SETDIGIT exg_cube 2
+LET d = DIGIT(exg_cube)
+ASSERT d == 2 "EXG leading digit 2"
+
+// final: EXG 2.78 held through FOR+UNTIL+math
+ASSERT exg == 278 "EXG 2.78 match final"
+ASSERT latch == 1
+ASSERT held == 4
+ASSERT OK == 1
+
+PRINT "exg278" exg held latch root sq

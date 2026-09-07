@@ -1,0 +1,164 @@
+// 2049_life_cell_cool.cubalc
+// Proof: life_cell cool — heat → environment (radiative cooling clearance).
+// Inverse of shiver/futile/uncouple heat creation. Yield sheds. warmth drops.
+// Does not touch energy/atp/pmf/pcr/ready. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+
+// Baseline spark
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Build heat via shiver then cool it off
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+GETF seed energy
+ASSERT LAST_N == 8 "active 8"
+SEND seed warmth
+ASSERT LAST_N == 4 "warmth 4"
+SEND seed yield
+ASSERT LAST_N == 8 "yield after shiver sheds"
+
+SEND seed cool 3
+ASSERT LAST_N == 3 "cool 3"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+GETF seed heat
+ASSERT LAST_N == 1 "heat 1"
+GETF seed energy
+ASSERT LAST_N == 8 "energy untouched by cool"
+SEND seed yield
+ASSERT LAST_N == 8 "yield held after cool"
+
+// Drain remaining heat
+SEND seed cool 9
+ASSERT LAST_N == 1 "cool drains 1"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed cool 2
+ASSERT LAST_N == 0 "empty cool 0"
+
+// Futile path: ATP→heat then cool
+SEND seed charge 5
+ASSERT LAST_N == 5 "charge 5"
+// e=3 atp=5
+SEND seed futile 3
+ASSERT LAST_N == 3 "futile 3"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+SEND seed cool 2
+ASSERT LAST_N == 2 "cool 2"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+SEND seed charged
+ASSERT LAST_N == 2 "atp held by cool"
+GETF seed energy
+ASSERT LAST_N == 3 "energy held by cool"
+
+// Uncouple path: pmf→heat then cool
+SEND seed feed 5
+ASSERT LAST_N == 8 "fed 8"
+SEND seed pump 2
+ASSERT LAST_N == 2 "pump 2"
+// e=6 pmf=2
+SEND seed uncouple 2
+ASSERT LAST_N == 2 "uncouple 2"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 1+2"
+SEND seed cool 3
+ASSERT LAST_N == 3 "cool all heat"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth cleared"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf held 0"
+GETF seed energy
+ASSERT LAST_N == 6 "energy held"
+
+// Isolation: cool leaves energy/atp/pmf/pcr alone
+SEND seed charge_pcr 1
+ASSERT LAST_N == 1 "charge_pcr 1"
+SEND seed charged
+ASSERT LAST_N == 1 "atp 1"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "pcr 1"
+SEND seed pump 1
+ASSERT LAST_N == 1 "pump 1"
+// build heat again
+SEND seed shiver 2
+ASSERT LAST_N == 2 "shiver 2"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed cool 1
+ASSERT LAST_N == 1 "cool 1"
+SEND seed charged
+ASSERT LAST_N == 1 "atp held"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf held"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "pcr held"
+GETF seed energy
+ASSERT LAST_N == 3 "energy after shiver only"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+
+// Dead / zero / neg
+SEND dead cool 3
+ASSERT LAST_N == 0 "dead cool 0"
+SEND dead warmth
+ASSERT LAST_N == 0 "dead warmth 0"
+SEND seed cool 0
+ASSERT LAST_N == 0 "zero cool"
+SEND seed cool -4
+ASSERT LAST_N == 0 "neg cool"
+
+// Quiescent: cool still clears heat; ready stays 0
+SEND quiet feed 0
+ASSERT LAST_N == 14 "quiet arm"
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet shiver 3
+ASSERT LAST_N == 3 "quiet shiver"
+SEND quiet warmth
+ASSERT LAST_N == 3 "quiet warmth 3"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet cool 2
+ASSERT LAST_N == 2 "quiet cool"
+SEND quiet warmth
+ASSERT LAST_N == 1 "quiet warmth 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet still not ready"
+GETF quiet energy
+ASSERT LAST_N == 11 "quiet e after shiver"
+
+// Ally: round-trip shiver→cool
+SEND ally feed 4
+ASSERT LAST_N == 12 "ally fed 12"
+SEND ally shiver 5
+ASSERT LAST_N == 5 "ally shiver 5"
+SEND ally warmth
+ASSERT LAST_N == 5 "ally warmth 5"
+SEND ally cool 5
+ASSERT LAST_N == 5 "ally cool 5"
+SEND ally warmth
+ASSERT LAST_N == 0 "ally warmth 0"
+GETF ally energy
+ASSERT LAST_N == 7 "ally e 7"
+SEND ally yield
+ASSERT LAST_N == 7 "ally yield"
+
+ASSERT 1 == 1 "life_cell_cool PASS"
