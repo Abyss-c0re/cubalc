@@ -66,6 +66,7 @@
 #   futile n             ATP → heat (futile cycling / non-work ATPase; yield sheds)
 #   boost n              PCr → energy (phosphagen mitosis boost; yield conserved)
 #   load n               energy → PCr (phosphagen load shortcut; yield conserved)
+#   cool n               heat → environment (radiative cooling; yield sheds)
 
 CLASS Cell
   FIELD alive 0
@@ -1465,6 +1466,34 @@ CLASS Cell
       END
     END
     SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cool: radiate n heat to environment (radiative / evaporative cooling clearance).
+  # Inverse of shiver/futile/uncouple heat creation — clears thermogenesis ledger.
+  # Yield sheds by take (heat leaves system). Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI sheds surplus warmth after cold-stress budgets without dual ladders.
+  # Returns amount cooled. Dead/zero/empty heat → 0.
+  METHOD cool n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
     RET take
   END
 
