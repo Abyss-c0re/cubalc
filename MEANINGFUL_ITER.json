@@ -36,13 +36,13 @@
   "science_ok": 21,
   "flagship_ok": 12,
   "anti_bloat": true,
-  "head": "3b129bb577573618a7c23e20a953250d1149548f",
-  "sha": "3b129bb577573618a7c23e20a953250d1149548f",
-  "tip": "3b129bb577573618a7c23e20a953250d1149548f",
-  "pin": "3b129bb577573618a7c23e20a953250d1149548f",
-  "feat_head": "3b129bb577573618a7c23e20a953250d1149548f",
-  "pin_head": "3b129bb577573618a7c23e20a953250d1149548f",
-  "short": "3b129bb57757",
+  "head": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "sha": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "tip": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "pin": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "feat_head": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "pin_head": "dc60b401ff9ef32d6f703498f0d16cb6d49bca2f",
+  "short": "dc60b401ff9e",
   "tip_eq_pin": true,
-  "commit": "3b129bb577"
+  "commit": "dc60b401ff"
 }
