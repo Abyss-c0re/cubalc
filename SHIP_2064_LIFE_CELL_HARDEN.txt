@@ -1,6 +1,6 @@
 LIFE_CELL_HARDEN 2064
 feat — programs/lib/life_cell.cubalc METHOD harden n
-proofs 2064 asserts; science; flagship 1620
+proofs 2064 asserts_ok=69 fail=0; science 21/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2064 · VERSION 1.15.1549-usability
 free energy: harden n spends heat → raise mitosis threshold (thermal hardening / heat-shock fortify); thr ceiling 1000; yield unchanged; energy/atp/reserve/pmf/pcr untouched; ready recomputes
 distinct from set_threshold/ease/anneal/prime/refold/cool/thaw/reclaim/capture/harness/buffer

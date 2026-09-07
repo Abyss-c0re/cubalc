@@ -7781,3 +7781,8 @@ See 1.11.6-universal.
 ## 1.15.1315-usability — 1836 MESH_BASILAR
 - feat(smx): MESH_BASILAR soft-OOB mesh life-force (vertebral confluence → basilar → PCA/Willis)
 - proofs 102/1836 PASS 60/0; flagship 1620 PASS 12/0
+
+## 1.15.1549-usability — 2064 LIFE_CELL_HARDEN
+- feat(life): harden n heat→raise mitosis threshold (thermal fortify); thr ceiling 1000
+- proofs: 2064_life_cell_harden 69/0; science 21/0; flagship 1620 12/0
+- yield unchanged; energy/atp/reserve/pmf/pcr untouched; ready recomputes
