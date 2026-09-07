@@ -2,8 +2,8 @@
   "product": "cubalc-flow",
   "meaningful_iter": 2056,
   "version": "1.15.1538-usability",
-  "head": "3e5c3e52e4ee5a4f4ded1f6777d07442e3645119",
-  "short": "3e5c3e52e",
+  "head": "96f06be8b8de21cde99a18bb38439e42c80d0ad1",
+  "short": "96f06be8b",
   "feature": "LIFE_CELL_RECLAIM",
   "proof_status": "PASS",
   "tip_eq_pin": true
