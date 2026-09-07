@@ -32,6 +32,18 @@ Plugs wire cubes; **REVERSE** flips I/O direction when needed.
 `ASYNC HTTP` `AWAIT` `PARALLEL`  
 `SYS …`
 
+
+## Fold dialect (EXG cube)
+
+Used by the Knight EXG app at fold rate. Do not shell this at 125 Hz.
+
+`FOR <seconds>` timed hold (`FOR 2` then body `END`). Not `FOR i = a TO b` (count loop).
+`UNTIL <cond>` on the EXG host is a latch (one pass per tick). CubalC CLI `UNTIL` stays inverse-WHILE.
+`LET name = expr` u00b7 `LET name, expr` u00b7 `LET name expr`
+Math: `+ - * / %` `abs()` `min()` `max()` `sqrt()` `pow(a, b)`
+Logic: `AND` `OR` `NOT` / `&&` `||` `!`
+`IF` / `THEN` / `ELSE` / `ELSE IF` / `ELIF` / `END` u00b7 `ON` / `OFF` u00b7 `ch1`..`ch8`
+
 ## Matrix / digit / free-flow algocube (device-agnostic)
 
 | form | meaning |

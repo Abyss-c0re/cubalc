@@ -1,0 +1,7 @@
+# EXG fold dialect
+LET n, 2
+LET x 1
+FOR 0
+  LET bit = 1
+END
+PRINT bit

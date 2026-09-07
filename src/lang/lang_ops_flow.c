@@ -23001,6 +23001,49 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
      FOR i = a DOWNTO b [STEP s] ... END  (digit-1: default step -1) */
   if (kw(&L->cur,"FOR")){
     lex_next(L);
+    /* EXG fold hold: FOR <seconds> body END. Count loop stays FOR i = a TO b. */
+    {
+      Lex hold_save = *L;
+      int is_count = 0;
+      if (L->cur.kind==TK_IDENT){
+        lex_next(L);
+        if (L->cur.kind==TK_EQ) is_count = 1;
+        *L = hold_save;
+      }
+      if (!is_count){
+        long sec = parse_expr(vm,L);
+        if (sec < 0) sec = 0;
+        if (kw(&L->cur,"THEN") || kw(&L->cur,"SEC") || kw(&L->cur,"SECONDS") ||
+            kw(&L->cur,"S"))
+          lex_next(L);
+        skip_nl(L);
+        Lex body_start=*L;
+        int depth=1;
+        while (L->cur.kind!=TK_EOF){
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth!=0){ fail(vm,"FOR without END"); return -1; }
+        struct timespec t0, t1, sl;
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+        long deadline_ms = (long)t0.tv_sec*1000L + t0.tv_nsec/1000000L + sec*1000L;
+        long guard=0;
+        for (;;){
+          vm->break_loop=0; vm->continue_loop=0;
+          Lex body=body_start;
+          if (exec_stmts_until(vm,&body,"END",NULL)<0) return -1;
+          if (vm->break_loop){ vm->break_loop=0; break; }
+          vm->continue_loop=0;
+          clock_gettime(CLOCK_MONOTONIC, &t1);
+          long now = (long)t1.tv_sec*1000L + t1.tv_nsec/1000000L;
+          if (now >= deadline_ms || guard++>100000) break;
+          sl.tv_sec = 0; sl.tv_nsec = 20L*1000L*1000L;
+          nanosleep(&sl, NULL);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm,"LAST_N", sec);
+        bump(vm); return 1;
+      }
+    }
     if (L->cur.kind!=TK_IDENT){ fail(vm,"FOR var = a TO b"); return -1; }
     char vname[48]; snprintf(vname,sizeof vname,"%s",L->cur.text); lex_next(L);
     if (L->cur.kind!=TK_EQ){ fail(vm,"FOR var ="); return -1; }

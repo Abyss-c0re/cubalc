@@ -74200,7 +74200,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
     if (L->cur.kind!=TK_IDENT){ fail_at(vm,L,"DEFAULT needs name [=] value — DEFAULT port 8080"); return -1; }
     snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
     /* '=' optional when next token is a value — same glue reduction as LET */
-    if (L->cur.kind==TK_EQ){
+    if (L->cur.kind==TK_EQ || L->cur.kind==TK_COMMA){
       lex_next(L);
     } else if (!(L->cur.kind==TK_NUM || L->cur.kind==TK_STR ||
                  L->cur.kind==TK_MINUS || L->cur.kind==TK_LPAREN ||
