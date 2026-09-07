@@ -1,0 +1,157 @@
+// 2065_life_cell_fortify.cubalc
+// Proof: life_cell fortify — ATP → raise mitosis threshold (CDK / work fortify).
+// Distinct from harden (heat→raise thr), prime (ATP→lower thr), set_threshold (direct),
+// ease/refold/spend/futile. ATP pays; thr ceiling 1000. Yield sheds by take.
+// energy/reserve/heat/pmf/pcr untouched. Ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed fortify 3
+ASSERT LAST_N == 0 "empty fortify 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+// charge ATP; energy drops
+SEND seed charge 8
+ASSERT LAST_N == 8 "charge 8"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed charged
+ASSERT LAST_N == 8 "atp 8"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed fortify 5
+ASSERT LAST_N == 5 "fortify 5"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3"
+GETF seed threshold
+ASSERT LAST_N == 15 "thr 15 after fortify"
+GETF seed energy
+ASSERT LAST_N == 12 "energy untouched by fortify"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e12 < thr15"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 5 "yield sheds ATP by fortify"
+
+// drain remaining ATP; thr rises further
+SEND seed fortify 9
+ASSERT LAST_N == 3 "fortify drains remaining atp 3"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed threshold
+ASSERT LAST_N == 18 "thr 18"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready e12 < thr18"
+
+SEND seed fortify 1
+ASSERT LAST_N == 0 "empty fortify 0"
+
+SEND dead fortify 2
+ASSERT LAST_N == 0 "dead fortify 0"
+
+// zero/neg
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+SEND seed fortify 0
+ASSERT LAST_N == 0 "zero fortify 0"
+SEND seed fortify -1
+ASSERT LAST_N == 0 "neg fortify 0"
+SEND seed charged
+ASSERT LAST_N == 4 "atp held 4"
+
+// ceiling thr at 1000
+SEND seed set_threshold 995
+ASSERT LAST_N == 995 "retune thr 995"
+GETF seed threshold
+ASSERT LAST_N == 995 "thr 995"
+SEND seed feed 20
+SEND seed charge 20
+ASSERT LAST_N == 20 "charge 20 for ceiling"
+SEND seed fortify 100
+ASSERT LAST_N == 5 "fortify room 5 to ceiling"
+GETF seed threshold
+ASSERT LAST_N == 1000 "thr ceiling 1000"
+SEND seed fortify 1
+ASSERT LAST_N == 0 "already ceiling fortify 0"
+SEND seed charged
+ASSERT LAST_N == 19 "atp leftover 19"
+
+// quiet path
+SEND quiet feed 5
+SEND quiet charge 4
+ASSERT LAST_N == 4 "quiet charge 4"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet fortify 3
+ASSERT LAST_N == 3 "quiet fortify 3"
+GETF quiet threshold
+ASSERT LAST_N == 13 "quiet thr 13"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet charged
+ASSERT LAST_N == 1 "quiet atp 1"
+
+// ally path: fortify then feed toward ready
+SEND ally charge 4
+ASSERT LAST_N == 4 "ally charge 4"
+GETF ally energy
+ASSERT LAST_N == 8 "ally e 8"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e8 < thr10"
+SEND ally fortify 6
+ASSERT LAST_N == 4 "ally fortify capped by atp 4"
+GETF ally threshold
+ASSERT LAST_N == 14 "ally thr 14"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still not ready e8 < thr14"
+SEND ally feed 10
+GETF ally energy
+ASSERT LAST_N == 18 "ally e 18"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e18 >= thr14"
+SEND ally charged
+ASSERT LAST_N == 0 "ally atp empty"
+
+// iso: age untouched
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso charge 5
+ASSERT LAST_N == 5 "iso charge 5"
+SEND iso fortify 3
+ASSERT LAST_N == 3 "iso fortify 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by fortify"
+GETF iso threshold
+ASSERT LAST_N == 13 "iso thr 13"
+SEND iso charged
+ASSERT LAST_N == 2 "iso atp 2"
+
+PRINT "2065_life_cell_fortify PASS"

@@ -1,0 +1,8 @@
+LIFE_CELL_FORTIFY 2065
+feat — programs/lib/life_cell.cubalc METHOD fortify n
+proofs 2065 asserts_ok=58 fail=0; science 21/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2065 · VERSION 1.15.1550-usability
+free energy: fortify n spends ATP → raise mitosis threshold (CDK / work fortify); thr ceiling 1000; yield sheds ATP; energy/reserve/heat/pmf/pcr untouched; ready recomputes
+distinct from harden(heat→raise)/prime(ATP→lower)/ease/refold/set_threshold/spend/futile
+programs/proof/2065_life_cell_fortify.cubalc
+programs/science/proof/2065_atomic_printer_life_fortify.cubalc

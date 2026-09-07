@@ -78,6 +78,7 @@
 #   harden n             heat → raise mitosis threshold (thermal hardening / heat-shock fortify; yield unchanged; ready recompute)
 #   refold n             ATP → age repair (chaperone ATPase / HSP70; yield sheds ATP; ready untouched)
 #   prime n              ATP → lower mitosis threshold (CDK / cycle priming; yield sheds ATP; ready recompute)
+#   fortify n            ATP → raise mitosis threshold (CDK / work fortify; yield sheds ATP; ready recompute)
 
 CLASS Cell
   FIELD alive 0
@@ -1942,6 +1943,64 @@ CLASS Cell
     END
     LET h = h - take
     SETF THIS heat h
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fortify: spend n ATP to raise mitosis threshold (CDK / work-currency fortification).
+  # Distinct from harden (heat→raise thr), prime (ATP→lower thr), set_threshold (direct),
+  # ease (heat→lower thr), refold (ATP→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; thr ceiling at 1000. Yield sheds by take (ATP in yield).
+  # energy/reserve/heat/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends work currency to fortify mitosis bar without flooding heat.
+  # Returns amount fortified (threshold rise). Dead/zero/empty ATP/thr already 1000 → 0.
+  METHOD fortify n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
     LET th = th + take
     SETF THIS threshold th
     LET rd = 0
