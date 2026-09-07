@@ -10,9 +10,10 @@
   "asserts_ok": 68,
   "science_asserts_ok": 40,
   "flagship_1620_asserts_ok": 12,
-  "head": "ce426c947f5d9a195901adb546191793c0111163",
+  "head": "a3d1be79f884f13340934070b61858ea07a396a1",
   "MEANINGFUL_ITER": 2048,
   "VERSION": "1.15.1531-usability",
   "proof": "programs/proof/2048_life_cell_load.cubalc",
-  "status": "PASS"
+  "status": "shipped",
+  "tip": "a3d1be79f884f13340934070b61858ea07a396a1"
 }

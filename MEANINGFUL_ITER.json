@@ -28,15 +28,16 @@
   "title": "LIFE_CELL_LOAD",
   "summary": "life_cell load energy\u2192PCr phosphagen bank + atomic printer science + 1620 flagship",
   "head_note": "load energy\u2192PCr phosphagen bank shortcut",
-  "pin_head": "d82656607377d4af3d507f82bf217cd5e576b10c",
-  "tip": "d82656607377d4af3d507f82bf217cd5e576b10c",
+  "pin_head": "a3d1be79f884f13340934070b61858ea07a396a1",
+  "tip": "a3d1be79f884f13340934070b61858ea07a396a1",
   "n": 2048,
   "name": "LIFE_CELL_LOAD",
-  "head": "ce426c947f5d9a195901adb546191793c0111163",
-  "HEAD": "ce426c947f5d9a195901adb546191793c0111163",
-  "sha": "ce426c947f5d9a195901adb546191793c0111163",
-  "short": "ce426c947",
+  "head": "a3d1be79f884f13340934070b61858ea07a396a1",
+  "HEAD": "a3d1be79f884f13340934070b61858ea07a396a1",
+  "sha": "a3d1be79f884f13340934070b61858ea07a396a1",
+  "short": "a3d1be79f",
   "feat": "load",
   "status": "PASS",
-  "sealed": true
+  "sealed": true,
+  "note": "load energy\u2192PCr phosphagen bank shortcut"
 }
