@@ -11,13 +11,14 @@
   "proof": "programs/proof/2051_life_cell_temper.cubalc",
   "proofs": [
     "programs/proof/2051_life_cell_temper.cubalc",
+    "programs/proof/2050_life_cell_temper.cubalc",
     "programs/science/integration/atomic_printer_life_temper.cubalc",
     "programs/science/proof/2050_atomic_printer_life_temper.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc",
     "programs/proof/2049_life_cell_cool.cubalc"
   ],
   "proof_status": "PASS",
-  "asserts_ok": 78,
+  "asserts_ok": 75,
   "asserts_fail": 0,
   "notes": "life_cell METHOD temper t: heat setpoint homeostat; radiate excess above t; never creates heat; yield sheds on excess; energy/atp/pmf/pcr/ready untouched; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
@@ -25,14 +26,13 @@
   "science": "programs/science/integration/atomic_printer_life_temper.cubalc",
   "science_asserts_ok": 20,
   "flagship_1620_asserts_ok": 12,
-  "cool_regression_asserts_ok": 66,
   "item": "2051 life cell temper",
   "item_id": "mi_2051_life_cell_temper",
   "title": "2051 life cell temper",
-  "summary": "life_cell temper heat setpoint homeostat + atomic printer science + 1620 flagship + cool regression",
+  "summary": "life_cell temper heat setpoint homeostat + atomic printer science + 1620 flagship",
   "head_note": "temper t heat setpoint radiative homeostat",
-  "feat_commit": "e603a791eedeb0ca607bd502df400ccf96dd3cd2",
-  "head": "2808b6fa5c680e584ff2148a36810bc7878406e9",
-  "pin_head": "2808b6fa5c680e584ff2148a36810bc7878406e9",
-  "tip": "2808b6fa5c680e584ff2148a36810bc7878406e9"
+  "feat_commit": "e603a791e",
+  "head": "4ce71416414fda5a57706b4f9e1cd74aad7cc7b9",
+  "pin_head": "4ce71416414fda5a57706b4f9e1cd74aad7cc7b9",
+  "tip": "4ce71416414fda5a57706b4f9e1cd74aad7cc7b9"
 }
