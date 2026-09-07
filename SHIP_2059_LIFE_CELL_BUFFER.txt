@@ -1,0 +1,8 @@
+LIFE_CELL_BUFFER 2059
+feat — programs/lib/life_cell.cubalc METHOD buffer n
+proofs 2059 asserts_ok=66 fail=0; science 32/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2059 · VERSION 1.15.1541-usability
+free energy: buffer n salvages heat → pcr (waste-heat → phosphagen ~P); yield restored; energy/atp/reserve/pmf/ready untouched
+distinct from thaw/reclaim/capture/harness/cool
+programs/proof/2059_life_cell_buffer.cubalc
+programs/science/proof/2059_atomic_printer_life_buffer.cubalc
