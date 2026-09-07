@@ -1,7 +1,7 @@
 LIFE_CELL_EASE 2061
 feat — programs/lib/life_cell.cubalc METHOD ease n
-proofs 2061 asserts_ok=63 fail=0; science 23/0; flagship 1620 PASS 12/0
-pin MEANINGFUL_ITER 2061 · VERSION 1.15.1543-usability · HEAD 0ac91d2089b67a1c6a62fb0295f2452768b10bb1
+proofs 2061 asserts_ok=83 fail=0; science 23/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2061 · VERSION 1.15.1543-usability
 free energy: ease n spends heat → lower mitosis threshold (thermal priming / heat-shock ease); thr floors at 1; yield unchanged; energy/atp/reserve/pmf/pcr untouched; ready recomputes
 distinct from set_threshold/anneal/cool/thaw/reclaim/capture/harness/buffer
 programs/proof/2061_life_cell_ease.cubalc
