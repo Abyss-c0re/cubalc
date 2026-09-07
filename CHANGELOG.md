@@ -1,3 +1,9 @@
+## 1.15.1550-usability — 2065 LIFE_CELL_FORTIFY
+- feat(life): fortify ATP→raise mitosis thr (CDK / work fortify)
+- proofs 2065 asserts_ok=58 fail=0; science 21/0; flagship 1620 PASS 12/0
+- thr ceiling 1000; yield sheds ATP; energy/reserve/heat/pmf/pcr untouched; ready recomputes
+- distinct from harden/prime/set_threshold/ease/refold/spend/futile
+
 ## 1.15.1549-usability — 2064 LIFE_CELL_HARDEN
 - feat(life): harden heat→raise mitosis thr (thermal hardening / heat-shock fortify)
 - proofs 2064 asserts_ok=69 fail=0; science 21/0; flagship 1620 PASS 12/0
