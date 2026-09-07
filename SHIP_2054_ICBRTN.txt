@@ -1,0 +1,6 @@
+SHIP 2054 ICBRTN
+feature: floor integer cube root → LAST_N (sign-preserving)
+pure C: src/lang/lang_ops_math.c (+ help catalog lang_ops_core.c)
+proof: programs/proof/2054_icbrtn.cubalc asserts_ok=21 asserts_fail=0
+aliases: CBRTN IROOT3N FLOORCBRTN INTCBRTN ROOT3N
+usability: edge = ICBRTN volume after GETFLAGN without shell cbrt glue

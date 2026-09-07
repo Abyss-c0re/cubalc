@@ -1,0 +1,71 @@
+# ICBRTN — floor integer cube root (twin of ISQRTN)
+# Usability: edge = ICBRTN volume after GETFLAGN geometry/volume.
+
+HOLD_FLASH 1
+
+# perfect cubes
+ICBRTN 0
+ASSERT LAST_N == 0
+ASSERT ICBRTN_OK == 1
+
+ICBRTN 1
+ASSERT LAST_N == 1
+
+ICBRTN 8
+ASSERT LAST_N == 2
+ASSERT ICBRTN_X == 8
+
+ICBRTN 27
+ASSERT LAST_N == 3
+
+ICBRTN 64
+ASSERT LAST_N == 4
+
+ICBRTN 125
+ASSERT LAST_N == 5
+
+ICBRTN 1000
+ASSERT LAST_N == 10
+
+# floor of non-perfect
+ICBRTN 9
+ASSERT LAST_N == 2
+
+ICBRTN 26
+ASSERT LAST_N == 2
+
+ICBRTN 28
+ASSERT LAST_N == 3
+
+ICBRTN 999
+ASSERT LAST_N == 9
+
+# negative (odd root keeps sign)
+ICBRTN -8
+ASSERT LAST_N == -2
+
+ICBRTN -27
+ASSERT LAST_N == -3
+
+ICBRTN -9
+ASSERT LAST_N == -2
+
+# aliases
+CBRTN 27
+ASSERT LAST_N == 3
+IROOT3N 64
+ASSERT LAST_N == 4
+FLOORCBRTN 1000
+ASSERT LAST_N == 10
+
+# var subject
+LET vol = 216
+ICBRTN vol
+ASSERT LAST_N == 6
+
+# LAST decimal
+ICBRTN 8
+SYS EQS LAST "2"
+ASSERT LAST_N == 1
+
+PRINT "icbrtn ok"

@@ -6528,5 +6528,119 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* NEXTPOW2N|CEILPOW2N|SNEXTPOW2N x — smallest power of 2 ≥ x → LAST_N.
+   * PREVPOW2N|FLOORPOW2N|SPREVPOW2N x — largest power of 2 ≤ x → LAST_N (0 if x≤0).
+   * ISPOW2N|ISPOWER2N|POW2PN x — 1 if x is power of two (>0), else 0.
+   * x≤0: NEXT soft 0+ERR (except ISPOW2→0 ok); PREV→0; ISPOW2→0.
+   * Twin of stack SCEILPOW2. Usability: pagesz = NEXTPOW2N nbytes after GETFLAGN. */
+  if (kw(&L->cur,"NEXTPOW2N") || kw(&L->cur,"CEILPOW2N") || kw(&L->cur,"SNEXTPOW2N") ||
+      kw(&L->cur,"NEXT_POW2_N") || kw(&L->cur,"CEIL_POW2_N") || kw(&L->cur,"PO2CEILN") ||
+      kw(&L->cur,"PREVPOW2N") || kw(&L->cur,"FLOORPOW2N") || kw(&L->cur,"SPREVPOW2N") ||
+      kw(&L->cur,"PREV_POW2_N") || kw(&L->cur,"FLOOR_POW2_N") || kw(&L->cur,"PO2FLOORN") ||
+      kw(&L->cur,"ISPOW2N") || kw(&L->cur,"ISPOWER2N") || kw(&L->cur,"POW2PN") ||
+      kw(&L->cur,"IS_POW2_N") || kw(&L->cur,"POWEROF2N") || kw(&L->cur,"ISPO2N")){
+    long x = 0, out = 0;
+    int bad = 0, mode = 0; /* 0=next 1=prev 2=is */
+    char nbuf[32];
+    if (kw(&L->cur,"PREVPOW2N") || kw(&L->cur,"FLOORPOW2N") || kw(&L->cur,"SPREVPOW2N") ||
+        kw(&L->cur,"PREV_POW2_N") || kw(&L->cur,"FLOOR_POW2_N") || kw(&L->cur,"PO2FLOORN"))
+      mode = 1;
+    else if (kw(&L->cur,"ISPOW2N") || kw(&L->cur,"ISPOWER2N") || kw(&L->cur,"POW2PN") ||
+             kw(&L->cur,"IS_POW2_N") || kw(&L->cur,"POWEROF2N") || kw(&L->cur,"ISPO2N"))
+      mode = 2;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) {
+        fail_at(vm, L, mode==2 ? "ISPOW2N x — unknown x" :
+                        mode==1 ? "PREVPOW2N x — unknown x" : "NEXTPOW2N x — unknown x");
+        return -1;
+      }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, mode==2 ? "ISPOW2N x — ISPOW2N n" :
+                      mode==1 ? "PREVPOW2N x — PREVPOW2N n" : "NEXTPOW2N x — NEXTPOW2N n");
+      return -1;
+    }
+    if (mode == 2) {
+      /* ISPOW2N: power of two iff x>0 and single bit set */
+      out = (x > 0 && ((unsigned long)x & ((unsigned long)x - 1ul)) == 0ul) ? 1L : 0L;
+    } else if (x <= 0) {
+      out = 0;
+      if (mode == 0) {
+        bad = 1;
+        var_set_str(vm, "LAST_ERR", "NEXTPOW2N: non-positive");
+        var_set_str(vm, "ERR", "NEXTPOW2N: non-positive");
+      }
+    } else if (mode == 1) {
+      /* PREVPOW2N: largest pow2 ≤ x */
+      unsigned long u = (unsigned long)x;
+      if ((u & (u - 1ul)) == 0ul) out = x;
+      else {
+        /* floor: smear bits then clear low */
+        u |= u >> 1; u |= u >> 2; u |= u >> 4; u |= u >> 8;
+        u |= u >> 16;
+#if ULONG_MAX > 0xfffffffful
+        u |= u >> 32;
+#endif
+        out = (long)((u - (u >> 1)));
+      }
+    } else {
+      /* NEXTPOW2N: smallest pow2 ≥ x */
+      unsigned long u = (unsigned long)x;
+      if ((u & (u - 1ul)) == 0ul) out = x;
+      else if (x > (1L << 62)) {
+        out = 0; bad = 1;
+        var_set_str(vm, "LAST_ERR", "NEXTPOW2N: overflow");
+        var_set_str(vm, "ERR", "NEXTPOW2N: overflow");
+      } else {
+        u--; /* prepare for smear-ceil */
+        u |= u >> 1; u |= u >> 2; u |= u >> 4; u |= u >> 8;
+        u |= u >> 16;
+#if ULONG_MAX > 0xfffffffful
+        u |= u >> 32;
+#endif
+        u++;
+        out = (long)u;
+      }
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    if (mode == 2) {
+      var_set_num(vm, "ISPOW2N", out);
+      var_set_num(vm, "ISPOWER2N", out);
+      var_set_num(vm, "POW2PN", out);
+      var_set_num(vm, "ISPOW2N_X", x);
+      var_set_num(vm, "ISPOW2N_OK", 1L);
+    } else if (mode == 1) {
+      var_set_num(vm, "PREVPOW2N", out);
+      var_set_num(vm, "FLOORPOW2N", out);
+      var_set_num(vm, "SPREVPOW2N", out);
+      var_set_num(vm, "PREVPOW2N_X", x);
+      var_set_num(vm, "PREVPOW2N_OK", bad ? 0L : 1L);
+    } else {
+      var_set_num(vm, "NEXTPOW2N", out);
+      var_set_num(vm, "CEILPOW2N", out);
+      var_set_num(vm, "SNEXTPOW2N", out);
+      var_set_num(vm, "NEXTPOW2N_X", x);
+      var_set_num(vm, "NEXTPOW2N_OK", bad ? 0L : 1L);
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %ld -> %ld bad=%d\n",
+              mode==2?"ispow2n":(mode==1?"prevpow2n":"nextpow2n"), x, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
