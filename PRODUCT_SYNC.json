@@ -10,7 +10,7 @@
   "asserts_ok": 68,
   "science_asserts_ok": 40,
   "flagship_1620_asserts_ok": 12,
-  "head": "665023815e75f0836ee1504c6e2f38be5553279d",
+  "head": "ce426c947f5d9a195901adb546191793c0111163",
   "MEANINGFUL_ITER": 2048,
   "VERSION": "1.15.1531-usability",
   "proof": "programs/proof/2048_life_cell_load.cubalc",
