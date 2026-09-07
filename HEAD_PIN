@@ -1,4 +1,5 @@
-tip=5fc24146f802f9f7f78315d3226fe6068478236a
-pin=5fc24146f802f9f7f78315d3226fe6068478236a
+head=fc8d7a6de6eeac45bb15c3d83cf8c86e59ed42b5
+short=fc8d7a6de6
 mi=2055
 feature=NEXTPOW2N_PREVPOW2N_ISPOW2N
+proof=programs/proof/2055_nextpow2n_prevpow2n.cubalc
