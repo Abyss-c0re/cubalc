@@ -1,16 +1,11 @@
 {
-  "schema": "projectnexus.product_sync.v1",
   "product": "cubalc",
-  "version": "1.15.1531-usability",
-  "paradigm": "COP/flow",
-  "ok": true,
-  "meaningful_iter": 2048,
-  "feature": "LIFE_CELL_LOAD",
+  "meaningful_iter": 2049,
+  "feature": "life_cell_cool",
+  "version": "1.15.1532-usability",
+  "head": "860ec1305c3f6966215561343de92953ade3b63d",
+  "tip": "860ec1305c3f6966215561343de92953ade3b63d",
+  "pin_head": "860ec1305c3f6966215561343de92953ade3b63d",
   "proof_status": "PASS",
-  "asserts_ok": 69,
-  "science_asserts_ok": 40,
-  "flagship_1620_asserts_ok": 12,
-  "head": "52c84a9082edd7ab92a9806f824f83d4a4454865",
-  "MEANINGFUL_ITER": 2048,
-  "VERSION": "1.15.1531-usability"
+  "updated": 1788742276
 }
