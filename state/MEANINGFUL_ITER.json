@@ -33,5 +33,14 @@
   "flagship": "programs/proof/1620_atomic_printer_life_force.cubalc",
   "science_ok": 25,
   "flagship_ok": 12,
-  "anti_bloat": true
+  "anti_bloat": true,
+  "head": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "sha": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "tip": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "pin": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "feat_head": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "pin_head": "d17cc77a8934510ad3db14bfcc4c1185a92e994d",
+  "short": "d17cc77a893",
+  "tip_eq_pin": true,
+  "commit": "d17cc77a893"
 }
