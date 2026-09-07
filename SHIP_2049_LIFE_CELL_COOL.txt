@@ -2,6 +2,6 @@ LIFE_CELL_COOL 2049
 feat — programs/lib/life_cell.cubalc METHOD cool n
 proofs 2049 asserts_ok=66 fail=0; science 45/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2049 · VERSION 1.15.1532-usability
-head ea18dced161adb8c7e44b407fd656667cea8e53c
+head 41ba64a160d0b9b8a6e0778272c4ef93bad6fba8
 free energy: cool n radiates n heat → environment (cooling clearance); energy/atp/pmf/pcr untouched; yield sheds heat
 distinct from shiver/futile/uncouple (heat creation) — inverse clearance after cold-stress budgets
