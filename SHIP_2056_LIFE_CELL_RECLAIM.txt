@@ -2,7 +2,7 @@ LIFE_CELL_RECLAIM 2056
 feat — programs/lib/life_cell.cubalc METHOD reclaim n
 proofs 2056 asserts_ok=69 fail=0; science 26/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2056 · VERSION 1.15.1538-usability
-head ea5d8ccd774b03815795f7fe77e42afafe480f7f
+head 8a0d2aaf8d77b308c09cee7e1f5d963013b69d01
 free energy: reclaim n salvages heat → reserve (waste-heat → glycogen bank); yield restored; energy/atp/pmf/pcr/ready untouched
 distinct from thaw (heat→energy) and cool (heat leaves) — banks thermogenesis ledger without flooding mitosis
 programs/proof/2056_life_cell_reclaim.cubalc
