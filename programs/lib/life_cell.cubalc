@@ -79,7 +79,7 @@
 #   refold n             ATP → age repair (chaperone ATPase / HSP70; yield sheds ATP; ready untouched)
 #   prime n              ATP → lower mitosis threshold (CDK / cycle priming; yield sheds ATP; ready recompute)
 #   fortify n            ATP → raise mitosis threshold (CDK / work fortify; yield sheds ATP; ready recompute)
-
+#   poise n              PCr → lower mitosis threshold (phosphagen CDK burst priming; yield sheds PCr; ready recompute)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -1884,6 +1884,62 @@ CLASS Cell
     END
     LET a = a - take
     SETF THIS atp a
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Poise: spend n PCr to lower mitosis threshold (phosphagen CDK burst priming).
+  # Distinct from prime (ATP→thr), ease (heat→thr), boost (PCr→energy), load (energy→PCr),
+  # discharge (PCr→ATP), set_threshold (direct), catalyze (1 ATP arms ready near thr).
+  # PCr pays; thr floors at 1. Yield sheds by take (PCr in yield). energy/reserve/atp/heat/pmf untouched.
+  # Recomputes ready so AGI can spend rapid ~P buffer to open mitosis gate without burning ATP or heat.
+  # Returns amount poised (threshold drop). Dead/zero/empty PCr/thr already 1 → 0.
+  METHOD poise n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
     LET th = th - take
     SETF THIS threshold th
     LET rd = 0

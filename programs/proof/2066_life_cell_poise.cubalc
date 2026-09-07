@@ -1,0 +1,158 @@
+// 2066_life_cell_poise.cubalc
+// Proof: life_cell poise PCr lowers mitosis threshold (phosphagen CDK burst priming).
+// Distinct from prime/ease/boost/load/discharge/set_threshold/catalyze.
+// PCr pays; thr floors at 1; yield sheds; ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed poise 3
+ASSERT LAST_N == 0 "empty poise 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Load PCr via energy→pcr (load) path; keep active energy moderate
+SEND seed load 6
+ASSERT LAST_N == 6 "load 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed phosphagen
+ASSERT LAST_N == 6 "pcr 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed poise 4
+ASSERT LAST_N == 4 "poise 4"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "pcr 2"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6 after poise"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by poise"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e6 >= thr6"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds PCr by poise"
+
+SEND seed poise 9
+ASSERT LAST_N == 2 "poise drains remaining pcr 2"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed threshold
+ASSERT LAST_N == 4 "thr 4"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready e6 >= thr4"
+
+SEND seed poise 1
+ASSERT LAST_N == 0 "empty poise 0"
+
+SEND dead poise 2
+ASSERT LAST_N == 0 "dead poise 0"
+
+SEND seed feed 10
+SEND seed load 3
+ASSERT LAST_N == 3 "load 3"
+SEND seed poise 0
+ASSERT LAST_N == 0 "zero poise 0"
+SEND seed poise -1
+ASSERT LAST_N == 0 "neg poise 0"
+SEND seed phosphagen
+ASSERT LAST_N == 3 "pcr held 3"
+
+GETF seed threshold
+LET th_now = LAST_N
+SEND seed poise 100
+ASSERT LAST_N == 3 "poise floor room 3"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr spent room only"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e>=1"
+
+SEND seed poise 1
+ASSERT LAST_N == 0 "thr already 1 poise 0"
+
+SEND quiet feed 5
+SEND quiet load 4
+ASSERT LAST_N == 4 "quiet load 4"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet poise 3
+ASSERT LAST_N == 3 "quiet poise 3"
+GETF quiet threshold
+ASSERT LAST_N == 7 "quiet thr 7"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet phosphagen
+ASSERT LAST_N == 1 "quiet pcr 1"
+
+SEND ally load 4
+ASSERT LAST_N == 4 "ally load 4"
+GETF ally energy
+ASSERT LAST_N == 4 "ally e 4"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e4 < thr10"
+SEND ally poise 6
+ASSERT LAST_N == 4 "ally poise capped by pcr 4"
+GETF ally threshold
+ASSERT LAST_N == 6 "ally thr 6"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still not ready e4 < thr6"
+SEND ally feed 2
+GETF ally energy
+ASSERT LAST_N == 6 "ally e 6"
+SEND ally load 2
+SEND ally poise 2
+ASSERT LAST_N == 2 "ally poise 2"
+GETF ally threshold
+ASSERT LAST_N == 4 "ally thr 4"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e6 >= thr4"
+SEND ally phosphagen
+ASSERT LAST_N == 0 "ally pcr empty"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso load 5
+ASSERT LAST_N == 5 "iso load 5"
+SEND iso poise 3
+ASSERT LAST_N == 3 "iso poise 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by poise"
+GETF iso threshold
+ASSERT LAST_N == 7 "iso thr 7"
+SEND iso phosphagen
+ASSERT LAST_N == 2 "iso pcr 2"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by poise"
+
+PRINT "2066_life_cell_poise PASS"
