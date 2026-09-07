@@ -1,7 +1,8 @@
 LIFE_CELL_LOAD 2048
 feat — programs/lib/life_cell.cubalc METHOD load n
-proofs 2048 asserts_ok=68 fail=0; science 40/0; boost 2047 PASS; flagship 1620 PASS 12/0
+proofs 2048 asserts_ok=69 fail=0; science 40/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2048 · VERSION 1.15.1531-usability
+head 665023815e75f0836ee1504c6e2f38be5553279d
 free energy: load n banks n active energy → PCr (phosphagen load shortcut); ATP/pmf/heat untouched; yield conserved; keeps life spark; disarms ready below thr
-distinct from charge_pcr (atp→pcr) and bank (energy→reserve) — one-stroke surplus mitosis budget into ~P buffer
+distinct from charge_pcr (atp→pcr) and bank (energy→reserve) — inverse of boost for surplus mitosis budget
 programs/proof/2048_life_cell_load.cubalc

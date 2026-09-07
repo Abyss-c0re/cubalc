@@ -5,12 +5,14 @@
   "paradigm": "COP/flow",
   "ok": true,
   "meaningful_iter": 2048,
-  "feature": "LIFE_CELL_LOAD",
+  "feature": "life_cell_load",
   "proof_status": "PASS",
   "asserts_ok": 68,
   "science_asserts_ok": 40,
   "flagship_1620_asserts_ok": 12,
-  "head": "cf208da5281956fb069369cdba96e138de27add6",
+  "head": "665023815e75f0836ee1504c6e2f38be5553279d",
   "MEANINGFUL_ITER": 2048,
-  "VERSION": "1.15.1531-usability"
+  "VERSION": "1.15.1531-usability",
+  "proof": "programs/proof/2048_life_cell_load.cubalc",
+  "status": "PASS"
 }
