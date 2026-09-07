@@ -1,7 +1,7 @@
 LIFE_CELL_ANNEAL 2060
 feat — programs/lib/life_cell.cubalc METHOD anneal n
 proofs 2060 asserts_ok=74 fail=0; science 30/0; flagship 1620 PASS 12/0
-pin MEANINGFUL_ITER 2060 · VERSION 1.15.1542-usability · HEAD ee7a1c431cba0da25711276891a1f90b996ddeb2
+pin MEANINGFUL_ITER 2060 · VERSION 1.15.1542-usability · HEAD 8ebdc99c4ccbd3715eca1a5bf9fce031b8abea71
 free energy: anneal n spends heat → age (chaperone / mild heat-shock refold); yield unchanged; energy/atp/reserve/pmf/pcr/ready untouched
 distinct from repair/cool/thaw/reclaim/capture/harness/buffer
 programs/proof/2060_life_cell_anneal.cubalc
