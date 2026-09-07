@@ -1,18 +1,10 @@
 {
-  "schema": "projectnexus.product_sync.v1",
-  "product": "cubalc",
-  "version": "1.15.1534-usability",
-  "paradigm": "COP/flow",
-  "ok": true,
-  "meaningful_iter": 2052,
-  "feature": "LIFE_CELL_THAW",
+  "product": "cubalc-flow",
+  "meaningful_iter": 2055,
+  "version": "1.15.1537-usability",
+  "head": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
+  "short": "ab3b5ca99",
+  "feature": "NEXTPOW2N_PREVPOW2N_ISPOW2N",
   "proof_status": "PASS",
-  "asserts_ok": 77,
-  "science_asserts_ok": 23,
-  "flagship_1620_asserts_ok": 12,
-  "head": "eaef6202b1bc0bf812d81fa6068e98703971aa2a",
-  "MEANINGFUL_ITER": 2052,
-  "VERSION": "1.15.1534-usability",
-  "proof": "programs/proof/2052_life_cell_thaw.cubalc",
-  "updated": 1788747691
+  "tip_eq_pin": true
 }

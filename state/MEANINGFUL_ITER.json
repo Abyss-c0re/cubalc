@@ -20,14 +20,10 @@
   "selftest": "PASS",
   "item": "2055 nextpow2n prevpow2n ispow2n",
   "item_id": "mi_2055_nextpow2n_prevpow2n",
-  "title": "2055 NEXTPOW2N PREVPOW2N ISPOW2N",
-  "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
-  "head_note": "NEXTPOW2N page pad without shell arithmetic",
-  "updated": 1788795115,
-  "head": "74c98bad514d9450b5da2f017255247364cf152f",
-  "pin_head": "74c98bad514d9450b5da2f017255247364cf152f",
-  "tip": "74c98bad514d9450b5da2f017255247364cf152f",
-  "feat_head": "74c98bad5",
-  "ts": 1788795115.893314,
-  "parent_head": "25e3cf94b"
+  "head": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
+  "HEAD": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
+  "tip": "ab3b5ca99253b7b30683fe0f6680ae60ec201e65",
+  "short": "ab3b5ca99",
+  "pinned": true,
+  "tip_eq_pin": true
 }
