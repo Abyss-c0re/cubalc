@@ -2,9 +2,13 @@
   "product": "cubalc-flow",
   "meaningful_iter": 2056,
   "version": "1.15.1538-usability",
-  "head": "868b5527c45a59401eec1489754b7e80697aa061",
+  "head": "92498760dd7276654b01d91526803736a2f4d6d1",
   "short": "868b5527c",
-  "feature": "LIFE_CELL_RECLAIM",
+  "feature": "life_cell_reclaim",
   "proof_status": "PASS",
-  "tip_eq_pin": true
+  "tip_eq_pin": true,
+  "pin": "92498760dd7276654b01d91526803736a2f4d6d1",
+  "MEANINGFUL_ITER": 2056,
+  "VERSION": "1.15.1538-usability",
+  "FEATURE": "LIFE_CELL_RECLAIM"
 }
