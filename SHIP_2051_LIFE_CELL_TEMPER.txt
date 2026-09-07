@@ -1,5 +1,9 @@
-SHIP 2051 LIFE_CELL_TEMPER
-METHOD temper t — heat setpoint homeostat (radiate excess above t)
-proof PASS asserts_ok=75 science=22 cool_regression=66
-VERSION 1.15.1533-usability MEANINGFUL_ITER 2051
-pure .cubalc in programs/lib/life_cell.cubalc
+LIFE_CELL_TEMPER 2051
+feat — programs/lib/life_cell.cubalc METHOD temper t
+proofs 2051 asserts_ok=78 fail=0; science 20/0; cool regression 66/0; flagship 12/0
+pin MEANINGFUL_ITER 2051 · VERSION 1.15.1533-usability
+head dad1417b7e08ca31a0567c7a59773a20987a6a6f
+feat e603a791eedeb0ca607bd502df400ccf96dd3cd2
+free energy: temper t radiates excess heat above setpoint; never creates heat; energy/atp/pmf/pcr untouched
+distinct from cool n (absolute radiate) — homeostat ceiling after cold-stress budgets
+programs/proof/2051_life_cell_temper.cubalc
