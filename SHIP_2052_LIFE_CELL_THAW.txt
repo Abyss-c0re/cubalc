@@ -1,9 +1,10 @@
 LIFE_CELL_THAW 2052
 feat — programs/lib/life_cell.cubalc METHOD thaw n
-proofs 2052 asserts_ok=77 fail=0; science 23/0; cool regression 66/0; temper 75/0; flagship 12/0
+proofs 2052 asserts_ok=77 fail=0; science 23/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2052 · VERSION 1.15.1534-usability
-free energy: thaw n recovers heat→energy (endothermic); yield conserved; atp/pmf/pcr untouched
-distinct from cool n (absolute radiate) and temper t (setpoint homeostat)
+head 10c32e9e3e530eaf5208a0bb0228e7a76db02d97
+free energy: thaw n recycles heat → active energy (endothermic waste-heat recovery); inverse of shiver; yield conserved; atp/pmf/pcr untouched; ready recomputed
+distinct from cool (heat leaves) and temper (setpoint shed) — banks lattice heat as Cube reserve
 programs/proof/2052_life_cell_thaw.cubalc
+programs/science/proof/2052_atomic_printer_life_thaw.cubalc
 programs/science/integration/atomic_printer_life_thaw.cubalc
-n/atomic_printer_life_thaw.cubalc
