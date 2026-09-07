@@ -154,3 +154,6 @@ Not C. Not Lua. CubalC verbs only on the hot path.
 | `FLOW DIR n` | directed energy OUT→IN only |
 
 There is no separate device/object model: sensors, brains, sinks are **cubes** with different ports.
+- NEXTPOW2N|CEILPOW2N x — smallest power of 2 ≥ x → LAST_N (page pad)
+- PREVPOW2N|FLOORPOW2N x — largest power of 2 ≤ x → LAST_N
+- ISPOW2N|POW2PN x — 1 if power of two else 0

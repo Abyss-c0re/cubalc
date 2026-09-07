@@ -3,9 +3,9 @@
   "meaningful_iter": 2055,
   "MEANINGFUL_ITER": 2055,
   "iter": 2055,
-  "version": "1.15.1537-usability",
+  "version": "1.15.1536-usability",
   "VERSION": "1.15.1537-usability",
-  "feature": "nextpow2n_prevpow2n_ispow2n",
+  "feature": "NEXTPOW2N/PREVPOW2N/ISPOW2N",
   "FEATURE": "NEXTPOW2N_PREVPOW2N_ISPOW2N",
   "ship": "2055_nextpow2n_prevpow2n",
   "proof": "programs/proof/2055_nextpow2n_prevpow2n.cubalc",
@@ -24,8 +24,10 @@
   "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
   "head_note": "NEXTPOW2N page pad without shell arithmetic",
   "updated": 1788795032,
-  "head": "40114f282216db75aa93f915940fb60ce0190d40",
-  "pin_head": "40114f282216db75aa93f915940fb60ce0190d40",
-  "tip": "40114f282216db75aa93f915940fb60ce0190d40",
-  "feat_head": "40114f282"
+  "head": "6c2a4bdc79b5e3efe2828cda7507ad8aa08fc2b7",
+  "pin_head": "6c2a4bdc79b5e3efe2828cda7507ad8aa08fc2b7",
+  "tip": "6c2a4bdc79b5e3efe2828cda7507ad8aa08fc2b7",
+  "feat_head": "6c2a4bdc79b5e3efe2828cda7507ad8aa08fc2b7",
+  "ts": 1788795043.666858,
+  "parent_head": "40114f282"
 }
