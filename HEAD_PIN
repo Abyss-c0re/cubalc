@@ -1,5 +1,5 @@
-MEANINGFUL_ITER=2056
-VERSION=1.15.1538-usability
-HEAD=67cea3cb5017a702a4ec55f8590f4760cd99396d
+HEAD=6faaadbbbf3236d46f5cf3f9f428a292d6c7507c
+SHORT=6faaadbbbf
+MI=2056
 FEATURE=LIFE_CELL_RECLAIM
-PROOF=programs/proof/2056_life_cell_reclaim.cubalc
+VERSION=1.15.1538-usability
