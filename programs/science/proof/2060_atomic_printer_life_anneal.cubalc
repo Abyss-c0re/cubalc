@@ -1,0 +1,124 @@
+// atomic_printer_life_anneal.cubalc
+// Science board: atomic printer + life_cell anneal heat→age chaperone refold.
+// Distinct from repair cool thaw reclaim capture harness buffer. Yield unchanged.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_anneal | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 10 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+
+GETF seed energy
+ASSERT LAST_N == 10 "seed e 10"
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "aged 6"
+SEND seed shiver 5
+ASSERT LAST_N == 5 "shiver 5"
+SEND seed warmth
+ASSERT LAST_N == 5 "warmth 5"
+SEND seed yield
+LET y0 = LAST_N
+SEND seed anneal 5
+ASSERT LAST_N == 5 "anneal 5"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth 0"
+GETF seed age
+ASSERT LAST_N == 1 "age 1"
+SEND seed yield
+ASSERT LAST_N == y0 "yield unchanged (heat not in yield)"
+GETF seed energy
+LET e1 = LAST_N
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty not capture"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty not reclaim"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty not harness"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty not buffer"
+
+// residual heat leftover when age floors
+SEND seed pulse 3
+GETF seed age
+ASSERT LAST_N == 4 "age 4"
+SEND seed shiver 8
+ASSERT LAST_N == 8 "shiver 8"
+SEND seed anneal 100
+ASSERT LAST_N == 4 "anneal capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed warmth
+ASSERT LAST_N == 4 "heat leftover 8-4"
+
+// distinct from repair energy path (board energy may flow — use deltas)
+SEND seed cool 99
+SEND seed feed 12
+GETF seed energy
+LET er = LAST_N
+SEND seed pulse 5
+GETF seed age
+LET a_before = LAST_N
+GETF seed energy
+LET e_before_repair = LAST_N
+SEND seed repair 2
+ASSERT LAST_N == 2 "repair energy path"
+GETF seed energy
+LET e_after_repair = LAST_N
+ASSERT e_after_repair == e_before_repair - 2 "energy paid by repair"
+GETF seed age
+ASSERT LAST_N == a_before - 2 "age shed by repair"
+GETF seed energy
+LET e_before_shiver = LAST_N
+GETF seed age
+LET a_mid = LAST_N
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+GETF seed energy
+ASSERT LAST_N == e_before_shiver - 3 "energy paid by shiver"
+SEND seed anneal 2
+ASSERT LAST_N == 2 "anneal heat path"
+GETF seed age
+ASSERT LAST_N == a_mid - 2 "age shed by anneal"
+GETF seed energy
+ASSERT LAST_N == e_before_shiver - 3 "energy only shiver not anneal"
+
+// dead / zero path
+SEND d1 anneal 3
+ASSERT LAST_N == 0 "dead anneal 0"
+
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"

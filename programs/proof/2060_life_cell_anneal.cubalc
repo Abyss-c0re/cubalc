@@ -1,0 +1,227 @@
+// 2060_life_cell_anneal.cubalc
+// Proof: life_cell anneal — heat → age repair (chaperone / mild heat-shock refold).
+// Distinct from repair (energy→age), cool (heat leaves), thaw/reclaim/capture/harness/buffer.
+// Heat pays; age floors 0. Yield unchanged (heat not in yield). energy/reserve/atp/pmf/pcr/ready untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed anneal 3
+ASSERT LAST_N == 0 "empty anneal 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// age the cell then build heat via shiver
+SEND seed pulse 8
+GETF seed age
+ASSERT LAST_N == 8 "aged 8"
+GETF seed energy
+LET e_after_pulse = LAST_N
+ASSERT e_after_pulse >= 12 "energy grew or held"
+SEND seed shiver 6
+ASSERT LAST_N == 6 "shiver 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+GETF seed age
+ASSERT LAST_N == 8 "age held through shiver"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed anneal 4
+ASSERT LAST_N == 4 "anneal 4"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after anneal"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy only lost shiver not anneal"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 "yield unchanged by anneal (heat not in yield)"
+
+SEND seed anneal 9
+ASSERT LAST_N == 2 "anneal drains remaining heat 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed age
+ASSERT LAST_N == 2 "age 2"
+SEND seed anneal 1
+ASSERT LAST_N == 0 "empty anneal 0"
+
+SEND dead anneal 2
+ASSERT LAST_N == 0 "dead anneal 0"
+
+// zero/neg
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+SEND seed anneal 0
+ASSERT LAST_N == 0 "zero anneal 0"
+SEND seed anneal -1
+ASSERT LAST_N == 0 "neg anneal 0"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth held 3"
+GETF seed age
+LET a1 = LAST_N
+SEND seed anneal 1
+ASSERT LAST_N == 1 "anneal 1"
+GETF seed age
+ASSERT LAST_N == a1 - 1 "age shed 1"
+SEND seed cool 99
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth clear"
+
+// age-limited: more heat than age only sheds age
+SEND seed pulse 5
+GETF seed age
+LET a2 = LAST_N
+ASSERT a2 >= 5 "aged more"
+SEND seed feed 20
+SEND seed shiver 10
+ASSERT LAST_N == 10 "shiver 10"
+SEND seed warmth
+ASSERT LAST_N == 10 "warmth 10"
+SEND seed anneal 100
+ASSERT LAST_N == a2 "anneal capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age floored 0"
+SEND seed warmth
+ASSERT LAST_N == 10 - a2 "heat leftover after age floor"
+SEND seed cool 99
+
+// Distinct from repair (energy pays)
+SEND seed cool 99
+SEND seed feed 20
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "age 6 for repair path"
+GETF seed energy
+LET e_before_repair = LAST_N
+SEND seed repair 3
+ASSERT LAST_N == 3 "repair 3 energy path"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after repair"
+GETF seed energy
+ASSERT LAST_N == e_before_repair - 3 "energy paid repair"
+GETF seed energy
+LET e_before_shiver = LAST_N
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+GETF seed energy
+ASSERT LAST_N == e_before_shiver - 4 "energy paid shiver"
+GETF seed energy
+LET e_before_anneal = LAST_N
+SEND seed anneal 2
+ASSERT LAST_N == 2 "anneal 2 heat path"
+GETF seed age
+ASSERT LAST_N == 1 "age 1 after anneal"
+GETF seed energy
+ASSERT LAST_N == e_before_anneal "energy untouched by anneal"
+
+// Distinct from buffer/capture/harness/reclaim/thaw
+SEND seed cool 99
+SEND seed feed 20
+SEND seed pulse 4
+GETF seed age
+ASSERT LAST_N == 5 "age 5 (1+4)"
+GETF seed energy
+LET e_base = LAST_N
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+SEND seed buffer 1
+SEND seed phosphagen
+ASSERT LAST_N == 1 "buffer path pcr"
+SEND seed capture 1
+SEND seed charged
+ASSERT LAST_N == 1 "capture path atp"
+SEND seed harness 1
+SEND seed gradient
+ASSERT LAST_N == 1 "harness path pmf"
+SEND seed reclaim 1
+SEND seed stores
+ASSERT LAST_N == 1 "reclaim path reserve"
+// remaining heat 0 after 4 salvage; rebuild
+SEND seed shiver 3
+ASSERT LAST_N == 3 "rebuild heat 3"
+GETF seed energy
+LET e_pre_thaw = LAST_N
+SEND seed thaw 1
+ASSERT LAST_N == 1 "thaw 1"
+GETF seed energy
+ASSERT LAST_N == e_pre_thaw + 1 "thaw path energy"
+GETF seed energy
+LET e_pre_anneal2 = LAST_N
+SEND seed anneal 2
+ASSERT LAST_N == 2 "anneal path age"
+GETF seed age
+ASSERT LAST_N == 3 "age 5-2 after anneal"
+GETF seed energy
+ASSERT LAST_N == e_pre_anneal2 "energy untouched by anneal"
+SEND seed phosphagen
+ASSERT LAST_N == 1 "buffer bank untouched by anneal"
+SEND seed charged
+ASSERT LAST_N == 1 "atp untouched by anneal"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf untouched by anneal"
+SEND seed stores
+ASSERT LAST_N == 1 "reserve untouched by anneal"
+
+// quiet path
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet pulse 5
+GETF quiet age
+ASSERT LAST_N == 5 "quiet aged 5"
+SEND quiet shiver 4
+SEND quiet anneal 4
+ASSERT LAST_N == 4 "quiet anneal 4"
+GETF quiet age
+ASSERT LAST_N == 1 "quiet age 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiescent never ready"
+SEND quiet wake
+
+// ally isolation
+GETF seed age
+LET seed_age_before = LAST_N
+SEND ally pulse 3
+SEND ally shiver 3
+SEND ally anneal 3
+GETF ally age
+ASSERT LAST_N == 0 "ally age 0"
+GETF seed age
+ASSERT LAST_N == seed_age_before "seed age unchanged by ally"
+
+// iso full
+SEND iso pulse 7
+SEND iso shiver 8
+SEND iso anneal 100
+GETF iso age
+ASSERT LAST_N == 0 "iso age 0"
+SEND iso warmth
+ASSERT LAST_N == 1 "iso heat leftover 8-7"
+
+// final unity pulse
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"
