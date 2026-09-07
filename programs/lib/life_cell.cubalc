@@ -72,6 +72,7 @@
 #   reclaim n            heat → reserve (waste-heat salvage to glycogen; yield restored; ready untouched)
 #   capture n            heat → ATP (waste-heat salvage to work currency; yield restored; ready untouched)
 #   harness n            heat → pmf (waste-heat salvage to proton gradient; yield restored; ready untouched)
+#   buffer n             heat → pcr (waste-heat salvage to phosphagen ~P; yield restored; ready untouched)
 
 CLASS Cell
   FIELD alive 0
@@ -1663,6 +1664,39 @@ CLASS Cell
     GETF THIS pmf
     LET p = LAST_N + take
     SETF THIS pmf p
+    RET take
+  END
+
+
+
+  # Buffer: salvage n heat into pcr phosphagen (~P buffer / waste-heat → rapid store).
+  # Distinct from thaw (heat→energy), reclaim (heat→reserve), capture (heat→ATP),
+  # harness (heat→pmf), cool (heat leaves). Yield restored into pcr bank.
+  # Does not touch energy/reserve/atp/pmf/ready.
+  # Usability: AGI banks thermogenesis ledger as phosphagen without flooding mitosis.
+  # Returns amount buffered. Dead/zero/empty heat → 0.
+  METHOD buffer n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS pcr
+    LET c = LAST_N + take
+    SETF THIS pcr c
     RET take
   END
 

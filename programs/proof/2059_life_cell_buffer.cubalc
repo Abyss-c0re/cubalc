@@ -1,0 +1,181 @@
+// 2059_life_cell_buffer.cubalc
+// Proof: life_cell buffer — heat → pcr (waste-heat salvage to phosphagen ~P).
+// Distinct from thaw reclaim capture harness cool.
+// Yield restored into pcr. energy/reserve/atp/pmf/ready untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+SEND seed buffer 3
+ASSERT LAST_N == 0 "empty buffer 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+SEND seed shiver 6
+ASSERT LAST_N == 6 "shiver 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+SEND seed yield
+ASSERT LAST_N == 6 "yield sheds on shiver"
+
+SEND seed buffer 4
+ASSERT LAST_N == 4 "buffer 4"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "pcr 4 after buffer"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by buffer"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed yield
+ASSERT LAST_N == 10 "yield energy+pcr 6+4"
+
+SEND seed buffer 9
+ASSERT LAST_N == 2 "buffer drains 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed phosphagen
+ASSERT LAST_N == 6 "pcr 6 total"
+GETF seed energy
+ASSERT LAST_N == 6 "energy still 6"
+SEND seed buffer 1
+ASSERT LAST_N == 0 "empty buffer 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield full 6+6"
+
+SEND dead buffer 2
+ASSERT LAST_N == 0 "dead buffer 0"
+
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+SEND seed buffer 0
+ASSERT LAST_N == 0 "zero buffer 0"
+SEND seed buffer -1
+ASSERT LAST_N == 0 "neg buffer 0"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth held 3"
+SEND seed cool 3
+ASSERT LAST_N == 3 "clear residual heat"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth clear"
+
+// Uncouple path: pmf→heat then buffer to pcr
+SEND seed feed 9
+ASSERT LAST_N == 12 "fed back to 12"
+SEND seed pump 4
+ASSERT LAST_N == 4 "pump 4"
+GETF seed energy
+LET e0 = LAST_N
+ASSERT e0 == 8 "e0 8"
+SEND seed gradient
+LET p0 = LAST_N
+ASSERT p0 == 4 "pmf 4"
+SEND seed uncouple 3
+ASSERT LAST_N == 3 "uncouple 3"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1 after uncouple"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3 from uncouple"
+SEND seed buffer 3
+ASSERT LAST_N == 3 "buffer recovers 3"
+SEND seed phosphagen
+ASSERT LAST_N == 9 "pcr 6+3"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed energy
+ASSERT LAST_N == 8 "energy held 8"
+SEND seed charged
+ASSERT LAST_N == 0 "atp still 0"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf still 1"
+SEND seed yield
+ASSERT LAST_N == 18 "yield e+pmf+pcr 8+1+9"
+
+// Boost path: buffered pcr can fire into mitosis energy
+SEND seed boost 5
+ASSERT LAST_N == 5 "boost 5 from buffer bank"
+GETF seed energy
+ASSERT LAST_N == 13 "energy 8+5"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "pcr 4 left"
+SEND seed yield
+ASSERT LAST_N == 18 "yield conserved via boost"
+
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet feed 20
+GETF quiet energy
+ASSERT LAST_N >= 20 "quiet energy high"
+SEND quiet shiver 5
+SEND quiet buffer 5
+SEND quiet phosphagen
+ASSERT LAST_N == 5 "quiet pcr 5"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiescent never ready"
+SEND quiet wake
+SEND quiet phosphagen
+ASSERT LAST_N == 5 "pcr held after wake"
+
+// ally isolation
+SEND ally shiver 4
+SEND ally buffer 4
+SEND ally phosphagen
+ASSERT LAST_N == 4 "ally pcr 4"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "seed pcr unchanged 4"
+
+// iso full drain
+SEND iso shiver 10
+SEND iso buffer 100
+SEND iso phosphagen
+ASSERT LAST_N == 10 "iso buffers all heat spark-safe"
+SEND iso warmth
+ASSERT LAST_N == 0 "iso warmth empty"
+GETF iso energy
+ASSERT LAST_N == 10 "iso spark held 10 (20-10)"
+
+// Distinct from capture/harness/reclaim/thaw
+SEND seed cool 99
+SEND seed shiver 4
+SEND seed capture 1
+SEND seed charged
+ASSERT LAST_N == 1 "capture path atp"
+SEND seed harness 1
+SEND seed gradient
+ASSERT LAST_N == 2 "harness path pmf 1+1"
+SEND seed reclaim 1
+SEND seed stores
+ASSERT LAST_N == 1 "reclaim path reserve"
+SEND seed thaw 1
+GETF seed energy
+LET e1 = LAST_N
+ASSERT e1 == 10 "thaw path energy 9+1"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "buffer bank untouched by other salvage"
+
+SEND seed yield
+ASSERT LAST_N >= 14 "yield holds"
+
+// final unity pulse
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"

@@ -1,0 +1,113 @@
+// atomic_printer_life_buffer.cubalc
+// Science board: atomic printer + life_cell buffer heat→pcr salvage.
+// Distinct from thaw reclaim capture harness. Yield restored to pcr. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_buffer | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 10 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+
+GETF seed energy
+ASSERT LAST_N == 10 "seed e 10"
+SEND seed shiver 5
+ASSERT LAST_N == 5 "shiver 5"
+SEND seed warmth
+ASSERT LAST_N == 5 "warmth 5"
+SEND seed yield
+ASSERT LAST_N == 5 "yield shed"
+SEND seed buffer 5
+ASSERT LAST_N == 5 "buffer 5"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth 0"
+GETF seed energy
+ASSERT LAST_N == 5 "e held 5 not thaw"
+SEND seed phosphagen
+ASSERT LAST_N == 5 "pcr 5"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty not capture"
+SEND seed stores
+ASSERT LAST_N == 0 "stores empty not reclaim"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty not harness"
+SEND seed yield
+ASSERT LAST_N == 10 "yield conserved via pcr"
+
+SEND seed shiver 6
+ASSERT LAST_N == 4 "shiver 4 spark-safe"
+SEND seed buffer 2
+ASSERT LAST_N == 2 "buffer 2"
+SEND seed phosphagen
+ASSERT LAST_N == 7 "pcr 7"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed cool 2
+ASSERT LAST_N == 2 "cool rest lost"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+
+SEND seed feed 9
+GETF seed energy
+LET e1 = LAST_N
+ASSERT e1 >= 5 "fed"
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+SEND seed uncouple 2
+ASSERT LAST_N == 2 "uncouple 2"
+SEND seed buffer 2
+ASSERT LAST_N == 2 "buffer recovers 2"
+SEND seed phosphagen
+LET p1 = LAST_N
+ASSERT p1 >= 9 "pcr bank grew"
+
+SEND seed boost 3
+ASSERT LAST_N == 3 "boost from buffer bank"
+GETF seed energy
+ASSERT LAST_N >= 5 "energy from pcr boost"
+SEND seed yield
+ASSERT LAST_N >= 10 "yield holds"
+
+ENTITY bud OF Cell 1 4 0
+SEND bud set_threshold 10
+SEND bud shiver 2
+SEND bud buffer 2
+SEND bud phosphagen
+ASSERT LAST_N == 2 "bud pcr 2"
+SEND bud boost 2
+GETF bud energy
+ASSERT LAST_N == 4 "bud e restored 4"
+GETF bud ready
+ASSERT LAST_N == 0 "below thr not ready"
+
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
