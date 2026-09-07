@@ -18,7 +18,7 @@
   "asserts_fail": 0,
   "science_asserts_ok": 27,
   "flagship_1620": "PASS 12/0",
-  "notes": "drive n: pmf\u2192lower mitosis threshold chemiosmotic CDK priming; thr floors at 1; yield sheds pmf; energy/reserve/atp/heat/pcr untouched; ready recomputes. Distinct from prime/poise/ease/fortify/brace/harden/synthase/pump/uncouple/set_threshold.",
+  "notes": "drive n: pmf\u2192lower mitosis threshold chemiosmotic CDK priming; yield sheds pmf; energy/reserve/atp/heat/pcr untouched; ready recomputes. Distinct from prime/poise/ease/synthase/pump/uncouple/set_threshold/fortify/brace/harden.",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "item": "2068 life_cell drive",
@@ -34,8 +34,15 @@
   "science_ok": 27,
   "flagship_ok": 12,
   "anti_bloat": true,
-  "updated": 1788820582,
-  "ts": 1788820582.8437157,
-  "head": "",
-  "sha": ""
+  "updated": 1788820624,
+  "ts": 1788820624.3484616,
+  "head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "sha": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "tip": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "pin": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "feat_head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "pin_head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
+  "short": "bf5b09e7f92a",
+  "tip_eq_pin": true,
+  "commit": "bf5b09e7f92"
 }

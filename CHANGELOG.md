@@ -4,12 +4,6 @@
 - thr floors at 1; yield sheds pmf; energy/reserve/atp/heat/pcr untouched; ready recomputes
 - distinct from prime/poise/ease/fortify/brace/harden/synthase/pump/uncouple/set_threshold
 
-## 1.15.1553-usability — 2068 LIFE_CELL_DRIVE
-- feat(life): drive pmf→lower mitosis thr (chemiosmotic CDK priming)
-- proofs 2068 asserts_ok=58 fail=0; science 27/0; flagship 1620 PASS 12/0
-- thr floor 1; yield sheds pmf; energy/reserve/atp/heat/pcr untouched; ready recomputes
-- distinct from prime/poise/ease/fortify/brace/harden/synthase/pump/uncouple/set_threshold
-
 ## 1.15.1550-usability — 2065 LIFE_CELL_FORTIFY
 - feat(life): fortify ATP→raise mitosis thr (CDK / work fortify)
 - proofs 2065 asserts_ok=58 fail=0; science 21/0; flagship 1620 PASS 12/0
