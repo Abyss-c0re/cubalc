@@ -68,6 +68,7 @@
 #   load n               energy → PCr (phosphagen load shortcut; yield conserved)
 #   cool n               heat → environment (radiative cooling; yield sheds)
 #   temper t             heat setpoint: radiate excess above t (homeostat; yield sheds)
+#   thaw n               heat → energy (endothermic recovery; yield restored; ready recompute)
 
 CLASS Cell
   FIELD alive 0
@@ -1528,7 +1529,7 @@ CLASS Cell
 
   # Thaw: recycle n heat back into active energy (endothermic / waste-heat recovery).
   # Inverse of shiver (energy→heat). Distinct from cool (heat leaves) and temper (setpoint shed).
-  # Yield conserved (heat→energy). Does not touch atp/pmf/pcr. Recomputes ready vs threshold.
+  # Yield excludes heat; thaw restores yield (heat→energy). Does not touch atp/pmf/pcr. Recomputes ready vs threshold.
   # Usability: AGI recovers thermogenesis ledger into mitosis budget after cold-stress.
   # Returns amount thawed. Dead/zero/empty heat → 0.
   METHOD thaw n

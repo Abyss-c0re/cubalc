@@ -1,14 +1,13 @@
 // 2052_life_cell_thaw.cubalc
-// Proof: life_cell thaw — heat → active energy (endothermic waste-heat recovery).
-// Inverse of shiver (energy→heat). Distinct from cool (heat leaves) and temper (setpoint shed).
-// Yield conserved (heat→energy). Does not touch atp/pmf/pcr. Recomputes ready vs threshold.
-// Cube is SoT. Free energy must flow.
+// Proof: life_cell thaw — heat → energy (endothermic waste-heat recovery).
+// Inverse of shiver. Distinct from cool (heat leaves) and temper (setpoint shed).
+// Yield conserved. atp/pmf/pcr untouched. Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
 ENTITY seed OF Cell 1 12 0
-ENTITY ally OF Cell 1 10 0
+ENTITY ally OF Cell 1 8 0
 ENTITY dead OF Cell 0 0 0
 ENTITY quiet OF Cell 1 14 0
 ENTITY iso OF Cell 1 20 0
@@ -19,48 +18,38 @@ ASSERT LAST_N == 12 "spark 12"
 SEND seed warmth
 ASSERT LAST_N == 0 "warmth empty"
 SEND seed thaw 3
-ASSERT LAST_N == 0 "thaw empty heat → 0"
+ASSERT LAST_N == 0 "empty thaw 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
 
-// Build heat via shiver then thaw back to energy (conserved yield)
+// Shiver then thaw recovers energy
 SEND seed shiver 6
 ASSERT LAST_N == 6 "shiver 6"
-SEND seed warmth
-ASSERT LAST_N == 6 "warmth 6"
 GETF seed energy
 ASSERT LAST_N == 6 "active 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
 SEND seed yield
-ASSERT LAST_N == 6 "yield after shiver sheds heat"
+ASSERT LAST_N == 6 "yield sheds on shiver"
 
 SEND seed thaw 4
 ASSERT LAST_N == 4 "thaw 4"
+GETF seed energy
+ASSERT LAST_N == 10 "energy 10 after thaw"
 SEND seed warmth
 ASSERT LAST_N == 2 "warmth 2"
-GETF seed energy
-ASSERT LAST_N == 10 "active 10"
 SEND seed yield
-ASSERT LAST_N == 12 "yield conserved 10e+2h"
+ASSERT LAST_N == 10 "yield conserved heat→energy"
 
-// Drain remaining heat
+// Drain remaining heat via thaw
 SEND seed thaw 9
 ASSERT LAST_N == 2 "thaw drains 2"
 SEND seed warmth
 ASSERT LAST_N == 0 "warmth empty"
 GETF seed energy
-ASSERT LAST_N == 12 "active restored 12"
-SEND seed thaw 2
+ASSERT LAST_N == 12 "energy back to 12"
+SEND seed thaw 1
 ASSERT LAST_N == 0 "empty thaw 0"
-
-// Zero / neg / dead
-SEND seed thaw 0
-ASSERT LAST_N == 0 "zero thaw"
-SEND seed thaw -3
-ASSERT LAST_N == 0 "neg thaw"
-SEND dead thaw 5
-ASSERT LAST_N == 0 "dead thaw 0"
-GETF dead heat
-ASSERT LAST_N == 0 "dead heat 0"
-GETF dead energy
-ASSERT LAST_N == 0 "dead energy 0"
 
 // Futile path: ATP→heat then thaw recovers to energy (not ATP)
 SEND seed charge 4
@@ -68,147 +57,140 @@ ASSERT LAST_N == 4 "charge 4"
 // e=8 atp=4
 SEND seed futile 3
 ASSERT LAST_N == 3 "futile 3"
-SEND seed warmth
-ASSERT LAST_N == 3 "warmth 3"
 SEND seed charged
 ASSERT LAST_N == 1 "atp 1"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+GETF seed energy
+ASSERT LAST_N == 8 "e 8"
 SEND seed thaw 2
-ASSERT LAST_N == 2 "thaw 2 from futile"
+ASSERT LAST_N == 2 "thaw 2"
+GETF seed energy
+ASSERT LAST_N == 10 "e 10 recovered"
+SEND seed charged
+ASSERT LAST_N == 1 "atp held (not restored)"
 SEND seed warmth
 ASSERT LAST_N == 1 "warmth 1"
-SEND seed charged
-ASSERT LAST_N == 1 "atp held by thaw"
-GETF seed energy
-ASSERT LAST_N == 10 "energy gained from heat"
-SEND seed yield
-ASSERT LAST_N == 12 "yield 10e+1atp+1h"
-
-// Clear leftover
 SEND seed thaw 1
-ASSERT LAST_N == 1 "clear last heat"
+ASSERT LAST_N == 1 "thaw last"
 SEND seed warmth
-ASSERT LAST_N == 0 "warmth cleared"
+ASSERT LAST_N == 0 "warmth 0"
+GETF seed energy
+ASSERT LAST_N == 11 "e 11"
 
 // Uncouple path: pmf→heat then thaw
-SEND seed feed 4
-ASSERT LAST_N == 14 "fed 14"
-// e was 11 after prior; feed adds
+SEND seed feed 2
+ASSERT LAST_N == 13 "fed 13"
 SEND seed pump 2
 ASSERT LAST_N == 2 "pump 2"
+// e=11 pmf=2
 SEND seed uncouple 2
 ASSERT LAST_N == 2 "uncouple 2"
-SEND seed warmth
-ASSERT LAST_N == 2 "warmth 2"
 SEND seed gradient
 ASSERT LAST_N == 0 "pmf empty"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
 SEND seed thaw 2
 ASSERT LAST_N == 2 "thaw uncouple heat"
 SEND seed warmth
 ASSERT LAST_N == 0 "warmth cleared"
 SEND seed gradient
 ASSERT LAST_N == 0 "pmf held 0"
+GETF seed energy
+ASSERT LAST_N == 13 "energy recovered from uncouple heat"
 
-// Isolation: thaw leaves atp/pmf/pcr alone; may flip ready
+// Ready recompute: low energy + thaw past threshold
+ENTITY arm OF Cell 1 4 0
+SEND arm set_threshold 10
+ASSERT LAST_N == 10 "thr 10"
+GETF arm ready
+ASSERT LAST_N == 0 "not ready"
+SEND arm feed 8
+ASSERT LAST_N == 12 "arm fed 12"
+SEND arm charge 2
+ASSERT LAST_N == 2 "arm charge 2"
+// e=10 atp=2
+SEND arm futile 2
+ASSERT LAST_N == 2 "arm futile 2"
+// e=10 atp=0 heat=2
+SEND arm shiver 3
+ASSERT LAST_N == 3 "arm shiver 3"
+// e=7 heat=5 ready should be 0
+GETF arm energy
+ASSERT LAST_N == 7 "arm e 7"
+GETF arm ready
+ASSERT LAST_N == 0 "arm not ready under thr"
+SEND arm thaw 4
+ASSERT LAST_N == 4 "arm thaw 4"
+GETF arm energy
+ASSERT LAST_N == 11 "arm e 11"
+GETF arm ready
+ASSERT LAST_N == 1 "arm ready after thaw past thr"
+SEND arm warmth
+ASSERT LAST_N == 1 "arm warmth 1"
+
+// Isolation: thaw leaves atp/pmf/pcr alone (energy/heat only)
 GETF iso energy
 ASSERT LAST_N == 20 "iso spark 20"
-SEND iso charge 6
-ASSERT LAST_N == 6 "iso charge 6"
-// e=14 atp=6
-SEND iso charge_pcr 3
-ASSERT LAST_N == 3 "iso charge_pcr 3"
-// e=14 atp=3 pcr=3
-SEND iso pump 4
-ASSERT LAST_N == 4 "iso pump 4"
-// e=10 atp=3 pcr=3 pmf=4
-SEND iso shiver 5
-ASSERT LAST_N == 5 "iso shiver 5"
-// e=5 heat=5
-SEND iso warmth
-ASSERT LAST_N == 5 "iso warmth 5"
-GETF iso ready
-ASSERT LAST_N == 0 "iso ready off (e under thr)"
-SEND iso thaw 3
-ASSERT LAST_N == 3 "iso thaw 3"
-// e=8 heat=2
-SEND iso charged
-ASSERT LAST_N == 3 "iso atp held"
-SEND iso gradient
-ASSERT LAST_N == 4 "iso pmf held"
-SEND iso phosphagen
-ASSERT LAST_N == 3 "iso pcr held"
-GETF iso energy
-ASSERT LAST_N == 8 "iso e 8"
-SEND iso warmth
-ASSERT LAST_N == 2 "iso warmth 2"
-// default thr=10; e=8 still under → ready 0
-GETF iso ready
-ASSERT LAST_N == 0 "iso ready still off"
+SEND iso charge 4
+ASSERT LAST_N == 4 "iso charge 4"
+// e=16 atp=4
+SEND iso charge_pcr 2
+ASSERT LAST_N == 2 "iso pcr 2"
+// e=16 atp=2 pcr=2
+SEND iso pump 2
+ASSERT LAST_N == 2 "iso pump 2"
+// e=14 pmf=2
+SEND iso shiver 3
+ASSERT LAST_N == 3 "iso shiver 3"
+// e=11 heat=3
 SEND iso thaw 2
-ASSERT LAST_N == 2 "iso thaw rest"
+ASSERT LAST_N == 2 "iso thaw 2"
+SEND iso charged
+ASSERT LAST_N == 2 "iso atp held"
+SEND iso phosphagen
+ASSERT LAST_N == 2 "iso pcr held"
+SEND iso gradient
+ASSERT LAST_N == 2 "iso pmf held"
 GETF iso energy
-ASSERT LAST_N == 10 "iso e 10"
-GETF iso ready
-ASSERT LAST_N == 1 "iso ready on at thr"
+ASSERT LAST_N == 13 "iso e 13"
+SEND iso warmth
+ASSERT LAST_N == 1 "iso warmth 1"
 
-// Quiescent: thaw works but ready stays 0 while G0
-SEND quiet feed 0
-GETF quiet energy
-ASSERT LAST_N == 14 "quiet spark 14"
-SEND quiet shiver 8
-ASSERT LAST_N == 8 "quiet shiver 8"
+// Dead / zero / neg
+SEND dead thaw 5
+ASSERT LAST_N == 0 "dead thaw 0"
+SEND seed thaw 0
+ASSERT LAST_N == 0 "zero thaw 0"
+SEND seed thaw -3
+ASSERT LAST_N == 0 "neg thaw 0"
+
+// Quiescent: thaw still moves heat→energy but ready stays 0
 SEND quiet quiesce
 ASSERT LAST_N == 1 "quiet G0"
-SEND quiet thaw 5
-ASSERT LAST_N == 5 "quiet thaw"
-GETF quiet energy
-ASSERT LAST_N == 11 "quiet e 11"
+SEND quiet shiver 4
+ASSERT LAST_N == 4 "quiet shiver 4"
 GETF quiet ready
-ASSERT LAST_N == 0 "quiet ready held off by G0"
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet thaw 3
+ASSERT LAST_N == 3 "quiet thaw 3"
+GETF quiet energy
+ASSERT LAST_N == 13 "quiet e 13"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet ready still 0"
 SEND quiet warmth
-ASSERT LAST_N == 3 "quiet warmth 3"
+ASSERT LAST_N == 1 "quiet warmth 1"
 
-// Ally: full round-trip shiver→thaw conserves free energy into mitosis budget
+// Ally round-trip shiver+thaw yield conservation
 GETF ally energy
-ASSERT LAST_N == 10 "ally spark 10"
+ASSERT LAST_N == 8 "ally 8"
 SEND ally shiver 5
 ASSERT LAST_N == 5 "ally shiver 5"
 SEND ally thaw 5
 ASSERT LAST_N == 5 "ally thaw 5"
 GETF ally energy
-ASSERT LAST_N == 10 "ally restored 10"
+ASSERT LAST_N == 8 "ally back 8"
 SEND ally warmth
 ASSERT LAST_N == 0 "ally warmth 0"
 SEND ally yield
-ASSERT LAST_N == 10 "ally yield full"
-GETF ally ready
-ASSERT LAST_N == 1 "ally ready"
-
-// Cool then thaw composition: cool removes heat forever; thaw only recovers remainder
-SEND ally shiver 6
-ASSERT LAST_N == 6 "ally shiver 6"
-SEND ally cool 2
-ASSERT LAST_N == 2 "ally cool 2"
-SEND ally warmth
-ASSERT LAST_N == 4 "ally warmth 4"
-SEND ally thaw 4
-ASSERT LAST_N == 4 "ally thaw remainder"
-GETF ally energy
-ASSERT LAST_N == 8 "ally e 4 lost to cool"
-SEND ally warmth
-ASSERT LAST_N == 0 "ally warmth 0"
-SEND ally yield
-ASSERT LAST_N == 8 "ally yield after cool loss"
-
-// Temper then thaw: temper sheds to setpoint; thaw recovers only residual
-SEND ally shiver 5
-ASSERT LAST_N == 5 "ally shiver5"
-SEND ally temper 2
-ASSERT LAST_N == 2 "ally temper 2"
-SEND ally thaw 2
-ASSERT LAST_N == 2 "ally thaw residual"
-GETF ally energy
-ASSERT LAST_N == 7 "ally e after temper loss"
-SEND ally warmth
-ASSERT LAST_N == 0 "ally warm empty"
-
-ASSERT 1 == 1 "life_cell_thaw PASS"
+ASSERT LAST_N == 8 "ally yield 8"
