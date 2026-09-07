@@ -32,7 +32,7 @@ LDFLAGS ?= $(LDFLAGS_SYS)
 
 CORE_SRC = \
 	src/cubalc_main.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
-	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c \
+	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c \
 	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_async.c \
 	src/cubalc_isa.c src/cubalc_jit.c
@@ -56,7 +56,7 @@ SRC = $(CORE_SRC) $(LANG_SRC)
 HDR = \
 	include/cubalc.h include/cubalc_law.h include/cubalc_platform.h \
 	include/cubalc_algocube.h include/cubalc_evolve.h include/cubalc_smx.h \
-	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_eeg.h \
+	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_eeg.h include/cubalc_sot.h \
 	include/cubalc_viz_matrix.h include/cubalc_lang.h \
 	include/lang/cubalc_lang_internal.h \
 	include/cubalc_translate.h include/cubalc_hostops.h include/cubalc_async.h \
@@ -82,7 +82,7 @@ SOLVER_SRC = \
 
 EEG_SRC = \
 	tools/eeg_matrix_stream.c \
-	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c src/cubalc_eeg.c \
+	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c
 
 .PHONY: all clean test law install human demo peers oversee jit-test \
@@ -107,7 +107,7 @@ $(SOLVER_BIN): $(SOLVER_SRC) $(HDR)
 # Real-time EEG → State Matrix streamer (standalone)
 eeg-stream: $(EEG_BIN)
 
-$(EEG_BIN): $(EEG_SRC) $(HDR) include/cubalc_eeg.h
+$(EEG_BIN): $(EEG_SRC) $(HDR) include/cubalc_eeg.h include/cubalc_sot.h
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -o $@ $(EEG_SRC) $(LDFLAGS)
 	@echo "built $@ EEG→matrix ($(CUBALC_TARGET))"

@@ -42,6 +42,7 @@ Used by the Knight EXG app at fold rate. Do not shell this at 125 Hz.
 `LET name = expr` u00b7 `LET name, expr` u00b7 `LET name expr`
 Math: `+ - * / %` `abs()` `min()` `max()` `sqrt()` `pow(a, b)`
 Logic: `AND` `OR` `NOT` / `&&` `||` `!`
+`OUT SENSOR name` [ON|OFF] writes the local cells.bin SoT (no network).
 `IF` / `THEN` / `ELSE` / `ELSE IF` / `ELIF` / `END` u00b7 `ON` / `OFF` u00b7 `ch1`..`ch8`
 
 ## Matrix / digit / free-flow algocube (device-agnostic)

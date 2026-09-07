@@ -4,6 +4,7 @@
  * Advanced vs C++: composition by PLUG, State Matrix SoT, flow-before-compile
  */
 #include "lang/cubalc_lang_internal.h"
+#include "cubalc_sot.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22996,6 +22997,28 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "ICASE", icase ? 1 : 0);
     var_set_num(vm, "OK", 1);
     bump(vm); return 1;
+  }
+  /* OUT SENSOR name [ON|OFF|expr] u2014 networkless lattice SoT (EXG cube file). */
+  if (kw(&L->cur,"OUT")){
+    Lex save=*L;
+    lex_next(L);
+    if (kw(&L->cur,"SENSOR")||kw(&L->cur,"SENSE")||kw(&L->cur,"NAME")){
+      char nm[48]; long on=1;
+      lex_next(L);
+      if (L->cur.kind!=TK_IDENT && L->cur.kind!=TK_STR){
+        fail(vm,"OUT SENSOR name"); return -1;
+      }
+      snprintf(nm,sizeof nm,"%s",L->cur.text); lex_next(L);
+      if (kw(&L->cur,"ON")||kw(&L->cur,"OFF")||L->cur.kind==TK_NUM||
+          L->cur.kind==TK_IDENT){
+        if (kw(&L->cur,"ON")){ on=1; lex_next(L); }
+        else if (kw(&L->cur,"OFF")){ on=0; lex_next(L); }
+        else on = parse_expr(vm,L)!=0;
+      }
+      cubalc_sot_out(nm, on?1:0);
+      bump(vm); return 1;
+    }
+    *L=save; /* not SENSOR u2014 leave to IO/OUT plug forms */
   }
   /* FOR i = a TO b [STEP s] ... END
      FOR i = a DOWNTO b [STEP s] ... END  (digit-1: default step -1) */
