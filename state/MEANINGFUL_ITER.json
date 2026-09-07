@@ -11,14 +11,15 @@
   "proof": "programs/proof/2056_life_cell_reclaim.cubalc",
   "proofs": [
     "programs/proof/2056_life_cell_reclaim.cubalc",
-    "programs/science/proof/2056_atomic_printer_life_reclaim.cubalc"
+    "programs/science/proof/2056_atomic_printer_life_reclaim.cubalc",
+    "programs/science/integration/atomic_printer_life_reclaim.cubalc"
   ],
   "proof_status": "PASS",
   "asserts_ok": 69,
   "asserts_fail": 0,
   "science_asserts_ok": 26,
   "flagship_1620": "PASS 12/0",
-  "notes": "reclaim n: heat\u2192reserve waste-heat salvage to glycogen; yield restored; energy/atp/pmf/pcr/ready untouched. Distinct from thaw and cool.",
+  "notes": "reclaim n: heat\u2192reserve (waste-heat salvage to glycogen). Distinct from thaw (heat\u2192energy) and cool (heat leaves). energy/atp/pmf/pcr/ready untouched. Usability: AGI banks thermogenesis as protected store without mitosis flood.",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "item": "2056 life_cell reclaim",
@@ -26,11 +27,12 @@
   "title": "2056 LIFE_CELL RECLAIM",
   "summary": "heat\u2192reserve salvage pure .cubalc + proof 69 asserts",
   "head_note": "reclaim banks thermogenesis without flooding mitosis",
-  "head": "e116992283bf0fc3d8d3fee89b67a3fb874ca02c",
-  "pin_head": "e116992283bf0fc3d8d3fee89b67a3fb874ca02c",
-  "tip": "e116992283bf0fc3d8d3fee89b67a3fb874ca02c",
-  "feat_head": "e116992283bf0fc3d8d3fee89b67a3fb874ca02c",
-  "updated": 1788796600,
-  "ts": 1788796600.0,
-  "parent_head": "28f45979b"
+  "head": "8c3131e76155350da6c605e8debc07dc12e25f92 HEAD_NOW.txt CUBALC_HEAD_NOW.txt SHIPPED_HEAD.txt PINNED_HEAD.txt HEAD_PIN_SHA.txt PINNED_HEAD_SHA.txt",
+  "pin_head": "8c3131e76155350da6c605e8debc07dc12e25f92 HEAD_NOW.txt CUBALC_HEAD_NOW.txt SHIPPED_HEAD.txt PINNED_HEAD.txt HEAD_PIN_SHA.txt PINNED_HEAD_SHA.txt",
+  "tip": "8c3131e76155350da6c605e8debc07dc12e25f92 HEAD_NOW.txt CUBALC_HEAD_NOW.txt SHIPPED_HEAD.txt PINNED_HEAD.txt HEAD_PIN_SHA.txt PINNED_HEAD_SHA.txt",
+  "feat_head": "8c3131e76155350da6c605e8debc07dc12e25f92 HEAD_NOW.txt CUBALC_HEAD_NOW.txt SHIPPED_HEAD.txt PINNED_HEAD.txt HEAD_PIN_SHA.txt PINNED_HEAD_SHA.txt",
+  "updated": 1788796296,
+  "ts": 1788796296.0,
+  "parent_head": "28f45979b",
+  "tip_eq_pin": true
 }
