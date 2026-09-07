@@ -31,8 +31,8 @@
   "title": "2051 life cell temper",
   "summary": "life_cell temper heat setpoint homeostat + atomic printer science + 1620 flagship",
   "head_note": "temper t heat setpoint radiative homeostat",
-  "feat_commit": "e603a791e",
-  "head": "37c67b780a1258f76de0e145340cfe5a76ec6784",
-  "pin_head": "37c67b780a1258f76de0e145340cfe5a76ec6784",
-  "tip": "37c67b780a1258f76de0e145340cfe5a76ec6784"
+  "feat_commit": "e603a791eedeb0ca607bd502df400ccf96dd3cd2",
+  "head": "9fa33889a8c78bcf3cbceffcac0de67470465d3a",
+  "pin_head": "9fa33889a8c78bcf3cbceffcac0de67470465d3a",
+  "tip": "9fa33889a8c78bcf3cbceffcac0de67470465d3a"
 }

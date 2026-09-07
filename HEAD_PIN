@@ -1,7 +1,6 @@
-head=37c67b780a1258f76de0e145340cfe5a76ec6784
-pin=37c67b780a1258f76de0e145340cfe5a76ec6784
-tip=37c67b780a1258f76de0e145340cfe5a76ec6784
-short=37c67b780
-mi=2050
+tip=9fa33889a8c78bcf3cbceffcac0de67470465d3a
+pin=9fa33889a8c78bcf3cbceffcac0de67470465d3a
+feat=e603a791eedeb0ca607bd502df400ccf96dd3cd2
+mi=2051
+ver=1.15.1533-usability
 feature=LIFE_CELL_TEMPER
-version=1.15.1533-usability
