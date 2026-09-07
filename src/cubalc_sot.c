@@ -1,8 +1,12 @@
 #include "cubalc_sot.h"
+#ifdef CUBALC_HAS_CUBEVIZ
+#include "cube_viz_path.h"
+#endif
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #define N 8
@@ -23,8 +27,17 @@ static void mkdir_p(const char *d){
 }
 static const char *dirp(void){
   static char d[256];
-  const char *e=getenv("CUBALC_SOT_DIR");
+#ifdef CUBALC_HAS_CUBEVIZ
+  if(!d[0]) cube_viz_dir(d,sizeof d);
+  return d;
+#else
+  const char *e=getenv("CUBEBRAIN_VIZ_DIR");
   if(e&&e[0]) return e;
+  e=getenv("NP_SOT_DIR"); if(e&&e[0]) return e;
+  e=getenv("CUBE_SOT_DIR"); if(e&&e[0]) return e;
+  e=getenv("CUBALC_SOT_DIR"); if(e&&e[0]) return e;
+  e=getenv("CUBEBRAIN_VIZ_CELLS");
+  if(e&&e[0]){ snprintf(d,sizeof d,"%s",e); { char *s=strrchr(d,47); if(s&&s>d) *s=0; } return d; }
   if(!d[0]){
 #ifdef __ANDROID__
     snprintf(d,sizeof d,"/data/local/tmp/cubebrain_viz");
@@ -35,6 +48,7 @@ static const char *dirp(void){
 #endif
   }
   return d;
+#endif
 }
 void cubalc_sot_out(const char *name, int on){
   int i; if(!name||!name[0]) return;

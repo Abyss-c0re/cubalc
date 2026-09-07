@@ -1,5 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include "cubalc.h"
+#ifdef CUBALC_HAS_CUBEVIZ
+#include "cube_viz_path.h"
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -924,7 +927,19 @@ int cubalc_chain_publish_united(const cubalc_chain *ch) {
   if (!ch || ch->n_cubes < 1) return -1;
   if (!st || !st[0]) st = "state";
   if (!root || !root[0]) root = "/home/voldemar/Dev/lab/prophecy_cube";
-  if (!cells_env || !cells_env[0]) cells_env = "/tmp/cubebrain_viz/cells.bin";
+  if (!cells_env || !cells_env[0]) {
+#ifdef CUBALC_HAS_CUBEVIZ
+    static char sot[512];
+    cube_viz_cells_path(sot, sizeof sot);
+    cells_env = sot;
+#else
+    static char sot[512];
+    const char *h = getenv("HOME");
+    if (h && h[0]) snprintf(sot, sizeof sot, "%s/.local/share/cubebrain_viz/cells.bin", h);
+    else snprintf(sot, sizeof sot, "/tmp/cubebrain_viz/cells.bin");
+    cells_env = sot;
+#endif
+  }
 
   n = ch->n_cubes;
   if (n > CUBALC_BUDGET) n = CUBALC_BUDGET;

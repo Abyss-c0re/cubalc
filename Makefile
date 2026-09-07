@@ -28,6 +28,8 @@ ifeq ($(CUBALC_CROSS),)
   endif
 endif
 CFLAGS  ?= $(CFLAGS_COMMON)
+CUBEVIZ ?= ../cubebrain/modules/viz
+
 LDFLAGS ?= $(LDFLAGS_SYS)
 
 CORE_SRC = \
@@ -52,6 +54,10 @@ LANG_SRC = \
 	src/lang/lang_run.c
 
 SRC = $(CORE_SRC) $(LANG_SRC)
+ifneq ($(wildcard $(CUBEVIZ)/cube_viz_path.c),)
+  SRC += $(CUBEVIZ)/cube_viz_path.c
+  CFLAGS += -I$(CUBEVIZ) -DCUBALC_HAS_CUBEVIZ
+endif
 
 HDR = \
 	include/cubalc.h include/cubalc_law.h include/cubalc_platform.h \
@@ -84,6 +90,9 @@ EEG_SRC = \
 	tools/eeg_matrix_stream.c \
 	src/cubalc_core.c src/cubalc_algocube.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c
+ifneq ($(wildcard $(CUBEVIZ)/cube_viz_path.c),)
+  EEG_SRC += $(CUBEVIZ)/cube_viz_path.c
+endif
 
 .PHONY: all clean test law install human demo peers oversee jit-test \
 	evolve evolve-loop showcase science universal-iter modular-check \

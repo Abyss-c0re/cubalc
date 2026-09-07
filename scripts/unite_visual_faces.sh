@@ -4,7 +4,9 @@ set -euo pipefail
 PC="${PROPHECY_CUBE_ROOT:-/home/voldemar/Dev/lab/prophecy_cube}"
 export PROPHECY_CUBE_ROOT="$PC"
 export CUBALC_STATE="${CUBALC_STATE:-$PC/cubalc/state}"
-export CUBEBRAIN_VIZ_CELLS="${CUBEBRAIN_VIZ_CELLS:-/tmp/cubebrain_viz/cells.bin}"
+CB="${CUBEBRAIN_ROOT:-/home/voldemar/Dev/cubebrain}"
+[ -f "$CB/modules/viz/cube_viz_env.sh" ] && . "$CB/modules/viz/cube_viz_env.sh"
+export CUBEBRAIN_VIZ_CELLS="${CUBEBRAIN_VIZ_CELLS:-$HOME/.local/share/cubebrain_viz/cells.bin}"
 export HOLD_FLASH=1
 export DISPLAY="${DISPLAY:-:0}"
 BIN="$PC/cubalc/out/cubalc"

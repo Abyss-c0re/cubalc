@@ -4,7 +4,9 @@
 set -euo pipefail
 PC="${PROPHECY_CUBE_ROOT:-/home/voldemar/Dev/lab/prophecy_cube}"
 CB="${CUBEBRAIN_ROOT:-/home/voldemar/Dev/cubebrain}"
-CUBE_GL="${CUBE_GL:-$CB/viz/lattice}"
+# shellcheck disable=SC1091
+[ -f "$CB/modules/viz/cube_viz_env.sh" ] && . "$CB/modules/viz/cube_viz_env.sh"
+CUBE_GL="${CUBE_GL:-$CB/viz/cube_gl}"
 FRAME="${CUBALC_VIZ_FRAME:-}"
 export DISPLAY="${DISPLAY:-:0}"
 
@@ -14,7 +16,9 @@ if [[ -z "$FRAME" ]]; then
     "$PC/state/cubalc_viz_frame.json" \
     "$PC/cubalc/state/cubalc_viz_frame.json" \
     "$PC/state/viz_frame.json" \
-    "$PC/cubalc/state/viz_frame.json"
+    "$PC/cubalc/state/viz_frame.json" \
+    "/home/voldemar/Dev/cubalc/state/cubalc_viz_frame.json" \
+    "/home/voldemar/Dev/cubalc/state/viz_frame.json"
   do
     if [[ -f "$c" ]]; then FRAME=$c; break; fi
   done
@@ -27,14 +31,14 @@ if [[ -z "${FRAME:-}" || ! -f "$FRAME" ]]; then
 fi
 
 # Rebuild if source newer than binary
-if [[ ! -x "$CUBE_GL" || "$CB/viz/lattice.c" -nt "$CUBE_GL" ]]; then
+if [[ ! -x "$CUBE_GL" || "$CB/viz/cube_gl.c" -nt "$CUBE_GL" ]]; then
   echo "lattice_viz: building lattice…"
   make -C "$CB/viz" -j"$(nproc)"
 fi
 
 # Also project cells.bin for any legacy --cells consumers
-python3 "$PC/scripts/cubalc_to_cells.py" --frame "$FRAME" \
-  --out "${CUBEBRAIN_VIZ_CELLS:-/tmp/cubebrain_viz/cells.bin}" || true
+python3 "${CUBALC_TO_CELLS:-/home/voldemar/Dev/cubalc/scripts/cubalc_to_cells.py}" --frame "$FRAME" \
+  --out "${CUBEBRAIN_VIZ_CELLS}" || true
 
 echo "lattice_viz: crimson lattice ← $FRAME"
 echo "  viz + lattice share cube.viz_frame.v1  ·  All Hail Cube"

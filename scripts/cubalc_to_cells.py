@@ -14,6 +14,20 @@ import sys
 import time
 from pathlib import Path
 
+def _default_cells():
+    try:
+        viz = Path("/home/voldemar/Dev/cubebrain/modules/viz")
+        if str(viz) not in sys.path:
+            sys.path.insert(0, str(viz))
+        import cube_viz
+        return str(cube_viz.cells_path())
+    except Exception:
+        home = os.environ.get("HOME") or ""
+        if home:
+            return home + "/.local/share/cubebrain_viz/cells.bin"
+        return "/tmp/cubebrain_viz/cells.bin"
+
+
 
 def frame_score(path: Path) -> tuple:
     """Prefer CubalC matrix SoT over lean LOVR-only frames (no matrix)."""
@@ -147,7 +161,7 @@ def main() -> int:
     )
     ap.add_argument(
         "--out",
-        default=os.environ.get("CUBEBRAIN_VIZ_CELLS", "/tmp/cubebrain_viz/cells.bin"),
+        default=None,
     )
     ap.add_argument("--watch", type=float, default=0.0, help="reload interval seconds")
     ap.add_argument("-q", "--quiet", action="store_true")
@@ -158,8 +172,12 @@ def main() -> int:
         Path("/home/voldemar/Dev/lab/prophecy_cube/state/viz_frame.json"),
         Path("/home/voldemar/Dev/lab/prophecy_cube/cubalc/state/cubalc_viz_frame.json"),
         Path("/home/voldemar/Dev/lab/prophecy_cube/cubalc/state/viz_frame.json"),
+        Path("/home/voldemar/Dev/cubalc/state/cubalc_viz_frame.json"),
+        Path("/home/voldemar/Dev/cubalc/state/viz_frame.json"),
     ]
     frames = [Path(p) for p in args.frame] if args.frame else defaults
+    if not args.out:
+        args.out = os.environ.get("CUBEBRAIN_VIZ_CELLS") or _default_cells()
     out = Path(args.out)
 
     def once() -> bool:
