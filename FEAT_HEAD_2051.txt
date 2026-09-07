@@ -5,3 +5,4 @@ pin MEANINGFUL_ITER 2051 · VERSION 1.15.1533-usability
 free energy: temper t radiates excess heat above setpoint; never creates heat; energy/atp/pmf/pcr untouched
 distinct from cool n (absolute radiate) — homeostat ceiling after cold-stress budgets
 programs/proof/2051_life_cell_temper.cubalc
+e603a791eedeb0ca607bd502df400ccf96dd3cd2
