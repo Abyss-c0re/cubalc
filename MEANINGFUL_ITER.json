@@ -22,10 +22,10 @@
   "asserts_fail": 0,
   "science_asserts_ok": 23,
   "flagship_1620_asserts_ok": 12,
-  "head": "b00eaa294658c432e3309eb8f792b2db99232c4d",
+  "head": "8fb327f3ffa6f36ff92e987dab2b08fdff7e78e8",
   "notes": "life_cell METHOD thaw n: heat\u2192energy (endothermic waste-heat recovery); inverse of shiver; yield conserved; atp/pmf/pcr untouched; ready recomputed. Free energy banks from lattice heat.",
-  "pin_head": "b00eaa294658c432e3309eb8f792b2db99232c4d",
-  "tip": "b00eaa294658c432e3309eb8f792b2db99232c4d",
+  "pin_head": "8fb327f3ffa6f36ff92e987dab2b08fdff7e78e8",
+  "tip": "8fb327f3ffa6f36ff92e987dab2b08fdff7e78e8",
   "updated": 1788747600,
   "parent_head": "e4a8be276"
 }
