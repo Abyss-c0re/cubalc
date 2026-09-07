@@ -1,5 +1,4 @@
-head=fc8d7a6de6eeac45bb15c3d83cf8c86e59ed42b5
-short=fc8d7a6de6
+tip=74c98bad514d9450b5da2f017255247364cf152f
+pin=74c98bad514d9450b5da2f017255247364cf152f
 mi=2055
 feature=NEXTPOW2N_PREVPOW2N_ISPOW2N
-proof=programs/proof/2055_nextpow2n_prevpow2n.cubalc
