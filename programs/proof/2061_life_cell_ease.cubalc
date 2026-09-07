@@ -1,0 +1,185 @@
+// 2061_life_cell_ease.cubalc
+// Proof: life_cell ease — heat → lower mitosis threshold (thermal priming / heat-shock ease).
+// Distinct from set_threshold (direct), anneal (heat→age), temper/cool, thaw/reclaim/capture/harness/buffer.
+// Heat pays; thr floors at 1. Yield unchanged (heat not in yield). energy/reserve/atp/pmf/pcr untouched. Ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed ease 3
+ASSERT LAST_N == 0 "empty ease 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// build heat via shiver; energy drops, thr still 10
+SEND seed shiver 6
+ASSERT LAST_N == 6 "shiver 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed ease 4
+ASSERT LAST_N == 4 "ease 4"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6 after ease"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by ease"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e6 >= thr6"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 "yield unchanged by ease (heat not in yield)"
+
+// drain remaining heat; thr drops further
+SEND seed ease 9
+ASSERT LAST_N == 2 "ease drains remaining heat 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+GETF seed threshold
+ASSERT LAST_N == 4 "thr 4"
+GETF seed ready
+ASSERT LAST_N == 1 "still ready e6 >= thr4"
+
+SEND seed ease 1
+ASSERT LAST_N == 0 "empty ease 0"
+
+SEND dead ease 2
+ASSERT LAST_N == 0 "dead ease 0"
+
+// zero/neg
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+SEND seed ease 0
+ASSERT LAST_N == 0 "zero ease 0"
+SEND seed ease -1
+ASSERT LAST_N == 0 "neg ease 0"
+
+// floor thr at 1: ease more than room
+GETF seed threshold
+LET th_now = LAST_N
+// th_now should be 4, room = 3
+SEND seed ease 100
+ASSERT LAST_N == 3 "ease to floor room 3"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed ease 1
+ASSERT LAST_N == 0 "already floor ease 0"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat spent to floor"
+
+// quiet path: ease lowers thr but quiescent never ready
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet shiver 5
+ASSERT LAST_N == 5 "quiet shiver 5"
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet ease 5
+ASSERT LAST_N == 5 "quiet ease 5"
+GETF quiet threshold
+ASSERT LAST_N == 5 "quiet thr 5"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiescent never ready"
+SEND quiet wake
+// quiet energy was 14, shiver 5 → energy 9; thr 5 → ready 1 after wake
+GETF quiet ready
+ASSERT LAST_N == 1 "wake ready e9 >= thr5"
+
+// ally isolation
+GETF seed threshold
+LET seed_th_before = LAST_N
+SEND ally shiver 4
+SEND ally ease 3
+GETF ally threshold
+ASSERT LAST_N == 7 "ally thr 7"
+GETF seed threshold
+ASSERT LAST_N == seed_th_before "seed thr unchanged by ally"
+
+// iso full: ease down to 1 with excess heat leftover
+SEND iso shiver 12
+ASSERT LAST_N == 12 "iso shiver 12"
+SEND iso ease 100
+ASSERT LAST_N == 9 "iso ease room 9 (10-1)"
+GETF iso threshold
+ASSERT LAST_N == 1 "iso thr 1"
+SEND iso warmth
+ASSERT LAST_N == 3 "iso heat leftover 12-9"
+
+// final unity pulse
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"
+
+// distinct from set_threshold direct path
+SEND seed set_threshold 10
+ASSERT LAST_N == 10 "retune thr 10"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr 10"
+SEND seed feed 5
+GETF seed energy
+LET e_mid = LAST_N
+SEND seed shiver 4
+ASSERT LAST_N == 4 "shiver 4"
+SEND seed ease 3
+ASSERT LAST_N == 3 "ease heat path 3"
+GETF seed threshold
+ASSERT LAST_N == 7 "thr 7 via heat"
+GETF seed energy
+ASSERT LAST_N == e_mid - 4 "energy only shiver not ease"
+
+// distinct from anneal (age path)
+SEND seed pulse 5
+GETF seed age
+LET a_before = LAST_N
+SEND seed shiver 2
+SEND seed anneal 2
+ASSERT LAST_N == 2 "anneal age path"
+GETF seed age
+ASSERT LAST_N == a_before - 2 "age shed by anneal"
+GETF seed threshold
+LET th_hold = LAST_N
+SEND seed shiver 2
+SEND seed ease 1
+ASSERT LAST_N == 1 "ease thr path"
+GETF seed threshold
+ASSERT LAST_N == th_hold - 1 "thr shed by ease not age"
+GETF seed age
+ASSERT LAST_N == a_before - 2 "age held through ease"
+
+SEND dead ease 3
+ASSERT LAST_N == 0 "dead ease 0"
+
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"

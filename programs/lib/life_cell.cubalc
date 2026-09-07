@@ -74,6 +74,7 @@
 #   harness n            heat → pmf (waste-heat salvage to proton gradient; yield restored; ready untouched)
 #   buffer n             heat → pcr (waste-heat salvage to phosphagen ~P; yield restored; ready untouched)
 #   anneal n             heat → age repair (chaperone / mild heat-shock refold; yield unchanged; ready untouched)
+#   ease n               heat → lower mitosis threshold (thermal priming / heat-shock ease; yield unchanged; ready recompute)
 
 CLASS Cell
   FIELD alive 0
@@ -1739,6 +1740,64 @@ CLASS Cell
     SETF THIS age a
     RET take
   END
+
+
+  # Ease: spend n heat to lower mitosis threshold (thermal priming / heat-shock ease).
+  # Distinct from set_threshold (direct retune), anneal (heat→age), temper (radiate excess),
+  # thaw/reclaim/capture/harness/buffer (heat→currency banks). Heat pays; thr floors at 1.
+  # Yield unchanged (heat not in yield). energy/reserve/atp/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends thermogenesis to ease mitosis bar without flooding energy banks.
+  # Returns amount eased (threshold drop). Dead/zero/empty heat/thr already 1 → 0.
+  METHOD ease n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
