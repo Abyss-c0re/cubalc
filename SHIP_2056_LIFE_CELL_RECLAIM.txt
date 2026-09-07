@@ -2,9 +2,9 @@ LIFE_CELL_RECLAIM 2056
 feat — programs/lib/life_cell.cubalc METHOD reclaim n
 proofs 2056 asserts_ok=69 fail=0; science 26/0; flagship 1620 PASS 12/0
 pin MEANINGFUL_ITER 2056 · VERSION 1.15.1538-usability
-head 6faaadbbbf3236d46f5cf3f9f428a292d6c7507c
-free energy: reclaim n salvages heat → glycogen reserve (waste-heat bank); yield restored into stores; energy/atp/pmf/pcr/ready untouched
-distinct from thaw (heat→energy) and cool (heat leaves) — AGI banks thermogenesis ledger without flooding mitosis
+head bc537ab853a1f4c1b294738c97de6fc553268263
+free energy: reclaim n salvages heat → reserve (waste-heat → glycogen bank); yield restored; energy/atp/pmf/pcr/ready untouched
+distinct from thaw (heat→energy) and cool (heat leaves) — banks thermogenesis ledger without flooding mitosis
 programs/proof/2056_life_cell_reclaim.cubalc
 programs/science/proof/2056_atomic_printer_life_reclaim.cubalc
 programs/science/integration/atomic_printer_life_reclaim.cubalc
