@@ -18,7 +18,7 @@
   "proof_status": "PASS",
   "asserts_ok": 66,
   "asserts_fail": 0,
-  "notes": "life_cell METHOD cool: heat\u2192environment radiative cooling; inverse shiver/futile/uncouple; yield sheds; energy/atp/pmf/pcr/ready untouched; pure .cubalc",
+  "notes": "life_cell METHOD cool: heat\u2192environment radiative cooling clearance; inverse of shiver/futile/uncouple; yield sheds; energy/atp/pmf/pcr/ready untouched; pure .cubalc",
   "pure_c": "programs/lib/life_cell.cubalc",
   "selftest": "PASS",
   "science": "programs/science/integration/atomic_printer_life_cool.cubalc",
@@ -27,10 +27,10 @@
   "item": "2049 life cell cool",
   "item_id": "mi_2049_life_cell_cool",
   "title": "2049 life cell cool",
-  "summary": "life_cell cool heat\u2192environment clearance + atomic printer science + 1620 flagship",
-  "head_note": "cool heat\u2192environment radiative clearance",
+  "summary": "life_cell cool heat\u2192environment radiative cooling + atomic printer science + 1620 flagship",
+  "head_note": "cool heat\u2192environment radiative cooling clearance",
   "feat_commit": "d01a68d83",
-  "head": "47b1f44f285975fd46013d142fe8a6db086186fb",
-  "pin_head": "47b1f44f285975fd46013d142fe8a6db086186fb",
-  "tip": "47b1f44f285975fd46013d142fe8a6db086186fb"
+  "head": "1f7c5674deab00e017e91ff3ba3fc1a520149726",
+  "pin_head": "1f7c5674deab00e017e91ff3ba3fc1a520149726",
+  "tip": "1f7c5674deab00e017e91ff3ba3fc1a520149726"
 }
