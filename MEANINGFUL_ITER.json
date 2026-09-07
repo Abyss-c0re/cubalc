@@ -23,7 +23,7 @@
   "title": "2055 NEXTPOW2N PREVPOW2N ISPOW2N",
   "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
   "head_note": "NEXTPOW2N page pad without shell arithmetic",
-  "head": "e7f12ca044cb83d8e801063dde6c54f9fdfb55c6",
+  "head": "a0074bd873f55b437c530363563acf819583289c",
   "pin_head": "0057f5f2306f4afb3518331bb9dd30d60e596ea7",
   "tip": "0057f5f2306f4afb3518331bb9dd30d60e596ea7",
   "feat_head": "0057f5f2306f4afb3518331bb9dd30d60e596ea7",
