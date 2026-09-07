@@ -75,6 +75,7 @@
 #   buffer n             heat → pcr (waste-heat salvage to phosphagen ~P; yield restored; ready untouched)
 #   anneal n             heat → age repair (chaperone / mild heat-shock refold; yield unchanged; ready untouched)
 #   ease n               heat → lower mitosis threshold (thermal priming / heat-shock ease; yield unchanged; ready recompute)
+#   refold n             ATP → age repair (chaperone ATPase / HSP70; yield sheds ATP; ready untouched)
 
 CLASS Cell
   FIELD alive 0
@@ -1798,6 +1799,46 @@ CLASS Cell
     RET take
   END
 
+
+
+
+  # Refold: spend n ATP to shed age (chaperone ATPase / HSP70 ATP-dependent refold).
+  # Distinct from repair (energy→age), anneal (heat→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; age floors at 0. Yield sheds by take (ATP is in yield). ready untouched.
+  # Does not touch energy/reserve/heat/pmf/pcr/ready.
+  # Usability: AGI spends work currency to rejuvenate without burning life spark or heat ledger.
+  # Returns amount refolded. Dead/zero/empty ATP → 0.
+  METHOD refold n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
 
 
 END

@@ -1,0 +1,239 @@
+// 2062_life_cell_refold.cubalc
+// Proof: life_cell refold — ATP → age repair (chaperone ATPase / HSP70).
+// Distinct from repair (energy→age), anneal (heat→age), spend (ATP→work), futile (ATP→heat).
+// ATP pays; age floors 0. Yield sheds by take (ATP in yield). energy/reserve/heat/pmf/pcr/ready untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed refold 3
+ASSERT LAST_N == 0 "empty refold 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// age then charge ATP via charge (energy→ATP, retain spark)
+SEND seed pulse 8
+GETF seed age
+ASSERT LAST_N == 8 "aged 8"
+GETF seed energy
+LET e_after_pulse = LAST_N
+ASSERT e_after_pulse >= 12 "energy grew or held"
+SEND seed charge 6
+ASSERT LAST_N == 6 "charge 6"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy paid charge"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed refold 4
+ASSERT LAST_N == 4 "refold 4"
+SEND seed charged
+ASSERT LAST_N == 2 "atp 2"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after refold"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy untouched by refold"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds ATP by refold"
+
+SEND seed refold 9
+ASSERT LAST_N == 2 "refold drains remaining atp 2"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+GETF seed age
+ASSERT LAST_N == 2 "age 2"
+SEND seed refold 1
+ASSERT LAST_N == 0 "empty refold 0"
+
+SEND dead refold 2
+ASSERT LAST_N == 0 "dead refold 0"
+
+// zero/neg
+SEND seed feed 10
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+SEND seed refold 0
+ASSERT LAST_N == 0 "zero refold 0"
+SEND seed refold -1
+ASSERT LAST_N == 0 "neg refold 0"
+SEND seed charged
+ASSERT LAST_N == 3 "atp held 3"
+GETF seed age
+LET a1 = LAST_N
+SEND seed refold 1
+ASSERT LAST_N == 1 "refold 1"
+GETF seed age
+ASSERT LAST_N == a1 - 1 "age shed 1"
+SEND seed spend 99
+SEND seed charged
+ASSERT LAST_N == 0 "atp clear"
+
+// age-limited: more ATP than age only sheds age
+SEND seed pulse 5
+GETF seed age
+LET a2 = LAST_N
+ASSERT a2 >= 5 "aged more"
+SEND seed feed 30
+SEND seed charge 10
+ASSERT LAST_N == 10 "charge 10"
+SEND seed charged
+ASSERT LAST_N == 10 "atp 10"
+SEND seed yield
+LET y1 = LAST_N
+SEND seed refold 100
+ASSERT LAST_N == a2 "refold capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age floored 0"
+SEND seed charged
+ASSERT LAST_N == 10 - a2 "atp leftover after age floor"
+SEND seed yield
+ASSERT LAST_N == y1 - a2 "yield shed by age-capped refold"
+SEND seed spend 99
+
+// Distinct from repair (energy pays)
+SEND seed feed 20
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "age 6 for repair path"
+GETF seed energy
+LET e_before_repair = LAST_N
+SEND seed repair 3
+ASSERT LAST_N == 3 "repair 3 energy path"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after repair"
+GETF seed energy
+ASSERT LAST_N == e_before_repair - 3 "energy paid repair"
+GETF seed energy
+LET e_before_charge = LAST_N
+SEND seed charge 4
+ASSERT LAST_N == 4 "charge 4"
+GETF seed energy
+ASSERT LAST_N == e_before_charge - 4 "energy paid charge"
+GETF seed energy
+LET e_before_refold = LAST_N
+SEND seed yield
+LET y_before_refold = LAST_N
+SEND seed refold 2
+ASSERT LAST_N == 2 "refold 2 atp path"
+GETF seed age
+ASSERT LAST_N == 1 "age 1 after refold"
+GETF seed energy
+ASSERT LAST_N == e_before_refold "energy untouched by refold"
+SEND seed charged
+ASSERT LAST_N == 2 "atp leftover 2"
+SEND seed yield
+ASSERT LAST_N == y_before_refold - 2 "yield sheds refold ATP"
+
+// Distinct from anneal (heat pays) and spend/futile (ATP sinks)
+SEND seed spend 99
+SEND seed cool 99
+SEND seed feed 20
+SEND seed pulse 4
+GETF seed age
+ASSERT LAST_N == 5 "age 5 (1+4)"
+SEND seed charge 5
+ASSERT LAST_N == 5 "charge 5"
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3 heat path"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+SEND seed anneal 1
+ASSERT LAST_N == 1 "anneal heat path"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after anneal"
+SEND seed charged
+ASSERT LAST_N == 5 "atp untouched by anneal"
+SEND seed yield
+LET y_pre = LAST_N
+SEND seed refold 2
+ASSERT LAST_N == 2 "refold atp path"
+GETF seed age
+ASSERT LAST_N == 2 "age 2 after refold"
+SEND seed charged
+ASSERT LAST_N == 3 "atp 3 after refold"
+SEND seed warmth
+ASSERT LAST_N == 2 "heat untouched by refold"
+SEND seed yield
+ASSERT LAST_N == y_pre - 2 "yield sheds refold not anneal"
+// spend burns ATP without age repair
+GETF seed age
+LET a_pre_spend = LAST_N
+SEND seed spend 1
+ASSERT LAST_N == 1 "spend 1"
+GETF seed age
+ASSERT LAST_N == a_pre_spend "age untouched by spend"
+// futile burns ATP to heat without age repair
+GETF seed age
+LET a_pre_futile = LAST_N
+SEND seed charged
+LET atp_pre_futile = LAST_N
+SEND seed futile 1
+ASSERT LAST_N == 1 "futile 1"
+GETF seed age
+ASSERT LAST_N == a_pre_futile "age untouched by futile"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth +1 from futile"
+
+// quiet path
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet pulse 5
+GETF quiet age
+ASSERT LAST_N == 5 "quiet aged 5"
+SEND quiet charge 4
+SEND quiet refold 4
+ASSERT LAST_N == 4 "quiet refold 4"
+GETF quiet age
+ASSERT LAST_N == 1 "quiet age 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiescent never ready"
+SEND quiet wake
+
+// ally isolation
+GETF seed age
+LET seed_age_before = LAST_N
+SEND ally pulse 3
+SEND ally charge 3
+SEND ally refold 3
+GETF ally age
+ASSERT LAST_N == 0 "ally age 0"
+GETF seed age
+ASSERT LAST_N == seed_age_before "seed age unchanged by ally"
+
+// iso full
+SEND iso pulse 7
+SEND iso charge 8
+SEND iso refold 100
+GETF iso age
+ASSERT LAST_N == 0 "iso age 0"
+SEND iso charged
+ASSERT LAST_N == 1 "iso atp leftover 8-7"
+
+// final unity pulse
+SEND seed vitality
+ASSERT LAST_N >= 1 "alive vitality"
+SEND seed yield
+ASSERT LAST_N >= 1 "yield holds"
