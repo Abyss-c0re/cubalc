@@ -80,6 +80,7 @@
 #   prime n              ATP → lower mitosis threshold (CDK / cycle priming; yield sheds ATP; ready recompute)
 #   fortify n            ATP → raise mitosis threshold (CDK / work fortify; yield sheds ATP; ready recompute)
 #   poise n              PCr → lower mitosis threshold (phosphagen CDK burst priming; yield sheds PCr; ready recompute)
+#   brace n              PCr → raise mitosis threshold (phosphagen CDK fortify; yield sheds PCr; ready recompute)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2057,6 +2058,66 @@ CLASS Cell
     END
     LET a = a - take
     SETF THIS atp a
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Brace: spend n PCr to raise mitosis threshold (phosphagen CDK fortification).
+  # Distinct from poise (PCr→lower thr), fortify (ATP→raise thr), harden (heat→raise thr),
+  # prime (ATP→lower thr), ease (heat→lower thr), boost (PCr→energy), load (energy→PCr),
+  # discharge (PCr→ATP), set_threshold (direct).
+  # PCr pays; thr ceiling at 1000. Yield sheds by take (PCr in yield).
+  # energy/reserve/atp/heat/pmf untouched. Recomputes ready.
+  # Usability: AGI spends rapid ~P buffer to fortify mitosis bar without burning ATP or heat.
+  # Returns amount braced (threshold rise). Dead/zero/empty PCr/thr already 1000 → 0.
+  METHOD brace n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
     LET th = th + take
     SETF THIS threshold th
     LET rd = 0

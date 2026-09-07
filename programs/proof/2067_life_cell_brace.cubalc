@@ -1,0 +1,154 @@
+// 2067_life_cell_brace.cubalc
+// Proof: life_cell brace — PCr → raise mitosis threshold (phosphagen CDK fortify).
+// Distinct from poise (PCr→lower thr), fortify (ATP→raise thr), harden (heat→raise thr),
+// prime/ease/boost/load/discharge/set_threshold. PCr pays; thr ceiling 1000.
+// Yield sheds PCr; energy/reserve/atp/heat/pmf untouched; ready recomputes.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed brace 3
+ASSERT LAST_N == 0 "empty brace 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+// Load PCr via energy→pcr; keep energy high enough for ready tests
+SEND seed load 8
+ASSERT LAST_N == 8 "load 8"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed phosphagen
+ASSERT LAST_N == 8 "pcr 8"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e12 >= thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed brace 4
+ASSERT LAST_N == 4 "brace 4"
+SEND seed phosphagen
+ASSERT LAST_N == 4 "pcr 4"
+GETF seed threshold
+ASSERT LAST_N == 14 "thr 14 after brace"
+GETF seed energy
+ASSERT LAST_N == 12 "energy untouched by brace"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e12 < thr14"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds PCr by brace"
+
+SEND seed brace 9
+ASSERT LAST_N == 4 "brace drains remaining pcr 4"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed threshold
+ASSERT LAST_N == 18 "thr 18"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready e12 < thr18"
+
+SEND seed brace 1
+ASSERT LAST_N == 0 "empty brace 0"
+
+SEND dead brace 2
+ASSERT LAST_N == 0 "dead brace 0"
+
+SEND seed feed 10
+SEND seed load 5
+ASSERT LAST_N == 5 "load 5"
+SEND seed brace 0
+ASSERT LAST_N == 0 "zero brace 0"
+SEND seed brace -1
+ASSERT LAST_N == 0 "neg brace 0"
+SEND seed phosphagen
+ASSERT LAST_N == 5 "pcr held 5"
+
+// ceiling: raise thr toward 1000 with limited room via set_threshold
+SEND seed set_threshold 997
+ASSERT LAST_N == 997 "thr 997"
+SEND seed phosphagen
+ASSERT LAST_N == 5 "pcr still 5"
+SEND seed brace 10
+ASSERT LAST_N == 3 "brace capped by ceiling room 3"
+GETF seed threshold
+ASSERT LAST_N == 1000 "thr ceiling 1000"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "pcr leftover 2"
+SEND seed brace 1
+ASSERT LAST_N == 0 "thr already 1000 brace 0"
+
+SEND quiet feed 5
+SEND quiet load 6
+ASSERT LAST_N == 6 "quiet load 6"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet brace 3
+ASSERT LAST_N == 3 "quiet brace 3"
+GETF quiet threshold
+ASSERT LAST_N == 13 "quiet thr 13"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet phosphagen
+ASSERT LAST_N == 3 "quiet pcr 3"
+
+SEND ally load 5
+ASSERT LAST_N == 5 "ally load 5"
+GETF ally energy
+ASSERT LAST_N == 7 "ally e 7"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e7 < thr10"
+SEND ally brace 2
+ASSERT LAST_N == 2 "ally brace 2"
+GETF ally threshold
+ASSERT LAST_N == 12 "ally thr 12"
+GETF ally ready
+ASSERT LAST_N == 0 "ally still not ready e7 < thr12"
+SEND ally feed 10
+GETF ally energy
+ASSERT LAST_N == 17 "ally e 17"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e17 >= thr12"
+SEND ally phosphagen
+ASSERT LAST_N == 3 "ally pcr 3"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso load 4
+ASSERT LAST_N == 4 "iso load 4"
+SEND iso brace 3
+ASSERT LAST_N == 3 "iso brace 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by brace"
+GETF iso threshold
+ASSERT LAST_N == 13 "iso thr 13"
+SEND iso phosphagen
+ASSERT LAST_N == 1 "iso pcr 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by brace"
+
+PRINT "2067_life_cell_brace PASS"

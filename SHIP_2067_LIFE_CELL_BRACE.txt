@@ -1,0 +1,8 @@
+LIFE_CELL_BRACE 2067
+feat — programs/lib/life_cell.cubalc METHOD brace n
+proofs 2067 asserts_ok=59 fail=0; science 28/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2067 · VERSION 1.15.1552-usability
+free energy: brace n spends PCr → raise mitosis threshold (phosphagen CDK fortify); thr ceiling 1000; yield sheds by take; energy/reserve/atp/heat/pmf untouched; ready recomputes
+distinct from poise/fortify/harden/prime/ease/boost/load/discharge/set_threshold
+programs/proof/2067_life_cell_brace.cubalc
+programs/science/proof/2067_atomic_printer_life_brace.cubalc
