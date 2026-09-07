@@ -1,0 +1,234 @@
+// 2057_life_cell_capture.cubalc
+// Proof: life_cell capture — heat → ATP (waste-heat salvage to work currency).
+// Distinct from thaw (heat→energy), reclaim (heat→reserve), cool (heat leaves).
+// Yield restored into ATP. energy/reserve/pmf/pcr/ready untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+// Baseline
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty"
+SEND seed capture 3
+ASSERT LAST_N == 0 "empty capture 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Shiver then capture banks heat into ATP
+SEND seed shiver 6
+ASSERT LAST_N == 6 "shiver 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed warmth
+ASSERT LAST_N == 6 "warmth 6"
+SEND seed yield
+ASSERT LAST_N == 6 "yield sheds on shiver"
+
+SEND seed capture 4
+ASSERT LAST_N == 4 "capture 4"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed charged
+ASSERT LAST_N == 4 "atp 4 after capture"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by capture"
+SEND seed yield
+ASSERT LAST_N == 10 "yield = energy+atp 6+4"
+
+// Drain remaining heat via capture
+SEND seed capture 9
+ASSERT LAST_N == 2 "capture drains 2"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth empty"
+SEND seed charged
+ASSERT LAST_N == 6 "atp 6 total"
+GETF seed energy
+ASSERT LAST_N == 6 "energy still 6"
+SEND seed capture 1
+ASSERT LAST_N == 0 "empty capture 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield full 6+6"
+
+// Dead cell refuses
+SEND dead capture 2
+ASSERT LAST_N == 0 "dead capture 0"
+
+// Zero / negative guard
+SEND seed shiver 3
+ASSERT LAST_N == 3 "shiver 3"
+// e=3 heat=3 atp=6
+SEND seed capture 0
+ASSERT LAST_N == 0 "zero capture 0"
+SEND seed capture -1
+ASSERT LAST_N == 0 "neg capture 0"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth held 3"
+SEND seed cool 3
+ASSERT LAST_N == 3 "clear residual heat"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth clear"
+// e=3 atp=6 heat=0
+
+// Uncouple path: pmf→heat then capture to ATP (not energy/pmf restore)
+SEND seed feed 9
+ASSERT LAST_N == 12 "fed back to 12"
+SEND seed pump 4
+ASSERT LAST_N == 4 "pump 4"
+// e=8 pmf=4 atp=6
+GETF seed energy
+LET e0 = LAST_N
+ASSERT e0 == 8 "e0 8"
+SEND seed gradient
+LET p0 = LAST_N
+ASSERT p0 == 4 "pmf 4"
+SEND seed uncouple 3
+ASSERT LAST_N == 3 "uncouple 3"
+// e=8 pmf=1 heat=3
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1 after uncouple"
+SEND seed warmth
+ASSERT LAST_N == 3 "warmth 3"
+SEND seed capture 2
+ASSERT LAST_N == 2 "capture 2 from uncouple"
+SEND seed warmth
+ASSERT LAST_N == 1 "warmth 1"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf held (not restored)"
+GETF seed energy
+ASSERT LAST_N == e0 "energy held by capture"
+SEND seed charged
+// prior atp 6 + 2 = 8
+ASSERT LAST_N == 8 "atp 8 after uncouple capture"
+SEND seed cool 1
+ASSERT LAST_N == 1 "shed leftover heat"
+// e=8 atp=8 pmf=1 heat=0
+
+// Isolation: ready untouched by capture
+GETF seed ready
+LET r0 = LAST_N
+SEND seed shiver 2
+// e=6 heat=2
+SEND seed capture 2
+// e=6 heat=0 atp=10
+GETF seed ready
+ASSERT LAST_N == r0 "ready unchanged by capture"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth cleared"
+SEND seed charged
+ASSERT LAST_N == 10 "atp 10 after ready-iso capture"
+
+// Ally independent
+SEND ally shiver 5
+ASSERT LAST_N == 5 "ally shiver 5"
+SEND ally capture 3
+ASSERT LAST_N == 3 "ally capture 3"
+SEND ally charged
+ASSERT LAST_N == 3 "ally atp 3"
+SEND seed charged
+ASSERT LAST_N == 10 "seed atp independent"
+
+// Quiet path: charge then capture stacks on ATP
+SEND quiet charge 4
+ASSERT LAST_N == 4 "quiet charge 4"
+SEND quiet shiver 4
+ASSERT LAST_N == 4 "quiet shiver 4"
+SEND quiet capture 4
+ASSERT LAST_N == 4 "quiet capture 4"
+SEND quiet charged
+ASSERT LAST_N == 8 "quiet atp charge+capture"
+
+// Isolation: capture leaves energy/reserve/pmf/pcr alone
+GETF iso energy
+ASSERT LAST_N == 20 "iso spark 20"
+SEND iso bank 4
+ASSERT LAST_N == 4 "iso bank 4"
+// e=16 reserve=4
+SEND iso charge 4
+ASSERT LAST_N == 4 "iso charge 4"
+// e=12 r=4 atp=4
+SEND iso charge_pcr 2
+ASSERT LAST_N == 2 "iso pcr 2"
+// e=12 r=4 atp=2 pcr=2
+SEND iso pump 2
+ASSERT LAST_N == 2 "iso pump 2"
+// e=10 r=4 atp=2 pcr=2 pmf=2
+SEND iso shiver 3
+ASSERT LAST_N == 3 "iso shiver 3"
+// e=7 heat=3
+SEND iso capture 2
+ASSERT LAST_N == 2 "iso capture 2"
+SEND iso stores
+ASSERT LAST_N == 4 "iso reserve held"
+SEND iso phosphagen
+ASSERT LAST_N == 2 "iso pcr held"
+SEND iso gradient
+ASSERT LAST_N == 2 "iso pmf held"
+GETF iso energy
+ASSERT LAST_N == 7 "iso e 7"
+SEND iso warmth
+ASSERT LAST_N == 1 "iso warmth 1"
+SEND iso charged
+// prior atp 2 + 2 = 4
+ASSERT LAST_N == 4 "iso atp 4"
+
+// Final conservation check on seed
+GETF seed energy
+LET ef = LAST_N
+SEND seed stores
+LET sf = LAST_N
+SEND seed warmth
+LET hf = LAST_N
+SEND seed charged
+LET af = LAST_N
+SEND seed gradient
+LET pf = LAST_N
+SEND seed phosphagen
+LET cf = LAST_N
+SEND seed yield
+// yield = energy + reserve + atp + pmf + pcr
+ASSERT LAST_N == ef + sf + af + pf + cf "yield = e+stores+atp+pmf+pcr"
+ASSERT hf == 0 "no residual heat"
+
+// Spend from captured ATP still works
+SEND seed spend 3
+ASSERT LAST_N == 3 "spend 3 from captured"
+SEND seed charged
+ASSERT LAST_N == af - 3 "atp fell by spend"
+SEND seed yield
+ASSERT LAST_N == ef + sf + (af - 3) + pf + cf "yield after spend"
+
+// Capture vs reclaim vs thaw triangle on fresh path
+SEND seed feed 20
+SEND seed cool 20
+SEND seed shiver 5
+ASSERT LAST_N == 5 "tri shiver 5"
+SEND seed reclaim 2
+ASSERT LAST_N == 2 "tri reclaim 2"
+SEND seed capture 2
+ASSERT LAST_N == 2 "tri capture 2"
+SEND seed thaw 1
+ASSERT LAST_N == 1 "tri thaw 1"
+SEND seed warmth
+ASSERT LAST_N == 0 "tri warmth 0"
+SEND seed stores
+LET rs = LAST_N
+SEND seed charged
+LET ac = LAST_N
+GETF seed energy
+LET en = LAST_N
+ASSERT rs >= 2 "reclaim landed in reserve"
+ASSERT ac >= 2 "capture landed in atp"
+ASSERT en >= 1 "thaw landed in energy"
+
+ASSERT 1 == 1 "life_cell_capture PASS"
