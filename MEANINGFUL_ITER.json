@@ -9,21 +9,18 @@
   "FEATURE": "NEXTPOW2N_PREVPOW2N_ISPOW2N",
   "ship": "2055_nextpow2n_prevpow2n",
   "proof": "programs/proof/2055_nextpow2n_prevpow2n.cubalc",
-  "proofs": [
-    "programs/proof/2055_nextpow2n_prevpow2n.cubalc"
-  ],
+  "proofs": ["programs/proof/2055_nextpow2n_prevpow2n.cubalc"],
   "proof_status": "PASS",
   "asserts_ok": 34,
   "asserts_fail": 0,
-  "notes": "NEXTPOW2N/PREVPOW2N/ISPOW2N power-of-two ceil/floor/predicate.",
+  "notes": "NEXTPOW2N/PREVPOW2N/ISPOW2N power-of-two ceil/floor/predicate (twin of stack SCEILPOW2). Soft ERR on non-positive NEXT. Aliases CEILPOW2N FLOORPOW2N ISPOWER2N. Usability: pagesz=NEXTPOW2N nbytes after GETFLAGN.",
   "pure_c": "src/lang/lang_ops_math.c",
   "selftest": "PASS",
   "item": "2055 nextpow2n prevpow2n ispow2n",
   "item_id": "mi_2055_nextpow2n_prevpow2n",
-  "head": "42054b3e8f9f569728da5cd5a12a0639a024e1bd",
-  "HEAD": "42054b3e8f9f569728da5cd5a12a0639a024e1bd",
-  "tip": "42054b3e8f9f569728da5cd5a12a0639a024e1bd",
-  "short": "42054b3e8",
-  "pinned": true,
-  "tip_eq_pin": true
+  "title": "2055 NEXTPOW2N PREVPOW2N ISPOW2N",
+  "summary": "power-of-two ceil/floor/predicate pure C + proof 34 asserts",
+  "head_note": "NEXTPOW2N page pad without shell arithmetic",
+  "head": "d7916def70495d83a99815fd4b28c6042c9f2899",
+  "updated": 1788795202
 }
