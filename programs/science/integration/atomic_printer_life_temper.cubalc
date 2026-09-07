@@ -1,0 +1,86 @@
+// atomic_printer_life_temper.cubalc
+// Science board: atomic printer + life_cell temper heat setpoint homeostat.
+// Radiate excess above t. Never creates heat. Yield sheds on excess only.
+// Does not touch energy/atp/pmf/pcr/ready. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_temper | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 10 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+
+// life_cell temper science
+GETF seed energy
+ASSERT LAST_N == 10 "seed e 10"
+SEND seed shiver 5
+ASSERT LAST_N == 5 "shiver 5"
+SEND seed warmth
+ASSERT LAST_N == 5 "warmth 5"
+SEND seed temper 2
+ASSERT LAST_N == 2 "temper→2"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+GETF seed energy
+ASSERT LAST_N == 5 "e held 5"
+SEND seed temper 0
+ASSERT LAST_N == 0 "temper clear"
+SEND seed warmth
+ASSERT LAST_N == 0 "warmth 0"
+SEND seed yield
+ASSERT LAST_N == 5 "yield 5"
+
+// futile → temper
+SEND seed charge 3
+ASSERT LAST_N == 3 "charge 3"
+SEND seed futile 2
+ASSERT LAST_N == 2 "futile 2"
+SEND seed warmth
+ASSERT LAST_N == 2 "warmth 2"
+SEND seed temper 1
+ASSERT LAST_N == 1 "temper 1"
+SEND seed charged
+ASSERT LAST_N == 1 "atp held"
+SEND seed temper 0
+ASSERT LAST_N == 0 "clear"
+
+// dead isolation
+SEND d1 temper 4
+ASSERT LAST_N == 0 "dead 0"
+
+// printer mesh still live
+SMX EXCHANGE bed hive
+ASSERT SMX_OK == 1 "smx still ok"
+IMPULSE membrane 1
+ENERGYFLOW 1
+
+ASSERT 1 == 1 "atomic_printer_life_temper PASS"

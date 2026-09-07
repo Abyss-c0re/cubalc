@@ -67,6 +67,7 @@
 #   boost n              PCr → energy (phosphagen mitosis boost; yield conserved)
 #   load n               energy → PCr (phosphagen load shortcut; yield conserved)
 #   cool n               heat → environment (radiative cooling; yield sheds)
+#   temper t             heat setpoint: radiate excess above t (homeostat; yield sheds)
 
 CLASS Cell
   FIELD alive 0
@@ -1496,6 +1497,32 @@ CLASS Cell
     SETF THIS heat h
     RET take
   END
+
+  # Temper: homeostatic heat setpoint — radiate excess warmth above target t.
+  # If heat > t, cool (heat - t); if heat <= t, no-op (never creates heat).
+  # Yield sheds only when excess cleared. Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI holds thermal ceiling after shiver/futile/uncouple budgets.
+  # Returns final heat. Dead → 0. t < 0 treated as 0.
+  METHOD temper t
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    LET tgt = t
+    IF tgt < 0 THEN
+      LET tgt = 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    IF h <= tgt THEN
+      RET h
+    END
+    LET take = h - tgt
+    LET h = h - take
+    SETF THIS heat h
+    RET h
+  END
+
 
 
 END

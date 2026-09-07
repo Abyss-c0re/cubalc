@@ -1,0 +1,5 @@
+SHIP 2051 LIFE_CELL_TEMPER
+METHOD temper t — heat setpoint homeostat (radiate excess above t)
+proof PASS asserts_ok=75 science=22 cool_regression=66
+VERSION 1.15.1533-usability MEANINGFUL_ITER 2051
+pure .cubalc in programs/lib/life_cell.cubalc

@@ -1,0 +1,7 @@
+LIFE_CELL_TEMPER 2050
+feat — programs/lib/life_cell.cubalc METHOD temper t
+proofs 2050 asserts_ok=75 fail=0; science 20/0; flagship 1620 PASS 12/0
+pin MEANINGFUL_ITER 2050 · VERSION 1.15.1533-usability
+free energy: temper t radiates excess heat above setpoint; never creates heat; energy/atp/pmf/pcr untouched; yield sheds on excess
+homeostat companion to cool n — AGI holds thermal ceiling after cold-stress budgets
+programs/proof/2050_life_cell_temper.cubalc
