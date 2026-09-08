@@ -1,8 +1,6 @@
 SHIP 2075 ILOG2N / BITWIDTHN
-feature: ilog2n_bitwidthn
-forms: ILOG2N|FLOORLOG2N|LOG2N|INTLOG2N ; BITWIDTHN|NBITSN|BITLENN|WIDTHN|BIT_WIDTH_N|BITLENGTHN
+feature: floor(log2(x)) + bit length → LAST_N
+pure C: src/lang/lang_ops_math.c + help catalog lang_ops_core.c
 proof: programs/proof/2075_ilog2n_bitwidthn.cubalc asserts_ok=37 fail=0
+aliases: FLOORLOG2N LOG2N INTLOG2N / NBITSN BITLENN WIDTHN
 usability: shift = ILOG2N pagesz after NEXTPOW2N; width = BITWIDTHN n after GETFLAGN
-soft-fail: ILOG2N x<=0 ; BITWIDTHN x<0 → LAST_N=0 *_OK=0 sticky LAST_ERR
-twin: stack SILOG2
-version: 1.15.1561-usability

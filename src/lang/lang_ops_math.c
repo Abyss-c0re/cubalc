@@ -6729,5 +6729,117 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* POPCOUNTN|BITCOUNTN|PCNTN x — Hamming weight of 64-bit pattern → LAST_N.
+   * CLZN|NLZN|LZCNTN x — leading zero count in 64-bit (0→64).
+   * CTZN|NTZN|TZCNTN x — trailing zero count in 64-bit (0→64).
+   * PARITYN|XORREDN|PARN x — xor-reduce of bits (popcount & 1).
+   * Twin of stack SPOPCNT/SCLZ/SCTZ. Usability: bits = POPCOUNTN flags after GETFLAGN. */
+  if (kw(&L->cur,"POPCOUNTN") || kw(&L->cur,"BITCOUNTN") || kw(&L->cur,"PCNTN") ||
+      kw(&L->cur,"POPCNTN") || kw(&L->cur,"HAMMINGN") || kw(&L->cur,"ONESN") ||
+      kw(&L->cur,"CLZN") || kw(&L->cur,"NLZN") || kw(&L->cur,"LZCNTN") ||
+      kw(&L->cur,"LEADINGZEROSN") || kw(&L->cur,"COUNTLZN") || kw(&L->cur,"CLZ_N") ||
+      kw(&L->cur,"CTZN") || kw(&L->cur,"NTZN") || kw(&L->cur,"TZCNTN") ||
+      kw(&L->cur,"TRAILINGZEROSN") || kw(&L->cur,"COUNTTZN") || kw(&L->cur,"CTZ_N") ||
+      kw(&L->cur,"PARITYN") || kw(&L->cur,"XORREDN") || kw(&L->cur,"PARN") ||
+      kw(&L->cur,"PARITY_N") || kw(&L->cur,"XORREDUCEN") || kw(&L->cur,"BITPARITYN")){
+    long x = 0, out = 0;
+    int mode = 0; /* 0=pop 1=clz 2=ctz 3=parity */
+    char nbuf[32];
+    if (kw(&L->cur,"CLZN") || kw(&L->cur,"NLZN") || kw(&L->cur,"LZCNTN") ||
+        kw(&L->cur,"LEADINGZEROSN") || kw(&L->cur,"COUNTLZN") || kw(&L->cur,"CLZ_N"))
+      mode = 1;
+    else if (kw(&L->cur,"CTZN") || kw(&L->cur,"NTZN") || kw(&L->cur,"TZCNTN") ||
+             kw(&L->cur,"TRAILINGZEROSN") || kw(&L->cur,"COUNTTZN") || kw(&L->cur,"CTZ_N"))
+      mode = 2;
+    else if (kw(&L->cur,"PARITYN") || kw(&L->cur,"XORREDN") || kw(&L->cur,"PARN") ||
+             kw(&L->cur,"PARITY_N") || kw(&L->cur,"XORREDUCEN") || kw(&L->cur,"BITPARITYN"))
+      mode = 3;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) {
+        fail_at(vm, L, mode==1 ? "CLZN x — unknown x" :
+                        mode==2 ? "CTZN x — unknown x" :
+                        mode==3 ? "PARITYN x — unknown x" : "POPCOUNTN x — unknown x");
+        return -1;
+      }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, mode==1 ? "CLZN x — CLZN n" :
+                      mode==2 ? "CTZN x — CTZN n" :
+                      mode==3 ? "PARITYN x — PARITYN n" : "POPCOUNTN x — POPCOUNTN flags");
+      return -1;
+    }
+    {
+      unsigned long u = (unsigned long)x;
+      if (mode == 0) {
+        out = 0;
+        while (u) { out += (long)(u & 1ul); u >>= 1; }
+      } else if (mode == 1) {
+        if (u == 0) out = 64;
+        else {
+          out = 0;
+          for (int i = 63; i >= 0; i--) {
+            if (u & (1ul << (unsigned)i)) break;
+            out++;
+          }
+        }
+      } else if (mode == 2) {
+        if (u == 0) out = 64;
+        else {
+          out = 0;
+          while ((u & 1ul) == 0) { out++; u >>= 1; }
+        }
+      } else {
+        out = 0;
+        while (u) { out ^= (long)(u & 1ul); u >>= 1; }
+      }
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    if (mode == 0) {
+      var_set_num(vm, "POPCOUNTN", out);
+      var_set_num(vm, "BITCOUNTN", out);
+      var_set_num(vm, "PCNTN", out);
+      var_set_num(vm, "POPCNTN", out);
+      var_set_num(vm, "POPCOUNTN_X", x);
+      var_set_num(vm, "POPCOUNTN_OK", 1L);
+    } else if (mode == 1) {
+      var_set_num(vm, "CLZN", out);
+      var_set_num(vm, "NLZN", out);
+      var_set_num(vm, "LZCNTN", out);
+      var_set_num(vm, "CLZN_X", x);
+      var_set_num(vm, "CLZN_OK", 1L);
+    } else if (mode == 2) {
+      var_set_num(vm, "CTZN", out);
+      var_set_num(vm, "NTZN", out);
+      var_set_num(vm, "TZCNTN", out);
+      var_set_num(vm, "CTZN_X", x);
+      var_set_num(vm, "CTZN_OK", 1L);
+    } else {
+      var_set_num(vm, "PARITYN", out);
+      var_set_num(vm, "XORREDN", out);
+      var_set_num(vm, "PARN", out);
+      var_set_num(vm, "PARITYN_X", x);
+      var_set_num(vm, "PARITYN_OK", 1L);
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %ld -> %ld\n",
+              mode==1?"clzn":mode==2?"ctzn":mode==3?"parityn":"popcountn", x, out);
+    bump(vm); return 1;
+  }
+
+
   return 0;
 }
