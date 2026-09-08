@@ -27,10 +27,10 @@
   "science_asserts_ok": 18,
   "host_finish": true,
   "anti_bloat": true,
-  "head": "bd472457d521653f89a100362dc7433bae0ddbe7",
-  "tip": "bd472457d521653f89a100362dc7433bae0ddbe7",
-  "pinned_head": "bd472457d521653f89a100362dc7433bae0ddbe7",
+  "head": "f07995a812a7546fc1215f2af6a9854ab4b39c57",
+  "tip": "f07995a812a7546fc1215f2af6a9854ab4b39c57",
+  "pinned_head": "f07995a812a7546fc1215f2af6a9854ab4b39c57",
   "feat_head": "41b9f1a98cbf525f43a8b4c34ba829817e534432",
-  "commit": "bd472457d",
-  "short": "bd472457d"
+  "commit": "f07995a81",
+  "short": "f07995a81"
 }
