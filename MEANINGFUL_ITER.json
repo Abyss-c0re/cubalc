@@ -3,7 +3,6 @@
   "meaningful_iter": 2077,
   "MEANINGFUL_ITER": 2077,
   "iter": 2077,
-  "n": 2077,
   "version": "1.15.1563-usability",
   "VERSION": "1.15.1563-usability",
   "feature": "popcountn_clzn_ctzn_parityn",
@@ -13,20 +12,8 @@
   "proofs": [
     "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc"
   ],
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pinned_head": "PENDING",
-  "feat_head": "PENDING",
-  "item": "popcountn clzn ctzn parityn",
-  "item_id": "mi_popcountn_clzn_ctzn_parityn",
-  "title": "POPCOUNTN_CLZN_CTZN_PARITYN",
-  "name": "POPCOUNTN_CLZN_CTZN_PARITYN",
-  "label": "POPCOUNTN_CLZN_CTZN_PARITYN",
-  "commit": "PENDING",
-  "summary": "POPCOUNTN/CLZN/CTZN/PARITYN 64-bit bit-metric usability pure C",
-  "ts": "2026-09-08T18:27:32Z",
-  "asserts_ok": 35,
-  "asserts_fail": 0,
-  "host_finish": true,
-  "anti_bloat": true
+  "head": "0360734748a632f6d47a98642cb31b5dc515b871",
+  "tip": "0360734748a632f6d47a98642cb31b5dc515b871",
+  "pinned_head": "0360734748a632f6d47a98642cb31b5dc515b871",
+  "feat_head": "0360734748a632f6d47a98642cb31b5dc515b871"
 }
