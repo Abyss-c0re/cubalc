@@ -12,14 +12,14 @@
   "proofs": [
     "programs/proof/2075_ilog2n_bitwidthn.cubalc"
   ],
-  "head": "cc3501850a6ca6035e16388dd8938c144c8e191d",
-  "tip": "cc3501850a6ca6035e16388dd8938c144c8e191d",
-  "pinned_head": "cc3501850a6ca6035e16388dd8938c144c8e191d",
+  "head": "8984fe08ecbacec4e7a4786df29dd5436a4bbdb4",
+  "tip": "8984fe08ecbacec4e7a4786df29dd5436a4bbdb4",
+  "pinned_head": "8984fe08ecbacec4e7a4786df29dd5436a4bbdb4",
   "feat_head": "245929bc6d981282504d62e6f9d031d01ea9d3ef",
   "item": "ilog2n bitwidthn",
   "item_id": "mi_ilog2n_bitwidthn",
   "title": "ILOG2N_BITWIDTHN",
-  "commit": "cc3501850",
+  "commit": "8984fe08e",
   "summary": "ILOG2N/BITWIDTHN floor-log2 + bit-length usability; proof 2075 asserts_ok=37 fail=0; pushed main.",
   "ts": "2026-09-08T18:20:40Z",
   "host_finish": true,
