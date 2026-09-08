@@ -1,5 +1,13 @@
 ## 1.15.1561-usability — 2075 ILOG2N_BITWIDTHN
 
+## 1.15.1573-usability — 2087 LIFE_CELL_EXOCYTE
+
+- feat(life): exocyte n membrane-paid fluid-phase exocytosis (shed reserve cargo to medium)
+- pairs with pinocyte inbound; free-energy cargo loop; no heat; spark-safe cost
+- proofs: 2087_life_cell_exocyte 61/0; science atomic_printer_life_exocyte 26/0
+- VERSION 1.15.1573-usability
+
+
 ## 1.15.1571-usability — 2026-09-08
 
 ### Direction

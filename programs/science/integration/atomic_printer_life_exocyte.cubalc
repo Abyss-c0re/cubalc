@@ -1,0 +1,77 @@
+// atomic_printer_life_exocyte.cubalc
+// Science board: fluid-phase exocytosis on the atomic printer life substrate.
+// Reserve cargo -> membrane-paid medium export; pairs with pinocyte inbound arc.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 18 0
+ENTITY sink OF Cell 1 10 0
+SEND printer set_threshold 12
+SEND sink set_threshold 10
+
+SEND printer bank 3
+ASSERT LAST_N == 3 "printer bank3"
+GETF printer energy
+ASSERT LAST_N == 15 "printer e15"
+
+SEND printer pinocyte 7
+ASSERT LAST_N == 7 "printer pinocyte7"
+GETF printer energy
+ASSERT LAST_N == 14 "printer after pin membrane"
+SEND printer stores
+ASSERT LAST_N == 10 "printer r3+7"
+
+SEND printer exocyte 5
+ASSERT LAST_N == 5 "printer exocyte5"
+GETF printer energy
+ASSERT LAST_N == 13 "printer exo membrane"
+SEND printer stores
+ASSERT LAST_N == 5 "printer r5"
+GETF printer heat
+ASSERT LAST_N == 0 "exocyte no heat"
+GETF printer ready
+ASSERT LAST_N == 1 "printer ready e>=thr"
+
+// remaining cargo can still digest
+SEND printer digest 3
+ASSERT LAST_N == 3 "printer digest residual"
+GETF printer energy
+ASSERT LAST_N == 16 "printer e13+3"
+SEND printer stores
+ASSERT LAST_N == 2 "printer r2"
+GETF printer heat
+ASSERT LAST_N == 1 "lysosomal heat"
+
+ENTITY spark OF Cell 1 1 0
+SEND spark exocyte 1
+ASSERT LAST_N == 0 "spark cannot exocyte"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+
+// empty reserve fail-closed
+ENTITY bare OF Cell 1 12 0
+SEND bare exocyte 4
+ASSERT LAST_N == 0 "bare no cargo"
+GETF bare energy
+ASSERT LAST_N == 12 "bare e untouched"
+
+// sink receives metaphorically via pinocyte after printer export (two-cell free energy flow)
+SEND sink pinocyte 5
+ASSERT LAST_N == 5 "sink drinks medium"
+GETF sink energy
+ASSERT LAST_N == 9 "sink membrane paid"
+SEND sink stores
+ASSERT LAST_N == 5 "sink r5"
+
+SEND printer vitality
+ASSERT LAST_N > 0 "printer vital"
+SEND sink total
+ASSERT LAST_N >= 10 "sink wealth"
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+GETF sink alive
+ASSERT LAST_N == 1 "sink lives"
+
+PASS "atomic_printer_life_exocyte science PASS"

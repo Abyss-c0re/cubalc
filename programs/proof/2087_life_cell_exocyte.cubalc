@@ -1,0 +1,209 @@
+// 2087_life_cell_exocyte.cubalc
+// Proof 2087: life_cell exocyte — fluid-phase exocytosis (membrane-paid cargo export).
+// Pay 1 energy membrane cost, shed n reserve to medium; cell lives; ready recompute.
+// Distinct from pinocyte (inbound), secrete (coded energy-first), gift, digest, scavenge.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY exp OF Cell 1 20 0
+ENTITY weak OF Cell 1 1 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 15 0
+ENTITY lean OF Cell 1 2 0
+ENTITY empty OF Cell 1 12 0
+
+SEND exp set_threshold 10
+SEND weak set_threshold 10
+SEND g0 set_threshold 10
+SEND lean set_threshold 10
+SEND empty set_threshold 10
+
+// stock cargo via pinocyte then export
+SEND exp pinocyte 8
+ASSERT LAST_N == 8 "exp pinocyte8"
+GETF exp energy
+ASSERT LAST_N == 19 "exp e19 after pin"
+SEND exp stores
+ASSERT LAST_N == 8 "exp r8"
+
+SEND exp exocyte 5
+ASSERT LAST_N == 5 "exp exocyte5"
+GETF exp energy
+ASSERT LAST_N == 18 "exp e18 membrane"
+SEND exp stores
+ASSERT LAST_N == 3 "exp r3"
+GETF exp alive
+ASSERT LAST_N == 1 "exp lives"
+GETF exp heat
+ASSERT LAST_N == 0 "exocyte no heat"
+GETF exp ready
+ASSERT LAST_N == 1 "exp still ready"
+
+// partial when n > reserve
+SEND exp exocyte 10
+ASSERT LAST_N == 3 "exp clamp to r"
+GETF exp energy
+ASSERT LAST_N == 17 "exp e17"
+SEND exp stores
+ASSERT LAST_N == 0 "exp r0"
+
+// empty reserve rejects without cost
+SEND empty exocyte 2
+ASSERT LAST_N == 0 "empty fail"
+GETF empty energy
+ASSERT LAST_N == 12 "empty e held"
+SEND empty stores
+ASSERT LAST_N == 0 "empty r0"
+
+// n<1 rejects without cost
+ENTITY ok OF Cell 1 12 0
+SEND ok set_threshold 10
+SEND ok bank 4
+ASSERT LAST_N == 4 "ok bank4"
+SEND ok exocyte 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF ok energy
+ASSERT LAST_N == 8 "ok e no cost after bank"
+SEND ok stores
+ASSERT LAST_N == 4 "ok r4 held"
+
+// weak spark-only cannot pay membrane
+SEND weak bank 0
+// give weak reserve via init path: birth-like — use pinocyte fail then set via bank from feed
+ENTITY wk OF Cell 1 1 0
+SEND wk set_threshold 10
+// cannot bank from spark; feed then bank then drain energy? feed raises e
+SEND wk feed 5
+SEND wk bank 3
+GETF wk energy
+// e was 1+5=6, bank3 -> e3 r3
+ASSERT LAST_N == 3 "wk e3"
+SEND wk stores
+ASSERT LAST_N == 3 "wk r3"
+// burn down to spark while keeping reserve: gift down
+SEND wk gift 2
+GETF wk energy
+ASSERT LAST_N == 1 "wk spark"
+SEND wk stores
+ASSERT LAST_N == 3 "wk r3 held"
+SEND wk exocyte 2
+ASSERT LAST_N == 0 "wk spark cannot exocyte"
+GETF wk energy
+ASSERT LAST_N == 1 "wk spark held"
+SEND wk stores
+ASSERT LAST_N == 3 "wk r held"
+
+// lean e=2 with reserve: pay once
+SEND lean feed 0
+SEND lean pinocyte 4
+// lean started e2, pinocyte pays1 -> e1 r4 — too weak for exocyte
+// rebuild lean2
+ENTITY ln OF Cell 1 3 0
+SEND ln set_threshold 10
+SEND ln pinocyte 5
+ASSERT LAST_N == 5 "ln pin5"
+GETF ln energy
+ASSERT LAST_N == 2 "ln e2"
+SEND ln stores
+ASSERT LAST_N == 5 "ln r5"
+SEND ln exocyte 3
+ASSERT LAST_N == 3 "ln exocyte3"
+GETF ln energy
+ASSERT LAST_N == 1 "ln spark after"
+SEND ln stores
+ASSERT LAST_N == 2 "ln r2"
+SEND ln exocyte 1
+ASSERT LAST_N == 0 "ln second fail spark"
+GETF ln energy
+ASSERT LAST_N == 1 "ln spark held"
+SEND ln stores
+ASSERT LAST_N == 2 "ln r2 held"
+
+// dead rejects
+SEND dead exocyte 3
+ASSERT LAST_N == 0 "dead fail"
+GETF dead energy
+ASSERT LAST_N == 20 "dead e untouched"
+
+// G0 may exocyte but stays unready
+SEND g0 pinocyte 6
+ASSERT LAST_N == 6 "g0 pin6"
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 energy
+LET ge = LAST_N
+SEND g0 stores
+LET gr = LAST_N
+SEND g0 exocyte 2
+ASSERT LAST_N == 2 "g0 exocyte2"
+GETF g0 energy
+ASSERT LAST_N == ge - 1 "g0 paid membrane"
+SEND g0 stores
+ASSERT LAST_N == gr - 2 "g0 r shed"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready while q"
+SEND g0 wake
+
+// pinocyte ↔ exocyte free-energy cargo loop (membrane paid both ways)
+ENTITY loop OF Cell 1 15 0
+SEND loop set_threshold 10
+SEND loop pinocyte 4
+ASSERT LAST_N == 4 "loop pin4"
+GETF loop energy
+ASSERT LAST_N == 14 "loop e14"
+SEND loop stores
+ASSERT LAST_N == 4 "loop r4"
+SEND loop exocyte 4
+ASSERT LAST_N == 4 "loop exo4"
+GETF loop energy
+ASSERT LAST_N == 13 "loop e13"
+SEND loop stores
+ASSERT LAST_N == 0 "loop r0"
+
+// secrete codes energy; exocyte sheds reserve only
+ENTITY sec OF Cell 1 20 0
+SEND sec set_threshold 10
+SEND sec bank 5
+SEND sec secrete 3
+ASSERT LAST_N == 3000 "sec de3 code"
+GETF sec energy
+LET se = LAST_N
+SEND sec stores
+LET sr = LAST_N
+// restock and exocyte reserve path
+SEND sec pinocyte 4
+SEND sec exocyte 2
+ASSERT LAST_N == 2 "sec exocyte reserve path"
+SEND sec stores
+ASSERT LAST_N == sr + 4 - 2 "sec r after pin-exo"
+
+// digest vs exocyte: digest yields energy+heat; exocyte exports cargo
+ENTITY dig OF Cell 1 14 0
+SEND dig set_threshold 10
+SEND dig pinocyte 6
+SEND dig digest 3
+ASSERT LAST_N == 3 "dig digest3"
+GETF dig heat
+ASSERT LAST_N == 1 "dig heat1"
+GETF dig energy
+LET de = LAST_N
+SEND dig stores
+LET dr = LAST_N
+SEND dig exocyte 2
+ASSERT LAST_N == 2 "dig exocyte2"
+GETF dig energy
+ASSERT LAST_N == de - 1 "dig paid membrane not gain"
+GETF dig heat
+ASSERT LAST_N == 1 "exocyte no extra heat"
+SEND dig stores
+ASSERT LAST_N == dr - 2 "dig r shed"
+
+SEND exp vitality
+ASSERT LAST_N > 0 "exp vital"
+SEND loop total
+ASSERT LAST_N >= 10 "loop wealth"
+
+PASS "2087 life_cell exocyte fluid-phase PASS"

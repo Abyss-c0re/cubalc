@@ -22,6 +22,7 @@
 #   engulf code          phagocytosis — pay 1 energy membrane cost, absorb endowment code (de*1000+dr); predator lives
 #   digest n             lysosome — burn n reserve cargo → energy +1 heat; completes engulf arc
 #   pinocyte n           fluid-phase endocytosis — pay 1 membrane energy, gain n reserve from medium
+#   exocyte n            fluid-phase exocytosis — pay 1 membrane energy, shed n reserve cargo to medium
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3035,6 +3036,67 @@ CLASS Cell
     END
     SETF THIS ready rd
     RET n
+  END
+
+
+  # Exocyte: fluid-phase exocytosis — membrane-paid export of reserve cargo to medium.
+  # Pays 1 active-energy membrane-remodel cost (keep spark: need energy >= 2), then
+  # sheds take=min(n,reserve) from reserve. Ready recomputed vs threshold.
+  # No thr/G0 gate after cost — stressed cells may still export if they can pay membrane.
+  # ATP/pmf/pcr/heat untouched. Distinct from pinocyte (inbound medium→reserve),
+  # secrete (energy-first coded vesicle pack, no separate membrane fee), gift (active
+  # energy only), digest (reserve→energy+heat), scavenge (reserve→age), bank/draw,
+  # lyse (death pack). Completes pinocyte↔exocyte free-energy cargo loop.
+  # Usability: AGI models vesicular export / cargo dumping without dual IF*P forms.
+  # Returns take exported; dead/n<1/empty reserve/cost-fail → 0 (no partial cost on fail).
+  METHOD exocyte n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    IF r < 1 THEN
+      RET 0
+    END
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # membrane cost 1; retain life spark
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 1
+    LET r = r - take
+    SETF THIS energy e
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
   END
 
 
