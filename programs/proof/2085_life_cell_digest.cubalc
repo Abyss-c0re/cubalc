@@ -1,0 +1,217 @@
+// 2085_life_cell_digest.cubalc
+// Proof 2085: life_cell digest — lysosomal cargo processing after engulf.
+// Burn n reserve → +n energy +1 heat; predator lives; ready recomputed.
+// Distinct from draw (no heat), reclaim (heat→reserve), scavenge (discard),
+// engulf (inbound code), feed/bank/secrete/lyse. Completes phagocytosis arc.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY pred OF Cell 1 20 0
+ENTITY prey OF Cell 1 30 0
+ENTITY weak OF Cell 1 1 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 15 0
+
+SEND pred set_threshold 10
+SEND prey set_threshold 10
+SEND weak set_threshold 10
+SEND g0 set_threshold 10
+
+// baseline pred: bank some glycogen then feast via secrete→engulf
+SEND pred bank 4
+ASSERT LAST_N == 4 "pred bank4"
+GETF pred energy
+ASSERT LAST_N == 16 "pred e16"
+SEND pred stores
+ASSERT LAST_N == 4 "pred r4"
+
+// prey packs energy vesicle
+SEND prey bank 10
+ASSERT LAST_N == 10 "prey bank10"
+GETF prey energy
+ASSERT LAST_N == 20 "prey e20"
+SEND prey secrete 18
+ASSERT LAST_N == 18000 "prey vesicle de18"
+GETF prey energy
+ASSERT LAST_N == 2 "prey e2 sparkish"
+SEND prey stores
+ASSERT LAST_N == 10 "prey r10 held"
+GETF prey alive
+ASSERT LAST_N == 1 "prey lives"
+
+// pred engulfs: membrane 1 then +18 energy
+SEND pred engulf 18000
+ASSERT LAST_N == 18 "pred engulf got18"
+GETF pred energy
+ASSERT LAST_N == 33 "pred e16-1+18=33"
+SEND pred stores
+ASSERT LAST_N == 4 "pred r4 cargo untouched by pure-energy vesicle"
+GETF pred ready
+ASSERT LAST_N == 1 "pred ready"
+
+// reserve-heavy vesicle
+ENTITY gland OF Cell 1 6 0
+SEND gland set_threshold 10
+SEND gland bank 5
+SEND gland secrete 4
+ASSERT LAST_N == 4 "gland vesicle dr4"
+GETF gland energy
+ASSERT LAST_N == 1 "gland spark held"
+SEND gland stores
+ASSERT LAST_N == 1 "gland r1 left"
+
+ENTITY hunter OF Cell 1 12 0
+SEND hunter set_threshold 10
+SEND hunter bank 3
+SEND hunter engulf 4
+ASSERT LAST_N == 4 "hunter got4 cargo"
+GETF hunter energy
+ASSERT LAST_N == 8 "hunter e9-1+0=8"
+SEND hunter stores
+ASSERT LAST_N == 7 "hunter r3+4=7"
+GETF hunter ready
+ASSERT LAST_N == 0 "hunter not ready e8<10"
+
+// digest 5 cargo → energy +5, heat +1
+SEND hunter digest 5
+ASSERT LAST_N == 5 "digest5"
+GETF hunter energy
+ASSERT LAST_N == 13 "hunter e8+5=13"
+SEND hunter stores
+ASSERT LAST_N == 2 "hunter r7-5=2"
+GETF hunter heat
+ASSERT LAST_N == 1 "heat byproduct 1"
+GETF hunter ready
+ASSERT LAST_N == 1 "hunter ready e13>=10"
+GETF hunter alive
+ASSERT LAST_N == 1 "hunter lives"
+
+// digest clamps to remaining reserve
+SEND hunter digest 100
+ASSERT LAST_N == 2 "digest clamp2"
+GETF hunter energy
+ASSERT LAST_N == 15 "e13+2"
+SEND hunter stores
+ASSERT LAST_N == 0 "r0"
+GETF hunter heat
+ASSERT LAST_N == 2 "heat2"
+
+// empty reserve → 0
+SEND hunter digest 1
+ASSERT LAST_N == 0 "empty digest0"
+GETF hunter heat
+ASSERT LAST_N == 2 "heat unchanged"
+
+// n<1 → 0
+SEND hunter digest 0
+ASSERT LAST_N == 0 "n0"
+SEND hunter digest -3
+ASSERT LAST_N == 0 "nneg"
+
+// dead cannot digest
+SEND dead digest 5
+ASSERT LAST_N == 0 "dead0"
+
+// weak path
+SEND weak feed 9
+LET fed = LAST_N
+ASSERT fed >= 9 "weak feed>=9"
+GETF weak energy
+LET we = LAST_N
+ASSERT we >= 10 "weak e>=10"
+SEND weak bank 6
+ASSERT LAST_N == 6 "weak bank6"
+GETF weak energy
+LET we2 = LAST_N
+SEND weak stores
+LET wr = LAST_N
+ASSERT wr >= 6 "weak r>=6"
+SEND weak digest 3
+ASSERT LAST_N == 3 "weak digest3"
+GETF weak energy
+ASSERT LAST_N == we2 + 3 "weak e+3"
+SEND weak stores
+ASSERT LAST_N == wr - 3 "weak r-3"
+GETF weak heat
+ASSERT LAST_N == 1 "weak heat1"
+
+// G0: digest still yields energy but ready stays 0
+SEND g0 bank 5
+SEND g0 quiesce
+ASSERT LAST_N == 1 "g0 rest"
+SEND g0 digest 2
+ASSERT LAST_N == 2 "g0 digest2"
+GETF g0 energy
+ASSERT LAST_N == 12 "g0 e10+2"
+SEND g0 stores
+ASSERT LAST_N == 3 "g0 r3"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready"
+SEND g0 wake
+GETF g0 ready
+ASSERT LAST_N == 1 "g0 wake ready"
+
+// draw vs digest: draw has no heat
+ENTITY twin OF Cell 1 10 0
+SEND twin set_threshold 10
+SEND twin bank 4
+GETF twin heat
+LET h0 = LAST_N
+SEND twin draw 2
+ASSERT LAST_N == 2 "draw2"
+GETF twin heat
+ASSERT LAST_N == h0 "draw no heat"
+SEND twin digest 1
+ASSERT LAST_N == 1 "digest1 after draw"
+GETF twin heat
+ASSERT LAST_N == h0 + 1 "digest adds heat"
+
+// full trophic arc
+ENTITY donor OF Cell 1 40 0
+ENTITY phago OF Cell 1 15 0
+SEND donor set_threshold 10
+SEND phago set_threshold 10
+SEND donor bank 12
+SEND donor secrete 10
+ASSERT LAST_N == 10000 "donor vesicle de10"
+SEND phago engulf 10000
+ASSERT LAST_N == 10 "phago got10"
+GETF phago energy
+ASSERT LAST_N == 24 "phago e24"
+SEND donor secrete 8
+ASSERT LAST_N == 8000 "donor second energy vesicle"
+SEND donor bank 9
+SEND donor secrete 6
+ASSERT LAST_N == 6 "donor cargo vesicle"
+SEND phago engulf 6
+ASSERT LAST_N == 6 "phago cargo6"
+GETF phago energy
+ASSERT LAST_N == 23 "phago e24-1+0=23"
+SEND phago stores
+ASSERT LAST_N == 6 "phago r6"
+SEND phago digest 6
+ASSERT LAST_N == 6 "phago digest cargo"
+GETF phago energy
+ASSERT LAST_N == 29 "phago e29"
+SEND phago stores
+ASSERT LAST_N == 0 "phago r0"
+GETF phago heat
+ASSERT LAST_N == 1 "phago heat1"
+GETF phago alive
+ASSERT LAST_N == 1 "phago lives"
+GETF donor alive
+ASSERT LAST_N == 1 "donor lives"
+
+SEND phago vitality
+ASSERT LAST_N > 0 "phago vital"
+SEND pred vitality
+ASSERT LAST_N > 0 "pred vital"
+
+SEND phago total
+ASSERT LAST_N >= 20 "phago wealth"
+SEND pred total
+ASSERT LAST_N >= 20 "pred wealth"
+
+PASS "2085 life_cell digest lysosome PASS"

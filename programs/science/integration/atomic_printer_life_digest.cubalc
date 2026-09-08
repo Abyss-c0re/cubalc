@@ -1,0 +1,68 @@
+// atomic_printer_life_digest.cubalc
+// Science board: atomic printer colony completes phagocytosis via digest.
+// Secrete vesicle → engulf membrane work → lysosomal digest cargo → mitosis fuel.
+// Cube is SoT. Manifest life-force: endocytic yield without dual IF*P forms.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 50 0
+ENTITY hunter OF Cell 1 14 0
+ENTITY pup OF Cell 0 0 0
+
+SEND printer set_threshold 12
+SEND hunter set_threshold 12
+
+SEND printer photosynth 10
+ASSERT LAST_N == 10 "printer light→reserve10"
+SEND printer bank 20
+ASSERT LAST_N == 20 "printer bank20"
+SEND printer yield
+ASSERT LAST_N == 60 "printer yield60"
+
+SEND printer secrete 15
+ASSERT LAST_N == 15000 "vesicle de15"
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+
+SEND hunter engulf 15000
+ASSERT LAST_N == 15 "engulf15"
+GETF hunter energy
+ASSERT LAST_N == 28 "hunter 14-1+15"
+
+SEND printer bank 10
+SEND printer secrete 8
+LET code = LAST_N
+ASSERT code > 0 "cargo code"
+SEND hunter engulf code
+LET got = LAST_N
+ASSERT got > 0 "cargo engulfed"
+
+SEND hunter stores
+LET cargo = LAST_N
+IF cargo > 0 THEN
+  SEND hunter digest cargo
+  ASSERT LAST_N == cargo "digest all cargo"
+END
+
+GETF hunter energy
+ASSERT LAST_N >= 20 "hunter fueled"
+GETF hunter alive
+ASSERT LAST_N == 1 "hunter lives"
+GETF hunter ready
+ASSERT LAST_N == 1 "hunter ready for mitosis"
+
+SEND hunter after_div
+SEND pup birth 6 1
+ASSERT LAST_N == 1 "pup born"
+SEND pup set_threshold 12
+SEND pup feed 4
+SEND pup vitality
+ASSERT LAST_N > 0 "pup vital"
+
+SEND printer vitality
+ASSERT LAST_N > 0 "printer vital"
+SEND hunter total
+ASSERT LAST_N >= 8 "hunter post-div wealth"
+
+PASS "atomic_printer_life_digest PASS"

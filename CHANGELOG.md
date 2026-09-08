@@ -1,4 +1,18 @@
 ## 1.15.1561-usability — 2075 ILOG2N_BITWIDTHN
+
+## 1.15.1571-usability — 2026-09-08
+
+### Direction
+- Life-force **digest**: lysosomal cargo processing completes phagocytosis after engulf.
+
+### Language / lib
+- `Cell.digest n` — burn n reserve → +n energy +1 heat; ready recompute; G0-safe
+- Distinct from `draw` (no heat), `reclaim` (heat→reserve), `scavenge`, `engulf`, `feed`
+- Proof `2085_life_cell_digest.cubalc` + science `atomic_printer_life_digest.cubalc`
+
+### Prior
+See 1.15.1570-usability.
+
 - feat(lang): ILOG2N/BITWIDTHN floor-log2 + bit-length usability (*N forms)
 - proof 2075 asserts_ok=37 fail=0; aliases FLOORLOG2N/LOG2N/NBITSN/BITLENN/WIDTHN
 - soft-fail non-positive ILOG2 / negative BITWIDTH; pairs with NEXTPOW2N+GETFLAGN
