@@ -1,0 +1,205 @@
+// 2082_life_cell_lyse.cubalc
+// Proof 2082: life_cell lyse — altruistic apoptosis / holocrine trophic bequeath.
+// Packs full energy+reserve as code=e*1000+r then dies; receiver inherit restores yield.
+// Distinct from die (discards), gift (alive energy-only), spore/bud/fission (mother lives).
+// Cube is SoT. Free energy must flow. PCD nutrient-recycling wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mom OF Cell 1 30 0
+ENTITY kid OF Cell 1 1 1
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 20 0
+ENTITY empty OF Cell 1 0 0
+ENTITY broke OF Cell 1 5 0
+
+GETF mom energy
+ASSERT LAST_N == 30 "mom spark 30"
+SEND mom set_threshold 10
+ASSERT LAST_N == 10 "mom thr 10"
+GETF mom ready
+ASSERT LAST_N == 1 "mom ready e30>=thr10"
+SEND kid set_threshold 10
+SEND quiet set_threshold 10
+SEND empty set_threshold 10
+SEND broke set_threshold 10
+
+// Bank glycogen then lyse
+SEND mom bank 10
+ASSERT LAST_N == 10 "mom bank 10"
+GETF mom energy
+ASSERT LAST_N == 20 "mom e 20 after bank"
+SEND mom stores
+ASSERT LAST_N == 10 "mom reserve 10"
+SEND mom yield
+LET y0 = LAST_N
+ASSERT y0 == 30 "mom yield 30 before lyse"
+
+SEND mom lyse
+LET code = LAST_N
+// e=20 r=10 → code 20010
+ASSERT code == 20010 "code e20*1000+r10"
+GETF mom alive
+ASSERT LAST_N == 0 "mom dead after lyse"
+GETF mom energy
+ASSERT LAST_N == 0 "mom energy cleared"
+SEND mom stores
+ASSERT LAST_N == 0 "mom reserve cleared"
+GETF mom ready
+ASSERT LAST_N == 0 "mom ready cleared"
+GETF mom atp
+ASSERT LAST_N == 0 "mom atp cleared"
+SEND mom yield
+ASSERT LAST_N == 0 "mom yield 0 after lyse"
+SEND mom vitality
+ASSERT LAST_N == 0 "mom vitality 0"
+
+LET de = code / 1000
+LET dr = code - de * 1000
+ASSERT de == 20 "unpack de 20"
+ASSERT dr == 10 "unpack dr 10"
+ASSERT de + dr == y0 "code packs full pre-lyse yield"
+
+// Daughter inherits trophic bequeath — colony yield conserved
+GETF kid energy
+LET ke0 = LAST_N
+ASSERT ke0 == 1 "kid spark 1"
+SEND kid stores
+LET kr0 = LAST_N
+ASSERT kr0 == 0 "kid reserve 0"
+SEND kid inherit code
+ASSERT LAST_N == 30 "kid absorbed 30"
+GETF kid energy
+ASSERT LAST_N == 21 "kid e 1+20"
+SEND kid stores
+ASSERT LAST_N == 10 "kid reserve 10"
+SEND kid yield
+LET yk = LAST_N
+ASSERT yk == 31 "kid yield 31 (1 prior + 30 bequeath)"
+ASSERT yk == ke0 + kr0 + y0 "colony yield conserved across lyse+inherit"
+
+// Dead cell cannot lyse
+SEND dead lyse
+ASSERT LAST_N == 0 "dead lyse 0"
+
+// Second lyse on already-dead mom → 0
+SEND mom lyse
+ASSERT LAST_N == 0 "double lyse 0"
+
+// G0 cell may still lyse (no quiesce gate — death gift from rest)
+SEND quiet bank 4
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+GETF quiet energy
+LET qe = LAST_N
+SEND quiet stores
+LET qr = LAST_N
+SEND quiet yield
+LET yq = LAST_N
+SEND quiet lyse
+LET qc = LAST_N
+ASSERT qc == qe * 1000 + qr "quiet code packs full"
+GETF quiet alive
+ASSERT LAST_N == 0 "quiet dead"
+GETF quiet quiescent
+ASSERT LAST_N == 0 "quiet flag cleared on death"
+ASSERT yq == qe + qr "quiet yield was e+r"
+LET qde = qc / 1000
+LET qdr = qc - qde * 1000
+ASSERT qde + qdr == yq "quiet yield in code"
+
+// Empty living cell: lyse dies cleanly, code 0
+GETF empty energy
+ASSERT LAST_N == 0 "empty e0"
+SEND empty lyse
+ASSERT LAST_N == 0 "empty lyse code 0"
+GETF empty alive
+ASSERT LAST_N == 0 "empty dies"
+
+// Sub-threshold cell still lyses (no thr gate)
+GETF broke energy
+ASSERT LAST_N == 5 "broke e5"
+GETF broke ready
+ASSERT LAST_N == 0 "broke not ready"
+SEND broke lyse
+ASSERT LAST_N == 5000 "broke code e5"
+GETF broke alive
+ASSERT LAST_N == 0 "broke dead"
+
+// gift keeps alive; lyse does not — phenotype contrast
+ENTITY donor OF Cell 1 16 0
+SEND donor set_threshold 10
+SEND donor gift 5
+ASSERT LAST_N == 5 "gift gave 5"
+GETF donor alive
+ASSERT LAST_N == 1 "gift keeps alive"
+GETF donor energy
+ASSERT LAST_N == 11 "gift retained spark path"
+SEND donor lyse
+ASSERT LAST_N == 11000 "lyse after gift packs remaining 11"
+GETF donor alive
+ASSERT LAST_N == 0 "lyse kills"
+
+// spore keeps mother; lyse kills — contrast
+ENTITY spor OF Cell 1 40 0
+SEND spor set_threshold 10
+SEND spor bank 8
+SEND spor spore
+LET sc = LAST_N
+ASSERT sc > 0 "spore code >0"
+GETF spor alive
+ASSERT LAST_N == 1 "spore mother lives"
+SEND spor yield
+LET ys = LAST_N
+ASSERT ys > 0 "spore mother retains yield"
+SEND spor lyse
+LET lc = LAST_N
+ASSERT lc > 0 "lyse packs remainder"
+GETF spor alive
+ASSERT LAST_N == 0 "lyse kills spore-mother"
+LET sde = lc / 1000
+LET sdr = lc - sde * 1000
+ASSERT sde + sdr == ys "lyse packs post-spore remainder yield"
+
+// die discards; lyse bequeaths — contrast
+ENTITY dump OF Cell 1 12 0
+ENTITY sink OF Cell 1 1 2
+SEND dump set_threshold 10
+SEND sink set_threshold 10
+SEND dump bank 4
+SEND dump die
+ASSERT LAST_N == 0 "die ret 0"
+GETF dump alive
+ASSERT LAST_N == 0 "die kills"
+SEND dump yield
+ASSERT LAST_N == 0 "die discards wealth"
+// nothing to inherit from die
+SEND sink inherit 0
+ASSERT LAST_N == 0 "no code from die"
+
+// Full cascade: mom2 lyse → kid2 inherit → kid2 ready if above thr
+ENTITY mom2 OF Cell 1 25 0
+ENTITY kid2 OF Cell 1 0 3
+SEND mom2 set_threshold 10
+SEND kid2 set_threshold 10
+SEND mom2 bank 5
+// e=20 r=5 → 20005
+SEND mom2 lyse
+ASSERT LAST_N == 20005 "mom2 code"
+SEND kid2 inherit 20005
+ASSERT LAST_N == 25 "kid2 got 25"
+GETF kid2 energy
+ASSERT LAST_N == 20 "kid2 e20"
+GETF kid2 ready
+ASSERT LAST_N == 1 "kid2 ready after trophic feast"
+
+// vitality/sense on lysed cell
+SEND mom2 vitality
+ASSERT LAST_N == 0 "lysed vitality 0"
+SEND mom2 sense
+ASSERT LAST_N == 0 "lysed sense 0"
+SEND mom2 feed 5
+ASSERT LAST_N == 0 "lysed feed rejected"
+
+ASSERT 1 == 1 "life_cell lyse proof complete"

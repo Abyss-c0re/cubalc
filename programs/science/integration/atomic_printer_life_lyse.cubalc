@@ -1,0 +1,117 @@
+// atomic_printer_life_lyse.cubalc
+// Science board: atomic printer colony trophic cascade via life_cell lyse.
+// Holocrine PCD bequeath — free energy flows from sacrificed cell into heir.
+// Cube is SoT. Manifest life-force: apoptosis as colony metabolism path.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+// Printer places founder + heir slots
+ENTITY founder OF Cell 1 48 0
+ENTITY heir OF Cell 1 2 1
+ENTITY witness OF Cell 1 1 2
+
+SEND founder set_threshold 12
+SEND heir set_threshold 12
+SEND witness set_threshold 12
+
+// Anabolic prep: photosynth → reserve, bank
+SEND founder photosynth 8
+ASSERT LAST_N == 8 "founder fix 8 light→reserve"
+SEND founder stores
+ASSERT LAST_N == 8 "founder glycogen 8"
+GETF founder energy
+ASSERT LAST_N == 48 "founder active held"
+SEND founder bank 16
+ASSERT LAST_N == 16 "founder banks 16"
+GETF founder energy
+ASSERT LAST_N == 32 "founder e32"
+SEND founder stores
+ASSERT LAST_N == 24 "founder reserve 24 (8+16)"
+SEND founder yield
+LET yf0 = LAST_N
+ASSERT yf0 == 56 "founder yield 56 before sacrifice"
+
+// Colony breath: founder lysed into trophic code
+SEND founder lyse
+LET code = LAST_N
+ASSERT code == 32024 "code e32*1000+r24"
+GETF founder alive
+ASSERT LAST_N == 0 "founder PCD complete"
+SEND founder yield
+ASSERT LAST_N == 0 "founder yield shed to code"
+
+LET de = code / 1000
+LET dr = code - de * 1000
+ASSERT de == 32 "bequeath energy 32"
+ASSERT dr == 24 "bequeath reserve 24"
+ASSERT de + dr == yf0 "full yield packed"
+
+// Heir absorbs — mitosis candidacy from feast
+SEND heir yield
+LET yh0 = LAST_N
+ASSERT yh0 == 2 "heir prior yield 2"
+SEND heir inherit code
+ASSERT LAST_N == 56 "heir absorbed full bequeath"
+GETF heir energy
+ASSERT LAST_N == 34 "heir e 2+32"
+SEND heir stores
+ASSERT LAST_N == 24 "heir reserve 24"
+SEND heir yield
+LET yh1 = LAST_N
+ASSERT yh1 == 58 "heir yield 58"
+ASSERT yh1 == yh0 + yf0 "colony free energy conserved"
+GETF heir ready
+ASSERT LAST_N == 1 "heir ready e34>=thr12"
+
+// Heir can now spore (serial dispersal after trophic feast)
+SEND heir spore
+LET sc = LAST_N
+ASSERT sc > 0 "heir spores after feast"
+GETF heir alive
+ASSERT LAST_N == 1 "heir lives through spore"
+SEND witness inherit sc
+ASSERT LAST_N > 0 "witness takes spore pack"
+GETF witness energy
+LET we = LAST_N
+ASSERT we >= 1 "witness sparked"
+
+// G0 sacrificial nurse cell still feeds commons
+ENTITY nurse OF Cell 1 18 0
+SEND nurse set_threshold 10
+SEND nurse bank 6
+SEND nurse quiesce
+SEND nurse yield
+LET yn = LAST_N
+SEND nurse lyse
+LET nc = LAST_N
+LET nde = nc / 1000
+LET ndr = nc - nde * 1000
+ASSERT nde + ndr == yn "nurse full yield bequeathed from G0"
+GETF nurse alive
+ASSERT LAST_N == 0 "nurse PCD"
+
+// die vs lyse science contrast on matched twins
+ENTITY t_die OF Cell 1 14 0
+ENTITY t_lyse OF Cell 1 14 0
+ENTITY sink OF Cell 1 0 5
+SEND t_die set_threshold 10
+SEND t_lyse set_threshold 10
+SEND sink set_threshold 10
+SEND t_die bank 4
+SEND t_lyse bank 4
+SEND t_die die
+SEND t_lyse lyse
+LET lc2 = LAST_N
+ASSERT lc2 == 10004 "lyse twin code e10*1000+r4"
+SEND t_die yield
+ASSERT LAST_N == 0 "die twin empty"
+SEND sink inherit lc2
+ASSERT LAST_N == 14 "sink ate lyse twin"
+SEND sink inherit 0
+ASSERT LAST_N == 0 "nothing left from die twin"
+
+// Flagship harmony: sacrificed founder wealth equals heir gain delta
+ASSERT yh1 - yh0 == yf0 "printer conservation law"
+
+ASSERT 1 == 1 "atomic_printer_life_lyse science complete"

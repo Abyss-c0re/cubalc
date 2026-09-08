@@ -17,6 +17,7 @@
 #   birth energy gen     activate a free slot as daughter
 #   after_div            parent halves energy after successful mitosis
 #   die                  apoptosis / resource death
+#   lyse                 altruistic PCD — pack energy+reserve as inherit code, then die
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -2749,6 +2750,48 @@ CLASS Cell
     SETF THIS ready 0
     LET code = de * 1000
     LET code = code + dr
+    RET code
+  END
+
+
+  # Lyse: altruistic apoptosis / holocrine trophic bequeath to the commons.
+  # Packs full active energy + reserve as code=e*1000+r then clears life (die path).
+  # No thr/G0 gate — stressed or resting cells may still feed colony cascade.
+  # Yield conserved when receiver inherit(code). ATP/pmf/pcr/heat shed (not in code;
+  # same packing surface as fission/bud/spore). Distinct from die (discards wealth),
+  # gift (keeps alive, energy-only, retains spark), spore/bud/fission (mother lives),
+  # after_div, scavenge, spare/invest. Usability: AGI models PCD nutrient recycling.
+  # Returns endowment code; dead → 0; empty wealth still dies cleanly → 0.
+  METHOD lyse
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET code = e * 1000
+    LET code = code + r
+    LET got = e + r
+    SETF THIS alive 0
+    SETF THIS energy 0
+    SETF THIS ready 0
+    SETF THIS quiescent 0
+    SETF THIS reserve 0
+    SETF THIS atp 0
+    SETF THIS pmf 0
+    SETF THIS heat 0
+    SETF THIS pcr 0
+    IF got < 1 THEN
+      RET 0
+    END
     RET code
   END
 
