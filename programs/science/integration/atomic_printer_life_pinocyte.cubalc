@@ -1,0 +1,65 @@
+// atomic_printer_life_pinocyte.cubalc
+// Science board: fluid-phase endocytosis on the atomic printer life substrate.
+// Medium -> membrane-paid reserve cargo -> lysosomal digest -> usable energy.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 16 0
+ENTITY medium OF Cell 1 8 0
+SEND printer set_threshold 12
+SEND medium set_threshold 10
+
+SEND printer bank 2
+ASSERT LAST_N == 2 "printer bank2"
+GETF printer energy
+ASSERT LAST_N == 14 "printer e14"
+
+SEND printer pinocyte 8
+ASSERT LAST_N == 8 "printer pinocyte8"
+GETF printer energy
+ASSERT LAST_N == 13 "printer membrane paid"
+SEND printer stores
+ASSERT LAST_N == 10 "printer r2+8"
+
+SEND printer digest 6
+ASSERT LAST_N == 6 "printer digest6"
+GETF printer energy
+ASSERT LAST_N == 19 "printer e13+6"
+SEND printer stores
+ASSERT LAST_N == 4 "printer r4"
+GETF printer heat
+ASSERT LAST_N == 1 "lysosomal heat"
+
+GETF printer ready
+ASSERT LAST_N == 1 "printer mitosis-ready"
+
+ENTITY spark OF Cell 1 1 0
+SEND spark pinocyte 3
+ASSERT LAST_N == 0 "spark cannot pinocyte"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+
+SEND medium secrete 4
+ASSERT LAST_N == 4000 "medium vesicle"
+SEND printer engulf 4000
+ASSERT LAST_N == 4 "printer engulf4"
+GETF printer energy
+ASSERT LAST_N == 22 "printer after engulf"
+SEND printer pinocyte 2
+ASSERT LAST_N == 2 "printer sip2"
+SEND printer stores
+ASSERT LAST_N == 6 "r4+2"
+SEND printer digest 2
+ASSERT LAST_N == 2 "digest sip"
+GETF printer energy
+ASSERT LAST_N == 23 "e23 after pinocyte+digest"
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+SEND printer vitality
+ASSERT LAST_N > 0 "vital"
+SEND printer total
+ASSERT LAST_N >= 20 "wealth"
+
+PASS "atomic_printer_life_pinocyte science PASS"

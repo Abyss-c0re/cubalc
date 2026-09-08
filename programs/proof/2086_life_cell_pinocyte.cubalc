@@ -1,0 +1,167 @@
+// 2086_life_cell_pinocyte.cubalc
+// Proof 2086: life_cell pinocyte — fluid-phase endocytosis (membrane-paid cargo sip).
+// Pay 1 energy membrane cost, gain n reserve from medium; cell lives; ready recompute.
+// Distinct from feed (free energy), engulf (coded pack), bank, photosynth, digest.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY sip OF Cell 1 20 0
+ENTITY weak OF Cell 1 1 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 15 0
+ENTITY lean OF Cell 1 2 0
+
+SEND sip set_threshold 10
+SEND weak set_threshold 10
+SEND g0 set_threshold 10
+SEND lean set_threshold 10
+
+// baseline sip
+GETF sip energy
+ASSERT LAST_N == 20 "sip e20"
+SEND sip stores
+ASSERT LAST_N == 0 "sip r0"
+GETF sip ready
+ASSERT LAST_N == 1 "sip ready e>=thr"
+
+// pinocyte 5: pay 1 membrane, +5 reserve
+SEND sip pinocyte 5
+ASSERT LAST_N == 5 "sip pinocyte5"
+GETF sip energy
+ASSERT LAST_N == 19 "sip e19"
+SEND sip stores
+ASSERT LAST_N == 5 "sip r5"
+GETF sip ready
+ASSERT LAST_N == 1 "sip still ready"
+GETF sip alive
+ASSERT LAST_N == 1 "sip lives"
+GETF sip heat
+ASSERT LAST_N == 0 "pinocyte no heat"
+
+// second sip stacks cargo
+SEND sip pinocyte 3
+ASSERT LAST_N == 3 "sip pinocyte3"
+GETF sip energy
+ASSERT LAST_N == 18 "sip e18"
+SEND sip stores
+ASSERT LAST_N == 8 "sip r8"
+
+// digest cargo after pinocyte (trophic arc: medium->reserve->energy)
+SEND sip digest 4
+ASSERT LAST_N == 4 "sip digest4"
+GETF sip energy
+ASSERT LAST_N == 22 "sip e18+4"
+SEND sip stores
+ASSERT LAST_N == 4 "sip r4"
+GETF sip heat
+ASSERT LAST_N == 1 "digest heat1"
+
+// weak spark-only cannot pay membrane
+SEND weak pinocyte 2
+ASSERT LAST_N == 0 "weak fail"
+GETF weak energy
+ASSERT LAST_N == 1 "weak e1 held"
+SEND weak stores
+ASSERT LAST_N == 0 "weak r0"
+
+// lean e=2: can pay exactly once -> e=1, r=n
+SEND lean pinocyte 7
+ASSERT LAST_N == 7 "lean pinocyte7"
+GETF lean energy
+ASSERT LAST_N == 1 "lean spark after cost"
+SEND lean stores
+ASSERT LAST_N == 7 "lean r7"
+// second fails (spark only)
+SEND lean pinocyte 1
+ASSERT LAST_N == 0 "lean second fail"
+GETF lean energy
+ASSERT LAST_N == 1 "lean spark held"
+SEND lean stores
+ASSERT LAST_N == 7 "lean r7 held"
+
+// dead rejects
+SEND dead pinocyte 3
+ASSERT LAST_N == 0 "dead fail"
+GETF dead energy
+ASSERT LAST_N == 20 "dead e untouched"
+
+// n<1 rejects without cost
+ENTITY ok OF Cell 1 12 0
+SEND ok set_threshold 10
+SEND ok pinocyte 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF ok energy
+ASSERT LAST_N == 12 "ok e12 no cost"
+
+// G0 may pinocyte but stays unready until wake
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 energy
+LET ge = LAST_N
+SEND g0 pinocyte 4
+ASSERT LAST_N == 4 "g0 pinocyte4"
+GETF g0 energy
+ASSERT LAST_N == ge - 1 "g0 paid membrane"
+SEND g0 stores
+ASSERT LAST_N == 4 "g0 r4"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready while q"
+SEND g0 wake
+GETF g0 quiescent
+ASSERT LAST_N == 0 "g0 awake"
+
+// feed vs pinocyte: feed adds energy free; pinocyte costs membrane -> reserve
+ENTITY a OF Cell 1 10 0
+ENTITY b OF Cell 1 10 0
+SEND a set_threshold 10
+SEND b set_threshold 10
+SEND a feed 5
+GETF a energy
+ASSERT LAST_N >= 14 "feed raised energy"
+SEND a stores
+ASSERT LAST_N == 0 "feed no reserve"
+SEND b pinocyte 5
+GETF b energy
+ASSERT LAST_N == 9 "pinocyte e10-1"
+SEND b stores
+ASSERT LAST_N == 5 "pinocyte r5"
+
+// engulf code vs pinocyte medium then digest
+ENTITY pred OF Cell 1 15 0
+ENTITY donor OF Cell 1 25 0
+SEND pred set_threshold 10
+SEND donor set_threshold 10
+SEND donor secrete 5
+ASSERT LAST_N == 5000 "donor de5 vesicle"
+SEND pred engulf 5000
+ASSERT LAST_N == 5 "engulf got5 energy path"
+GETF pred energy
+ASSERT LAST_N == 19 "pred after engulf energy"
+SEND pred stores
+ASSERT LAST_N == 0 "engulf pure-energy no reserve"
+SEND pred pinocyte 6
+ASSERT LAST_N == 6 "pred pinocyte6"
+GETF pred energy
+ASSERT LAST_N == 18 "pred e19-1"
+SEND pred stores
+ASSERT LAST_N == 6 "pred r6"
+SEND pred digest 6
+ASSERT LAST_N == 6 "pred digest pinocyte cargo"
+GETF pred energy
+ASSERT LAST_N == 24 "pred e24"
+SEND pred stores
+ASSERT LAST_N == 0 "pred r0"
+GETF pred heat
+ASSERT LAST_N == 1 "pred heat1"
+GETF pred alive
+ASSERT LAST_N == 1 "pred lives"
+
+SEND sip vitality
+ASSERT LAST_N > 0 "sip vital"
+SEND pred total
+ASSERT LAST_N >= 20 "pred wealth"
+
+PASS "2086 life_cell pinocyte fluid-phase PASS"
