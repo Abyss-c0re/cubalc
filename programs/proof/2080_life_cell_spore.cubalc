@@ -1,0 +1,158 @@
+// 2080_life_cell_spore.cubalc
+// Proof 2080: life_cell spore — endospore survival packing.
+// Parent keeps spark energy=1; packs de=(e-1)+full reserve as code=de*1000+dr.
+// Stress path: no mitosis threshold gate (≠ fission/bud division paths).
+// Distinct from fission (half), bud (~1/3), after_div, die, gift, inherit.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mom OF Cell 1 20 0
+ENTITY kid OF Cell 1 2 1
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 18 0
+ENTITY poor OF Cell 1 1 0
+
+GETF mom energy
+ASSERT LAST_N == 20 "mom spark 20"
+SEND mom set_threshold 10
+ASSERT LAST_N == 10 "mom thr"
+GETF mom ready
+ASSERT LAST_N == 1 "mom ready"
+SEND kid set_threshold 10
+SEND quiet set_threshold 10
+
+// bank glycogen then spore
+SEND mom bank 6
+ASSERT LAST_N == 6 "bank 6"
+GETF mom energy
+ASSERT LAST_N == 14 "e 14"
+SEND mom stores
+ASSERT LAST_N == 6 "r 6"
+SEND mom yield
+LET y0 = LAST_N
+ASSERT y0 == 20 "yield 20"
+
+SEND mom spore
+LET code = LAST_N
+// de=14-1=13, dr=6 → 13006
+ASSERT code == 13006 "code de13*1000+dr6"
+GETF mom energy
+ASSERT LAST_N == 1 "mom spark 1"
+SEND mom stores
+ASSERT LAST_N == 0 "mom reserve cleared"
+GETF mom ready
+ASSERT LAST_N == 0 "ready cleared"
+GETF mom alive
+ASSERT LAST_N == 1 "mom still alive"
+SEND mom yield
+ASSERT LAST_N == 1 "mom yield spark only"
+
+// daughter germinates via inherit
+SEND kid yield
+LET yk0 = LAST_N
+SEND kid inherit code
+ASSERT LAST_N == 19 "inherit 13+6"
+GETF kid energy
+ASSERT LAST_N == 15 "kid e 2+13"
+SEND kid stores
+ASSERT LAST_N == 6 "kid r 6"
+SEND kid yield
+ASSERT LAST_N == yk0 + 19 "kid +spore pack"
+
+// conservation: mom1 + kid gain19 = 20
+ASSERT 1 + 19 == 20 "conserved"
+
+// Dead cannot spore
+SEND dead spore
+ASSERT LAST_N == 0 "dead spore 0"
+
+// G0 blocks spore
+SEND quiet quiesce
+SEND quiet spore
+ASSERT LAST_N == 0 "G0 spore 0"
+SEND quiet wake
+
+// spark-only cannot spore
+GETF poor energy
+ASSERT LAST_N == 1 "poor spark"
+SEND poor spore
+ASSERT LAST_N == 0 "spark-only 0"
+
+// below thr CAN spore (stress ≠ mitosis) — e=8 thr=10
+ENTITY stress OF Cell 1 8 0
+SEND stress set_threshold 10
+GETF stress ready
+ASSERT LAST_N == 0 "stress not ready"
+SEND stress bank 2
+// e=6 r=2
+SEND stress spore
+LET cs = LAST_N
+// de=5 dr=2 → 5002
+ASSERT cs == 5002 "stress spore ok without ready"
+GETF stress energy
+ASSERT LAST_N == 1 "stress spark 1"
+SEND stress stores
+ASSERT LAST_N == 0 "stress r 0"
+
+// no reserve path
+ENTITY solo OF Cell 1 12 0
+SEND solo spore
+LET c2 = LAST_N
+// de=11 dr=0 → 11000
+ASSERT c2 == 11000 "solo spore de11"
+GETF solo energy
+ASSERT LAST_N == 1 "solo spark"
+ENTITY babe OF Cell 1 1 2
+SEND babe inherit c2
+ASSERT LAST_N == 11 "babe 11"
+GETF babe energy
+ASSERT LAST_N == 12 "babe e 1+11"
+
+// fission still half (regression)
+ENTITY fis OF Cell 1 20 0
+SEND fis set_threshold 10
+SEND fis bank 4
+SEND fis fission
+LET cf = LAST_N
+// e16 de8 dr2 → 8002
+ASSERT cf == 8002 "fission half still"
+GETF fis energy
+ASSERT LAST_N == 8 "fission e8"
+
+// bud still ~1/3 (regression)
+ENTITY b OF Cell 1 18 0
+SEND b set_threshold 10
+SEND b bud
+LET cb = LAST_N
+// de=18/3=6 → 6000
+ASSERT cb == 6000 "bud third"
+GETF b energy
+ASSERT LAST_N == 12 "bud keeps 12"
+
+// after_div energy-only regression
+ENTITY old OF Cell 1 16 0
+SEND old bank 4
+SEND old after_div
+ASSERT LAST_N == 6 "after_div half e"
+SEND old stores
+ASSERT LAST_N == 4 "after_div r held"
+
+// zero inherit
+SEND kid inherit 0
+ASSERT LAST_N == 0 "zero inherit"
+
+// vitality on spore survivor
+SEND mom vitality
+ASSERT LAST_N > 0 "mom vitality spark"
+
+// second spore after feed
+SEND mom feed 9
+// e=10
+SEND mom spore
+LET c3 = LAST_N
+// de=9 dr=0 → 9000
+ASSERT c3 == 9000 "second spore"
+GETF mom energy
+ASSERT LAST_N == 1 "spark again"

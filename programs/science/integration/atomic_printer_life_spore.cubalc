@@ -1,0 +1,73 @@
+// atomic_printer_life_spore.cubalc
+// Science board: atomic printer + life_cell endospore survival packing.
+// Stress packs (energy-1)+full reserve into inherit-compatible code; spark remains.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY bed OF Cell 1 24 0
+ENTITY germ OF Cell 1 1 1
+
+SEND bed set_threshold 10
+SEND germ set_threshold 10
+SEND bed bank 9
+// e=15 r=9 yield=24
+SEND bed yield
+ASSERT LAST_N == 24 "bed yield 24"
+
+SEND bed spore
+LET code = LAST_N
+// de=14 dr=9 → 14009
+ASSERT code == 14009 "spore code 14009"
+GETF bed energy
+ASSERT LAST_N == 1 "bed spark 1"
+SEND bed stores
+ASSERT LAST_N == 0 "bed r 0"
+GETF bed ready
+ASSERT LAST_N == 0 "ready clear"
+GETF bed alive
+ASSERT LAST_N == 1 "alive"
+
+SEND germ inherit code
+ASSERT LAST_N == 23 "germ +23"
+GETF germ energy
+ASSERT LAST_N == 15 "germ e 1+14"
+SEND germ stores
+ASSERT LAST_N == 9 "germ r 9"
+
+SEND bed yield
+LET yb = LAST_N
+SEND germ yield
+LET yg = LAST_N
+// bed1 + germ24 = 25 = original24 + germ seed1
+ASSERT yb == 1 "bed yield 1"
+ASSERT yg == 24 "germ yield 24"
+ASSERT yb + yg == 25 "seed-aware total"
+
+// gates
+ENTITY z OF Cell 0 0 0
+SEND z spore
+ASSERT LAST_N == 0 "dead 0"
+ENTITY g0 OF Cell 1 20 0
+SEND g0 quiesce
+SEND g0 spore
+ASSERT LAST_N == 0 "G0 0"
+
+// distinct from fission/bud on same start e24 r0
+ENTITY f OF Cell 1 24 0
+SEND f set_threshold 10
+SEND f fission
+ASSERT LAST_N == 12000 "fission de12"
+ENTITY u OF Cell 1 24 0
+SEND u set_threshold 10
+SEND u bud
+ASSERT LAST_N == 8000 "bud de8"
+ENTITY s OF Cell 1 24 0
+SEND s spore
+ASSERT LAST_N == 23000 "spore de23"
+
+SEND bed vitality
+ASSERT LAST_N > 0 "bed vit"
+SEND germ vitality
+ASSERT LAST_N > 0 "germ vit"

@@ -91,6 +91,7 @@
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
 #   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
+#   spore               endospore survival pack: keep spark=1, pack (energy-1)+full reserve as code=de*1000+dr; ready cleared
 #   inherit code         apply fission/bud endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
 CLASS Cell
   FIELD alive 0
@@ -2659,7 +2660,6 @@ CLASS Cell
       END
     END
     SETF THIS ready rd
-    SETF THIS ready rd
     RET got
   END
 
@@ -2708,6 +2708,44 @@ CLASS Cell
     LET dr = r / 3
     LET r = r - dr
     SETF THIS reserve r
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+  # Spore: bacterial endospore-style survival packing.
+  # Parent keeps life spark energy=1, yields de=(energy-1) + full reserve dr as
+  # code=de*1000+dr. Reserve cleared on parent; ready cleared. Phenotype thr/gen held.
+  # Gates: alive, not G0, energy >= 2 so a transferable de >= 1 exists.
+  # Does NOT require mitosis threshold (stress path ≠ division path).
+  # Distinct from fission (half/half, needs ready/threshold), bud (~1/3 minority),
+  # after_div (energy-only half), die (zeros all), gift, bank/draw, scavenge,
+  # inherit (daughter absorb). Free energy conserved in durable spore code.
+  # Returns endowment code; dead/G0/spark-only → 0.
+  METHOD spore
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 2 THEN
+      RET 0
+    END
+    LET de = e - 1
+    IF de < 1 THEN
+      RET 0
+    END
+    SETF THIS energy 1
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r
+    SETF THIS reserve 0
     SETF THIS ready 0
     LET code = de * 1000
     LET code = code + dr
