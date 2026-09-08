@@ -88,6 +88,7 @@
 #   scavenge n           reserve → shed age (macroautophagy / glycogen-funded QC; yield sheds reserve; thr/ready untouched)
 #   invest n             energy → raise mitosis threshold (cytosolic nutrient→CDK fortify; yield sheds energy; ready recompute)
 #   spare n              reserve → lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease; yield sheds reserve; ready recompute)
+#   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2498,5 +2499,65 @@ CLASS Cell
   END
 
 
+
+
+
+  # Buttress: spend n reserve to raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal).
+  # Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+  # anchor (pmf→raise thr), invest (energy→raise thr), spare (reserve→lower thr), scavenge (reserve→age),
+  # bank/draw/stow/saturate/respire, set_threshold, drive/prime/poise/ease (lower thr).
+  # reserve pays; thr ceiling 1000. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr/age untouched. Recomputes ready.
+  # Usability: AGI spends protected glycogen bank to seal mitosis gate without burning ATP, PCr, pmf, heat, or life spark.
+  # Returns amount buttressed (threshold rise). Dead/zero/empty reserve/thr already 1000 → 0.
+  METHOD buttress n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END

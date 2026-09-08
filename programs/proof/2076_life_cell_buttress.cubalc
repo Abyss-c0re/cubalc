@@ -1,0 +1,146 @@
+// 2076_life_cell_buttress.cubalc
+// Proof 2076: life_cell buttress — reserve → raise mitosis threshold (glycogen CDK fortify).
+// Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+// anchor (pmf→raise thr), invest (energy→raise thr), scavenge (reserve→age),
+// bank/draw/stow/saturate/set_threshold, drive/prime/poise/ease (lower thr).
+// reserve pays; thr ceiling 1000. Yield sheds by take; energy/atp/heat/pmf/pcr/age untouched.
+// Ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 14 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 18 0
+ENTITY iso OF Cell 1 25 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed buttress 3
+ASSERT LAST_N == 0 "empty buttress 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+// Build reserve via bank; keep energy high enough for ready tests
+SEND seed bank 8
+ASSERT LAST_N == 8 "bank 8"
+GETF seed energy
+ASSERT LAST_N == 12 "active 12"
+SEND seed stores
+ASSERT LAST_N == 8 "reserve 8"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e12 >= thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed buttress 4
+ASSERT LAST_N == 4 "buttress 4"
+SEND seed stores
+ASSERT LAST_N == 4 "reserve 4"
+GETF seed threshold
+ASSERT LAST_N == 14 "thr 14 after buttress"
+GETF seed energy
+ASSERT LAST_N == 12 "energy untouched by buttress"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e12 < thr14"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds reserve by buttress"
+
+SEND seed buttress 9
+ASSERT LAST_N == 4 "buttress drains remaining reserve 4"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed threshold
+ASSERT LAST_N == 18 "thr 18"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready e12 < thr18"
+
+SEND seed buttress 1
+ASSERT LAST_N == 0 "empty buttress 0"
+
+SEND dead buttress 2
+ASSERT LAST_N == 0 "dead buttress 0"
+
+SEND seed feed 10
+SEND seed bank 5
+ASSERT LAST_N == 5 "bank 5"
+SEND seed buttress 0
+ASSERT LAST_N == 0 "zero buttress 0"
+SEND seed buttress -1
+ASSERT LAST_N == 0 "neg buttress 0"
+SEND seed stores
+ASSERT LAST_N == 5 "reserve held 5"
+
+// quiet path — thr rises, ready stays 0
+SEND quiet feed 5
+SEND quiet bank 6
+ASSERT LAST_N == 6 "quiet bank 6"
+SEND quiet quiesce
+GETF quiet threshold
+ASSERT LAST_N == 10 "quiet thr 10"
+SEND quiet buttress 3
+ASSERT LAST_N == 3 "quiet buttress 3"
+GETF quiet threshold
+ASSERT LAST_N == 13 "quiet thr 13"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet stores
+ASSERT LAST_N == 3 "quiet reserve 3"
+
+// ally: buttress seals gate then feed reopens
+SEND ally bank 6
+ASSERT LAST_N == 6 "ally bank 6"
+GETF ally energy
+ASSERT LAST_N == 8 "ally e 8"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e8 < thr10"
+SEND ally set_threshold 8
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e8 >= thr8"
+SEND ally buttress 5
+ASSERT LAST_N == 5 "ally buttress 5"
+GETF ally threshold
+ASSERT LAST_N == 13 "ally thr 13"
+GETF ally ready
+ASSERT LAST_N == 0 "ally sealed e8 < thr13"
+SEND ally feed 10
+GETF ally energy
+ASSERT LAST_N == 18 "ally e 18"
+GETF ally ready
+ASSERT LAST_N == 1 "ally ready e18 >= thr13"
+SEND ally stores
+ASSERT LAST_N == 1 "ally reserve 1"
+
+// iso: age untouched
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso bank 4
+ASSERT LAST_N == 4 "iso bank 4"
+SEND iso buttress 3
+ASSERT LAST_N == 3 "iso buttress 3"
+GETF iso age
+ASSERT LAST_N == 5 "iso age untouched by buttress"
+GETF iso threshold
+ASSERT LAST_N == 13 "iso thr 13"
+SEND iso stores
+ASSERT LAST_N == 1 "iso reserve 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by buttress"
+
+PRINT "2076_life_cell_buttress PASS"

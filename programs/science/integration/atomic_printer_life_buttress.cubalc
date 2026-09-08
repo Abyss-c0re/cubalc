@@ -1,0 +1,90 @@
+// atomic_printer_life_buttress.cubalc
+// Science board: atomic printer + life_cell buttress (reserve → raise mitosis threshold).
+// Glycogen CDK fortify: protected reserve seals the mitosis gate without burning
+// ATP, PCr, pmf, heat, or the life spark. Distinct from fortify/brace/harden/anchor/invest/scavenge.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=life_buttress | note=glycogen_cdk_fortify"
+
+ENTITY founder OF Cell 1 16 0
+ENTITY cohort OF Cell 1 12 0
+
+GETF founder energy
+ASSERT LAST_N == 16 "founder spark 16"
+GETF founder threshold
+ASSERT LAST_N == 10 "founder thr 10"
+SEND founder set_threshold 10
+GETF founder ready
+ASSERT LAST_N == 1 "founder ready e16 >= thr10"
+
+// Bank glycogen then buttress to seal gate despite high energy
+SEND founder bank 6
+ASSERT LAST_N == 6 "founder bank 6"
+GETF founder energy
+ASSERT LAST_N == 10 "founder e 10"
+GETF founder ready
+ASSERT LAST_N == 1 "founder still ready e10 >= thr10"
+SEND founder stores
+ASSERT LAST_N == 6 "founder reserve 6"
+SEND founder yield
+LET y0 = LAST_N
+
+SEND founder buttress 5
+ASSERT LAST_N == 5 "founder buttress 5"
+GETF founder threshold
+ASSERT LAST_N == 15 "founder thr 15"
+GETF founder energy
+ASSERT LAST_N == 10 "founder energy held through buttress"
+GETF founder ready
+ASSERT LAST_N == 0 "founder sealed e10 < thr15"
+SEND founder stores
+ASSERT LAST_N == 1 "founder reserve 1"
+SEND founder yield
+ASSERT LAST_N == y0 - 5 "yield sheds buttress reserve"
+SEND founder charged
+ASSERT LAST_N == 0 "founder atp untouched"
+SEND founder gradient
+ASSERT LAST_N == 0 "founder pmf untouched"
+SEND founder phosphagen
+ASSERT LAST_N == 0 "founder pcr untouched"
+SEND founder warmth
+ASSERT LAST_N == 0 "founder heat untouched"
+
+// Cohort: glycogen seal under surplus, then feed reopens
+SEND cohort bank 5
+ASSERT LAST_N == 5 "cohort bank 5"
+GETF cohort energy
+ASSERT LAST_N == 7 "cohort e 7"
+SEND cohort set_threshold 7
+GETF cohort ready
+ASSERT LAST_N == 1 "cohort ready e7 >= thr7"
+SEND cohort buttress 4
+ASSERT LAST_N == 4 "cohort buttress 4"
+GETF cohort threshold
+ASSERT LAST_N == 11 "cohort thr 11"
+GETF cohort ready
+ASSERT LAST_N == 0 "cohort sealed e7 < thr11"
+SEND cohort feed 8
+GETF cohort energy
+ASSERT LAST_N == 15 "cohort e 15"
+GETF cohort ready
+ASSERT LAST_N == 1 "cohort ready e15 >= thr11"
+SEND cohort vitality
+ASSERT LAST_N > 1000 "cohort vitality alive"
+
+// Harmony: free energy still flows after seal
+SEND founder pulse 2
+GETF founder age
+ASSERT LAST_N == 2 "founder aged 2 by pulse"
+SEND founder feed 10
+GETF founder energy
+ASSERT LAST_N >= 18 "founder fed after buttress"
+GETF founder ready
+ASSERT LAST_N == 1 "founder reopened e>=thr15"
+
+PRINT "atomic_printer_life_buttress PASS"
+SCIENCE DUMP
