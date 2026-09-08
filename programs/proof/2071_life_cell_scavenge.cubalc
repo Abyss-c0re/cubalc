@@ -1,0 +1,215 @@
+// 2071_life_cell_scavenge.cubalc
+// Proof: life_cell scavenge — reserve → shed age (macroautophagy / glycogen-funded QC).
+// Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+// renew (pmf→age), bank/draw/stow/saturate (reserve traffic without age).
+// reserve pays; age floors at 0. Yield sheds by take (reserve in yield).
+// energy/atp/heat/pmf/pcr/ready/threshold untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed scavenge 3
+ASSERT LAST_N == 0 "empty scavenge 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+SEND seed pulse 8
+GETF seed age
+ASSERT LAST_N == 8 "aged 8"
+GETF seed energy
+LET e_after_pulse = LAST_N
+ASSERT e_after_pulse >= 20 "energy grew or held"
+SEND seed bank 6
+ASSERT LAST_N == 6 "bank 6"
+SEND seed stores
+ASSERT LAST_N == 6 "reserve 6"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy paid bank"
+GETF seed threshold
+LET thr0 = LAST_N
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed scavenge 4
+ASSERT LAST_N == 4 "scavenge 4"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after scavenge"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy untouched by scavenge"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+GETF seed threshold
+ASSERT LAST_N == thr0 "thr untouched by scavenge"
+GETF seed ready
+LET rd0 = LAST_N
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds reserve by scavenge"
+
+SEND seed scavenge 9
+ASSERT LAST_N == 2 "scavenge drains remaining reserve 2"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed age
+ASSERT LAST_N == 2 "age 2"
+SEND seed scavenge 1
+ASSERT LAST_N == 0 "empty scavenge 0"
+GETF seed ready
+ASSERT LAST_N == rd0 "ready untouched by scavenge"
+
+SEND dead scavenge 2
+ASSERT LAST_N == 0 "dead scavenge 0"
+
+SEND seed feed 10
+SEND seed bank 3
+ASSERT LAST_N == 3 "bank 3"
+SEND seed scavenge 0
+ASSERT LAST_N == 0 "zero scavenge 0"
+SEND seed scavenge -1
+ASSERT LAST_N == 0 "neg scavenge 0"
+SEND seed stores
+ASSERT LAST_N == 3 "reserve held 3"
+GETF seed age
+LET a1 = LAST_N
+SEND seed scavenge 1
+ASSERT LAST_N == 1 "scavenge 1"
+GETF seed age
+ASSERT LAST_N == a1 - 1 "age shed 1"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve 2 after scavenge 1"
+
+// age-limited: more reserve than age only sheds age
+SEND seed pulse 5
+GETF seed age
+LET a2 = LAST_N
+ASSERT a2 >= 5 "aged more"
+SEND seed feed 30
+SEND seed bank 10
+ASSERT LAST_N == 10 "bank 10"
+SEND seed stores
+LET r_full = LAST_N
+ASSERT r_full >= 12 "reserve stacked"
+SEND seed yield
+LET y1 = LAST_N
+SEND seed scavenge 100
+ASSERT LAST_N == a2 "scavenge capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age floored 0"
+SEND seed stores
+ASSERT LAST_N == r_full - a2 "reserve leftover after age floor"
+SEND seed yield
+ASSERT LAST_N == y1 - a2 "yield shed by age-capped scavenge"
+
+// contrast: renew uses pmf, scavenge uses reserve; paths independent
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "age 6 for dual path"
+GETF seed energy
+LET e_r = LAST_N
+SEND seed repair 3
+ASSERT LAST_N == 3 "repair 3 energy path"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after repair"
+GETF seed energy
+ASSERT LAST_N == e_r - 3 "energy paid repair"
+SEND seed bank 4
+ASSERT LAST_N == 4 "bank 4"
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+GETF seed threshold
+LET thr1 = LAST_N
+SEND seed stores
+LET rs = LAST_N
+SEND seed gradient
+LET pm = LAST_N
+SEND seed scavenge 2
+ASSERT LAST_N == 2 "scavenge 2"
+GETF seed age
+ASSERT LAST_N == 1 "age 1 after scavenge"
+SEND seed stores
+ASSERT LAST_N == rs - 2 "reserve paid scavenge"
+SEND seed gradient
+ASSERT LAST_N == pm "pmf untouched by scavenge"
+SEND seed renew 1
+ASSERT LAST_N == 1 "renew 1 after scavenge"
+GETF seed age
+ASSERT LAST_N == 0 "age 0 after renew"
+SEND seed gradient
+ASSERT LAST_N == pm - 1 "pmf paid renew"
+SEND seed stores
+ASSERT LAST_N == rs - 2 "reserve held after renew"
+GETF seed threshold
+ASSERT LAST_N == thr1 "thr held through dual QC"
+
+SEND quiet feed 5
+SEND quiet pulse 4
+GETF quiet age
+ASSERT LAST_N == 4 "quiet aged 4"
+SEND quiet bank 5
+ASSERT LAST_N == 5 "quiet bank 5"
+SEND quiet quiesce
+SEND quiet scavenge 3
+ASSERT LAST_N == 3 "quiet scavenge 3"
+GETF quiet age
+ASSERT LAST_N == 1 "quiet age 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet stores
+ASSERT LAST_N == 2 "quiet reserve 2"
+
+SEND ally pulse 5
+GETF ally age
+ASSERT LAST_N == 5 "ally aged 5"
+SEND ally bank 4
+ASSERT LAST_N == 4 "ally bank 4"
+SEND ally scavenge 3
+ASSERT LAST_N == 3 "ally scavenge 3"
+GETF ally age
+ASSERT LAST_N == 2 "ally age 2"
+SEND ally stores
+ASSERT LAST_N == 1 "ally reserve 1"
+GETF ally energy
+ASSERT LAST_N >= 4 "ally e held after bank"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso bank 4
+ASSERT LAST_N == 4 "iso bank 4"
+SEND iso scavenge 3
+ASSERT LAST_N == 3 "iso scavenge 3"
+GETF iso age
+ASSERT LAST_N == 2 "iso age 2"
+GETF iso threshold
+ASSERT LAST_N == 10 "iso thr default untouched"
+SEND iso stores
+ASSERT LAST_N == 1 "iso reserve 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by scavenge"
+SEND iso gradient
+ASSERT LAST_N == 0 "iso pmf untouched by scavenge"
+SEND iso phosphagen
+ASSERT LAST_N == 0 "iso pcr untouched by scavenge"
+
+PRINT "2071_life_cell_scavenge PASS"

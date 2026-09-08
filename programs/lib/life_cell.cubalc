@@ -84,6 +84,7 @@
 #   drive n              pmf → lower mitosis threshold (chemiosmotic CDK priming; yield sheds pmf; ready recompute)
 #   mend n               PCr → shed age (phosphagen chaperone; yield sheds PCr; thr/ready untouched)
 #   renew n              pmf → shed age (chemiosmotic QC / Δψ chaperone; yield sheds pmf; thr/ready untouched)
+#   scavenge n           reserve → shed age (macroautophagy / glycogen-funded QC; yield sheds reserve; thr/ready untouched)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2278,6 +2279,48 @@ CLASS Cell
     SETF THIS age ag
     RET take
   END
+
+
+
+  # Scavenge: spend n reserve to shed age (macroautophagy / glycogen-funded proteostasis QC).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+  # renew (pmf→age), bank/draw/stow/saturate/respire/anabolize (reserve traffic).
+  # reserve pays; age floors at 0. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr/ready/threshold untouched.
+  # Usability: AGI spends protected glycogen bank to rejuvenate without burning ATP, PCr, pmf, heat, or life spark.
+  # Returns amount scavenged. Dead/zero/empty reserve/age already 0 → 0.
+  METHOD scavenge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
 
 
 END
