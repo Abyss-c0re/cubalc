@@ -1,0 +1,80 @@
+// atomic_printer_life_fission.cubalc
+// Science board: atomic printer + life_cell fission/inherit cytokinesis.
+// Maternal endowment: half energy + half glycogen reserve pack into one code;
+// daughter absorbs spark + bank without rewriting phenotype. Distinct from
+// after_div / gift / birth / bank. Gift: CubalC life-force. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=life_fission | note=cytokinesis_endowment"
+
+ENTITY founder OF Cell 1 22 0
+ENTITY daughter OF Cell 1 1 1
+
+GETF founder energy
+ASSERT LAST_N == 22 "founder spark 22"
+GETF founder threshold
+ASSERT LAST_N == 10 "founder thr 10"
+SEND founder set_threshold 10
+ASSERT LAST_N == 10 "founder thr arm"
+GETF founder ready
+ASSERT LAST_N == 1 "founder ready"
+SEND daughter set_threshold 10
+
+SEND founder bank 8
+ASSERT LAST_N == 8 "founder bank 8"
+GETF founder energy
+ASSERT LAST_N == 14 "founder e 14"
+SEND founder stores
+ASSERT LAST_N == 8 "founder reserve 8"
+SEND founder yield
+LET y0 = LAST_N
+ASSERT y0 == 22 "founder total 22"
+
+SEND founder fission
+LET code = LAST_N
+ASSERT code == 7004 "endowment de7*1000+dr4"
+GETF founder energy
+ASSERT LAST_N == 7 "founder post-fission e 7"
+SEND founder stores
+ASSERT LAST_N == 4 "founder post-fission reserve 4"
+GETF founder ready
+ASSERT LAST_N == 0 "founder gate cleared"
+GETF founder gen
+ASSERT LAST_N == 0 "founder gen held"
+SEND founder yield
+LET y1 = LAST_N
+ASSERT y1 == 11 "founder yield 11"
+ASSERT y1 + 7 + 4 == y0 "colony yield conserved at cut"
+
+SEND daughter inherit code
+ASSERT LAST_N == 11 "daughter absorbed 11"
+GETF daughter energy
+ASSERT LAST_N == 8 "daughter e 1+7"
+SEND daughter stores
+ASSERT LAST_N == 4 "daughter reserve 4"
+GETF daughter gen
+ASSERT LAST_N == 1 "daughter lineage gen 1"
+GETF daughter ready
+ASSERT LAST_N == 0 "daughter e8 < thr10"
+SEND daughter feed 3
+GETF daughter energy
+ASSERT LAST_N == 11 "daughter fed 11"
+GETF daughter ready
+ASSERT LAST_N == 1 "daughter mitosis-ready"
+
+// Founder can bank again and re-arm
+SEND founder feed 5
+GETF founder energy
+ASSERT LAST_N == 12 "founder fed 12"
+GETF founder ready
+ASSERT LAST_N == 1 "founder re-armed"
+
+SEND founder vitality
+ASSERT LAST_N > 1000 "founder vitality alive"
+SEND daughter vitality
+ASSERT LAST_N > 1000 "daughter vitality alive"
+
+PRINT "atomic_printer_life_fission ok"

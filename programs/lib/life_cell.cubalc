@@ -89,6 +89,8 @@
 #   invest n             energy → raise mitosis threshold (cytosolic nutrient→CDK fortify; yield sheds energy; ready recompute)
 #   spare n              reserve → lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease; yield sheds reserve; ready recompute)
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
+#   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
+#   inherit code         apply fission endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2558,6 +2560,105 @@ CLASS Cell
     END
     SETF THIS ready rd
     RET take
+  END
+
+  # Fission: cytokinesis prep — parent yields half active energy + half reserve as maternal endowment.
+  # Endowment code = de*1000 + dr (de = energy/2, dr = reserve/2). Parent keeps remainder + full
+  # threshold/setpoint/gen phenotype (epigenetic continuity). Ready cleared after cut.
+  # Requires alive, not quiescent, energy >= threshold, and energy >= 2 so both keep a spark path.
+  # Distinct from after_div (energy-only half, no return, no reserve split), gift (voluntary energy),
+  # birth (slot activate), bank/draw/stow/saturate, spare/buttress/invest (threshold ops), scavenge.
+  # Yield conserved across parent remainder + code unpack. Free energy flows to daughter lineage.
+  # Returns endowment code; dead/G0/below-threshold/spark-only → 0.
+  METHOD fission
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    IF e < th THEN
+      RET 0
+    END
+    IF e < 2 THEN
+      RET 0
+    END
+    LET de = e / 2
+    IF de < 1 THEN
+      RET 0
+    END
+    LET e = e - de
+    IF e < 1 THEN
+      LET e = 1
+    END
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r / 2
+    LET r = r - dr
+    SETF THIS reserve r
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+  # Inherit: apply maternal fission endowment code to a living daughter cell.
+  # de = code/1000 → energy; dr = code - de*1000 → reserve. Recomputes ready vs threshold.
+  # Does not alter gen/threshold/setpoint/age (lineage identity stays daughter's).
+  # Distinct from feed (nutrient pulse), birth (activate slot), bank/draw, gift, saturate,
+  # after_div, fission (parent side). Usability: AGI unpacks one RET from parent fission into child.
+  # Returns de+dr absorbed. Dead/zero code → 0.
+  METHOD inherit code
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF code < 1 THEN
+      RET 0
+    END
+    LET de = code / 1000
+    LET dr = code - de * 1000
+    IF de < 0 THEN
+      LET de = 0
+    END
+    IF dr < 0 THEN
+      LET dr = 0
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N + de
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + dr
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET got
   END
 
 END

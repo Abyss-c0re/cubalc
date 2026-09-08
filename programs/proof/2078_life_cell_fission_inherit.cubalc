@@ -1,0 +1,160 @@
+// 2078_life_cell_fission_inherit.cubalc
+// Proof 2078: life_cell fission + inherit — cytokinesis maternal endowment.
+// Parent halves energy+reserve into code=de*1000+dr; daughter inherits spark+glycogen.
+// Distinct from after_div (energy-only, no return/reserve), gift, birth, bank/draw,
+// spare/buttress/invest (threshold), scavenge. Yield conserved parent+daughter path.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mom OF Cell 1 20 0
+ENTITY kid OF Cell 1 2 1
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 18 0
+ENTITY poor OF Cell 1 8 0
+
+GETF mom energy
+ASSERT LAST_N == 20 "mom spark 20"
+GETF mom threshold
+ASSERT LAST_N == 10 "mom thr 10"
+SEND mom set_threshold 10
+ASSERT LAST_N == 10 "mom thr arm"
+GETF mom ready
+ASSERT LAST_N == 1 "mom ready e20>=thr10"
+SEND mom stores
+ASSERT LAST_N == 0 "mom reserve empty"
+SEND kid set_threshold 10
+SEND quiet set_threshold 10
+SEND poor set_threshold 10
+
+// Build glycogen bank then fission
+SEND mom bank 6
+ASSERT LAST_N == 6 "mom bank 6"
+GETF mom energy
+ASSERT LAST_N == 14 "mom e 14"
+SEND mom stores
+ASSERT LAST_N == 6 "mom reserve 6"
+SEND mom yield
+LET y_mom0 = LAST_N
+ASSERT y_mom0 == 20 "mom yield 20 before fission"
+
+SEND mom fission
+LET code = LAST_N
+ASSERT code == 7003 "code de7*1000+dr3"
+GETF mom energy
+ASSERT LAST_N == 7 "mom half energy 7"
+SEND mom stores
+ASSERT LAST_N == 3 "mom half reserve 3"
+GETF mom ready
+ASSERT LAST_N == 0 "mom ready cleared after fission"
+GETF mom threshold
+ASSERT LAST_N == 10 "mom thr phenotype held"
+SEND mom yield
+LET y_mom1 = LAST_N
+ASSERT y_mom1 == 10 "mom yield 10 after fission"
+// de+dr from code
+LET de = code / 1000
+LET dr = code - de * 1000
+ASSERT de == 7 "unpack de 7"
+ASSERT dr == 3 "unpack dr 3"
+ASSERT y_mom1 + de + dr == y_mom0 "yield conserved across cut"
+
+// Daughter inherits maternal endowment
+GETF kid energy
+ASSERT LAST_N == 2 "kid spark 2"
+GETF kid gen
+ASSERT LAST_N == 1 "kid gen 1"
+SEND kid yield
+LET y_kid0 = LAST_N
+ASSERT y_kid0 == 2 "kid yield 2"
+
+SEND kid inherit code
+ASSERT LAST_N == 10 "inherit absorbed 10"
+GETF kid energy
+ASSERT LAST_N == 9 "kid e 2+7"
+SEND kid stores
+ASSERT LAST_N == 3 "kid reserve 3"
+GETF kid ready
+ASSERT LAST_N == 0 "kid not ready e9 < thr10"
+GETF kid gen
+ASSERT LAST_N == 1 "kid gen held"
+SEND kid yield
+ASSERT LAST_N == y_kid0 + 10 "kid yield +endowment"
+
+// Feed kid over threshold
+SEND kid feed 2
+ASSERT LAST_N == 11 "kid feed to 11"
+GETF kid ready
+ASSERT LAST_N == 1 "kid ready after feed"
+
+// Dead cannot fission / inherit
+SEND dead fission
+ASSERT LAST_N == 0 "dead fission 0"
+SEND dead inherit 5002
+ASSERT LAST_N == 0 "dead inherit 0"
+
+// Quiescent blocks fission
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet fission
+ASSERT LAST_N == 0 "G0 fission 0"
+SEND quiet wake
+ASSERT LAST_N == 1 "wake ready"
+
+// Below threshold cannot fission
+GETF poor energy
+ASSERT LAST_N == 8 "poor e 8"
+GETF poor ready
+ASSERT LAST_N == 0 "poor not ready"
+SEND poor fission
+ASSERT LAST_N == 0 "sub-threshold fission 0"
+
+// Zero code inherit
+SEND kid inherit 0
+ASSERT LAST_N == 0 "zero inherit 0"
+
+// Second fission path with no reserve
+ENTITY solo OF Cell 1 12 0
+SEND solo fission
+LET c2 = LAST_N
+ASSERT c2 == 6000 "solo code de6*1000+dr0"
+GETF solo energy
+ASSERT LAST_N == 6 "solo half 6"
+SEND solo stores
+ASSERT LAST_N == 0 "solo reserve 0"
+ENTITY babe OF Cell 1 1 2
+SEND babe inherit c2
+ASSERT LAST_N == 6 "babe inherit 6"
+GETF babe energy
+ASSERT LAST_N == 7 "babe e 1+6"
+SEND babe stores
+ASSERT LAST_N == 0 "babe reserve 0"
+
+// Ally: inherit-only energy code (dr=0 encoded as xxx000)
+ENTITY ally OF Cell 1 5 0
+SEND ally inherit 4000
+ASSERT LAST_N == 4 "ally inherit de4"
+GETF ally energy
+ASSERT LAST_N == 9 "ally e 5+4"
+SEND ally stores
+ASSERT LAST_N == 0 "ally reserve still 0"
+
+// Reserve-only style small code (de=0, dr=5) — still valid maternal glycogen gift
+ENTITY nest OF Cell 1 4 0
+SEND nest inherit 5
+ASSERT LAST_N == 5 "nest inherit dr5"
+GETF nest energy
+ASSERT LAST_N == 4 "nest energy held"
+SEND nest stores
+ASSERT LAST_N == 5 "nest reserve 5"
+
+// after_div still energy-only (regression: distinct path)
+ENTITY old OF Cell 1 16 0
+SEND old bank 4
+SEND old after_div
+ASSERT LAST_N == 6 "after_div halves energy only to 6"
+SEND old stores
+ASSERT LAST_N == 4 "after_div reserve untouched"
+
+PRINT "life_cell_fission_inherit ok"
