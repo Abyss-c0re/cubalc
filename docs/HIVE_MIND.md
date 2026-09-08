@@ -10,6 +10,7 @@ MatrixState is the source of truth and external nanobots are bees to that queen.
 | `manager_motivate.cubalc` | Manager role for incomplete contracts |
 | `smx_filter.cubalc` | Protect path between braincube and external |
 | `nexus_heartbeat.cubalc` | SIDE_organ NEXUS_COORD fold |
+| `augogen_confirm.cubalc` | Pair vote (guide+oversee) on suggestPrompt — never auto-execute |
 
 ```bash
 ./out/cubalc run programs/hive_mind/instinct_queen.cubalc

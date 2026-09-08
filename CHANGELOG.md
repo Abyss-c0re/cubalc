@@ -1,3 +1,9 @@
+## Unreleased — AUGOGEN pair confirm (hive mind)
+
+- `programs/hive_mind/augogen_confirm.cubalc` — guide + oversee as one braincube
+- Next-step suggestion pending until COMPARE/HARMONY; never SYS SPAWN
+- Law: pair vote before next_prompt; mesh may veto; observer NexusCore
+
 ## 1.15.1577-usability — 2091 LIFE_CELL_FUSION
 
 - feat(life): fusion n mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; pmf held
