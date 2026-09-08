@@ -12,8 +12,13 @@
   "proofs": [
     "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc"
   ],
-  "head": "397e46b0d679369bc80304415c920c9dee58e107",
-  "tip": "397e46b0d679369bc80304415c920c9dee58e107",
-  "pinned_head": "397e46b0d679369bc80304415c920c9dee58e107",
-  "feat_head": "0360734748a632f6d47a98642cb31b5dc515b871"
+  "head": "6a27f5868f6bdc2caf568fe0aee953fb8ffaef59",
+  "tip": "6a27f5868f6bdc2caf568fe0aee953fb8ffaef59",
+  "pinned_head": "6a27f5868f6bdc2caf568fe0aee953fb8ffaef59",
+  "feat_head": "6a27f5868f6bdc2caf568fe0aee953fb8ffaef59",
+  "commit": "6a27f5868",
+  "ts": "2026-09-08T18:28:03Z",
+  "asserts_ok": 35,
+  "asserts_fail": 0,
+  "host_finish": true
 }
