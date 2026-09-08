@@ -1,0 +1,60 @@
+// atomic_printer_life_engulf.cubalc
+// Atomic printer life-force: phagocytosis / vesicle engulf extends trophic graph.
+// Place cells, energize, secrete vesicle, engulf with membrane work, ASSERT wonder.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gland OF Cell 1 40 0
+ENTITY hunter OF Cell 1 12 0
+ENTITY daughter OF Cell 0 0 0
+
+SEND gland set_threshold 10
+SEND hunter set_threshold 10
+
+SEND gland bank 15
+ASSERT LAST_N == 15 "gland bank15"
+// e=25 r=15 yield=40; secrete 20 → de=20 code=20000; e=5 r=15
+SEND gland yield
+ASSERT LAST_N == 40 "gland endowed"
+SEND gland secrete 20
+ASSERT LAST_N == 20000 "vesicle de20"
+GETF gland energy
+ASSERT LAST_N == 5 "gland e5 after secrete"
+SEND gland stores
+ASSERT LAST_N == 15 "gland r15 held"
+GETF gland alive
+ASSERT LAST_N == 1 "gland merocrine lives"
+
+SEND hunter engulf 20000
+ASSERT LAST_N == 20 "hunter phagocytosed 20"
+GETF hunter energy
+ASSERT LAST_N == 31 "hunter 12-1+20"
+SEND hunter stores
+ASSERT LAST_N == 0 "hunter r0"
+GETF hunter ready
+ASSERT LAST_N == 1 "hunter mitosis-ready"
+
+// hunter divides after engulf feast
+SEND hunter after_div
+GETF hunter energy
+ASSERT LAST_N > 0 "parent after_div"
+SEND daughter birth 8 1
+ASSERT LAST_N == 1 "daughter born"
+GETF daughter alive
+ASSERT LAST_N == 1 "daughter alive"
+SEND daughter set_threshold 10
+SEND daughter feed 5
+SEND daughter vitality
+ASSERT LAST_N > 0 "daughter vitality"
+
+// net: free energy flowed gland → vesicle → hunter membrane work → lineage
+SEND hunter total
+ASSERT LAST_N >= 10 "hunter wealth"
+SEND gland vitality
+ASSERT LAST_N > 0 "gland still vital"
+
+// colony: gland yield 5+15=20; hunter after engulf before div was 31; 20+31=51 = 40+12-1
+SEND gland yield
+ASSERT LAST_N == 20 "gland post yield20"

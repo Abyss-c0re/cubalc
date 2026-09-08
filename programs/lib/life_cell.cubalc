@@ -19,6 +19,7 @@
 #   die                  apoptosis / resource death
 #   lyse                 altruistic PCD — pack energy+reserve as inherit code, then die
 #   secrete n            merocrine vesicle — pack up to n yield as inherit code; mother lives
+#   engulf code          phagocytosis — pay 1 energy membrane cost, absorb endowment code (de*1000+dr); predator lives
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -2843,6 +2844,63 @@ CLASS Cell
     LET code = de * 1000
     LET code = code + dr
     RET code
+  END
+
+  # Engulf: phagocytosis / endocytic trophic capture of an endowment vesicle or prey pack.
+  # Pays 1 active-energy membrane-remodel cost (keep spark: need energy >= 2), then absorbs
+  # code=de*1000+dr exactly like inherit (energy+=de, reserve+=dr; ready recompute).
+  # No thr/G0 gate on the absorb path after cost — stressed cells may still feed if they can pay.
+  # ATP/pmf/pcr/heat untouched. Distinct from inherit (zero-cost maternal dowry),
+  # feed (raw nutrient, no code), secrete/gift/lyse/spore (outbound), bank/draw/scavenge.
+  # Usability: AGI models predator–prey and vesicle uptake with explicit membrane work.
+  # Returns got=de+dr; dead/cost-fail/code<1/empty payload → 0 (no partial cost on fail).
+  METHOD engulf code
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF code < 1 THEN
+      RET 0
+    END
+    LET de = code / 1000
+    LET dr = code - de * 1000
+    IF de < 0 THEN
+      LET de = 0
+    END
+    IF dr < 0 THEN
+      LET dr = 0
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # membrane cost 1; retain life spark
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 1
+    LET e = e + de
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + dr
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET got
   END
 
   METHOD lyse

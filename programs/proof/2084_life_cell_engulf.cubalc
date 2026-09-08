@@ -1,0 +1,153 @@
+// 2084_life_cell_engulf.cubalc
+// Proof 2084: life_cell engulf — phagocytosis of endowment code with membrane energy cost.
+// Pay 1 active energy (spark retained), absorb code=de*1000+dr; predator lives.
+// Distinct from inherit (free dowry), feed (raw), secrete/gift/lyse/spore (outbound).
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY pred OF Cell 1 20 0
+ENTITY prey OF Cell 1 25 0
+ENTITY pup OF Cell 1 1 1
+ENTITY weak OF Cell 1 1 0
+ENTITY dead OF Cell 0 20 0
+
+SEND pred set_threshold 10
+SEND prey set_threshold 10
+SEND pup set_threshold 10
+SEND weak set_threshold 10
+
+GETF pred energy
+ASSERT LAST_N == 20 "pred e20"
+SEND pred bank 5
+ASSERT LAST_N == 5 "pred bank5"
+GETF pred energy
+ASSERT LAST_N == 15 "pred e15"
+SEND pred stores
+ASSERT LAST_N == 5 "pred r5"
+
+// prey packs vesicle: bank then secrete drains energy-first
+SEND prey bank 8
+ASSERT LAST_N == 8 "prey bank8"
+GETF prey energy
+ASSERT LAST_N == 17 "prey e17"
+SEND prey stores
+ASSERT LAST_N == 8 "prey r8"
+SEND prey secrete 12
+ASSERT LAST_N == 12000 "prey vesicle de12"
+GETF prey energy
+ASSERT LAST_N == 5 "prey e5 after secrete"
+SEND prey stores
+ASSERT LAST_N == 8 "prey r still 8"
+GETF prey alive
+ASSERT LAST_N == 1 "prey lives after secrete"
+
+// predator engulfs vesicle: membrane cost 1 then +de/+dr
+SEND pred engulf 12000
+ASSERT LAST_N == 12 "pred engulf got12"
+GETF pred energy
+ASSERT LAST_N == 26 "pred e15-1+12=26"
+SEND pred stores
+ASSERT LAST_N == 5 "pred r5 unchanged"
+GETF pred alive
+ASSERT LAST_N == 1 "pred lives"
+GETF pred ready
+ASSERT LAST_N == 1 "pred ready e26>=10"
+
+// mixed energy+reserve vesicle (force reserve drain on secrete)
+ENTITY gland OF Cell 1 12 0
+SEND gland set_threshold 10
+SEND gland bank 8
+// e=4 r=8 yield=12; secrete 10 → de=3 dr=7 code=3007
+SEND gland secrete 10
+ASSERT LAST_N == 3007 "gland vesicle e3+r7"
+ENTITY hunter2 OF Cell 1 10 0
+SEND hunter2 set_threshold 10
+SEND hunter2 bank 2
+// e=8 r=2; engulf 3007 → e=8-1+3=10 r=2+7=9 got=10
+SEND hunter2 engulf 3007
+ASSERT LAST_N == 10 "hunter2 got10"
+GETF hunter2 energy
+ASSERT LAST_N == 10 "hunter2 e10"
+SEND hunter2 stores
+ASSERT LAST_N == 9 "hunter2 r9"
+GETF hunter2 ready
+ASSERT LAST_N == 1 "hunter2 ready"
+
+// inherit remains zero-cost control path
+SEND pup inherit 2000
+ASSERT LAST_N == 2 "pup inherit free +2"
+GETF pup energy
+ASSERT LAST_N == 3 "pup e1+2 no membrane tax"
+
+// weak spark-only cannot pay membrane cost — no partial debit
+SEND weak engulf 5000
+ASSERT LAST_N == 0 "weak e1 cannot engulf"
+GETF weak energy
+ASSERT LAST_N == 1 "weak spark untouched"
+SEND weak stores
+ASSERT LAST_N == 0 "weak r0"
+
+// dead predator fails
+SEND dead engulf 5000
+ASSERT LAST_N == 0 "dead no engulf"
+
+// empty / bad codes
+SEND pred engulf 0
+ASSERT LAST_N == 0 "code0"
+SEND pred engulf -3
+ASSERT LAST_N == 0 "code neg"
+
+// G0 predator may still engulf if it can pay cost
+ENTITY rest OF Cell 1 10 0
+SEND rest set_threshold 10
+SEND rest quiesce
+ASSERT LAST_N == 1 "rest G0"
+SEND rest engulf 3001
+ASSERT LAST_N == 4 "G0 engulf got4"
+GETF rest energy
+ASSERT LAST_N == 12 "rest e10-1+3"
+SEND rest stores
+ASSERT LAST_N == 1 "rest r1"
+GETF rest ready
+ASSERT LAST_N == 0 "G0 ready stays 0"
+GETF rest quiescent
+ASSERT LAST_N == 1 "still G0"
+
+// full trophic loop: secrete → engulf conservation (minus membrane 1)
+ENTITY donor OF Cell 1 30 0
+ENTITY hunter OF Cell 1 8 0
+SEND donor set_threshold 10
+SEND hunter set_threshold 10
+SEND donor yield
+ASSERT LAST_N == 30 "donor yield30"
+SEND hunter yield
+ASSERT LAST_N == 8 "hunter yield8"
+SEND donor secrete 9
+ASSERT LAST_N == 9000 "donor code9"
+SEND hunter engulf 9000
+ASSERT LAST_N == 9 "hunter got9"
+SEND donor yield
+ASSERT LAST_N == 21 "donor yield21"
+SEND hunter yield
+ASSERT LAST_N == 16 "hunter 8-1+9=16"
+// colony conserved wealth: 21+16=37 = 30+8 - 1 membrane
+LET colony = 21
+LET colony = colony + 16
+ASSERT colony == 37 "colony wealth minus membrane"
+
+// vitality still positive after hunt
+SEND hunter vitality
+ASSERT LAST_N > 0 "hunter vitality"
+
+// checkpoint moves
+SEND hunter checkpoint
+ASSERT LAST_N > 0 "hunter checkpoint"
+
+// secrete→engulf reserve path colony math
+// gland left e1 r1 yield2 after 3007; hunter2 yield e10+r9=19; prior gland12+hunter2_10=22; 2+19=21 = 22-1
+SEND gland yield
+ASSERT LAST_N == 2 "gland residual yield2"
+SEND hunter2 yield
+ASSERT LAST_N == 19 "hunter2 yield19"
