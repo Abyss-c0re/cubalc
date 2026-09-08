@@ -25,12 +25,12 @@
   "asserts_ok": 54,
   "asserts_fail": 0,
   "science_asserts_ok": 23,
-  "host_finish": false,
+  "host_finish": true,
   "anti_bloat": true,
-  "head": "",
-  "tip": "",
-  "pinned_head": "",
-  "feat_head": "",
-  "commit": "",
-  "short": ""
+  "head": "5bf3c90b178305ae2f7f06911bc5b62afab77c62",
+  "tip": "5bf3c90b178305ae2f7f06911bc5b62afab77c62",
+  "pinned_head": "5bf3c90b178305ae2f7f06911bc5b62afab77c62",
+  "feat_head": "5bf3c90b178305ae2f7f06911bc5b62afab77c62",
+  "commit": "5bf3c90b1",
+  "short": "5bf3c90b1"
 }
