@@ -90,7 +90,8 @@
 #   spare n              reserve → lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease; yield sheds reserve; ready recompute)
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
-#   inherit code         apply fission endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
+#   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
+#   inherit code         apply fission/bud endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2658,7 +2659,59 @@ CLASS Cell
       END
     END
     SETF THIS ready rd
+    SETF THIS ready rd
     RET got
+  END
+
+  # Bud: asymmetric cytokinesis / budding-yeast style minority endowment.
+  # Packs ~1/3 active energy + ~1/3 reserve as code=de*1000+dr; mother keeps ~2/3.
+  # Gates: alive, not G0, energy >= threshold, energy >= 3 so mother keeps spark
+  # and bud carries at least 1 unit. Parent phenotype (thr/setpoint/gen/age) held;
+  # ready cleared. Yield conserved mother remainder + code unpack.
+  # Distinct from fission (equal half split), after_div (energy-only no code/reserve),
+  # gift, birth, bank/draw, spare/buttress/invest, scavenge, inherit (daughter side).
+  # Usability: AGI models polar growth / stem self-renewal without equal bipartition.
+  # Returns endowment code; dead/G0/sub-threshold/too-lean → 0.
+  METHOD bud
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    IF e < th THEN
+      RET 0
+    END
+    IF e < 3 THEN
+      RET 0
+    END
+    LET de = e / 3
+    IF de < 1 THEN
+      RET 0
+    END
+    LET e = e - de
+    IF e < 1 THEN
+      LET e = 1
+    END
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r / 3
+    LET r = r - dr
+    SETF THIS reserve r
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
   END
 
 END

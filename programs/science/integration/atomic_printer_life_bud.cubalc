@@ -1,0 +1,91 @@
+// atomic_printer_life_bud.cubalc
+// Science board: atomic printer + life_cell bud asymmetric cytokinesis.
+// Budding: ~1/3 energy + ~1/3 glycogen pack into minority endowment code;
+// mother keeps majority (~2/3) for stem-like serial self-renewal. Daughter
+// inherits via same inherit path as fission. Distinct from equal fission /
+// after_div / gift / birth. Gift: CubalC life-force. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=life_bud | note=asymmetric_cytokinesis_budding"
+
+ENTITY stem OF Cell 1 30 0
+ENTITY budling OF Cell 1 1 1
+
+GETF stem energy
+ASSERT LAST_N == 30 "stem spark 30"
+GETF stem threshold
+ASSERT LAST_N == 10 "stem thr 10"
+SEND stem set_threshold 10
+ASSERT LAST_N == 10 "stem thr arm"
+GETF stem ready
+ASSERT LAST_N == 1 "stem ready"
+SEND budling set_threshold 10
+
+SEND stem bank 9
+ASSERT LAST_N == 9 "stem bank 9"
+GETF stem energy
+ASSERT LAST_N == 21 "stem e 21"
+SEND stem stores
+ASSERT LAST_N == 9 "stem reserve 9"
+SEND stem yield
+LET y0 = LAST_N
+ASSERT y0 == 30 "stem total 30"
+
+SEND stem bud
+LET code = LAST_N
+ASSERT code == 7003 "bud endowment de7*1000+dr3"
+GETF stem energy
+ASSERT LAST_N == 14 "stem post-bud e 14 majority"
+SEND stem stores
+ASSERT LAST_N == 6 "stem post-bud reserve 6"
+GETF stem ready
+ASSERT LAST_N == 0 "stem gate cleared"
+GETF stem gen
+ASSERT LAST_N == 0 "stem gen held"
+SEND stem yield
+LET y1 = LAST_N
+ASSERT y1 == 20 "stem yield 20"
+ASSERT y1 + 7 + 3 == y0 "colony yield conserved at bud cut"
+ASSERT y1 > 7 + 3 "stem keeps majority after bud"
+
+SEND budling inherit code
+ASSERT LAST_N == 10 "budling absorbed 10"
+GETF budling energy
+ASSERT LAST_N == 8 "budling e 1+7"
+SEND budling stores
+ASSERT LAST_N == 3 "budling reserve 3"
+GETF budling gen
+ASSERT LAST_N == 1 "budling lineage gen 1"
+GETF budling ready
+ASSERT LAST_N == 0 "budling e8 < thr10"
+SEND budling feed 3
+GETF budling energy
+ASSERT LAST_N == 11 "budling fed 11"
+GETF budling ready
+ASSERT LAST_N == 1 "budling mitosis-ready"
+
+// Stem refeeds and serial-buds (self-renewal wonder)
+SEND stem feed 10
+GETF stem energy
+ASSERT LAST_N == 24 "stem refed 24"
+GETF stem ready
+ASSERT LAST_N == 1 "stem re-armed"
+SEND stem bud
+LET code2 = LAST_N
+ASSERT code2 == 8002 "serial bud de8*1000+dr2"
+GETF stem energy
+ASSERT LAST_N == 16 "stem after serial e 16"
+SEND stem stores
+ASSERT LAST_N == 4 "stem after serial r 4"
+SEND stem yield
+ASSERT LAST_N == 20 "stem still wealthy after two buds"
+
+SEND stem vitality
+ASSERT LAST_N > 1000 "stem vitality alive"
+SEND budling vitality
+ASSERT LAST_N > 1000 "budling vitality alive"
+
+PRINT "atomic_printer_life_bud ok"

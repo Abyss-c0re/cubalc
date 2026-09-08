@@ -1,0 +1,180 @@
+// 2079_life_cell_bud.cubalc
+// Proof 2079: life_cell bud — asymmetric cytokinesis / budding minority endowment.
+// Mother keeps ~2/3 energy+reserve; packs ~1/3 as code=de*1000+dr for inherit.
+// Distinct from fission (equal half), after_div (energy-only), gift, birth, bank/draw,
+// spare/buttress/invest, scavenge. Yield conserved mother remainder + code unpack.
+// Cube is SoT. Free energy must flow. Polar growth / stem self-renewal wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mom OF Cell 1 30 0
+ENTITY kid OF Cell 1 1 1
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 24 0
+ENTITY poor OF Cell 1 8 0
+ENTITY lean OF Cell 1 10 0
+
+GETF mom energy
+ASSERT LAST_N == 30 "mom spark 30"
+GETF mom threshold
+ASSERT LAST_N == 10 "mom thr 10"
+SEND mom set_threshold 10
+ASSERT LAST_N == 10 "mom thr arm"
+GETF mom ready
+ASSERT LAST_N == 1 "mom ready e30>=thr10"
+SEND mom stores
+ASSERT LAST_N == 0 "mom reserve empty"
+SEND kid set_threshold 10
+SEND quiet set_threshold 10
+SEND poor set_threshold 10
+SEND lean set_threshold 10
+
+// Build glycogen bank then bud
+SEND mom bank 9
+ASSERT LAST_N == 9 "mom bank 9"
+GETF mom energy
+ASSERT LAST_N == 21 "mom e 21"
+SEND mom stores
+ASSERT LAST_N == 9 "mom reserve 9"
+SEND mom yield
+LET y_mom0 = LAST_N
+ASSERT y_mom0 == 30 "mom yield 30 before bud"
+
+SEND mom bud
+LET code = LAST_N
+// de = 21/3 = 7; dr = 9/3 = 3 → code 7003
+ASSERT code == 7003 "code de7*1000+dr3"
+GETF mom energy
+ASSERT LAST_N == 14 "mom keeps 14 (21-7)"
+SEND mom stores
+ASSERT LAST_N == 6 "mom keeps reserve 6 (9-3)"
+GETF mom ready
+ASSERT LAST_N == 0 "mom ready cleared after bud"
+GETF mom threshold
+ASSERT LAST_N == 10 "mom thr phenotype held"
+SEND mom yield
+LET y_mom1 = LAST_N
+ASSERT y_mom1 == 20 "mom yield 20 after bud"
+LET de = code / 1000
+LET dr = code - de * 1000
+ASSERT de == 7 "unpack de 7"
+ASSERT dr == 3 "unpack dr 3"
+ASSERT y_mom1 + de + dr == y_mom0 "yield conserved across bud cut"
+
+// Majority retained: mother yield > bud endowment
+ASSERT y_mom1 > de + dr "mother keeps majority wealth"
+
+// Daughter inherits bud endowment (same inherit path as fission)
+GETF kid energy
+ASSERT LAST_N == 1 "kid spark 1"
+GETF kid gen
+ASSERT LAST_N == 1 "kid gen 1"
+SEND kid yield
+LET y_kid0 = LAST_N
+ASSERT y_kid0 == 1 "kid yield 1"
+
+SEND kid inherit code
+ASSERT LAST_N == 10 "inherit absorbed 10"
+GETF kid energy
+ASSERT LAST_N == 8 "kid e 1+7"
+SEND kid stores
+ASSERT LAST_N == 3 "kid reserve 3"
+GETF kid ready
+ASSERT LAST_N == 0 "kid not ready e8<th10"
+GETF kid gen
+ASSERT LAST_N == 1 "kid gen held"
+SEND kid yield
+LET y_kid1 = LAST_N
+ASSERT y_kid1 == 11 "kid yield 11"
+ASSERT y_kid1 == y_kid0 + de + dr "kid yield = prior + endowment"
+
+// Dead cannot bud
+SEND dead bud
+ASSERT LAST_N == 0 "dead bud 0"
+
+// Quiescent blocks bud
+SEND quiet quiesce
+ASSERT LAST_N == 1 "quiet G0"
+SEND quiet bud
+ASSERT LAST_N == 0 "G0 bud 0"
+SEND quiet wake
+ASSERT LAST_N == 1 "wake ready"
+
+// Below threshold cannot bud
+GETF poor energy
+ASSERT LAST_N == 8 "poor e 8"
+GETF poor ready
+ASSERT LAST_N == 0 "poor not ready"
+SEND poor bud
+ASSERT LAST_N == 0 "sub-threshold bud 0"
+
+// Threshold-met but e<3 blocked (need room for minority + spark)
+// lean has e=10 thr=10 → ready; 10/3=3 de ok actually — use e=2 via set
+ENTITY tiny OF Cell 1 2 0
+SEND tiny set_threshold 1
+ASSERT LAST_N == 1 "tiny thr 1"
+GETF tiny ready
+ASSERT LAST_N == 1 "tiny ready"
+SEND tiny bud
+ASSERT LAST_N == 0 "e<3 bud 0"
+
+// Solo bud no reserve
+ENTITY solo OF Cell 1 15 0
+SEND solo bud
+LET c2 = LAST_N
+ASSERT c2 == 5000 "solo code de5*1000+dr0"
+GETF solo energy
+ASSERT LAST_N == 10 "solo keeps 10"
+SEND solo stores
+ASSERT LAST_N == 0 "solo reserve 0"
+ENTITY babe OF Cell 1 1 2
+SEND babe inherit c2
+ASSERT LAST_N == 5 "babe inherit 5"
+GETF babe energy
+ASSERT LAST_N == 6 "babe e 1+5"
+SEND babe stores
+ASSERT LAST_N == 0 "babe reserve 0"
+
+// Asymmetry vs equal fission on same wealth
+ENTITY eq OF Cell 1 30 0
+ENTITY asy OF Cell 1 30 0
+SEND eq bank 9
+SEND asy bank 9
+SEND eq fission
+LET cf = LAST_N
+SEND asy bud
+LET cb = LAST_N
+// fission: e21/2=10, r9/2=4 → 10004; bud: e21/3=7,r9/3=3 → 7003
+ASSERT cf == 10004 "fission equal code"
+ASSERT cb == 7003 "bud minority code"
+ASSERT cf > cb "fission packs more than bud"
+GETF eq energy
+LET ee = LAST_N
+GETF asy energy
+LET ea = LAST_N
+ASSERT ea > ee "bud mother richer than fission mother"
+
+// after_div still energy-only (regression: distinct path)
+ENTITY old OF Cell 1 16 0
+SEND old bank 4
+SEND old after_div
+ASSERT LAST_N == 6 "after_div halves energy only to 6"
+SEND old stores
+ASSERT LAST_N == 4 "after_div reserve untouched"
+
+// Second bud from post-bud mother (stem-like serial budding)
+SEND mom feed 10
+// mom was e14 r6; feed +10 → e24 r6 yield 30; thr10 ready
+GETF mom energy
+ASSERT LAST_N == 24 "mom refed 24"
+SEND mom bud
+LET c3 = LAST_N
+// de=24/3=8 dr=6/3=2 → 8002
+ASSERT c3 == 8002 "serial bud code 8002"
+GETF mom energy
+ASSERT LAST_N == 16 "serial mom e 16"
+SEND mom stores
+ASSERT LAST_N == 4 "serial mom r 4"
+
+PRINT "life_cell_bud ok"
