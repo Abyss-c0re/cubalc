@@ -18,6 +18,7 @@
 #   after_div            parent halves energy after successful mitosis
 #   die                  apoptosis / resource death
 #   lyse                 altruistic PCD — pack energy+reserve as inherit code, then die
+#   secrete n            merocrine vesicle — pack up to n yield as inherit code; mother lives
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -2762,6 +2763,88 @@ CLASS Cell
   # gift (keeps alive, energy-only, retains spark), spore/bud/fission (mother lives),
   # after_div, scavenge, spare/invest. Usability: AGI models PCD nutrient recycling.
   # Returns endowment code; dead → 0; empty wealth still dies cleanly → 0.
+
+  # Secrete: merocrine/apocrine trophic vesicle — partial bequeath while living.
+  # Packs up to n yield units as code=de*1000+dr. Drain order: active energy down to
+  # life spark 1, then reserve. Mother stays alive; ready recomputed vs threshold.
+  # No thr/G0 gate (stressed/resting cells may still nourish colony without PCD).
+  # Yield conserved when receiver inherit(code). ATP/pmf/pcr/heat untouched.
+  # Distinct from gift (energy-only, returns amt not code, no reserve path),
+  # lyse (full pack + die), spore (forced spark=1 full pack, stress survival),
+  # fission/bud (division ratios, thr gate), die (discards), bank/draw/scavenge.
+  # Usability: AGI meters colony trophic flow without killing the donor cell.
+  # Returns endowment code; dead/n<1/nothing transferable (e<=1 and r<=0) → 0.
+  METHOD secrete n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET need = n
+    LET de = 0
+    LET dr = 0
+    # energy-first, keep spark >= 1 when e >= 1
+    LET can_e = 0
+    IF e > 1 THEN
+      LET can_e = e - 1
+    END
+    IF can_e > need THEN
+      LET can_e = need
+    END
+    IF can_e < 0 THEN
+      LET can_e = 0
+    END
+    LET de = can_e
+    LET e = e - de
+    LET need = need - de
+    IF need > 0 THEN
+      LET dr = need
+      IF dr > r THEN
+        LET dr = r
+      END
+      IF dr < 0 THEN
+        LET dr = 0
+      END
+      LET r = r - dr
+      LET need = need - dr
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    SETF THIS energy e
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
   METHOD lyse
     GETF THIS alive
     IF LAST_N == 0 THEN
