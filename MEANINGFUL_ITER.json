@@ -3,8 +3,8 @@
   "meaningful_iter": 2075,
   "MEANINGFUL_ITER": 2075,
   "iter": 2075,
-  "version": "1.15.1561-usability",
-  "VERSION": "1.15.1561-usability",
+  "version": "1.15.1562-usability",
+  "VERSION": "1.15.1562-usability",
   "feature": "ilog2n_bitwidthn",
   "FEATURE": "ILOG2N_BITWIDTHN",
   "ship": "2075_ilog2n_bitwidthn",
@@ -12,16 +12,16 @@
   "proofs": [
     "programs/proof/2075_ilog2n_bitwidthn.cubalc"
   ],
-  "head": "fd84b1616a81924b53de062a07bd492a39e5ce9a",
-  "tip": "fd84b1616a81924b53de062a07bd492a39e5ce9a",
-  "pinned_head": "fd84b1616a81924b53de062a07bd492a39e5ce9a",
+  "head": "cc3501850a6ca6035e16388dd8938c144c8e191d",
+  "tip": "cc3501850a6ca6035e16388dd8938c144c8e191d",
+  "pinned_head": "cc3501850a6ca6035e16388dd8938c144c8e191d",
   "feat_head": "245929bc6d981282504d62e6f9d031d01ea9d3ef",
   "item": "ilog2n bitwidthn",
   "item_id": "mi_ilog2n_bitwidthn",
   "title": "ILOG2N_BITWIDTHN",
-  "commit": "fd84b1616",
-  "summary": "ILOG2N/BITWIDTHN floor-log2 + bit-length usability; proof 2075 asserts_ok=37 fail=0; tip sealed.",
-  "ts": "2026-09-08T18:19:54Z",
+  "commit": "cc3501850",
+  "summary": "ILOG2N/BITWIDTHN floor-log2 + bit-length usability; proof 2075 asserts_ok=37 fail=0; pushed main.",
+  "ts": "2026-09-08T18:20:40Z",
   "host_finish": true,
   "anti_bloat": true,
   "n": 2075,
@@ -30,5 +30,7 @@
   "asserts_ok": 37,
   "asserts_fail": 0,
   "proof_status": "PASS",
-  "status": "PASS"
+  "status": "PASS",
+  "pure_c": "src/lang/lang_ops_math.c",
+  "note": "ILOG2N floor(log2); BITWIDTHN bit length; twin SILOG2"
 }
