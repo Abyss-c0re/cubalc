@@ -21,16 +21,16 @@
   "item": "life cell mitophagy",
   "item_id": "mi_life_cell_mitophagy",
   "summary": "mitophagy n: selective mito QC \u2014 recycle n age + drain pmf debris \u2192 energy +1 heat; ATP/energy selectivity tax; completes autophagy\u2194mitophagy free-energy QC loop; proof 2089 + atomic_printer_life_mitophagy.",
-  "ts": "2026-09-08T22:43:48Z",
+  "ts": "2026-09-08T22:43:54Z",
   "asserts_ok": 133,
   "asserts_fail": 0,
   "science_asserts_ok": 54,
   "host_finish": true,
   "anti_bloat": true,
-  "head": "30b745b8aa99767e9033986bd2c86032042c2b33",
-  "tip": "30b745b8aa99767e9033986bd2c86032042c2b33",
-  "pinned_head": "30b745b8aa99767e9033986bd2c86032042c2b33",
+  "head": "177b6d9bc10a137b8ce81741a322a62bc6adfa66",
+  "tip": "177b6d9bc10a137b8ce81741a322a62bc6adfa66",
+  "pinned_head": "177b6d9bc10a137b8ce81741a322a62bc6adfa66",
   "feat_head": "30b745b8aa99767e9033986bd2c86032042c2b33",
-  "commit": "30b745b8a",
-  "short": "30b745b8a"
+  "commit": "177b6d9bc",
+  "short": "177b6d9bc"
 }
