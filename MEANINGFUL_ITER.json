@@ -15,17 +15,17 @@
     "src/lang/lang_ops_math.c",
     "src/lang/lang_ops_core.c"
   ],
-  "head": "ed554bf9ee2f2e811dcda303f055c6b68fa7728b",
-  "tip": "ed554bf9ee2f2e811dcda303f055c6b68fa7728b",
-  "pinned_head": "ed554bf9ee2f2e811dcda303f055c6b68fa7728b",
+  "head": "ed6fec05bd6cdae6171aad44958100102e0ac6ad",
+  "tip": "ed6fec05bd6cdae6171aad44958100102e0ac6ad",
+  "pinned_head": "ed6fec05bd6cdae6171aad44958100102e0ac6ad",
   "feat_head": "036073474",
-  "short": "ed554bf9e",
-  "commit": "ed554bf9e",
+  "short": "ed6fec05b",
+  "commit": "ed6fec05b",
   "item": "popcountn clzn ctzn parityn",
   "item_id": "mi_popcountn_clzn_ctzn_parityn",
   "title": "POPCOUNTN CLZN CTZN PARITYN",
   "summary": "Hamming/lzcnt/tzcnt/parity usability forms; proof 2077 PASS 35/0.",
-  "ts": "2026-09-08T18:29:19Z",
+  "ts": "2026-09-08T18:29:53Z",
   "host_finish": false,
   "anti_bloat": true
 }
