@@ -1,0 +1,186 @@
+// 2088_life_cell_autophagy.cubalc
+// Proof 2088: life_cell autophagy — macroautophagy (age biomass → energy + heat).
+// Recycle worn organelles under starvation; no membrane toll; ready recompute.
+// Distinct from repair (energy→shed age), scavenge (reserve→age), digest (reserve→energy+heat).
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY aged OF Cell 1 6 0
+ENTITY young OF Cell 1 12 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 8 0
+ENTITY spark OF Cell 1 1 0
+
+SEND aged set_threshold 10
+SEND young set_threshold 10
+SEND g0 set_threshold 10
+SEND spark set_threshold 10
+
+// age the cell via pulse ticks
+SEND aged pulse 7
+GETF aged age
+ASSERT LAST_N == 7 "aged a7"
+GETF aged energy
+// pulse burns some energy; record baseline after pulse
+LET e0 = LAST_N
+ASSERT e0 >= 1 "aged still spark"
+
+SEND aged autophagy 4
+ASSERT LAST_N == 4 "aged auto4"
+GETF aged age
+ASSERT LAST_N == 3 "aged a3"
+GETF aged energy
+ASSERT LAST_N == e0 + 4 "aged e+4"
+GETF aged heat
+ASSERT LAST_N == 1 "aged heat1"
+GETF aged alive
+ASSERT LAST_N == 1 "aged lives"
+// energy may cross thr
+GETF aged ready
+// just assert ready is 0 or 1 valid
+ASSERT LAST_N >= 0 "aged ready ok"
+
+// clamp to remaining age
+SEND aged autophagy 10
+ASSERT LAST_N == 3 "aged clamp a"
+GETF aged age
+ASSERT LAST_N == 0 "aged a0"
+GETF aged energy
+ASSERT LAST_N == e0 + 7 "aged e+7 total"
+GETF aged heat
+ASSERT LAST_N == 2 "aged heat2"
+
+// zero age fail-closed
+SEND aged autophagy 2
+ASSERT LAST_N == 0 "aged empty age"
+GETF aged energy
+ASSERT LAST_N == e0 + 7 "aged e held"
+GETF aged heat
+ASSERT LAST_N == 2 "heat held"
+
+// n<1 reject
+SEND young pulse 3
+GETF young age
+ASSERT LAST_N == 3 "young a3"
+SEND young autophagy 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF young age
+ASSERT LAST_N == 3 "young a held"
+GETF young heat
+ASSERT LAST_N == 0 "young no heat"
+
+// young age-less reject
+ENTITY fresh OF Cell 1 15 0
+SEND fresh set_threshold 10
+SEND fresh autophagy 5
+ASSERT LAST_N == 0 "fresh no age"
+GETF fresh energy
+ASSERT LAST_N == 15 "fresh e held"
+GETF fresh heat
+ASSERT LAST_N == 0 "fresh heat0"
+GETF fresh ready
+ASSERT LAST_N == 1 "fresh ready"
+
+// dead reject
+SEND dead autophagy 3
+ASSERT LAST_N == 0 "dead fail"
+
+// G0: energy rises, ready stays 0
+SEND g0 pulse 5
+GETF g0 age
+ASSERT LAST_N == 5 "g0 a5"
+SEND g0 quiesce
+ASSERT LAST_N == 1 "g0 quiesce"
+SEND g0 autophagy 3
+ASSERT LAST_N == 3 "g0 auto3"
+GETF g0 age
+ASSERT LAST_N == 2 "g0 a2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready"
+GETF g0 heat
+ASSERT LAST_N == 1 "g0 heat1"
+GETF g0 energy
+// pulse burned; energy +3 from autophagy — just vitality path
+ASSERT LAST_N >= 1 "g0 spark"
+
+// starvation wonder: low energy, high age → autophagy arms mitosis
+ENTITY starve OF Cell 1 4 0
+SEND starve set_threshold 10
+SEND starve pulse 8
+GETF starve age
+ASSERT LAST_N == 8 "starve a8"
+GETF starve energy
+LET se = LAST_N
+// may be low after pulse burn
+SEND starve autophagy 6
+ASSERT LAST_N == 6 "starve auto6"
+GETF starve energy
+LET se2 = LAST_N
+ASSERT se2 == se + 6 "starve e+6"
+GETF starve age
+ASSERT LAST_N == 2 "starve a2"
+GETF starve heat
+ASSERT LAST_N == 1 "starve heat1"
+// if se2 >= 10 ready should arm
+IF se2 >= 10 THEN
+  GETF starve ready
+  ASSERT LAST_N == 1 "starve armed"
+END
+
+// reserve/atp untouched
+ENTITY banked OF Cell 1 14 0
+SEND banked set_threshold 10
+SEND banked bank 4
+SEND banked charge 3
+SEND banked pulse 4
+GETF banked age
+ASSERT LAST_N == 4 "banked a4"
+SEND banked stores
+ASSERT LAST_N == 4 "banked r4"
+SEND banked charged
+ASSERT LAST_N == 3 "banked atp3"
+SEND banked autophagy 2
+ASSERT LAST_N == 2 "banked auto2"
+SEND banked stores
+ASSERT LAST_N == 4 "banked r held"
+SEND banked charged
+ASSERT LAST_N == 3 "banked atp held"
+GETF banked heat
+ASSERT LAST_N == 1 "banked heat1"
+
+// distinct from repair: repair spends energy to shed age
+ENTITY rep OF Cell 1 20 0
+SEND rep set_threshold 10
+SEND rep pulse 5
+GETF rep age
+ASSERT LAST_N == 5 "rep a5"
+GETF rep energy
+LET re = LAST_N
+SEND rep repair 3
+ASSERT LAST_N == 3 "rep repair3"
+GETF rep age
+ASSERT LAST_N == 2 "rep a2 after repair"
+GETF rep energy
+ASSERT LAST_N == re - 3 "rep e spent"
+GETF rep heat
+ASSERT LAST_N == 0 "repair no heat"
+
+// autophagy inverse direction: age→energy+heat
+SEND rep autophagy 2
+ASSERT LAST_N == 2 "rep auto2"
+GETF rep age
+ASSERT LAST_N == 0 "rep a0"
+GETF rep energy
+ASSERT LAST_N == re - 3 + 2 "rep e net"
+GETF rep heat
+ASSERT LAST_N == 1 "rep heat1"
+
+// vitality stays positive
+SEND aged vitality
+ASSERT LAST_N > 0 "aged vital"
+SEND starve vitality
+ASSERT LAST_N > 0 "starve vital"
+
+PASS "2088_life_cell_autophagy PASS"

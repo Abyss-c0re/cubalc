@@ -23,6 +23,7 @@
 #   digest n             lysosome — burn n reserve cargo → energy +1 heat; completes engulf arc
 #   pinocyte n           fluid-phase endocytosis — pay 1 membrane energy, gain n reserve from medium
 #   exocyte n            fluid-phase exocytosis — pay 1 membrane energy, shed n reserve cargo to medium
+#   autophagy n          macroautophagy — recycle n age (worn biomass) → energy +1 heat; starvation self-catabolism
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3082,6 +3083,61 @@ CLASS Cell
     LET r = r - take
     SETF THIS energy e
     SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Autophagy: macroautophagy / self-catabolism — recycle worn biomass (age) into metabolic fuel.
+  # Burns take=min(n,age) age units → energy += take, heat += 1 (lysosomal self-digest tax).
+  # Internal double-membrane path: no active-energy membrane toll. reserve/atp/pmf/pcr untouched.
+  # Ready recomputed vs threshold (quiescent stays unready). Yield conserved into energy+heat.
+  # Distinct from repair (energy→shed age), scavenge (reserve→shed age), digest (reserve→energy+heat),
+  # respire (reserve→energy no heat), thaw (heat→energy), reclaim, cool, die/lyse.
+  # Usability: AGI models starvation survival — cell eats damaged organelles to keep the spark.
+  # Returns take recycled; dead/n<1/age<1 → 0.
+  METHOD autophagy n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET ag = ag - take
+    SETF THIS age ag
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
     GETF THIS quiescent
     LET q = LAST_N
     LET rd = 0

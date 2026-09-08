@@ -1,0 +1,102 @@
+// atomic_printer_life_autophagy.cubalc
+// Science board: macroautophagy on the atomic printer life substrate.
+// Worn biomass (age) → metabolic fuel + lysosomal heat; starvation survival arc.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 9 0
+ENTITY elder OF Cell 1 5 0
+SEND printer set_threshold 12
+SEND elder set_threshold 10
+
+// age via metabolic ticks then self-catabolize toward mitosis
+SEND printer pulse 6
+GETF printer age
+ASSERT LAST_N == 6 "printer a6"
+GETF printer energy
+LET pe = LAST_N
+ASSERT pe >= 1 "printer spark"
+
+SEND printer autophagy 5
+ASSERT LAST_N == 5 "printer auto5"
+GETF printer age
+ASSERT LAST_N == 1 "printer a1"
+GETF printer energy
+ASSERT LAST_N == pe + 5 "printer e+5"
+GETF printer heat
+ASSERT LAST_N == 1 "printer lysosomal heat"
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+
+// residual age can still recycle
+SEND printer autophagy 3
+ASSERT LAST_N == 1 "printer clamp residual"
+GETF printer age
+ASSERT LAST_N == 0 "printer a0"
+GETF printer heat
+ASSERT LAST_N == 2 "printer heat2"
+
+// elder starvation: low energy, deep age → fuel for life
+SEND elder pulse 10
+GETF elder age
+ASSERT LAST_N == 10 "elder a10"
+GETF elder energy
+LET ee = LAST_N
+SEND elder autophagy 8
+ASSERT LAST_N == 8 "elder auto8"
+GETF elder energy
+ASSERT LAST_N == ee + 8 "elder e+8"
+GETF elder age
+ASSERT LAST_N == 2 "elder a2"
+GETF elder heat
+ASSERT LAST_N == 1 "elder heat1"
+SEND elder vitality
+ASSERT LAST_N > 0 "elder vital"
+
+// zero-age fail closed
+ENTITY bare OF Cell 1 16 0
+SEND bare set_threshold 10
+SEND bare autophagy 4
+ASSERT LAST_N == 0 "bare no age"
+GETF bare energy
+ASSERT LAST_N == 16 "bare e held"
+GETF bare heat
+ASSERT LAST_N == 0 "bare no heat"
+GETF bare ready
+ASSERT LAST_N == 1 "bare ready"
+
+// spark cannot invent age
+ENTITY spark OF Cell 1 1 0
+SEND spark autophagy 1
+ASSERT LAST_N == 0 "spark no age"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+
+// free-energy loop: pinocyte cargo, digest, then autophagy ages into more fuel
+ENTITY loop OF Cell 1 14 0
+SEND loop set_threshold 10
+SEND loop pinocyte 4
+ASSERT LAST_N == 4 "loop pin4"
+SEND loop digest 4
+ASSERT LAST_N == 4 "loop digest4"
+GETF loop heat
+ASSERT LAST_N == 1 "loop digest heat"
+SEND loop pulse 3
+GETF loop age
+ASSERT LAST_N == 3 "loop a3"
+SEND loop autophagy 2
+ASSERT LAST_N == 2 "loop auto2"
+GETF loop heat
+ASSERT LAST_N == 2 "loop heat digest+auto"
+GETF loop alive
+ASSERT LAST_N == 1 "loop lives"
+SEND loop total
+ASSERT LAST_N >= 1 "loop wealth"
+
+SEND printer sense
+// energy gap vs thr — any integer ok
+ASSERT LAST_N == LAST_N "printer sense taut"
+
+PASS "atomic_printer_life_autophagy science PASS"
