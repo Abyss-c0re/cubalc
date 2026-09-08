@@ -1,11 +1,31 @@
 {
+  "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2077,
+  "MEANINGFUL_ITER": 2077,
+  "iter": 2077,
   "name": "POPCOUNTN_CLZN_CTZN_PARITYN",
   "version": "1.15.1563-usability",
-  "head": "747c90c95168a0d87ca6688f32f7db731ce55e6d",
-  "short": "7fb53d971",
+  "VERSION": "1.15.1563-usability",
   "feature": "POPCOUNTN/CLZN/CTZN/PARITYN",
-  "tip": "747c90c95168a0d87ca6688f32f7db731ce55e6d",
-  "pinned_head": "747c90c95168a0d87ca6688f32f7db731ce55e6d",
-  "commit": "747c90c95"
+  "FEATURE": "POPCOUNTN_CLZN_CTZN_PARITYN",
+  "ship": "2077_popcountn_clzn_ctzn_parityn",
+  "proof": "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc",
+  "proofs": [
+    "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc",
+    "src/lang/lang_ops_math.c",
+    "src/lang/lang_ops_core.c"
+  ],
+  "head": "86237cabf3831c0a9dcb557bbbdb32d0d11e8ecd",
+  "tip": "86237cabf3831c0a9dcb557bbbdb32d0d11e8ecd",
+  "pinned_head": "86237cabf3831c0a9dcb557bbbdb32d0d11e8ecd",
+  "feat_head": "036073474",
+  "short": "86237cabf",
+  "commit": "86237cabf",
+  "item": "popcountn clzn ctzn parityn",
+  "item_id": "mi_popcountn_clzn_ctzn_parityn",
+  "title": "POPCOUNTN CLZN CTZN PARITYN",
+  "summary": "Hamming/lzcnt/tzcnt/parity usability forms; proof 2077 PASS 35/0.",
+  "ts": "2026-09-08T18:28:54Z",
+  "host_finish": false,
+  "anti_bloat": true
 }
