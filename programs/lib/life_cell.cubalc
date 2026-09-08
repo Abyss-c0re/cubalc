@@ -2380,4 +2380,61 @@ CLASS Cell
 
 
 
+
+  # Invest: spend n active energy to raise mitosis threshold (cytosolic nutrient→CDK fortify).
+  # Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+  # anchor (pmf→raise thr), feed (energy+ready), bank/draw, set_threshold, drive/prime/poise/ease.
+  # energy pays; thr ceiling 1000. Yield sheds by take. reserve/atp/heat/pmf/pcr untouched.
+  # Recomputes ready. Usability: AGI invests life spark into mitosis gate seal without ATP/PCr/pmf/heat.
+  # Returns amount invested (threshold rise). Dead/zero/empty energy/thr already 1000 → 0.
+  METHOD invest n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END

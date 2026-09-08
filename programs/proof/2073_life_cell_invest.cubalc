@@ -1,0 +1,166 @@
+// 2073_life_cell_invest.cubalc
+// Proof 2073: life_cell invest — energy → raise mitosis threshold (cytosolic nutrient→CDK fortify).
+// Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+// anchor (pmf→raise thr), feed (energy+ready), bank/draw, set_threshold, drive/prime/poise/ease.
+// energy pays; thr ceiling 1000. Yield sheds by take; reserve/atp/heat/pmf/pcr untouched.
+// Ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 18 0
+ENTITY iso OF Cell 1 30 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed invest 0
+ASSERT LAST_N == 0 "zero invest 0"
+SEND seed invest -2
+ASSERT LAST_N == 0 "neg invest 0"
+GETF seed energy
+ASSERT LAST_N == 20 "energy held"
+
+SEND seed invest 4
+ASSERT LAST_N == 4 "invest 4"
+GETF seed energy
+ASSERT LAST_N == 16 "energy 16"
+GETF seed threshold
+ASSERT LAST_N == 14 "thr 14"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e16 >= thr14"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed yield
+LET y0 = LAST_N
+// yield = energy+reserve+atp+pmf+pcr = 16
+ASSERT LAST_N == 16 "yield 16 after invest"
+
+SEND seed invest 100
+ASSERT LAST_N == 16 "invest drains remaining energy"
+GETF seed energy
+ASSERT LAST_N == 0 "energy empty"
+GETF seed threshold
+ASSERT LAST_N == 30 "thr 30"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e0 < thr30"
+SEND seed yield
+ASSERT LAST_N == 0 "yield empty"
+
+SEND seed invest 1
+ASSERT LAST_N == 0 "empty invest 0"
+
+SEND dead invest 3
+ASSERT LAST_N == 0 "dead invest 0"
+
+// feed then invest — ready flips when e drops below thr
+SEND seed feed 40
+GETF seed energy
+ASSERT LAST_N == 40 "feed 40"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e40 >= thr30"
+SEND seed invest 15
+ASSERT LAST_N == 15 "invest 15"
+GETF seed energy
+ASSERT LAST_N == 25 "e 25"
+GETF seed threshold
+ASSERT LAST_N == 45 "thr 45"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e25 < thr45"
+
+// ceiling: thr near 1000
+SEND seed set_threshold 997
+SEND seed feed 20
+GETF seed energy
+LET e_ceil = LAST_N
+SEND seed invest 10
+ASSERT LAST_N == 3 "invest ceiling room 3"
+GETF seed threshold
+ASSERT LAST_N == 1000 "thr ceiling 1000"
+GETF seed energy
+ASSERT LAST_N == e_ceil - 3 "energy paid room only"
+SEND seed invest 1
+ASSERT LAST_N == 0 "thr already 1000 invest 0"
+
+// ally path
+SEND ally invest 5
+ASSERT LAST_N == 5 "ally invest 5"
+GETF ally energy
+ASSERT LAST_N == 7 "ally e 7"
+GETF ally threshold
+ASSERT LAST_N == 15 "ally thr 15"
+GETF ally ready
+ASSERT LAST_N == 0 "ally not ready e7 < thr15"
+
+// quiet: invest raises thr, ready stays 0 while quiescent
+SEND quiet quiesce
+GETF quiet threshold
+LET qt = LAST_N
+GETF quiet energy
+LET qe = LAST_N
+SEND quiet invest 4
+ASSERT LAST_N == 4 "quiet invest 4"
+GETF quiet threshold
+ASSERT LAST_N == qt + 4 "quiet thr rose"
+GETF quiet energy
+ASSERT LAST_N == qe - 4 "quiet energy paid"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet stays not ready"
+
+// iso isolation: atp/heat/pcr/reserve/pmf/age untouched by invest
+SEND iso charge 3
+ASSERT LAST_N == 3 "iso charge 3"
+SEND iso shiver 2
+SEND iso load 2
+SEND iso pump 3
+ASSERT LAST_N == 3 "iso pump 3"
+SEND iso pulse 1
+GETF iso age
+LET age0 = LAST_N
+SEND iso charged
+LET atp0 = LAST_N
+SEND iso warmth
+LET heat0 = LAST_N
+SEND iso phosphagen
+LET pcr0 = LAST_N
+SEND iso stores
+LET res0 = LAST_N
+SEND iso gradient
+LET pmf0 = LAST_N
+GETF iso energy
+LET e0 = LAST_N
+GETF iso threshold
+LET th0 = LAST_N
+
+SEND iso invest 5
+ASSERT LAST_N == 5 "iso invest 5"
+GETF iso energy
+ASSERT LAST_N == e0 - 5 "iso energy paid"
+GETF iso threshold
+ASSERT LAST_N == th0 + 5 "iso thr rose"
+SEND iso charged
+ASSERT LAST_N == atp0 "iso atp held"
+SEND iso warmth
+ASSERT LAST_N == heat0 "iso heat held"
+SEND iso phosphagen
+ASSERT LAST_N == pcr0 "iso pcr held"
+SEND iso stores
+ASSERT LAST_N == res0 "iso reserve held"
+SEND iso gradient
+ASSERT LAST_N == pmf0 "iso pmf held"
+GETF iso age
+ASSERT LAST_N == age0 "iso age held"
+
+PRINT "life_cell_invest ok"

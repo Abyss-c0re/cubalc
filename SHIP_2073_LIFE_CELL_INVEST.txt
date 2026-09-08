@@ -1,0 +1,6 @@
+SHIP 2073 LIFE_CELL_INVEST
+feature: invest n — spend energy to raise mitosis threshold (cytosolic CDK fortify)
+lib: programs/lib/life_cell.cubalc METHOD invest
+proof: programs/proof/2073_life_cell_invest.cubalc asserts_ok=52 fail=0
+science: programs/science/integration/atomic_printer_life_invest.cubalc asserts_ok=19 fail=0
+distinct: fortify/brace/harden/anchor (other payers); feed/bank; set_threshold; drive/prime

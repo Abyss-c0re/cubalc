@@ -1,0 +1,92 @@
+// atomic_printer_life_invest.cubalc
+// Science board: atomic printer + life_cell invest (energy → raise thr / cytosolic CDK fortify).
+// Nutrient spark seals mitosis gate without burning ATP, PCr, pmf, or heat.
+// Distinct from fortify/brace/harden/anchor. Gift: CubalC life-force substrate.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_invest | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 24 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+GETF seed energy
+ASSERT LAST_N == 24 "life spark 24"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr 10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed invest 6
+ASSERT LAST_N == 6 "invest 6"
+GETF seed energy
+ASSERT LAST_N == 18 "e 18"
+GETF seed threshold
+ASSERT LAST_N == 16 "thr 16"
+SEND seed yield
+ASSERT LAST_N == y0 - 6 "yield sheds energy"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e18 >= thr16"
+
+// mitosis under invested gate after feed surplus
+SEND seed feed 10
+GETF seed energy
+ASSERT LAST_N == 28 "e 28"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e28 >= thr16"
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "daughter born"
+GETF d1 alive
+ASSERT LAST_N == 1 "d1 alive"
+GETF d1 gen
+ASSERT LAST_N == 1 "d1 gen 1"
+
+// further invest seals thr higher without touching membrane energy flow
+SEND seed invest 4
+ASSERT LAST_N == 4 "post-mitosis invest 4"
+GETF seed threshold
+ASSERT LAST_N >= 16 "thr still sealed"
+
+ENERGYFLOW 1
+FLOW 1
+ASSERT ENERGY > 0 "energy still flows"
+
+PRINT "atomic_printer_life_invest ok"
