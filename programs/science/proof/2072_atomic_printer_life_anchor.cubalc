@@ -100,4 +100,4 @@ ASSERT LAST_N >= 1 "alive vitality"
 SEND seed yield
 ASSERT LAST_N >= 1 "yield holds"
 
-PRINT "2071_atomic_printer_life_anchor PASS"
+PRINT "2072_atomic_printer_life_anchor PASS"

@@ -1,5 +1,5 @@
-// 2071_life_cell_anchor.cubalc
-// Proof: life_cell anchor — pmf → raise mitosis threshold (chemiosmotic CDK fortify / F1Fo gate seal).
+// 2072_life_cell_anchor.cubalc
+// Proof 2072: life_cell anchor — pmf → raise mitosis threshold (chemiosmotic CDK fortify / F1Fo gate seal).
 // Distinct from drive (pmf→lower thr), fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
 // prime/poise/ease (lower thr), synthase/pump/uncouple/set_threshold, mend (PCr→age), renew (pmf→age).
 // pmf pays; thr ceiling 1000. Yield sheds by take; energy/reserve/atp/heat/pcr untouched.
@@ -187,4 +187,4 @@ ASSERT LAST_N == ia "iso age held"
 SEND iso yield
 ASSERT LAST_N == iy - 3 "iso yield shed 3"
 
-PRINT "2071_life_cell_anchor PASS"
+PRINT "2072_life_cell_anchor PASS"
