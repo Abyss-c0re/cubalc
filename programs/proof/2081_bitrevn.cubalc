@@ -1,0 +1,97 @@
+# BITREVN — 64-bit full-word bit reverse usability (MI 2081)
+# Twin of stack SBITREV (32) / SBREVN (low-n). Completes POPCOUNTN/CLZN/CTZN/PARITYN plane.
+# Usability: mirrored = BITREVN flags after GETFLAGN; FFT index = BITREVN i.
+
+HOLD_FLASH 1
+
+# zero
+BITREVN 0
+ASSERT LAST_N == 0
+ASSERT BITREVN_OK == 1
+
+# bit0 -> bit63: store as BITREVN 1; check via rev-rev and sign
+BITREVN 1
+LET b0 = LAST_N
+ASSERT b0 < 0 "bit0 maps to sign bit"
+# 2^63 is only negative power with abs overflow; rev-rev restores
+BITREVN b0
+ASSERT LAST_N == 1 "revrev 1"
+
+# bit1 -> bit62 = +2^62
+BITREVN 2
+ASSERT LAST_N == 4611686018427387904
+
+# bit2 -> bit61 = +2^61
+BITREVN 4
+ASSERT LAST_N == 2305843009213693952
+
+# bit3 -> bit60 = +2^60
+BITREVN 8
+ASSERT LAST_N == 1152921504606846976
+
+# low nibble 15 = 0b1111 -> top 4 bits set (negative large)
+BITREVN 15
+LET r15 = LAST_N
+ASSERT r15 < 0 "top nibble set => neg"
+BITREVN r15
+ASSERT LAST_N == 15 "revrev 15"
+
+# 0xFF -> top byte
+BITREVN 255
+LET r255 = LAST_N
+ASSERT r255 < 0
+BITREVN r255
+ASSERT LAST_N == 255 "revrev 255"
+
+# 0xA5 = 165 involution
+BITREVN 165
+LET ra = LAST_N
+BITREVN ra
+ASSERT LAST_N == 165 "revrev 165"
+
+# aliases match primary
+BITREVN 2
+LET p = LAST_N
+REVBITSN 2
+ASSERT LAST_N == p
+BREVN 2
+ASSERT LAST_N == p
+RBITN 2
+ASSERT LAST_N == p
+REV64N 2
+ASSERT LAST_N == p
+BITREV64N 2
+ASSERT LAST_N == p
+BITREVERSEN 2
+ASSERT LAST_N == p
+
+# all-ones fixed point
+BITREVN -1
+ASSERT LAST_N == -1
+
+# var subject
+LET v = 3
+BITREVN v
+LET r3 = LAST_N
+BITREVN r3
+ASSERT LAST_N == 3 "revrev 3"
+
+# POPCOUNT preserved under bitrev (Hamming weight invariant)
+POPCOUNTN 255
+LET h1 = LAST_N
+BITREVN 255
+POPCOUNTN LAST_N
+ASSERT LAST_N == h1 "popcount invariant 255"
+
+POPCOUNTN 15
+LET h2 = LAST_N
+BITREVN 15
+POPCOUNTN LAST_N
+ASSERT LAST_N == h2 "popcount invariant 15"
+
+# BITREVN_OK sticky
+BITREVN 42
+ASSERT BITREVN_OK == 1
+ASSERT BREVN == LAST_N
+
+PRINT "bitrevn ok"

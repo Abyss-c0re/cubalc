@@ -6841,5 +6841,59 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
   }
 
 
+
+  /* BITREVN|REVBITSN|BITREVERSEN|BREVN x — reverse all 64 bits of pattern → LAST_N.
+   * Twin of stack SBITREV (32-bit) / SBREVN (low-n). Full-word usability dual of POPCOUNTN plane.
+   * Usability: mirrored = BITREVN flags after GETFLAGN; FFT bit-reverse index = BITREVN i after ILOG2N n.
+   * Aliases: RBITN REV64N BITREV64N REVERBN BITFLIPORDN (order reverse, not complement). */
+  if (kw(&L->cur,"BITREVN") || kw(&L->cur,"REVBITSN") || kw(&L->cur,"BITREVERSEN") ||
+      kw(&L->cur,"BREVN") || kw(&L->cur,"RBITN") || kw(&L->cur,"REV64N") ||
+      kw(&L->cur,"BITFLIPORDN") || kw(&L->cur,"REVERBN") || kw(&L->cur,"BITREV64N")){
+    long x = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) {
+        fail_at(vm, L, "BITREVN x — unknown x");
+        return -1;
+      }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "BITREVN x — BITREVN n");
+      return -1;
+    }
+    {
+      unsigned long u = (unsigned long)x;
+      unsigned long ra = 0;
+      for (int i = 0; i < 64; i++){
+        ra = (ra << 1) | (u & 1ul);
+        u >>= 1;
+      }
+      x = (long)ra;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", x);
+    var_set_num(vm, "LAST_N", x);
+    vm->last_n = x;
+    var_set_num(vm, "BITREVN", x);
+    var_set_num(vm, "REVBITSN", x);
+    var_set_num(vm, "BREVN", x);
+    var_set_num(vm, "BITREVN_OK", 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# bitrevn -> %ld\n", x);
+    bump(vm); return 1;
+  }
+
+
+
   return 0;
 }
