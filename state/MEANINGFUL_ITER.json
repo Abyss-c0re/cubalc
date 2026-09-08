@@ -1,0 +1,29 @@
+{
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2071,
+  "MEANINGFUL_ITER": 2071,
+  "iter": 2072,
+  "version": "1.15.1557-usability",
+  "VERSION": "1.15.1557-usability",
+  "feature": "life_cell_scavenge",
+  "FEATURE": "LIFE_CELL_SCAVENGE",
+  "ship": "2071_life_cell_scavenge",
+  "proof": "programs/proof/2071_life_cell_scavenge.cubalc",
+  "proofs": [
+    "programs/proof/2071_life_cell_scavenge.cubalc",
+    "programs/science/integration/atomic_printer_life_scavenge.cubalc",
+    "programs/lib/life_cell.cubalc"
+  ],
+  "head": "c30bc16065aeaffd5b68a98fee29231ca891a5e5",
+  "tip": "f756f76a1f0a1da1d8ff1066ccbe9fde9540d926",
+  "pinned_head": "c30bc16065aeaffd5b68a98fee29231ca891a5e5",
+  "feat_head": "c30bc16065aeaffd5b68a98fee29231ca891a5e5",
+  "item": "life cell scavenge",
+  "item_id": "mi_life_cell_scavenge",
+  "title": "life cell scavenge",
+  "commit": "c30bc1606",
+  "summary": "reserve→age scavenge macroautophagy QC; proof 2071 + atomic_printer_life_scavenge science board.",
+  "ts": "2026-09-08T01:20:00Z",
+  "host_finish": false,
+  "anti_bloat": true
+}
