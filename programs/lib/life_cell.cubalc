@@ -2195,4 +2195,46 @@ CLASS Cell
   END
 
 
+
+
+  # Mend: spend n PCr to shed age (phosphagen chaperone / creatine kinase age repair).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age),
+  # brace (PCr→raise thr), poise (PCr→lower thr), boost/load/discharge, drive (pmf→thr).
+  # PCr pays; age floors at 0. Yield sheds by take (PCr in yield).
+  # energy/reserve/atp/heat/pmf/ready/threshold untouched.
+  # Usability: AGI spends rapid ~P buffer to rejuvenate without burning ATP, heat, or life spark.
+  # Returns amount mended. Dead/zero/empty PCr/age already 0 → 0.
+  METHOD mend n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
 END

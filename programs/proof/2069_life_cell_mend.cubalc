@@ -1,0 +1,202 @@
+// 2069_life_cell_mend.cubalc
+// Proof: life_cell mend — PCr → shed age (phosphagen chaperone / creatine kinase age repair).
+// Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age),
+// brace (PCr→raise thr), poise (PCr→lower thr), boost/load/discharge.
+// PCr pays; age floors at 0. Yield sheds by take (PCr in yield).
+// energy/reserve/atp/heat/pmf/ready/threshold untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed mend 3
+ASSERT LAST_N == 0 "empty mend 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+SEND seed pulse 8
+GETF seed age
+ASSERT LAST_N == 8 "aged 8"
+GETF seed energy
+LET e_after_pulse = LAST_N
+ASSERT e_after_pulse >= 20 "energy grew or held"
+SEND seed load 6
+ASSERT LAST_N == 6 "load 6"
+SEND seed phosphagen
+ASSERT LAST_N == 6 "pcr 6"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy paid load"
+GETF seed threshold
+LET thr0 = LAST_N
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed mend 4
+ASSERT LAST_N == 4 "mend 4"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "pcr 2"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after mend"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy untouched by mend"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+GETF seed threshold
+ASSERT LAST_N == thr0 "thr untouched by mend"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds PCr by mend"
+
+SEND seed mend 9
+ASSERT LAST_N == 2 "mend drains remaining pcr 2"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty"
+GETF seed age
+ASSERT LAST_N == 2 "age 2"
+SEND seed mend 1
+ASSERT LAST_N == 0 "empty mend 0"
+
+SEND dead mend 2
+ASSERT LAST_N == 0 "dead mend 0"
+
+SEND seed feed 10
+SEND seed load 3
+ASSERT LAST_N == 3 "load 3"
+SEND seed mend 0
+ASSERT LAST_N == 0 "zero mend 0"
+SEND seed mend -1
+ASSERT LAST_N == 0 "neg mend 0"
+SEND seed phosphagen
+ASSERT LAST_N == 3 "pcr held 3"
+GETF seed age
+LET a1 = LAST_N
+SEND seed mend 1
+ASSERT LAST_N == 1 "mend 1"
+GETF seed age
+ASSERT LAST_N == a1 - 1 "age shed 1"
+SEND seed phosphagen
+ASSERT LAST_N == 2 "pcr 2 after mend 1"
+
+// age-limited: more PCr than age only sheds age
+SEND seed pulse 5
+GETF seed age
+LET a2 = LAST_N
+ASSERT a2 >= 5 "aged more"
+SEND seed feed 30
+SEND seed load 10
+ASSERT LAST_N == 10 "load 10"
+SEND seed phosphagen
+ASSERT LAST_N == 12 "pcr 12"
+SEND seed yield
+LET y1 = LAST_N
+SEND seed mend 100
+ASSERT LAST_N == a2 "mend capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age floored 0"
+SEND seed phosphagen
+ASSERT LAST_N == 12 - a2 "pcr leftover after age floor"
+SEND seed yield
+ASSERT LAST_N == y1 - a2 "yield shed by age-capped mend"
+
+// Clear leftover PCr then prove distinct from repair + brace
+SEND seed phosphagen
+LET p_left = LAST_N
+SEND seed discharge p_left
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr cleared for distinctness"
+SEND seed feed 20
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "age 6 for repair path"
+GETF seed energy
+LET e_r = LAST_N
+SEND seed repair 3
+ASSERT LAST_N == 3 "repair 3 energy path"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after repair"
+GETF seed energy
+ASSERT LAST_N == e_r - 3 "energy paid repair"
+SEND seed load 4
+ASSERT LAST_N == 4 "load 4"
+GETF seed threshold
+LET thr1 = LAST_N
+SEND seed brace 2
+ASSERT LAST_N == 2 "brace 2"
+GETF seed threshold
+ASSERT LAST_N == thr1 + 2 "thr raised by brace"
+GETF seed age
+ASSERT LAST_N == 3 "age untouched by brace"
+SEND seed mend 2
+ASSERT LAST_N == 2 "mend 2 after brace"
+GETF seed age
+ASSERT LAST_N == 1 "age 1 after mend"
+GETF seed threshold
+ASSERT LAST_N == thr1 + 2 "thr held after mend"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty after brace+mend"
+
+SEND quiet feed 5
+SEND quiet pulse 4
+GETF quiet age
+ASSERT LAST_N == 4 "quiet aged 4"
+SEND quiet load 5
+ASSERT LAST_N == 5 "quiet load 5"
+SEND quiet quiesce
+SEND quiet mend 3
+ASSERT LAST_N == 3 "quiet mend 3"
+GETF quiet age
+ASSERT LAST_N == 1 "quiet age 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet phosphagen
+ASSERT LAST_N == 2 "quiet pcr 2"
+
+SEND ally pulse 5
+GETF ally age
+ASSERT LAST_N == 5 "ally aged 5"
+SEND ally load 4
+ASSERT LAST_N == 4 "ally load 4"
+SEND ally mend 3
+ASSERT LAST_N == 3 "ally mend 3"
+GETF ally age
+ASSERT LAST_N == 2 "ally age 2"
+SEND ally phosphagen
+ASSERT LAST_N == 1 "ally pcr 1"
+GETF ally energy
+ASSERT LAST_N >= 8 "ally e held after load"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso load 4
+ASSERT LAST_N == 4 "iso load 4"
+SEND iso mend 3
+ASSERT LAST_N == 3 "iso mend 3"
+GETF iso age
+ASSERT LAST_N == 2 "iso age 2"
+GETF iso threshold
+ASSERT LAST_N == 10 "iso thr default untouched"
+SEND iso phosphagen
+ASSERT LAST_N == 1 "iso pcr 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by mend"
+
+PRINT "2069_life_cell_mend PASS"
