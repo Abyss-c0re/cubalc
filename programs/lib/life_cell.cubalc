@@ -24,6 +24,7 @@
 #   pinocyte n           fluid-phase endocytosis — pay 1 membrane energy, gain n reserve from medium
 #   exocyte n            fluid-phase exocytosis — pay 1 membrane energy, shed n reserve cargo to medium
 #   autophagy n          macroautophagy — recycle n age (worn biomass) → energy +1 heat; starvation self-catabolism
+#   mitophagy n          selective mito QC — recycle n age + drain pmf debris → energy +1 heat; ATP/energy selectivity tax
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3138,6 +3139,94 @@ CLASS Cell
     GETF THIS heat
     LET h = LAST_N + 1
     SETF THIS heat h
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mitophagy: selective mitochondrial autophagy — QC of worn mito biomass + gradient debris.
+  # Burns take=min(n,age) age → energy += take, heat += 1 (lysosomal self-digest tax).
+  # Also clears broken proton-gradient debris: pmf -= min(take, pmf) (no heat double-count).
+  # Selectivity tax: prefer 1 ATP if atp>=1; else pay 1 active energy (keep spark: need e>=2 before pay).
+  # Tax is paid only when take>=1; fail-closed before mutation if tax cannot be paid.
+  # reserve/pcr untouched. Ready recomputed vs threshold (quiescent stays unready).
+  # Distinct from autophagy (bulk, no tax, no pmf drain), repair (energy→shed age), scavenge
+  # (reserve→age), uncouple (pmf→heat only), digest (reserve→energy), respire.
+  # Usability: AGI models PINK1/Parkin-style mito QC — clear damaged powerhouses under stress.
+  # Returns take recycled; dead/n<1/age<1/tax-fail → 0.
+  METHOD mitophagy n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    # selectivity tax: ATP preferred, else active energy (keep spark)
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET paid_atp = 0
+    IF a >= 1 THEN
+      LET a = a - 1
+      SETF THIS atp a
+      LET paid_atp = 1
+    END
+    IF paid_atp == 0 THEN
+      GETF THIS energy
+      LET e0 = LAST_N
+      IF e0 < 2 THEN
+        RET 0
+      END
+      LET e0 = e0 - 1
+      SETF THIS energy e0
+    END
+    LET ag = ag - take
+    SETF THIS age ag
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET drain = take
+    IF drain > p THEN
+      LET drain = p
+    END
+    LET p = p - drain
+    SETF THIS pmf p
     GETF THIS quiescent
     LET q = LAST_N
     LET rd = 0

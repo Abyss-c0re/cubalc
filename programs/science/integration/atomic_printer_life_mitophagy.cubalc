@@ -1,0 +1,163 @@
+// atomic_printer_life_mitophagy.cubalc
+// Science board: selective mitophagy on the atomic printer life substrate.
+// Worn mito age + pmf debris -> fuel + lysosomal heat; ATP/energy selectivity tax.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+ENTITY elder OF Cell 1 6 0
+SEND printer set_threshold 12
+SEND elder set_threshold 10
+
+SEND printer pulse 7
+GETF printer age
+ASSERT LAST_N == 7 "printer a7"
+SEND printer photosynth 5
+SEND printer glycolyse 4
+GETF printer atp
+ASSERT LAST_N == 4 "printer atp4"
+SEND printer feed 6
+SEND printer pump 5
+GETF printer pmf
+ASSERT LAST_N == 5 "printer pmf5"
+GETF printer energy
+LET pe = LAST_N
+
+SEND printer mitophagy 5
+ASSERT LAST_N == 5 "printer mito5"
+GETF printer age
+ASSERT LAST_N == 2 "printer a2"
+GETF printer atp
+ASSERT LAST_N == 3 "printer atp tax"
+GETF printer energy
+ASSERT LAST_N == pe + 5 "printer e+5"
+GETF printer heat
+ASSERT LAST_N == 1 "printer lysosomal heat"
+GETF printer pmf
+ASSERT LAST_N == 0 "printer pmf cleared"
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+
+SEND printer mitophagy 3
+ASSERT LAST_N == 2 "printer clamp residual"
+GETF printer age
+ASSERT LAST_N == 0 "printer a0"
+GETF printer heat
+ASSERT LAST_N == 2 "printer heat2"
+GETF printer atp
+ASSERT LAST_N == 2 "printer atp2"
+
+SEND elder pulse 8
+GETF elder age
+ASSERT LAST_N == 8 "elder a8"
+GETF elder energy
+LET ee = LAST_N
+ASSERT ee >= 2 "elder can tax"
+GETF elder atp
+ASSERT LAST_N == 0 "elder no atp"
+SEND elder mitophagy 6
+ASSERT LAST_N == 6 "elder mito6"
+GETF elder energy
+ASSERT LAST_N == ee - 1 + 6 "elder net+5"
+GETF elder age
+ASSERT LAST_N == 2 "elder a2"
+GETF elder heat
+ASSERT LAST_N == 1 "elder heat1"
+SEND elder vitality
+ASSERT LAST_N > 0 "elder vital"
+
+ENTITY bare OF Cell 1 16 0
+SEND bare set_threshold 10
+SEND bare photosynth 2
+SEND bare glycolyse 2
+SEND bare mitophagy 4
+ASSERT LAST_N == 0 "bare no age"
+GETF bare energy
+ASSERT LAST_N == 16 "bare e held"
+GETF bare atp
+ASSERT LAST_N == 2 "bare atp held"
+GETF bare heat
+ASSERT LAST_N == 0 "bare no heat"
+GETF bare ready
+ASSERT LAST_N == 1 "bare ready"
+
+ENTITY spark OF Cell 1 1 0
+SEND spark mitophagy 1
+ASSERT LAST_N == 0 "spark no mito"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+
+ENTITY loop OF Cell 1 15 0
+SEND loop set_threshold 10
+SEND loop pinocyte 5
+ASSERT LAST_N == 5 "loop pin5"
+SEND loop digest 5
+ASSERT LAST_N == 5 "loop digest5"
+GETF loop heat
+ASSERT LAST_N == 1 "loop digest heat"
+SEND loop pulse 4
+GETF loop age
+ASSERT LAST_N == 4 "loop a4"
+SEND loop photosynth 2
+SEND loop glycolyse 2
+SEND loop pump 3
+GETF loop pmf
+ASSERT LAST_N >= 1 "loop has pmf"
+GETF loop energy
+LET le = LAST_N
+GETF loop atp
+LET la = LAST_N
+SEND loop mitophagy 3
+ASSERT LAST_N == 3 "loop mito3"
+GETF loop energy
+ASSERT LAST_N == le + 3 "loop e+3"
+GETF loop atp
+ASSERT LAST_N == la - 1 "loop atp tax"
+GETF loop age
+ASSERT LAST_N == 1 "loop a1"
+GETF loop heat
+ASSERT LAST_N == 2 "loop heat digest+mito"
+GETF loop pmf
+ASSERT LAST_N == 0 "loop pmf cleared"
+SEND loop vitality
+ASSERT LAST_N > 0 "loop vital"
+
+ENTITY twin OF Cell 1 18 0
+SEND twin set_threshold 10
+SEND twin pulse 3
+SEND twin photosynth 2
+SEND twin glycolyse 2
+SEND twin feed 4
+SEND twin pump 3
+GETF twin atp
+ASSERT LAST_N == 2 "twin atp2"
+GETF twin pmf
+ASSERT LAST_N == 3 "twin pmf3"
+GETF twin energy
+LET te = LAST_N
+SEND twin autophagy 1
+ASSERT LAST_N == 1 "twin auto1"
+GETF twin atp
+ASSERT LAST_N == 2 "twin atp no tax"
+GETF twin pmf
+ASSERT LAST_N == 3 "twin pmf no drain"
+GETF twin energy
+LET te2 = LAST_N
+ASSERT te2 == te + 1 "twin auto e+1"
+SEND twin mitophagy 1
+ASSERT LAST_N == 1 "twin mito1"
+GETF twin atp
+ASSERT LAST_N == 1 "twin atp taxed"
+GETF twin pmf
+ASSERT LAST_N == 2 "twin pmf-1"
+GETF twin energy
+ASSERT LAST_N == te2 + 1 "twin mito e+1"
+
+SEND printer vitality
+ASSERT LAST_N > 0 "printer vital"
+SEND loop total
+ASSERT LAST_N >= 10 "loop wealth"
+
+PASS "atomic_printer_life_mitophagy science PASS"

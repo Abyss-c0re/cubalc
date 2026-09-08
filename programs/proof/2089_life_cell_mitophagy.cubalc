@@ -1,0 +1,251 @@
+// 2089_life_cell_mitophagy.cubalc
+// Proof 2089: life_cell mitophagy — selective mitochondrial QC.
+// Recycle worn age biomass + drain pmf debris -> energy +1 heat; ATP/energy tax.
+// Distinct from autophagy (bulk, no tax/pmf), repair, uncouple, digest, scavenge.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY aged OF Cell 1 12 0
+ENTITY young OF Cell 1 14 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY spark OF Cell 1 1 0
+
+SEND aged set_threshold 10
+SEND young set_threshold 10
+SEND g0 set_threshold 10
+SEND spark set_threshold 10
+
+SEND aged pulse 6
+GETF aged age
+ASSERT LAST_N == 6 "aged a6"
+GETF aged energy
+LET e_base = LAST_N
+ASSERT e_base >= 1 "aged spark"
+
+SEND aged photosynth 4
+SEND aged glycolyse 3
+GETF aged atp
+ASSERT LAST_N == 3 "aged atp3"
+GETF aged energy
+LET e0 = LAST_N
+
+SEND aged feed 5
+SEND aged pump 4
+GETF aged pmf
+ASSERT LAST_N == 4 "aged pmf4"
+GETF aged energy
+LET e1 = LAST_N
+
+SEND aged mitophagy 4
+ASSERT LAST_N == 4 "aged mito4"
+GETF aged age
+ASSERT LAST_N == 2 "aged a2"
+GETF aged atp
+ASSERT LAST_N == 2 "aged atp tax1"
+GETF aged energy
+ASSERT LAST_N == e1 + 4 "aged e+4 no energy tax"
+GETF aged heat
+ASSERT LAST_N == 1 "aged heat1"
+GETF aged pmf
+ASSERT LAST_N == 0 "aged pmf drained 4"
+GETF aged alive
+ASSERT LAST_N == 1 "aged lives"
+GETF aged ready
+ASSERT LAST_N >= 0 "aged ready ok"
+
+SEND aged mitophagy 10
+ASSERT LAST_N == 2 "aged clamp a"
+GETF aged age
+ASSERT LAST_N == 0 "aged a0"
+GETF aged atp
+ASSERT LAST_N == 1 "aged atp tax2"
+GETF aged heat
+ASSERT LAST_N == 2 "aged heat2"
+GETF aged pmf
+ASSERT LAST_N == 0 "pmf stays 0"
+
+SEND aged mitophagy 2
+ASSERT LAST_N == 0 "aged empty age"
+GETF aged atp
+ASSERT LAST_N == 1 "atp held on fail"
+GETF aged heat
+ASSERT LAST_N == 2 "heat held"
+
+SEND young pulse 4
+GETF young age
+ASSERT LAST_N == 4 "young a4"
+SEND young mitophagy 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF young age
+ASSERT LAST_N == 4 "young a held"
+GETF young heat
+ASSERT LAST_N == 0 "young no heat"
+
+ENTITY fresh OF Cell 1 15 0
+SEND fresh set_threshold 10
+SEND fresh photosynth 2
+SEND fresh glycolyse 2
+SEND fresh mitophagy 3
+ASSERT LAST_N == 0 "fresh no age"
+GETF fresh energy
+ASSERT LAST_N == 15 "fresh e held"
+GETF fresh atp
+ASSERT LAST_N == 2 "fresh atp held"
+GETF fresh heat
+ASSERT LAST_N == 0 "fresh heat0"
+GETF fresh ready
+ASSERT LAST_N == 1 "fresh ready"
+
+SEND dead mitophagy 3
+ASSERT LAST_N == 0 "dead fail"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays dead"
+
+// energy-tax path when no ATP: keep spark (need e>=2)
+ENTITY taxed OF Cell 1 8 0
+SEND taxed set_threshold 10
+SEND taxed pulse 5
+GETF taxed age
+ASSERT LAST_N == 5 "taxed a5"
+GETF taxed energy
+LET te0 = LAST_N
+ASSERT te0 >= 2 "taxed can pay"
+GETF taxed atp
+ASSERT LAST_N == 0 "taxed no atp"
+SEND taxed mitophagy 3
+ASSERT LAST_N == 3 "taxed mito3"
+GETF taxed age
+ASSERT LAST_N == 2 "taxed a2"
+GETF taxed energy
+ASSERT LAST_N == te0 - 1 + 3 "taxed e net+2"
+GETF taxed heat
+ASSERT LAST_N == 1 "taxed heat1"
+GETF taxed alive
+ASSERT LAST_N == 1 "taxed lives"
+
+SEND spark mitophagy 1
+ASSERT LAST_N == 0 "spark fail"
+GETF spark energy
+ASSERT LAST_N == 1 "spark held"
+
+ENTITY poor OF Cell 1 1 0
+SEND poor set_threshold 10
+SEND poor feed 4
+SEND poor pulse 3
+GETF poor age
+ASSERT LAST_N == 3 "poor a3"
+GETF poor energy
+LET pe = LAST_N
+LET give = pe - 1
+SEND poor gift give
+GETF poor energy
+ASSERT LAST_N == 1 "poor e1"
+GETF poor atp
+ASSERT LAST_N == 0 "poor no atp"
+SEND poor mitophagy 2
+ASSERT LAST_N == 0 "poor tax fail"
+GETF poor age
+ASSERT LAST_N == 3 "poor a held"
+GETF poor energy
+ASSERT LAST_N == 1 "poor e held"
+GETF poor heat
+ASSERT LAST_N == 0 "poor no heat"
+
+SEND g0 pulse 5
+SEND g0 photosynth 3
+SEND g0 glycolyse 2
+SEND g0 feed 6
+SEND g0 pump 3
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 age
+LET ga = LAST_N
+ASSERT ga >= 5 "g0 aged"
+GETF g0 energy
+LET ge = LAST_N
+GETF g0 atp
+LET gatp = LAST_N
+SEND g0 mitophagy 3
+ASSERT LAST_N == 3 "g0 mito3"
+GETF g0 age
+ASSERT LAST_N == ga - 3 "g0 a-3"
+GETF g0 atp
+ASSERT LAST_N == gatp - 1 "g0 atp tax"
+GETF g0 energy
+ASSERT LAST_N == ge + 3 "g0 e+3"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready while q"
+GETF g0 pmf
+ASSERT LAST_N == 0 "g0 pmf cleared"
+SEND g0 wake
+
+ENTITY bulk OF Cell 1 16 0
+SEND bulk set_threshold 10
+SEND bulk pulse 4
+SEND bulk photosynth 2
+SEND bulk glycolyse 1
+SEND bulk feed 4
+SEND bulk pump 2
+GETF bulk age
+ASSERT LAST_N == 4 "bulk a4"
+GETF bulk atp
+ASSERT LAST_N == 1 "bulk atp1"
+GETF bulk pmf
+ASSERT LAST_N == 2 "bulk pmf2"
+GETF bulk energy
+LET be0 = LAST_N
+SEND bulk autophagy 2
+ASSERT LAST_N == 2 "bulk auto2"
+GETF bulk atp
+ASSERT LAST_N == 1 "bulk atp untouched by auto"
+GETF bulk pmf
+ASSERT LAST_N == 2 "bulk pmf untouched by auto"
+GETF bulk energy
+ASSERT LAST_N == be0 + 2 "bulk auto e+2"
+GETF bulk heat
+ASSERT LAST_N == 1 "bulk auto heat"
+GETF bulk energy
+LET be1 = LAST_N
+SEND bulk mitophagy 2
+ASSERT LAST_N == 2 "bulk mito2"
+GETF bulk atp
+ASSERT LAST_N == 0 "bulk atp taxed"
+GETF bulk pmf
+ASSERT LAST_N == 0 "bulk pmf drained"
+GETF bulk energy
+ASSERT LAST_N == be1 + 2 "bulk mito e+2"
+GETF bulk heat
+ASSERT LAST_N == 2 "bulk heat2"
+GETF bulk age
+ASSERT LAST_N == 0 "bulk a0"
+
+ENTITY leak OF Cell 1 20 0
+SEND leak set_threshold 10
+SEND leak pulse 5
+SEND leak photosynth 1
+SEND leak glycolyse 1
+SEND leak feed 3
+SEND leak pump 2
+GETF leak pmf
+ASSERT LAST_N == 2 "leak pmf2"
+GETF leak age
+ASSERT LAST_N == 5 "leak a5"
+SEND leak mitophagy 4
+ASSERT LAST_N == 4 "leak mito4"
+GETF leak pmf
+ASSERT LAST_N == 0 "leak pmf floor0"
+GETF leak age
+ASSERT LAST_N == 1 "leak a1"
+GETF leak heat
+ASSERT LAST_N == 1 "leak heat1"
+
+SEND aged vitality
+ASSERT LAST_N > 0 "aged vital"
+SEND bulk total
+ASSERT LAST_N >= 1 "bulk wealth"
+
+PASS "2089 life_cell mitophagy selective mito QC PASS"
