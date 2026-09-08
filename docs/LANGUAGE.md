@@ -157,3 +157,11 @@ There is no separate device/object model: sensors, brains, sinks are **cubes** w
 - NEXTPOW2N|CEILPOW2N x — smallest power of 2 ≥ x → LAST_N (page pad)
 - PREVPOW2N|FLOORPOW2N x — largest power of 2 ≤ x → LAST_N
 - ISPOW2N|POW2PN x — 1 if power of two else 0
+
+### POPCOUNTN / CLZN / CTZN / PARITYN
+Usability bit metrics on a 64-bit word → `LAST_N`.
+- `POPCOUNTN|BITCOUNTN|PCNTN x` — Hamming weight
+- `CLZN|NLZN|LZCNTN x` — leading zeros (0→64)
+- `CTZN|NTZN|TZCNTN x` — trailing zeros (0→64)
+- `PARITYN|XORREDN|PARN x` — xor-reduce (popcount & 1)
+Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
