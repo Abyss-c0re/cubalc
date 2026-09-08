@@ -86,6 +86,8 @@
 #   mend n               PCr → shed age (phosphagen chaperone; yield sheds PCr; thr/ready untouched)
 #   renew n              pmf → shed age (chemiosmotic QC / Δψ chaperone; yield sheds pmf; thr/ready untouched)
 #   scavenge n           reserve → shed age (macroautophagy / glycogen-funded QC; yield sheds reserve; thr/ready untouched)
+#   invest n             energy → raise mitosis threshold (cytosolic nutrient→CDK fortify; yield sheds energy; ready recompute)
+#   spare n              reserve → lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease; yield sheds reserve; ready recompute)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2427,6 +2429,66 @@ CLASS Cell
     GETF THIS quiescent
     LET q = LAST_N
     IF q == 0 THEN
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Spare: spend n reserve to lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease).
+  # Distinct from ease (heat→lower thr), prime (ATP→lower thr), poise (PCr→lower thr), drive (pmf→lower thr),
+  # scavenge (reserve→age), bank/draw/respire/anabolize, invest (energy→raise thr), fortify/brace/harden/anchor.
+  # reserve pays; thr floors at 1. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends protected glycogen bank to prime mitosis gate without ATP/PCr/pmf/heat/life spark.
+  # Returns amount spared (threshold drop). Dead/zero/empty reserve/thr already 1 → 0.
+  METHOD spare n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
       IF e >= th THEN
         LET rd = 1
       END

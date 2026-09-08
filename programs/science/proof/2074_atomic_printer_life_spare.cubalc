@@ -1,0 +1,96 @@
+// 2074_atomic_printer_life_spare.cubalc
+// Science board: atomic printer + life_cell spare (reserve lowers thr / glycogen CDK priming).
+// Distinct from ease prime poise drive scavenge invest fortify brace harden anchor.
+// Yield sheds reserve. ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_spare | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 16 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+
+GETF seed energy
+ASSERT LAST_N == 16 "seed e 16"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr 10"
+SEND seed bank 8
+ASSERT LAST_N == 8 "bank 8"
+GETF seed energy
+ASSERT LAST_N == 8 "e 8"
+SEND seed stores
+ASSERT LAST_N == 8 "reserve 8"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e8 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+SEND seed spare 5
+ASSERT LAST_N == 5 "spare 5"
+SEND seed stores
+ASSERT LAST_N == 3 "reserve 3"
+GETF seed threshold
+ASSERT LAST_N == 5 "thr 5"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e8 >= thr5"
+SEND seed yield
+ASSERT LAST_N == y0 - 5 "yield sheds reserve"
+GETF seed energy
+ASSERT LAST_N == 8 "energy untouched"
+SEND seed charged
+ASSERT LAST_N == 0 "atp empty not prime"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat empty not ease"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr empty not poise"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty not drive"
+GETF seed age
+ASSERT LAST_N == 0 "age empty not scavenge"
+
+SEND seed feed 4
+GETF seed energy
+ASSERT LAST_N == 12 "e 12"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e12 >= thr5"
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "daughter born"
+GETF d1 alive
+ASSERT LAST_N == 1 "d1 alive"
+
+PRINT "atomic_printer_life_spare ok"

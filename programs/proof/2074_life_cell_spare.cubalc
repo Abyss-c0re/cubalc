@@ -1,0 +1,165 @@
+// 2074_life_cell_spare.cubalc
+// Proof 2074: life_cell spare — reserve lowers mitosis threshold (glycogen CDK priming).
+// Distinct from ease prime poise drive scavenge invest fortify brace harden anchor.
+// reserve pays; thr floors at 1. Yield sheds by take; energy/atp/heat/pmf/pcr untouched.
+// Ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+SEND seed spare 3
+ASSERT LAST_N == 0 "empty spare 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+SEND seed bank 8
+ASSERT LAST_N == 8 "bank 8"
+GETF seed energy
+ASSERT LAST_N == 4 "active 4 after bank"
+SEND seed stores
+ASSERT LAST_N == 8 "reserve 8"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e4 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+ASSERT LAST_N == 12 "yield 12 after bank"
+
+SEND seed spare 4
+ASSERT LAST_N == 4 "spare 4"
+SEND seed stores
+ASSERT LAST_N == 4 "reserve 4"
+GETF seed threshold
+ASSERT LAST_N == 6 "thr 6 after spare"
+GETF seed energy
+ASSERT LAST_N == 4 "energy untouched by spare"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e4 < thr6"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds reserve by spare"
+
+SEND seed spare 9
+ASSERT LAST_N == 4 "spare drains remaining reserve 4"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve empty"
+GETF seed threshold
+ASSERT LAST_N == 2 "thr 2"
+GETF seed ready
+ASSERT LAST_N == 1 "ready e4 >= thr2"
+
+SEND seed spare 1
+ASSERT LAST_N == 0 "empty spare 0"
+
+SEND dead spare 2
+ASSERT LAST_N == 0 "dead spare 0"
+
+// energy is 4 here; thr is 2; floor room = 1
+SEND seed bank 3
+ASSERT LAST_N == 3 "bank 3 for floor"
+GETF seed energy
+ASSERT LAST_N == 1 "e 1 after bank"
+GETF seed threshold
+ASSERT LAST_N == 2 "thr still 2"
+SEND seed stores
+ASSERT LAST_N == 3 "reserve 3"
+SEND seed spare 10
+ASSERT LAST_N == 1 "spare floor room 1"
+GETF seed threshold
+ASSERT LAST_N == 1 "thr floor 1"
+SEND seed stores
+ASSERT LAST_N == 2 "reserve leftover after floor"
+SEND seed spare 1
+ASSERT LAST_N == 0 "thr already 1 spare 0"
+
+SEND ally feed 10
+SEND ally bank 6
+ASSERT LAST_N == 6 "ally bank 6"
+SEND ally invest 3
+ASSERT LAST_N == 3 "ally invest 3"
+GETF ally threshold
+ASSERT LAST_N == 13 "ally thr 13"
+SEND ally spare 4
+ASSERT LAST_N == 4 "ally spare 4"
+GETF ally threshold
+ASSERT LAST_N == 9 "ally thr 9"
+SEND ally stores
+ASSERT LAST_N == 2 "ally reserve 2 after spare"
+
+SEND quiet quiesce
+SEND quiet bank 5
+ASSERT LAST_N == 5 "quiet bank 5"
+GETF quiet threshold
+LET qt = LAST_N
+SEND quiet spare 3
+ASSERT LAST_N == 3 "quiet spare 3"
+GETF quiet threshold
+ASSERT LAST_N == qt - 3 "quiet thr fell"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet stays not ready"
+
+SEND iso bank 10
+ASSERT LAST_N == 10 "iso bank 10"
+SEND iso charge 2
+ASSERT LAST_N == 2 "iso charge 2"
+SEND iso shiver 1
+SEND iso load 1
+SEND iso pulse 2
+GETF iso energy
+LET ie = LAST_N
+GETF iso age
+LET ia = LAST_N
+SEND iso stores
+LET ir = LAST_N
+SEND iso charged
+LET iatp = LAST_N
+SEND iso phosphagen
+LET ipcr = LAST_N
+SEND iso warmth
+LET ih = LAST_N
+SEND iso gradient
+LET ipmf = LAST_N
+GETF iso threshold
+LET ith = LAST_N
+SEND iso yield
+LET iy = LAST_N
+SEND iso spare 3
+ASSERT LAST_N == 3 "iso spare 3"
+GETF iso energy
+ASSERT LAST_N == ie "iso energy held"
+SEND iso charged
+ASSERT LAST_N == iatp "iso atp held"
+SEND iso phosphagen
+ASSERT LAST_N == ipcr "iso pcr held"
+SEND iso warmth
+ASSERT LAST_N == ih "iso heat held"
+SEND iso gradient
+ASSERT LAST_N == ipmf "iso pmf held"
+GETF iso age
+ASSERT LAST_N == ia "iso age held"
+SEND iso stores
+ASSERT LAST_N == ir - 3 "iso reserve paid"
+GETF iso threshold
+ASSERT LAST_N == ith - 3 "iso thr fell"
+SEND iso yield
+ASSERT LAST_N == iy - 3 "iso yield sheds reserve"
+
+PRINT "life_cell_spare ok"

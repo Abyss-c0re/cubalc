@@ -1,0 +1,50 @@
+// atomic_printer_life_spare.cubalc
+// Science board integration: atomic printer + life_cell spare (reserve lowers thr).
+// Glycogen-funded CDK priming. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_spare | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 20 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+ASSERT SMX_OK == 1 "smx ok"
+
+SEND seed bank 10
+ASSERT LAST_N == 10 "bank 10"
+SEND seed spare 6
+ASSERT LAST_N == 6 "spare 6"
+GETF seed threshold
+ASSERT LAST_N == 4 "thr 4"
+GETF seed ready
+ASSERT LAST_N == 1 "ready after spare"
+SEND seed stores
+ASSERT LAST_N == 4 "reserve 4"
+
+PRINT "atomic_printer_life_spare integration ok"

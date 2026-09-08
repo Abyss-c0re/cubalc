@@ -1,3 +1,9 @@
+## 1.15.1560-usability — 2074 LIFE_CELL_SPARE
+- feat(life): spare reserve→lower mitosis thr (glycogen CDK priming / storage-funded cycle ease)
+- proofs 2074 asserts_ok=57 fail=0; science 24/0; flagship 1620 PASS 12/0
+- thr floors at 1; yield sheds reserve; energy/atp/heat/pmf/pcr untouched; ready recomputes
+- distinct from ease/prime/poise/drive/scavenge/invest/fortify/brace/harden/anchor
+
 ## 1.15.1553-usability — 2068 LIFE_CELL_DRIVE
 - feat(life): drive pmf→lower mitosis thr (chemiosmotic CDK priming)
 - proofs 2068 asserts_ok=58 fail=0; science 27/0; flagship 1620 PASS 12/0

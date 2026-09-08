@@ -1,0 +1,7 @@
+SHIP 2074 LIFE_CELL_SPARE
+feature: spare reserve→lower mitosis thr (glycogen CDK priming)
+lib: programs/lib/life_cell.cubalc METHOD spare
+proof: programs/proof/2074_life_cell_spare.cubalc asserts_ok=57 fail=0
+science: programs/science/proof/2074_atomic_printer_life_spare.cubalc asserts_ok=24 fail=0
+flagship 1620 PASS asserts_ok=12 fail=0
+distinct: ease/prime/poise/drive/scavenge/invest
