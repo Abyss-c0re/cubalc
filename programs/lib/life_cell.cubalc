@@ -82,6 +82,8 @@
 #   poise n              PCr → lower mitosis threshold (phosphagen CDK burst priming; yield sheds PCr; ready recompute)
 #   brace n              PCr → raise mitosis threshold (phosphagen CDK fortify; yield sheds PCr; ready recompute)
 #   drive n              pmf → lower mitosis threshold (chemiosmotic CDK priming; yield sheds pmf; ready recompute)
+#   mend n               PCr → shed age (phosphagen chaperone; yield sheds PCr; thr/ready untouched)
+#   renew n              pmf → shed age (chemiosmotic QC / Δψ chaperone; yield sheds pmf; thr/ready untouched)
 CLASS Cell
   FIELD alive 0
   FIELD energy 0
@@ -2231,6 +2233,47 @@ CLASS Cell
     END
     LET c = c - take
     SETF THIS pcr c
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+  # Renew: spend n pmf to shed age (chemiosmotic QC / Δψ-dependent chaperone / mito quality control).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+  # drive (pmf→lower thr), uncouple (pmf→heat), synthase (pmf→ATP), pump (energy→pmf).
+  # pmf pays; age floors at 0. Yield sheds by take (pmf in yield).
+  # energy/reserve/atp/heat/pcr/ready/threshold untouched.
+  # Usability: AGI spends proton-motive force to rejuvenate without burning ATP, PCr, heat, or life spark.
+  # Returns amount renewed. Dead/zero/empty pmf/age already 0 → 0.
+  METHOD renew n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
     LET ag = ag - take
     SETF THIS age ag
     RET take

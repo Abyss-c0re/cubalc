@@ -2,19 +2,26 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2069,
   "MEANINGFUL_ITER": 2069,
-  "iter": 2069,
-  "version": "1.15.1554-usability",
+  "iter": 2070,
+  "version": "1.15.1555-usability",
   "VERSION": "1.15.1554-usability",
   "feature": "life_cell_mend",
   "FEATURE": "LIFE_CELL_MEND",
   "ship": "2069_life_cell_mend",
   "proof": "programs/proof/2069_life_cell_mend.cubalc",
   "proofs": [
-    "programs/proof/2069_life_cell_mend.cubalc",
-    "programs/science/proof/2069_atomic_printer_life_mend.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
   "head": "e0444897b0f5dca64c179c3da4596772a93a4cfb",
   "tip": "e0444897b0f5dca64c179c3da4596772a93a4cfb",
   "pinned_head": "e0444897b0f5dca64c179c3da4596772a93a4cfb",
-  "feat_head": "e0444897b0f5dca64c179c3da4596772a93a4cfb"
+  "feat_head": "e0444897b0f5dca64c179c3da4596772a93a4cfb",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "title": "life cell",
+  "commit": "d51608f11",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-08T00:04:34Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
