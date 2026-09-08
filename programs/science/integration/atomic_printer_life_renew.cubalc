@@ -1,0 +1,124 @@
+// atomic_printer_life_renew.cubalc
+// Science board: atomic printer + life_cell renew (pmf → shed age / mito QC).
+// Chemiosmotic quality control: proton-motive force pays for rejuvenation
+// without burning ATP, PCr, heat, or the life spark. Distinct from mend/refold/anneal/repair.
+// Gift: CubalC life-force substrate. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=atomic_printer_life_renew | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE membrane ROLE energy PROTON 1
+
+FOLDBITS bed      "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle   "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive     "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS membrane "1111111111111111000000000000000011111111111111110000000000000000"
+
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG bed hive
+PLUG membrane bed
+
+ENTITY seed OF Cell 1 6 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+IMPULSE nozzle 1
+IMPULSE bed 1
+IMPULSE membrane 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE bed nozzle
+SMX EXCHANGE nozzle hive
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT ENERGY > 0 "energy flows"
+
+// Age on printer bed, build pmf, renew, then mitosis
+GETF seed energy
+ASSERT LAST_N == 6 "life spark 6"
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "aged 6"
+GETF seed energy
+LET e_pulse = LAST_N
+ASSERT e_pulse >= 6 "energy after pulse"
+SEND seed feed 10
+ASSERT LAST_N == e_pulse + 10 "fed +10"
+GETF seed energy
+LET e0 = LAST_N
+SEND seed pump 5
+ASSERT LAST_N == 5 "pump 5"
+SEND seed gradient
+ASSERT LAST_N == 5 "pmf 5"
+GETF seed energy
+ASSERT LAST_N == e0 - 5 "active paid pump"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed renew 4
+ASSERT LAST_N == 4 "renew 4"
+GETF seed age
+ASSERT LAST_N == 2 "age 2 after renew"
+SEND seed gradient
+ASSERT LAST_N == 1 "pmf 1 leftover"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds pmf"
+// convert leftover pmf to ATP then active; feed to thr
+SEND seed synthase 1
+ASSERT LAST_N == 1 "synthase 1"
+SEND seed oxidize 1
+ASSERT LAST_N == 1 "oxidize 1"
+SEND seed feed 8
+GETF seed energy
+ASSERT LAST_N >= 10 "ready budget"
+GETF seed ready
+ASSERT LAST_N == 1 "ready for mitosis"
+GETF seed age
+ASSERT LAST_N == 2 "age held through charge path"
+
+// Mitosis on printer bed — rejuvenated founder divides
+GETF seed energy
+LET half = LAST_N / 2
+IF half < 1 THEN
+  LET half = 1
+END
+SEND seed after_div
+ASSERT LAST_N >= 1 "parent halved"
+SEND d1 birth half 1
+ASSERT LAST_N == 1 "daughter birth"
+GETF d1 alive
+ASSERT LAST_N == 1 "daughter alive"
+GETF d1 gen
+ASSERT LAST_N == 1 "daughter gen 1"
+GETF seed alive
+ASSERT LAST_N == 1 "parent lives"
+GETF seed age
+ASSERT LAST_N == 2 "parent age preserved across mitosis"
+
+// Daughter builds her own delta-psi and renews after aging
+SEND d1 pulse 4
+GETF d1 age
+ASSERT LAST_N == 4 "daughter aged 4"
+SEND d1 feed 12
+SEND d1 pump 4
+ASSERT LAST_N == 4 "daughter pump 4"
+SEND d1 renew 3
+ASSERT LAST_N == 3 "daughter renew 3"
+GETF d1 age
+ASSERT LAST_N == 1 "daughter age 1"
+SEND d1 gradient
+ASSERT LAST_N == 1 "daughter pmf 1"
+SEND d1 charged
+ASSERT LAST_N == 0 "daughter atp untouched by renew"
+ASSERT ENERGY > 0 "energy still flows"
+ASSERT UNITY >= 0 "mesh unity floor"
+
+PRINT "atomic_printer_life_renew PASS"

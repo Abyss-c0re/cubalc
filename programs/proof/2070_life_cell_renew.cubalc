@@ -1,0 +1,208 @@
+// 2070_life_cell_renew.cubalc
+// Proof: life_cell renew — pmf → shed age (chemiosmotic QC / Δψ-dependent chaperone).
+// Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+// drive (pmf→lower thr), uncouple (pmf→heat), synthase (pmf→ATP), pump (energy→pmf).
+// pmf pays; age floors at 0. Yield sheds by take (pmf in yield).
+// energy/reserve/atp/heat/pcr/ready/threshold untouched.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 20 0
+ENTITY ally OF Cell 1 12 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 30 0
+ENTITY iso OF Cell 1 15 0
+
+GETF seed energy
+ASSERT LAST_N == 20 "spark 20"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed age
+ASSERT LAST_N == 0 "age 0"
+SEND seed renew 3
+ASSERT LAST_N == 0 "empty renew 0"
+SEND seed yield
+ASSERT LAST_N == 20 "yield 20"
+
+SEND seed pulse 8
+GETF seed age
+ASSERT LAST_N == 8 "aged 8"
+GETF seed energy
+LET e_after_pulse = LAST_N
+ASSERT e_after_pulse >= 20 "energy grew or held"
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy paid pump"
+GETF seed threshold
+LET thr0 = LAST_N
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed renew 4
+ASSERT LAST_N == 4 "renew 4"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2"
+GETF seed age
+ASSERT LAST_N == 4 "age 4 after renew"
+GETF seed energy
+ASSERT LAST_N == e_after_pulse - 6 "energy untouched by renew"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+GETF seed threshold
+ASSERT LAST_N == thr0 "thr untouched by renew"
+GETF seed ready
+LET rd0 = LAST_N
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds pmf by renew"
+
+SEND seed renew 9
+ASSERT LAST_N == 2 "renew drains remaining pmf 2"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed age
+ASSERT LAST_N == 2 "age 2"
+SEND seed renew 1
+ASSERT LAST_N == 0 "empty renew 0"
+GETF seed ready
+ASSERT LAST_N == rd0 "ready untouched by renew"
+
+SEND dead renew 2
+ASSERT LAST_N == 0 "dead renew 0"
+
+SEND seed feed 10
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+SEND seed renew 0
+ASSERT LAST_N == 0 "zero renew 0"
+SEND seed renew -1
+ASSERT LAST_N == 0 "neg renew 0"
+SEND seed gradient
+ASSERT LAST_N == 3 "pmf held 3"
+GETF seed age
+LET a1 = LAST_N
+SEND seed renew 1
+ASSERT LAST_N == 1 "renew 1"
+GETF seed age
+ASSERT LAST_N == a1 - 1 "age shed 1"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2 after renew 1"
+
+// age-limited: more pmf than age only sheds age
+SEND seed pulse 5
+GETF seed age
+LET a2 = LAST_N
+ASSERT a2 >= 5 "aged more"
+SEND seed feed 30
+SEND seed pump 10
+ASSERT LAST_N == 10 "pump 10"
+SEND seed gradient
+ASSERT LAST_N == 12 "pmf 12"
+SEND seed yield
+LET y1 = LAST_N
+SEND seed renew 100
+ASSERT LAST_N == a2 "renew capped by age"
+GETF seed age
+ASSERT LAST_N == 0 "age floored 0"
+SEND seed gradient
+ASSERT LAST_N == 12 - a2 "pmf leftover after age floor"
+SEND seed yield
+ASSERT LAST_N == y1 - a2 "yield shed by age-capped renew"
+
+// Clear leftover pmf then prove distinct from repair + drive
+SEND seed gradient
+LET p_left = LAST_N
+SEND seed uncouple p_left
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf cleared for distinctness"
+SEND seed feed 20
+SEND seed pulse 6
+GETF seed age
+ASSERT LAST_N == 6 "age 6 for repair path"
+GETF seed energy
+LET e_r = LAST_N
+SEND seed repair 3
+ASSERT LAST_N == 3 "repair 3 energy path"
+GETF seed age
+ASSERT LAST_N == 3 "age 3 after repair"
+GETF seed energy
+ASSERT LAST_N == e_r - 3 "energy paid repair"
+SEND seed pump 4
+ASSERT LAST_N == 4 "pump 4"
+GETF seed threshold
+LET thr1 = LAST_N
+SEND seed drive 2
+ASSERT LAST_N == 2 "drive 2"
+GETF seed threshold
+ASSERT LAST_N == thr1 - 2 "thr lowered by drive"
+GETF seed age
+ASSERT LAST_N == 3 "age untouched by drive"
+SEND seed renew 2
+ASSERT LAST_N == 2 "renew 2 after drive"
+GETF seed age
+ASSERT LAST_N == 1 "age 1 after renew"
+GETF seed threshold
+ASSERT LAST_N == thr1 - 2 "thr held after renew"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty after drive+renew"
+
+SEND quiet feed 5
+SEND quiet pulse 4
+GETF quiet age
+ASSERT LAST_N == 4 "quiet aged 4"
+SEND quiet pump 5
+ASSERT LAST_N == 5 "quiet pump 5"
+SEND quiet quiesce
+SEND quiet renew 3
+ASSERT LAST_N == 3 "quiet renew 3"
+GETF quiet age
+ASSERT LAST_N == 1 "quiet age 1"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet not ready"
+SEND quiet gradient
+ASSERT LAST_N == 2 "quiet pmf 2"
+
+SEND ally pulse 5
+GETF ally age
+ASSERT LAST_N == 5 "ally aged 5"
+SEND ally pump 4
+ASSERT LAST_N == 4 "ally pump 4"
+SEND ally renew 3
+ASSERT LAST_N == 3 "ally renew 3"
+GETF ally age
+ASSERT LAST_N == 2 "ally age 2"
+SEND ally gradient
+ASSERT LAST_N == 1 "ally pmf 1"
+GETF ally energy
+ASSERT LAST_N >= 4 "ally e held after pump"
+
+SEND iso pulse 5
+GETF iso age
+ASSERT LAST_N == 5 "iso aged 5"
+SEND iso feed 20
+SEND iso pump 4
+ASSERT LAST_N == 4 "iso pump 4"
+SEND iso renew 3
+ASSERT LAST_N == 3 "iso renew 3"
+GETF iso age
+ASSERT LAST_N == 2 "iso age 2"
+GETF iso threshold
+ASSERT LAST_N == 10 "iso thr default untouched"
+SEND iso gradient
+ASSERT LAST_N == 1 "iso pmf 1"
+SEND iso charged
+ASSERT LAST_N == 0 "iso atp untouched by renew"
+SEND iso phosphagen
+ASSERT LAST_N == 0 "iso pcr untouched by renew"
+
+PRINT "2070_life_cell_renew PASS"
