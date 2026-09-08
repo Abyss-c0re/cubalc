@@ -1,9 +1,9 @@
 # AUGOGEN CONFIRM — pair vote (guide + oversee) as one braincube
-# Next-step suggestion is PENDING until HARMONY. Never auto-execute.
-# Wire: SMX2 bits only. Prose stays off the bus.
-# Host may FOLDBITS guide/oversee/mesh from env (CUBALC_PEER0_BITS / PEER1).
+# Soft suggest = FOLDBITS only (no digit_lock). Confirm = SETDIGIT + RESOLVE.
+# Never SYS SPAWN. Prose stays off the bus. HOLD_FLASH omitted (ordinary board).
+# Host: CUBALC_SUGGEST_BITS / CUBALC_PEER0_BITS / CUBALC_PEER1_BITS / CUBALC_MESH_VOTE_BITS
 
-HOLD_FLASH 1
+INCLUDE agent_boot
 SHARE state_matrix_only
 BUDGET 48
 CREED "C3"
@@ -11,52 +11,56 @@ CREED "C3"
 GENESIS "AUGOGEN v1 | type=pair_confirm | api=x.ai/suggestPrompt | auto_execute=0 | observer=NexusCore | smx_only=1 |"
 
 CUBE core     ROLE kernel_sot  PROTON 1
+CUBE suggest  ROLE atom        PROTON 1
 CUBE guide    ROLE nanobot     PROTON 1
 CUBE oversee  ROLE nanobot     PROTON 1
 CUBE brain    ROLE braincube   PROTON 1
 CUBE mesh     ROLE hive        PROTON 1
 CUBE nexus    ROLE nexuscore   PROTON 1
-CUBE suggest  ROLE atom        PROTON 1
 
 NEST core guide
 NEST core oversee
 PLUG core guide
 PLUG core oversee
+PLUG suggest guide
+PLUG suggest oversee
 PLUG guide brain
 PLUG oversee brain
 PLUG brain mesh
 PLUG mesh nexus
-PLUG suggest guide
-PLUG suggest oversee
 
 SETBIT core 0 1
 SETBIT core 7 1
 SETBIT nexus 0 1
 SETBIT nexus 8 1
-SETBIT mesh 2 1
-SETBIT suggest 0 1
 
-# Guide vote bits (host override)
+# 1. soft suggestion — bits only, no SETDIGIT
+SYS ENV "CUBALC_SUGGEST_BITS"
+IF LAST_N > 0 THEN
+  FOLDBITS suggest LAST
+ELSE
+  SETBIT suggest 0 1
+  SETBIT suggest 2 1
+  SETBIT suggest 5 1
+END
+
+# Pair vote inject (host override). Default: agree bits, no lock.
 SYS ENV "CUBALC_PEER0_BITS"
 IF LAST_N > 0 THEN
   FOLDBITS guide LAST
 ELSE
   SETBIT guide 0 1
   SETBIT guide 2 1
-  SETDIGIT guide 1
 END
 
-# Oversee vote bits (host override)
 SYS ENV "CUBALC_PEER1_BITS"
 IF LAST_N > 0 THEN
   FOLDBITS oversee LAST
 ELSE
   SETBIT oversee 0 1
   SETBIT oversee 2 1
-  SETDIGIT oversee 1
 END
 
-# Mesh may fold a veto (bit0=0)
 SYS ENV "CUBALC_MESH_VOTE_BITS"
 IF LAST_N > 0 THEN
   FOLDBITS mesh LAST
@@ -64,30 +68,46 @@ ELSE
   SETBIT mesh 0 1
 END
 
-IMPULSE core 1
+IMPULSE suggest 1
 IMPULSE guide 1
 IMPULSE oversee 1
-IMPULSE suggest 1
-FLOW 3
+ENERGYFLOW 3
+IF ENERGY(suggest) == 0 THEN
+  DECONSTRUCT suggest
+  RECONSTRUCT suggest
+  PLUG suggest guide
+  PLUG suggest oversee
+  IMPULSE suggest 1
+  ENERGYFLOW 2
+END
 
+# 2. pair vote
 SMX KEY
-SMX EXCHANGE guide oversee
+SMX PAIR guide oversee
 SMX EXCHANGE oversee brain
 SMX EXCHANGE brain mesh
 SMX EXCHANGE mesh nexus
 
-IMPULSE brain 1
-DECIDE brain
-DECIDE nexus
 COMPARE guide oversee
-HARMONY
+HARMONY mesh
 
-PRINT "augogen_confirm" CUBES SMX_OK SMX_TALKS SET(guide) SET(oversee) COMPAT(guide,oversee) DIGIT(brain) UNITY HARMONY
+# 3. confirm only when pair agrees — lock brain digit then RESOLVE
+LET confirm = 0
+IF COMPAT >= 1 THEN
+  LET confirm = 1
+  SETDIGIT brain DIGIT
+  IMPULSE brain 1
+  RESOLVE brain
+END
 
-# Machine accept: pair must agree; no auto-execute (no SYS SPAWN)
+DECIDE nexus
+PRINT "augogen_confirm" confirm DECIDE DIGIT(brain) COMPAT UNITY HARMONY ENERGY SMX_OK SMX_TALKS
+
+# 4. machine accept — no auto-execute
 ASSERT CUBES >= 6
 ASSERT SET(guide) >= 1
 ASSERT SET(oversee) >= 1
 ASSERT COMPAT(guide,oversee) >= 1
 ASSERT DECIDE >= 0
 ASSERT DECIDE <= 9
+ASSERT ENERGY > 0
