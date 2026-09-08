@@ -16,9 +16,9 @@
   "proofs": [
     "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc"
   ],
-  "head": "51117815c0ce1e61c8fc3d9ee1101b78ef4ca5ba",
-  "tip": "51117815c0ce1e61c8fc3d9ee1101b78ef4ca5ba",
-  "pinned_head": "51117815c0ce1e61c8fc3d9ee1101b78ef4ca5ba",
+  "head": "a0b4daf0b9e272edf7b03f987225debc1d1088b4",
+  "tip": "a0b4daf0b9e272edf7b03f987225debc1d1088b4",
+  "pinned_head": "a0b4daf0b9e272edf7b03f987225debc1d1088b4",
   "feat_head": "ef40a9edb76eae5e2fd37fedd84524bd79e3e513",
   "item": "popcountn clzn ctzn parityn",
   "item_id": "mi_popcountn_clzn_ctzn_parityn",
