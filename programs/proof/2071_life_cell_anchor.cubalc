@@ -1,0 +1,190 @@
+// 2071_life_cell_anchor.cubalc
+// Proof: life_cell anchor — pmf → raise mitosis threshold (chemiosmotic CDK fortify / F1Fo gate seal).
+// Distinct from drive (pmf→lower thr), fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+// prime/poise/ease (lower thr), synthase/pump/uncouple/set_threshold, mend (PCr→age), renew (pmf→age).
+// pmf pays; thr ceiling 1000. Yield sheds by take; energy/reserve/atp/heat/pcr untouched.
+// Ready recomputes. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 12 0
+ENTITY ally OF Cell 1 8 0
+ENTITY dead OF Cell 0 0 0
+ENTITY quiet OF Cell 1 14 0
+ENTITY iso OF Cell 1 20 0
+
+GETF seed energy
+ASSERT LAST_N == 12 "spark 12"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr default 10"
+SEND seed anchor 3
+ASSERT LAST_N == 0 "empty anchor 0"
+SEND seed yield
+ASSERT LAST_N == 12 "yield 12"
+
+// Build pmf via energy→pmf (pump)
+SEND seed pump 6
+ASSERT LAST_N == 6 "pump 6"
+GETF seed energy
+ASSERT LAST_N == 6 "active 6"
+SEND seed gradient
+ASSERT LAST_N == 6 "pmf 6"
+GETF seed threshold
+ASSERT LAST_N == 10 "thr held 10"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr10"
+SEND seed yield
+LET y0 = LAST_N
+
+SEND seed anchor 4
+ASSERT LAST_N == 4 "anchor 4"
+SEND seed gradient
+ASSERT LAST_N == 2 "pmf 2"
+GETF seed threshold
+ASSERT LAST_N == 14 "thr 14 after anchor"
+GETF seed energy
+ASSERT LAST_N == 6 "energy untouched by anchor"
+GETF seed ready
+ASSERT LAST_N == 0 "not ready e6 < thr14"
+SEND seed charged
+ASSERT LAST_N == 0 "atp untouched"
+SEND seed warmth
+ASSERT LAST_N == 0 "heat untouched"
+SEND seed phosphagen
+ASSERT LAST_N == 0 "pcr untouched"
+SEND seed stores
+ASSERT LAST_N == 0 "reserve untouched"
+SEND seed yield
+ASSERT LAST_N == y0 - 4 "yield sheds pmf by anchor"
+
+SEND seed anchor 9
+ASSERT LAST_N == 2 "anchor drains remaining pmf 2"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf empty"
+GETF seed threshold
+ASSERT LAST_N == 16 "thr 16"
+GETF seed ready
+ASSERT LAST_N == 0 "still not ready e6 < thr16"
+
+SEND seed anchor 1
+ASSERT LAST_N == 0 "empty anchor 0"
+
+SEND dead anchor 2
+ASSERT LAST_N == 0 "dead anchor 0"
+
+SEND seed feed 20
+SEND seed pump 3
+ASSERT LAST_N == 3 "pump 3"
+SEND seed anchor 0
+ASSERT LAST_N == 0 "zero anchor 0"
+SEND seed anchor -1
+ASSERT LAST_N == 0 "neg anchor 0"
+SEND seed gradient
+ASSERT LAST_N == 3 "pmf held 3"
+
+GETF seed threshold
+LET th_now = LAST_N
+// raise toward ceiling: thr is 16, room to 1000 is large; take only 3 pmf
+SEND seed anchor 100
+ASSERT LAST_N == 3 "anchor room 3"
+GETF seed threshold
+ASSERT LAST_N == th_now + 3 "thr rose by 3"
+SEND seed gradient
+ASSERT LAST_N == 0 "pmf spent"
+GETF seed energy
+LET e_now = LAST_N
+// e_now should be 6+20-3=23; thr was 16+3=19 → ready
+GETF seed ready
+ASSERT LAST_N == 1 "ready when e>=thr after feed"
+
+// ceiling test: set thr high then anchor limited by room
+SEND seed set_threshold 998
+SEND seed feed 50
+SEND seed pump 10
+ASSERT LAST_N == 10 "pump 10 for ceiling"
+SEND seed gradient
+ASSERT LAST_N == 10 "pmf 10"
+SEND seed anchor 5
+ASSERT LAST_N == 2 "anchor ceiling room 2"
+GETF seed threshold
+ASSERT LAST_N == 1000 "thr ceiling 1000"
+SEND seed gradient
+ASSERT LAST_N == 8 "pmf leftover after ceiling"
+SEND seed anchor 1
+ASSERT LAST_N == 0 "thr already 1000 anchor 0"
+
+// ally path: lower thr via drive then re-anchor
+SEND ally feed 10
+SEND ally pump 5
+ASSERT LAST_N == 5 "ally pump 5"
+SEND ally drive 3
+ASSERT LAST_N == 3 "ally drive 3"
+GETF ally threshold
+ASSERT LAST_N == 7 "ally thr 7"
+SEND ally pump 4
+ASSERT LAST_N == 4 "ally pump 4"
+SEND ally anchor 2
+ASSERT LAST_N == 2 "ally anchor 2"
+GETF ally threshold
+ASSERT LAST_N == 9 "ally thr 9"
+SEND ally gradient
+ASSERT LAST_N == 4 "ally pmf 4 after ops"
+// pump5 + pump4 - drive3 - anchor2 = 4
+
+// quiet: anchor still raises thr, ready stays 0 while quiescent
+SEND quiet quiesce
+SEND quiet pump 5
+ASSERT LAST_N == 5 "quiet pump 5"
+GETF quiet threshold
+LET qt = LAST_N
+SEND quiet anchor 3
+ASSERT LAST_N == 3 "quiet anchor 3"
+GETF quiet threshold
+ASSERT LAST_N == qt + 3 "quiet thr rose"
+GETF quiet ready
+ASSERT LAST_N == 0 "quiet stays not ready"
+
+// iso isolation: energy/atp/heat/pcr/reserve/age untouched by anchor
+SEND iso pump 8
+ASSERT LAST_N == 8 "iso pump 8"
+SEND iso charge 2
+ASSERT LAST_N == 2 "iso charge 2"
+SEND iso shiver 1
+SEND iso load 1
+SEND iso pulse 2
+// capture baselines AFTER setup, BEFORE anchor
+GETF iso energy
+LET ie = LAST_N
+GETF iso age
+LET ia = LAST_N
+SEND iso stores
+LET ir = LAST_N
+SEND iso charged
+LET iatp = LAST_N
+SEND iso phosphagen
+LET ipcr = LAST_N
+SEND iso warmth
+LET ih = LAST_N
+SEND iso yield
+LET iy = LAST_N
+SEND iso anchor 3
+ASSERT LAST_N == 3 "iso anchor 3"
+GETF iso energy
+ASSERT LAST_N == ie "iso energy held"
+SEND iso charged
+ASSERT LAST_N == iatp "iso atp held"
+SEND iso phosphagen
+ASSERT LAST_N == ipcr "iso pcr held"
+SEND iso stores
+ASSERT LAST_N == ir "iso reserve held"
+SEND iso warmth
+ASSERT LAST_N == ih "iso heat held"
+GETF iso age
+ASSERT LAST_N == ia "iso age held"
+SEND iso yield
+ASSERT LAST_N == iy - 3 "iso yield shed 3"
+
+PRINT "2071_life_cell_anchor PASS"
