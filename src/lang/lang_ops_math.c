@@ -6642,5 +6642,92 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
     bump(vm); return 1;
   }
 
+
+  /* ILOG2N|FLOORLOG2N|LOG2N|INTLOG2N x — floor(log2(x)) → LAST_N.
+   * BITWIDTHN|NBITSN|BITLENN|WIDTHN x — bit length = floor(log2(x))+1 (0→0) → LAST_N.
+   * x≤0: ILOG2 soft 0+ERR (ILOG2N_OK=0); BITWIDTH 0 ok for x==0, soft fail x<0.
+   * Twin of stack SILOG2. Usability: shift = ILOG2N pagesz after NEXTPOW2N; width = BITWIDTHN n after GETFLAGN. */
+  if (kw(&L->cur,"ILOG2N") || kw(&L->cur,"FLOORLOG2N") || kw(&L->cur,"LOG2N") ||
+      kw(&L->cur,"INTLOG2N") || kw(&L->cur,"FLOOR_LOG2_N") || kw(&L->cur,"ILOG2_N") ||
+      kw(&L->cur,"BITWIDTHN") || kw(&L->cur,"NBITSN") || kw(&L->cur,"BITLENN") ||
+      kw(&L->cur,"WIDTHN") || kw(&L->cur,"BIT_WIDTH_N") || kw(&L->cur,"BITWIDTH_N") ||
+      kw(&L->cur,"NBITS_N") || kw(&L->cur,"BITLEN_N")){
+    long x = 0, out = 0;
+    int bad = 0, mode = 0; /* 0=ilog2 1=bitwidth */
+    char nbuf[32];
+    if (kw(&L->cur,"BITWIDTHN") || kw(&L->cur,"NBITSN") || kw(&L->cur,"BITLENN") ||
+        kw(&L->cur,"WIDTHN") || kw(&L->cur,"BIT_WIDTH_N") || kw(&L->cur,"BITWIDTH_N") ||
+        kw(&L->cur,"NBITS_N") || kw(&L->cur,"BITLEN_N"))
+      mode = 1;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) {
+        fail_at(vm, L, mode==1 ? "BITWIDTHN x — unknown x" : "ILOG2N x — unknown x");
+        return -1;
+      }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, mode==1 ? "BITWIDTHN x — BITWIDTHN n" : "ILOG2N x — ILOG2N n");
+      return -1;
+    }
+    if (mode == 1) {
+      if (x < 0) {
+        out = 0; bad = 1;
+        var_set_str(vm, "LAST_ERR", "BITWIDTHN: negative");
+        var_set_str(vm, "ERR", "BITWIDTHN: negative");
+      } else if (x == 0) {
+        out = 0;
+      } else {
+        unsigned long u = (unsigned long)x;
+        int w = 0;
+        while (u){ w++; u >>= 1; }
+        out = (long)w;
+      }
+    } else {
+      if (x <= 0) {
+        out = 0; bad = 1;
+        var_set_str(vm, "LAST_ERR", "ILOG2N: non-positive");
+        var_set_str(vm, "ERR", "ILOG2N: non-positive");
+      } else {
+        unsigned long u = (unsigned long)x;
+        int r = -1;
+        while (u){ r++; u >>= 1; }
+        out = (long)r;
+      }
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", out);
+    var_set_num(vm, "LAST_N", out);
+    vm->last_n = out;
+    if (mode == 1) {
+      var_set_num(vm, "BITWIDTHN", out);
+      var_set_num(vm, "NBITSN", out);
+      var_set_num(vm, "BITLENN", out);
+      var_set_num(vm, "WIDTHN", out);
+      var_set_num(vm, "BITWIDTHN_X", x);
+      var_set_num(vm, "BITWIDTHN_OK", bad ? 0L : 1L);
+    } else {
+      var_set_num(vm, "ILOG2N", out);
+      var_set_num(vm, "FLOORLOG2N", out);
+      var_set_num(vm, "LOG2N", out);
+      var_set_num(vm, "INTLOG2N", out);
+      var_set_num(vm, "ILOG2N_X", x);
+      var_set_num(vm, "ILOG2N_OK", bad ? 0L : 1L);
+    }
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %ld -> %ld bad=%d\n",
+              mode==1?"bitwidthn":"ilog2n", x, out, bad);
+    bump(vm); return 1;
+  }
+
   return 0;
 }

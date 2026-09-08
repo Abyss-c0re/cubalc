@@ -1,3 +1,9 @@
+## 1.15.1561-usability — 2075 ILOG2N_BITWIDTHN
+- feat(lang): ILOG2N/BITWIDTHN floor-log2 + bit-length usability (*N forms)
+- proof 2075 asserts_ok=37 fail=0; aliases FLOORLOG2N/LOG2N/NBITSN/BITLENN/WIDTHN
+- soft-fail non-positive ILOG2 / negative BITWIDTH; pairs with NEXTPOW2N+GETFLAGN
+- twin of stack SILOG2; pure C in lang_ops_math.c + help plate
+
 ## 1.15.1560-usability — 2074 LIFE_CELL_SPARE
 - feat(life): spare reserve→lower mitosis thr (glycogen CDK priming / storage-funded cycle ease)
 - proofs 2074 asserts_ok=57 fail=0; science 24/0; flagship 1620 PASS 12/0

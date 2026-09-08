@@ -4227,6 +4227,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"ALIGNUPN", "ALIGNUPN|CEILALIGNN|SNAPUPN x step — raise to next multiple of step → LAST_N · pad/align"},
       {"ALIGNDOWNN", "ALIGNDOWNN|FLOORALIGNN|SNAPDOWNN x step — lower to previous multiple of step → LAST_N · base/align"},
       {"ICBRTN", "ICBRTN|CBRTN|IROOT3N x — floor integer cube root → LAST_N · GETFLAGN volume"},
+      {"ILOG2N", "ILOG2N|FLOORLOG2N|LOG2N x — floor(log2(x)) → LAST_N · shift after NEXTPOW2N"},
+      {"BITWIDTHN", "BITWIDTHN|NBITSN|BITLENN|WIDTHN x — bit length → LAST_N · GETFLAGN width"},
       {"NEXTPOW2N", "NEXTPOW2N|CEILPOW2N|SNEXTPOW2N x — smallest power of 2 ≥ x → LAST_N · page pad"},
       {"PREVPOW2N", "PREVPOW2N|FLOORPOW2N|SPREVPOW2N x — largest power of 2 ≤ x → LAST_N · floor page"},
       {"ISPOW2N", "ISPOW2N|ISPOWER2N|POW2PN x — 1 if x is power of two else 0 · GETFLAGN size"},
