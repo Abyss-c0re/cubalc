@@ -12,21 +12,23 @@
   "proofs": [
     "programs/proof/2075_ilog2n_bitwidthn.cubalc"
   ],
-  "head": "c44cfae969eb2a0fa4de23ec86389e5ff518ae22",
-  "tip": "c44cfae969eb2a0fa4de23ec86389e5ff518ae22",
-  "pinned_head": "c44cfae969eb2a0fa4de23ec86389e5ff518ae22",
+  "head": "fe93d893f818854bce446bd445e13a10c06e46ed",
+  "tip": "fe93d893f818854bce446bd445e13a10c06e46ed",
+  "pinned_head": "fe93d893f818854bce446bd445e13a10c06e46ed",
   "feat_head": "245929bc6d981282504d62e6f9d031d01ea9d3ef",
   "item": "ilog2n bitwidthn",
   "item_id": "mi_ilog2n_bitwidthn",
   "title": "ILOG2N_BITWIDTHN",
-  "commit": "c44cfae96",
-  "summary": "ILOG2N/BITWIDTHN floor-log2 + bit-length usability; proof 2075 asserts_ok=37.",
-  "ts": "2026-09-08T18:18:14Z",
-  "host_finish": false,
+  "commit": "fe93d893f",
+  "summary": "ILOG2N/BITWIDTHN floor-log2 + bit-length usability; proof 2075 asserts_ok=37 fail=0; tip sealed.",
+  "ts": "2026-09-08T18:19:43Z",
+  "host_finish": true,
   "anti_bloat": true,
   "n": 2075,
   "name": "ILOG2N_BITWIDTHN",
   "label": "ILOG2N_BITWIDTHN",
   "asserts_ok": 37,
-  "asserts_fail": 0
+  "asserts_fail": 0,
+  "proof_status": "PASS",
+  "status": "PASS"
 }
