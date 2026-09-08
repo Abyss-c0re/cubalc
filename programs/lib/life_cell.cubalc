@@ -25,6 +25,7 @@
 #   exocyte n            fluid-phase exocytosis — pay 1 membrane energy, shed n reserve cargo to medium
 #   autophagy n          macroautophagy — recycle n age (worn biomass) → energy +1 heat; starvation self-catabolism
 #   mitophagy n          selective mito QC — recycle n age + drain pmf debris → energy +1 heat; ATP/energy selectivity tax
+#   biogenesis n         mito biogenesis — invest n ATP + n reserve → n nascent pmf +1 heat; PGC-1α rebuild after QC
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3241,6 +3242,60 @@ CLASS Cell
       END
     END
     SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Biogenesis: mitochondrial biogenesis (PGC-1α / NRF1-style OXPHOS rebuild).
+  # Invest take=min(n,atp,reserve) ATP + equal reserve (membrane/protein mass)
+  # → mint take nascent pmf (fresh cristae seeds) + heat += 1 (biosynthetic tax).
+  # Fail-closed before mutation if ATP or reserve cannot fund take>=1.
+  # energy/age/pcr untouched. Ready unchanged (pmf is not mitosis currency directly).
+  # Distinct from reverse (ATP→pmf, no reserve/heat), pump (energy→pmf), synthase (pmf→ATP),
+  # anabolize (ATP→reserve), mitophagy (age→energy + drain pmf), photosynth, uncouple.
+  # Completes mitophagy↔biogenesis free-energy QC loop — clear debris, then rebuild fleet.
+  # Usability: AGI models exercise/cold-induced mito expansion under ASSERT science boards.
+  # Returns take built; dead/n<1/empty atp or reserve → 0.
+  METHOD biogenesis n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    LET r = r - take
+    SETF THIS atp a
+    SETF THIS reserve r
+    GETF THIS pmf
+    LET p = LAST_N + take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
     RET take
   END
 

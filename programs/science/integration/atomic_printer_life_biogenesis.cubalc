@@ -1,0 +1,78 @@
+// atomic_printer_life_biogenesis.cubalc
+// Science board: mitochondrial biogenesis on the atomic printer life substrate.
+// ATP + reserve membrane mass → nascent pmf cristae seeds + biosynthetic heat.
+// Completes mitophagy↔biogenesis free-energy QC loop after selective mito clearance.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+ENTITY elder OF Cell 1 8 0
+SEND printer set_threshold 12
+SEND elder set_threshold 10
+
+SEND printer photosynth 8
+SEND printer glycolyse 6
+GETF printer atp
+ASSERT LAST_N == 6 "printer atp6"
+GETF printer reserve
+ASSERT LAST_N == 2 "printer r2"
+SEND printer photosynth 4
+GETF printer reserve
+ASSERT LAST_N == 6 "printer r6"
+GETF printer energy
+LET pe = LAST_N
+
+SEND printer biogenesis 4
+ASSERT LAST_N == 4 "printer bio4"
+GETF printer atp
+ASSERT LAST_N == 2 "printer atp2"
+GETF printer reserve
+ASSERT LAST_N == 2 "printer r2"
+GETF printer pmf
+ASSERT LAST_N == 4 "printer pmf4"
+GETF printer heat
+ASSERT LAST_N == 1 "printer heat1"
+GETF printer energy
+ASSERT LAST_N == pe "printer e conserved"
+
+// harvest new cristae via synthase → work currency
+SEND printer synthase 3
+ASSERT LAST_N == 3 "printer syn3"
+GETF printer atp
+ASSERT LAST_N == 5 "printer atp back"
+GETF printer pmf
+ASSERT LAST_N == 1 "printer pmf1"
+
+// elder: mitophagy then biogenesis rebuild
+SEND elder pulse 6
+SEND elder photosynth 5
+SEND elder glycolyse 3
+SEND elder feed 5
+SEND elder pump 4
+GETF elder age
+ASSERT LAST_N == 6 "elder a6"
+GETF elder pmf
+ASSERT LAST_N == 4 "elder pmf4"
+SEND elder mitophagy 4
+ASSERT LAST_N == 4 "elder mito4"
+GETF elder pmf
+ASSERT LAST_N == 0 "elder cleared"
+GETF elder age
+ASSERT LAST_N == 2 "elder a2"
+SEND elder photosynth 4
+SEND elder biogenesis 2
+ASSERT LAST_N == 2 "elder rebuild"
+GETF elder pmf
+ASSERT LAST_N == 2 "elder pmf reborn"
+GETF elder alive
+ASSERT LAST_N == 1 "elder lives"
+GETF elder heat
+ASSERT LAST_N >= 2 "elder heat qc+bio"
+
+// wonder: vitality stays live through rebuild
+SEND printer vitality
+ASSERT LAST_N > 1000 "printer vitality"
+
+PRINT "atomic_printer_life_biogenesis PASS"

@@ -1,0 +1,198 @@
+// 2090_life_cell_biogenesis.cubalc
+// Proof 2090: life_cell biogenesis — mitochondrial biogenesis (PGC-1α-style).
+// Invest n ATP + n reserve → n nascent pmf +1 heat biosynthetic tax.
+// Completes mitophagy↔biogenesis free-energy QC loop.
+// Distinct from reverse, pump, anabolize, synthase, mitophagy, photosynth.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY builder OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+
+SEND builder set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+
+// Fund ATP + reserve (membrane mass)
+SEND builder photosynth 6
+SEND builder glycolyse 5
+GETF builder atp
+ASSERT LAST_N == 5 "builder atp5"
+GETF builder reserve
+ASSERT LAST_N == 1 "builder r1 after gly"
+SEND builder photosynth 4
+GETF builder reserve
+ASSERT LAST_N == 5 "builder r5"
+GETF builder pmf
+ASSERT LAST_N == 0 "builder pmf0"
+GETF builder heat
+ASSERT LAST_N == 0 "builder heat0"
+GETF builder energy
+LET e0 = LAST_N
+
+SEND builder biogenesis 3
+ASSERT LAST_N == 3 "builder bio3"
+GETF builder atp
+ASSERT LAST_N == 2 "builder atp-3"
+GETF builder reserve
+ASSERT LAST_N == 2 "builder r-3"
+GETF builder pmf
+ASSERT LAST_N == 3 "builder pmf+3"
+GETF builder heat
+ASSERT LAST_N == 1 "builder heat1"
+GETF builder energy
+ASSERT LAST_N == e0 "builder e held"
+GETF builder alive
+ASSERT LAST_N == 1 "builder lives"
+
+// clamp to min(atp,reserve)
+SEND builder biogenesis 10
+ASSERT LAST_N == 2 "builder clamp2"
+GETF builder atp
+ASSERT LAST_N == 0 "builder atp0"
+GETF builder reserve
+ASSERT LAST_N == 0 "builder r0"
+GETF builder pmf
+ASSERT LAST_N == 5 "builder pmf5"
+GETF builder heat
+ASSERT LAST_N == 2 "builder heat2"
+
+// empty stores fail closed
+SEND builder biogenesis 1
+ASSERT LAST_N == 0 "builder empty fail"
+GETF builder pmf
+ASSERT LAST_N == 5 "pmf held"
+GETF builder heat
+ASSERT LAST_N == 2 "heat held"
+
+// n<1 fail
+SEND poor photosynth 3
+SEND poor glycolyse 2
+SEND poor biogenesis 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF poor atp
+ASSERT LAST_N == 2 "poor atp held"
+GETF poor reserve
+ASSERT LAST_N == 1 "poor r held"
+
+// ATP only, no reserve → 0
+ENTITY atp_only OF Cell 1 15 0
+SEND atp_only set_threshold 10
+SEND atp_only photophos 4
+GETF atp_only atp
+ASSERT LAST_N == 4 "ao atp4"
+GETF atp_only reserve
+ASSERT LAST_N == 0 "ao r0"
+SEND atp_only biogenesis 2
+ASSERT LAST_N == 0 "ao no reserve"
+GETF atp_only atp
+ASSERT LAST_N == 4 "ao atp held"
+GETF atp_only pmf
+ASSERT LAST_N == 0 "ao pmf0"
+
+// reserve only, no ATP → 0
+ENTITY res_only OF Cell 1 15 0
+SEND res_only set_threshold 10
+SEND res_only photosynth 5
+GETF res_only reserve
+ASSERT LAST_N == 5 "ro r5"
+GETF res_only atp
+ASSERT LAST_N == 0 "ro atp0"
+SEND res_only biogenesis 2
+ASSERT LAST_N == 0 "ro no atp"
+GETF res_only reserve
+ASSERT LAST_N == 5 "ro r held"
+
+// dead cell
+SEND dead biogenesis 2
+ASSERT LAST_N == 0 "dead fail"
+
+// G0 still builds mito (biogenesis not mitosis-gated)
+// photosynth 5 → r5; glycolyse 3 → atp3 r2; biogenesis 2 funded
+SEND g0 photosynth 5
+SEND g0 glycolyse 3
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 atp
+ASSERT LAST_N == 3 "g0 atp3"
+GETF g0 reserve
+ASSERT LAST_N == 2 "g0 r2"
+SEND g0 biogenesis 2
+ASSERT LAST_N == 2 "g0 bio2"
+GETF g0 pmf
+ASSERT LAST_N == 2 "g0 pmf2"
+GETF g0 heat
+ASSERT LAST_N == 1 "g0 heat1"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready"
+
+// QC loop: mitophagy clears debris, biogenesis rebuilds fleet
+ENTITY loop OF Cell 1 16 0
+SEND loop set_threshold 10
+SEND loop pulse 5
+SEND loop photosynth 6
+SEND loop glycolyse 4
+SEND loop feed 4
+SEND loop pump 3
+GETF loop age
+ASSERT LAST_N == 5 "loop a5"
+GETF loop pmf
+ASSERT LAST_N == 3 "loop pmf3"
+GETF loop atp
+LET la0 = LAST_N
+SEND loop mitophagy 3
+ASSERT LAST_N == 3 "loop mito3"
+GETF loop age
+ASSERT LAST_N == 2 "loop a2"
+GETF loop pmf
+ASSERT LAST_N == 0 "loop pmf cleared"
+GETF loop atp
+LET la1 = LAST_N
+ASSERT la1 == la0 - 1 "loop atp tax"
+// restock reserve for membranes after mitophagy
+SEND loop photosynth 5
+GETF loop reserve
+LET lr = LAST_N
+ASSERT lr >= 2 "loop r funded"
+GETF loop atp
+LET la2 = LAST_N
+ASSERT la2 >= 2 "loop atp funded"
+SEND loop biogenesis 2
+ASSERT LAST_N == 2 "loop bio rebuild"
+GETF loop pmf
+ASSERT LAST_N == 2 "loop pmf reborn"
+GETF loop heat
+ASSERT LAST_N >= 2 "loop heat mito+bio"
+GETF loop alive
+ASSERT LAST_N == 1 "loop lives"
+
+// biogenesis vs reverse: reverse spends ATP only, no reserve/heat
+ENTITY rev OF Cell 1 14 0
+SEND rev set_threshold 10
+SEND rev photophos 3
+SEND rev photosynth 3
+GETF rev heat
+ASSERT LAST_N == 0 "rev h0"
+SEND rev reverse 2
+ASSERT LAST_N == 2 "rev reverse2"
+GETF rev pmf
+ASSERT LAST_N == 2 "rev pmf2"
+GETF rev reserve
+ASSERT LAST_N == 3 "rev r held"
+GETF rev heat
+ASSERT LAST_N == 0 "rev no heat"
+SEND rev biogenesis 1
+ASSERT LAST_N == 1 "rev bio1"
+GETF rev reserve
+ASSERT LAST_N == 2 "rev r-1"
+GETF rev heat
+ASSERT LAST_N == 1 "rev heat bio"
+GETF rev pmf
+ASSERT LAST_N == 3 "rev pmf3"
+
+PRINT "2090_life_cell_biogenesis PASS"
