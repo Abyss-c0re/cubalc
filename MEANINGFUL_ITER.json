@@ -16,14 +16,14 @@
   "proofs": [
     "programs/proof/2077_popcountn_clzn_ctzn_parityn.cubalc"
   ],
-  "head": "71db01cd35b7db1f0350d8aae1e7043e36ff911a",
-  "tip": "71db01cd35b7db1f0350d8aae1e7043e36ff911a",
-  "pinned_head": "71db01cd35b7db1f0350d8aae1e7043e36ff911a",
+  "head": "8ea0fc2e83f6a0c35e5aecf84b736a2abc7540a8",
+  "tip": "8ea0fc2e83f6a0c35e5aecf84b736a2abc7540a8",
+  "pinned_head": "8ea0fc2e83f6a0c35e5aecf84b736a2abc7540a8",
   "feat_head": "ef40a9edb76eae5e2fd37fedd84524bd79e3e513",
   "item": "popcountn clzn ctzn parityn",
   "item_id": "mi_popcountn_clzn_ctzn_parityn",
   "commit": "f0bac6569",
-  "short": "71db01cd3",
+  "short": "8ea0fc2e8",
   "summary": "POPCOUNTN/CLZN/CTZN/PARITYN bit density usability pure C",
   "ts": "2026-09-08T18:30:31Z",
   "asserts_ok": 35,
