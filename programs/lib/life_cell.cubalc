@@ -26,6 +26,7 @@
 #   autophagy n          macroautophagy — recycle n age (worn biomass) → energy +1 heat; starvation self-catabolism
 #   mitophagy n          selective mito QC — recycle n age + drain pmf debris → energy +1 heat; ATP/energy selectivity tax
 #   biogenesis n         mito biogenesis — invest n ATP + n reserve → n nascent pmf +1 heat; PGC-1α rebuild after QC
+#   fusion n             mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; gradient held
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3293,6 +3294,55 @@ CLASS Cell
     GETF THIS pmf
     LET p = LAST_N + take
     SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    RET take
+  END
+
+
+
+  # Fusion: mitochondrial fusion (MFN1/2 + OPA1 GTPase networking).
+  # Pay take=min(n,atp,age) ATP → shed take age (matrix complementation QC) + heat += 1.
+  # pmf/reserve/energy/pcr untouched — content mixing holds the gradient, repairs phenotype.
+  # Fail-closed before mutation if ATP cannot fund take>=1 or age<1.
+  # Distinct from mitophagy (drains pmf + age→energy), biogenesis (ATP+reserve→pmf),
+  # repair (energy→age), renew (pmf→age), autophagy (bulk age→energy, no ATP tax), scavenge.
+  # Completes QC triad: mitophagy clear → biogenesis rebuild → fusion network complement.
+  # Usability: AGI models stress-induced mito networking / complementation under ASSERT boards.
+  # Returns take fused; dead/n<1/empty atp or age → 0.
+  METHOD fusion n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET ag = ag - take
+    SETF THIS age ag
     GETF THIS heat
     LET h = LAST_N + 1
     SETF THIS heat h

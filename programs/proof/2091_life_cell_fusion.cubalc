@@ -1,0 +1,251 @@
+// 2091_life_cell_fusion.cubalc
+// Proof 2091: life_cell fusion — mitochondrial fusion (MFN/OPA1 GTPase).
+// Pay n ATP to shed n age via complementation +1 heat; pmf held.
+// Completes mitophagy-biogenesis-fusion free-energy QC triad.
+// Distinct from mitophagy, biogenesis, repair, renew, autophagy, scavenge.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY fusor OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+
+SEND fusor set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+
+// age + ATP fund
+SEND fusor pulse 6
+SEND fusor photosynth 4
+SEND fusor glycolyse 4
+GETF fusor age
+ASSERT LAST_N == 6 "fusor a6"
+GETF fusor atp
+ASSERT LAST_N == 4 "fusor atp4"
+GETF fusor heat
+ASSERT LAST_N == 0 "fusor h0"
+GETF fusor pmf
+ASSERT LAST_N == 0 "fusor pmf0"
+GETF fusor energy
+LET e0 = LAST_N
+GETF fusor reserve
+LET r0 = LAST_N
+
+SEND fusor fusion 3
+ASSERT LAST_N == 3 "fusor fus3"
+GETF fusor atp
+ASSERT LAST_N == 1 "fusor atp-3"
+GETF fusor age
+ASSERT LAST_N == 3 "fusor a-3"
+GETF fusor heat
+ASSERT LAST_N == 1 "fusor heat1"
+GETF fusor energy
+ASSERT LAST_N == e0 "fusor e held"
+GETF fusor reserve
+ASSERT LAST_N == r0 "fusor r held"
+GETF fusor pmf
+ASSERT LAST_N == 0 "fusor pmf held"
+GETF fusor alive
+ASSERT LAST_N == 1 "fusor lives"
+
+// clamp to min(atp,age)
+SEND fusor fusion 10
+ASSERT LAST_N == 1 "fusor clamp1"
+GETF fusor atp
+ASSERT LAST_N == 0 "fusor atp0"
+GETF fusor age
+ASSERT LAST_N == 2 "fusor a2"
+GETF fusor heat
+ASSERT LAST_N == 2 "fusor heat2"
+
+// empty ATP fail closed
+SEND fusor fusion 1
+ASSERT LAST_N == 0 "fusor empty atp"
+GETF fusor age
+ASSERT LAST_N == 2 "age held"
+GETF fusor heat
+ASSERT LAST_N == 2 "heat held"
+
+// n less than 1 fail
+SEND poor pulse 4
+SEND poor photosynth 3
+SEND poor glycolyse 2
+SEND poor fusion 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF poor atp
+ASSERT LAST_N == 2 "poor atp held"
+GETF poor age
+ASSERT LAST_N == 4 "poor a held"
+
+// ATP only, no age -> 0
+ENTITY young OF Cell 1 15 0
+SEND young set_threshold 10
+SEND young photosynth 3
+SEND young glycolyse 3
+GETF young age
+ASSERT LAST_N == 0 "young a0"
+GETF young atp
+ASSERT LAST_N == 3 "young atp3"
+SEND young fusion 2
+ASSERT LAST_N == 0 "young no age"
+GETF young atp
+ASSERT LAST_N == 3 "young atp held"
+
+// age only, no ATP -> 0
+ENTITY aged OF Cell 1 18 0
+SEND aged set_threshold 10
+SEND aged pulse 5
+GETF aged age
+ASSERT LAST_N == 5 "aged a5"
+GETF aged atp
+ASSERT LAST_N == 0 "aged atp0"
+SEND aged fusion 2
+ASSERT LAST_N == 0 "aged no atp"
+GETF aged age
+ASSERT LAST_N == 5 "aged a held"
+
+// dead cell
+SEND dead fusion 2
+ASSERT LAST_N == 0 "dead fail"
+
+// G0 still fuses (not mitosis-gated)
+SEND g0 pulse 4
+SEND g0 photosynth 3
+SEND g0 glycolyse 3
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 atp
+ASSERT LAST_N == 3 "g0 atp3"
+GETF g0 age
+ASSERT LAST_N == 4 "g0 a4"
+SEND g0 fusion 2
+ASSERT LAST_N == 2 "g0 fus2"
+GETF g0 age
+ASSERT LAST_N == 2 "g0 a2"
+GETF g0 heat
+ASSERT LAST_N == 1 "g0 heat1"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready"
+
+// QC triad: mitophagy clear, biogenesis rebuild, fusion network
+ENTITY triad OF Cell 1 20 0
+SEND triad set_threshold 10
+SEND triad pulse 6
+SEND triad photosynth 8
+SEND triad glycolyse 5
+SEND triad feed 4
+SEND triad pump 4
+GETF triad age
+ASSERT LAST_N == 6 "triad a6"
+GETF triad pmf
+ASSERT LAST_N == 4 "triad pmf4"
+GETF triad atp
+LET ta0 = LAST_N
+SEND triad mitophagy 3
+ASSERT LAST_N == 3 "triad mito3"
+GETF triad age
+ASSERT LAST_N == 3 "triad a3"
+GETF triad pmf
+ASSERT LAST_N == 1 "triad pmf1"
+// restock for biogenesis membranes
+SEND triad photosynth 4
+GETF triad atp
+LET ta1 = LAST_N
+ASSERT ta1 >= 2 "triad atp for bio"
+GETF triad reserve
+LET tr1 = LAST_N
+ASSERT tr1 >= 2 "triad r for bio"
+SEND triad biogenesis 2
+ASSERT LAST_N == 2 "triad bio2"
+GETF triad pmf
+ASSERT LAST_N == 3 "triad pmf reborn"
+// fusion networks remaining wear without draining pmf
+GETF triad atp
+LET ta2 = LAST_N
+ASSERT ta2 >= 1 "triad atp for fus"
+GETF triad age
+LET tag = LAST_N
+ASSERT tag >= 1 "triad age left"
+GETF triad pmf
+LET tp0 = LAST_N
+SEND triad fusion 1
+ASSERT LAST_N == 1 "triad fus1"
+GETF triad pmf
+ASSERT LAST_N == tp0 "triad pmf held thru fus"
+GETF triad age
+ASSERT LAST_N == tag - 1 "triad age-1"
+GETF triad alive
+ASSERT LAST_N == 1 "triad lives"
+GETF triad heat
+ASSERT LAST_N >= 3 "triad heat mito+bio+fus"
+
+// fusion vs repair: repair spends energy not ATP; no heat
+ENTITY rep OF Cell 1 16 0
+SEND rep set_threshold 10
+SEND rep pulse 4
+SEND rep photosynth 3
+SEND rep glycolyse 3
+GETF rep energy
+LET re0 = LAST_N
+GETF rep heat
+ASSERT LAST_N == 0 "rep h0"
+SEND rep repair 2
+ASSERT LAST_N == 2 "rep repair2"
+GETF rep energy
+ASSERT LAST_N == re0 - 2 "rep e-2"
+GETF rep age
+ASSERT LAST_N == 2 "rep a2"
+GETF rep heat
+ASSERT LAST_N == 0 "rep no heat"
+// restock ATP
+SEND rep photosynth 2
+SEND rep glycolyse 2
+GETF rep atp
+ASSERT LAST_N >= 2 "rep atp funded"
+GETF rep age
+LET ra = LAST_N
+GETF rep energy
+LET re1 = LAST_N
+SEND rep fusion 2
+ASSERT LAST_N == 2 "rep fus2"
+GETF rep energy
+ASSERT LAST_N == re1 "rep e held by fus"
+GETF rep age
+ASSERT LAST_N == ra - 2 "rep a-2"
+GETF rep heat
+ASSERT LAST_N == 1 "rep heat fus"
+
+// fusion vs renew: renew spends pmf not ATP
+ENTITY rn OF Cell 1 14 0
+SEND rn set_threshold 10
+SEND rn pulse 4
+SEND rn pump 3
+SEND rn photosynth 2
+SEND rn glycolyse 2
+GETF rn pmf
+ASSERT LAST_N == 3 "rn pmf3"
+GETF rn heat
+ASSERT LAST_N == 0 "rn h0"
+SEND rn renew 2
+ASSERT LAST_N == 2 "rn renew2"
+GETF rn pmf
+ASSERT LAST_N == 1 "rn pmf1"
+GETF rn age
+ASSERT LAST_N == 2 "rn a2"
+GETF rn heat
+ASSERT LAST_N == 0 "rn no heat"
+SEND rn fusion 1
+ASSERT LAST_N == 1 "rn fus1"
+GETF rn pmf
+ASSERT LAST_N == 1 "rn pmf held"
+GETF rn heat
+ASSERT LAST_N == 1 "rn heat fus"
+GETF rn age
+ASSERT LAST_N == 1 "rn a1"
+
+PRINT "2091_life_cell_fusion PASS"
+

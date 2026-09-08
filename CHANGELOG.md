@@ -1,3 +1,10 @@
+## 1.15.1577-usability — 2091 LIFE_CELL_FUSION
+
+- feat(life): fusion n mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; pmf held
+- Completes mitophagy↔biogenesis↔fusion free-energy QC triad after selective QC + rebuild
+- proofs: 2091_life_cell_fusion 75/0; science atomic_printer_life_fusion 23/0; flagship 1620 PASS 12/0
+- VERSION 1.15.1577-usability
+
 ## 1.15.1561-usability — 2075 ILOG2N_BITWIDTHN
 
 ## 1.15.1573-usability — 2087 LIFE_CELL_EXOCYTE

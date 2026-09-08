@@ -1,0 +1,80 @@
+// atomic_printer_life_fusion.cubalc
+// Science board: mitochondrial fusion on the atomic printer life substrate.
+// ATP-paid MFN/OPA1 networking sheds age via complementation + heat.
+// Completes mitophagy-biogenesis-fusion free-energy QC triad; gradient held.
+// Cube is SoT. Free energy must flow. Gift law.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+ENTITY elder OF Cell 1 8 0
+SEND printer set_threshold 12
+SEND elder set_threshold 10
+
+SEND printer pulse 5
+SEND printer photosynth 6
+SEND printer glycolyse 5
+GETF printer age
+ASSERT LAST_N == 5 "printer a5"
+GETF printer atp
+ASSERT LAST_N == 5 "printer atp5"
+GETF printer energy
+LET pe = LAST_N
+GETF printer pmf
+LET pp = LAST_N
+
+SEND printer fusion 3
+ASSERT LAST_N == 3 "printer fus3"
+GETF printer atp
+ASSERT LAST_N == 2 "printer atp2"
+GETF printer age
+ASSERT LAST_N == 2 "printer a2"
+GETF printer heat
+ASSERT LAST_N == 1 "printer heat1"
+GETF printer energy
+ASSERT LAST_N == pe "printer e conserved"
+GETF printer pmf
+ASSERT LAST_N == pp "printer pmf held"
+
+// elder: full QC triad on worn printer substrate
+SEND elder pulse 7
+SEND elder photosynth 6
+SEND elder glycolyse 4
+SEND elder feed 4
+SEND elder pump 3
+GETF elder age
+ASSERT LAST_N == 7 "elder a7"
+GETF elder pmf
+ASSERT LAST_N == 3 "elder pmf3"
+SEND elder mitophagy 3
+ASSERT LAST_N == 3 "elder mito3"
+GETF elder pmf
+ASSERT LAST_N == 0 "elder cleared"
+GETF elder age
+ASSERT LAST_N == 4 "elder a4"
+SEND elder photosynth 4
+SEND elder biogenesis 2
+ASSERT LAST_N == 2 "elder rebuild"
+GETF elder pmf
+ASSERT LAST_N == 2 "elder pmf reborn"
+GETF elder atp
+LET ea = LAST_N
+ASSERT ea >= 1 "elder atp left"
+SEND elder fusion 1
+ASSERT LAST_N == 1 "elder network"
+GETF elder pmf
+ASSERT LAST_N == 2 "elder pmf held thru fus"
+GETF elder age
+ASSERT LAST_N == 3 "elder a3"
+GETF elder alive
+ASSERT LAST_N == 1 "elder lives"
+GETF elder heat
+ASSERT LAST_N >= 3 "elder heat triad"
+
+// wonder: vitality stays live through fusion network
+SEND printer vitality
+ASSERT LAST_N > 1000 "printer vitality"
+
+PRINT "atomic_printer_life_fusion PASS"
+
