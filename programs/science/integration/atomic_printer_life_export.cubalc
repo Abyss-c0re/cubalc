@@ -1,6 +1,6 @@
-// atomic_printer_life_degrade.cubalc
-// Atomic printer life-force: post-activate lysosomal substrate proteolysis.
-// Continuum ...->mature->recruit->activate->degrade. Free energy must flow.
+// atomic_printer_life_export.cubalc
+// Atomic printer life-force: post-degrade lysosomal AA export.
+// Continuum ...->recruit->activate->degrade->export. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -51,6 +51,12 @@ SEND cell photosynth 10
 SEND cell glycolyse 8
 SEND cell charge 10
 SEND cell feed 10
+SEND cell degrade 2
+ASSERT LAST_N == 2 "sci degprep"
+SEND cell photosynth 8
+SEND cell glycolyse 6
+SEND cell charge 8
+SEND cell feed 8
 
 GETF cell heat
 LET h0 = LAST_N
@@ -71,26 +77,26 @@ LET p0 = LAST_N
 GETF cell setpoint
 LET s0 = LAST_N
 
-SEND cell degrade 2
+SEND cell export 2
 LET took = LAST_N
-ASSERT took == 2 "sci deg took2"
+ASSERT took == 2 "sci exp took2"
 GETF cell heat
-ASSERT LAST_N == h0 + took "sci deg heat"
+ASSERT LAST_N == h0 + took "sci exp heat"
 GETF cell energy
-ASSERT LAST_N == e0 - took "sci deg e"
+ASSERT LAST_N == e0 - took "sci exp e"
 GETF cell atp
-ASSERT LAST_N == a0 - took "sci deg a"
+ASSERT LAST_N == a0 - took "sci exp a"
 GETF cell age
-ASSERT LAST_N == ag0 - took "sci deg age"
+ASSERT LAST_N == ag0 "sci exp age held"
 GETF cell pcr
-ASSERT LAST_N == c0 + took "sci deg pcr"
+ASSERT LAST_N == c0 - took "sci exp pcr"
 GETF cell reserve
-ASSERT LAST_N == r0 "sci deg r held"
+ASSERT LAST_N == r0 + took "sci exp r"
 GETF cell threshold
-ASSERT LAST_N == t0 "sci deg thr held"
+ASSERT LAST_N == t0 "sci exp thr held"
 GETF cell pmf
-ASSERT LAST_N == p0 "sci deg pmf held"
+ASSERT LAST_N == p0 "sci exp pmf held"
 GETF cell setpoint
-ASSERT LAST_N == s0 "sci deg sp held"
+ASSERT LAST_N == s0 "sci exp sp held"
 
-PRINT "atomic_printer_life_degrade PASS"
+PRINT "atomic_printer_life_export PASS"

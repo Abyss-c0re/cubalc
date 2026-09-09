@@ -1,5 +1,5 @@
-// smx_mesh_vesicle_degrade_life.cubalc
-// SMX mesh vesicle board: life_cell degrade under sealed exchange.
+// smx_mesh_vesicle_export_life.cubalc
+// SMX mesh vesicle board: life_cell export under sealed exchange.
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
@@ -30,26 +30,31 @@ SEND v photosynth 8
 SEND v glycolyse 8
 SEND v charge 8
 SEND v feed 8
+SEND v degrade 2
+SEND v photosynth 6
+SEND v glycolyse 6
+SEND v charge 6
+SEND v feed 6
 
 GETF v heat
 LET h0 = LAST_N
 GETF v energy
 LET e0 = LAST_N
-GETF v age
-LET ag0 = LAST_N
 GETF v pcr
 LET c0 = LAST_N
+GETF v reserve
+LET r0 = LAST_N
 
-SEND v degrade 2
+SEND v export 2
 LET took = LAST_N
-ASSERT took >= 1 "smx deg took"
+ASSERT took >= 1 "smx exp took"
 GETF v heat
-ASSERT LAST_N == h0 + took "smx deg heat"
+ASSERT LAST_N == h0 + took "smx exp heat"
 GETF v energy
-ASSERT LAST_N == e0 - took "smx deg e"
-GETF v age
-ASSERT LAST_N == ag0 - took "smx deg age"
+ASSERT LAST_N == e0 - took "smx exp e"
 GETF v pcr
-ASSERT LAST_N == c0 + took "smx deg pcr"
+ASSERT LAST_N == c0 - took "smx exp pcr"
+GETF v reserve
+ASSERT LAST_N == r0 + took "smx exp r"
 
-PRINT "smx_mesh_vesicle_degrade_life PASS"
+PRINT "smx_mesh_vesicle_export_life PASS"

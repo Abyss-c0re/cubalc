@@ -6373,7 +6373,7 @@ CLASS Cell
   # AGE/reserve/setpoint/pcr HELD — mature is EE->LE Rab conversion after acidify, not
   #   injury age+, not membrane bank reserve+/-, not clamp-tension sp, not phosphagen pcr.
   # Ready recomputed from post-burn energy vs (possibly raised) threshold.
-  # Continuum: ...->collapse->retrieve->acidify->mature->recruit->activate.
+  # Continuum: ...->collapse->retrieve->acidify->mature->recruit->activate->degrade->export.
   # Signature: heat+n energy-n pmf-n thr+n; age+reserve+sp+pcr held — mature life-force.
   # Usability: AGI models post-acidify EE->LE maturation under ASSERT.
   # Returns take matured; dead/n<1/empty atp|energy|pmf -> 0.
@@ -6472,7 +6472,7 @@ CLASS Cell
   #   lock, not EE proton bank, not thr hydrolase-latency raise, not injury age+, not
   #   clamp-tension sp, not phosphagen pcr.
   # Ready recomputed from post-burn energy vs held threshold.
-  # Continuum: ...->collapse->retrieve->acidify->mature->recruit->activate.
+  # Continuum: ...->collapse->retrieve->acidify->mature->recruit->activate->degrade->export.
   # Signature: heat+n energy-n reserve+n; age+pmf+thr+sp+pcr held — recruit life-force.
   # Usability: AGI models post-mature hydrolase cargo recruit under ASSERT.
   # Returns take recruited; dead/n<1/empty atp|energy -> 0.
@@ -6566,7 +6566,7 @@ CLASS Cell
   # PMF/AGE/SETPOINT/PCR HELD — activate is catalytic arming after recruit cargo fill,
   #   not EE proton bank, not injury age+, not clamp-tension sp, not phosphagen pcr.
   # Ready recomputed from post-burn energy vs post-drop threshold.
-  # Continuum: ...->retrieve->acidify->mature->recruit->activate.
+  # Continuum: ...->retrieve->acidify->mature->recruit->activate->degrade->export.
   # Signature: heat+n energy-n reserve-n thr-n; age+pmf+sp+pcr held — activate life-force.
   # Usability: AGI models post-recruit LE zymogen activation under ASSERT.
   # Returns take activated; dead/n<1/empty atp|energy|reserve -> 0.
@@ -6671,7 +6671,7 @@ CLASS Cell
   #   activate arming, not zymogen bank reserve, not latency thr, not EE proton bank,
   #   not clamp-tension sp.
   # Ready recomputed from post-burn energy vs threshold.
-  # Continuum: ...->acidify->mature->recruit->activate->degrade.
+  # Continuum: ...->acidify->mature->recruit->activate->degrade->export.
   # Signature: heat+n energy-n age-n pcr+n; reserve+thr+pmf+sp held — degrade life-force.
   # Usability: AGI models post-activate lysosomal substrate proteolysis under ASSERT.
   # Returns take clamped; dead/n<1/empty atp|energy -> 0.
