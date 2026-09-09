@@ -34,8 +34,8 @@
   "pass": true,
   "proof_status": "PASS",
   "note": "RETRIEVE burns ATP+energy into heat and restores reserve membrane bank after collapse CME.",
-  "feat_head": "ae01f6398c02948a95a4f6f81d4d515d6de5bbe2",
-  "HEAD": "ae01f6398c02948a95a4f6f81d4d515d6de5bbe2",
-  "FEAT_HEAD": "ae01f6398c02948a95a4f6f81d4d515d6de5bbe2",
-  "commit": "ae01f6398c02948a95a4f6f81d4d515d6de5bbe2"
+  "feat_head": "db9de3e9368ebb7366d720ed42f8cac6f7f81f5f",
+  "HEAD": "db9de3e9368ebb7366d720ed42f8cac6f7f81f5f",
+  "FEAT_HEAD": "db9de3e9368ebb7366d720ed42f8cac6f7f81f5f",
+  "commit": "db9de3e9368ebb7366d720ed42f8cac6f7f81f5f"
 }
