@@ -4467,7 +4467,7 @@ CLASS Cell
   # Distinct from cilia (ATP->heat+n pmf+n thr/sp held), polar (sp+ thr held),
   # seal (thr+ sp held), lumen (pcr+), fortify (thr+ no heat), set_setpoint
   # (direct sp write no ATP/heat). Continuum:
-  # ...->cad->bleb->effer->resolve->restit->seal->polar->lumen->cilia->align.
+  # ...->cad->bleb->effer->resolve->restit->seal->polar->lumen->cilia->align->converge.
   # Signature: heat+n thr+n sp+n; age+energy+reserve+pmf+pcr held — PCP life.
   # Usability: AGI models planar polarity competence under ASSERT boards.
   # Returns take aligned; dead/n<1/empty atp -> 0.
@@ -4530,6 +4530,78 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+
+  # CONVERGE: convergent extension (CE) mediolateral intercalation after ALIGN (PCP).
+  # Spend take=min(n,atp) ATP (Myosin-II bipolar junction shrinkage, mediolateral
+  # neighbor exchange, multicellular rosette resolve, A-P tissue elongation cables
+  # after planar-polarity axis lock from align).
+  # HEAT += take (each cross-bridge / junction-shrink cycle dissipates as heat).
+  # RESERVE rises: reserve = reserve + take — cortical tension / junctional actomyosin
+  # work banked as protected mechanical free-energy cargo (tensile ~P-equivalent;
+  # not injury bleb age+, not thr/sp axis writes, not pmf/pcr banks).
+  # AGE/energy/pmf/pcr/threshold/setpoint HELD — converge is tissue-flow intercalation
+  # after PCP, not demolition (casp/cad), not bleb age+ packaging, not thr-only seal,
+  # not sp-only polar, not thr+sp align, not pmf cilia, not pcr lumen.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from align (ATP->heat+n thr+n sp+n reserve held), bleb (heat+n age+n
+  # reserve+n), cilia (heat+n pmf+n), lumen (heat+n pcr+n), seal (heat+n thr+n),
+  # polar (heat+n sp+n), fortify (thr+ no heat). Continuum:
+  # ...->seal->polar->lumen->cilia->align->converge.
+  # Signature: heat+n reserve+n; age+energy+pmf+pcr+thr+sp held — CE life-force.
+  # Usability: AGI models post-PCP convergent-extension competence under ASSERT boards.
+  # Returns take converged; dead/n<1/empty atp -> 0.
+  METHOD converge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    SETF THIS reserve r
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END

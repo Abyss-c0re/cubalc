@@ -1,0 +1,150 @@
+// atomic_printer_life_converge.cubalc
+// Science board: LIFE_CELL_CONVERGE - convergent extension after planar polarity.
+// Atomic printer continuum: ... cilia -> align -> converge (CE reserve bank).
+// Free energy must flow. Cube is SoT. Gift law: life-force manifestation.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cell OF Cell 1 16 0
+ENTITY tissue OF Cell 1 14 0
+ENTITY axis OF Cell 1 18 0
+
+SEND cell set_threshold 10
+SEND tissue set_threshold 10
+SEND axis set_threshold 12
+SEND cell set_setpoint 10
+SEND tissue set_setpoint 10
+SEND axis set_setpoint 10
+
+SEND cell pulse 6
+SEND cell photosynth 8
+SEND cell glycolyse 6
+SEND cell pump 5
+SEND cell photophos 6
+GETF cell atp
+ASSERT LAST_N >= 10 "sci atp"
+GETF cell age
+LET a0 = LAST_N
+GETF cell heat
+LET h0 = LAST_N
+GETF cell energy
+LET e0 = LAST_N
+GETF cell reserve
+LET r0 = LAST_N
+GETF cell threshold
+LET t0 = LAST_N
+GETF cell pmf
+LET p0 = LAST_N
+GETF cell setpoint
+LET s0 = LAST_N
+GETF cell pcr
+LET c0 = LAST_N
+ASSERT s0 == 10 "sci sp10"
+ASSERT c0 == 0 "sci pcr0"
+
+SEND cell seal 1
+ASSERT LAST_N == 1 "sci seal"
+SEND cell polar 1
+ASSERT LAST_N == 1 "sci polar"
+SEND cell lumen 1
+ASSERT LAST_N == 1 "sci lumen"
+SEND cell cilia 2
+ASSERT LAST_N == 2 "sci cilia"
+SEND cell align 2
+ASSERT LAST_N == 2 "sci align"
+SEND cell converge 3
+ASSERT LAST_N == 3 "sci converge3"
+
+GETF cell heat
+ASSERT LAST_N == h0 + 1 + 1 + 1 + 2 + 2 + 3 "sci heat path"
+GETF cell threshold
+ASSERT LAST_N == t0 + 1 + 2 "sci thr seal+align"
+GETF cell setpoint
+ASSERT LAST_N == s0 + 1 + 2 "sci sp polar+align"
+GETF cell pmf
+ASSERT LAST_N == p0 + 2 "sci pmf cilia held through converge"
+GETF cell pcr
+ASSERT LAST_N == c0 + 1 "sci pcr lumen held"
+GETF cell reserve
+ASSERT LAST_N == r0 + 3 "sci reserve converge only"
+GETF cell energy
+ASSERT LAST_N == e0 "sci energy held"
+GETF cell age
+ASSERT LAST_N == a0 "sci age held"
+GETF cell atp
+ASSERT LAST_N >= 2 "sci atp remaining"
+GETF cell alive
+ASSERT LAST_N == 1 "sci cell lives"
+
+SEND tissue pulse 5
+SEND tissue photosynth 6
+SEND tissue glycolyse 5
+SEND tissue pump 3
+SEND tissue photophos 4
+GETF tissue pmf
+LET tp0 = LAST_N
+GETF tissue threshold
+LET tt0 = LAST_N
+GETF tissue setpoint
+LET ts0 = LAST_N
+GETF tissue heat
+LET th0 = LAST_N
+GETF tissue energy
+LET te0 = LAST_N
+GETF tissue reserve
+LET tr0 = LAST_N
+GETF tissue atp
+ASSERT LAST_N >= 3 "sci tissue atp"
+SEND tissue align 1
+ASSERT LAST_N == 1 "sci tissue align"
+SEND tissue converge 2
+ASSERT LAST_N == 2 "sci tissue converge"
+GETF tissue heat
+ASSERT LAST_N == th0 + 1 + 2 "sci tissue heat"
+GETF tissue threshold
+ASSERT LAST_N == tt0 + 1 "sci tissue thr align only"
+GETF tissue setpoint
+ASSERT LAST_N == ts0 + 1 "sci tissue sp align only"
+GETF tissue reserve
+ASSERT LAST_N == tr0 + 2 "sci tissue r+2"
+GETF tissue pmf
+ASSERT LAST_N == tp0 "sci tissue pmf held"
+GETF tissue energy
+ASSERT LAST_N == te0 "sci tissue e held"
+GETF tissue alive
+ASSERT LAST_N == 1 "sci tissue lives"
+
+SEND axis pulse 6
+SEND axis photosynth 7
+SEND axis glycolyse 5
+SEND axis pump 4
+SEND axis photophos 5
+GETF axis reserve
+LET ar0 = LAST_N
+GETF axis heat
+LET ah0 = LAST_N
+GETF axis threshold
+LET at0 = LAST_N
+GETF axis setpoint
+LET as0 = LAST_N
+GETF axis age
+LET aa0 = LAST_N
+SEND axis converge 4
+ASSERT LAST_N == 4 "sci axis c4"
+SEND axis converge 0
+ASSERT LAST_N == 0 "sci axis n0"
+SEND axis converge 2
+ASSERT LAST_N == 2 "sci axis c2"
+GETF axis reserve
+ASSERT LAST_N == ar0 + 6 "sci axis r+6"
+GETF axis heat
+ASSERT LAST_N == ah0 + 6 "sci axis h+6"
+GETF axis threshold
+ASSERT LAST_N == at0 "sci axis thr held"
+GETF axis setpoint
+ASSERT LAST_N == as0 "sci axis sp held"
+GETF axis age
+ASSERT LAST_N == aa0 "sci axis age held"
+GETF axis alive
+ASSERT LAST_N == 1 "sci axis lives"

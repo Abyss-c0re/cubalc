@@ -1,0 +1,283 @@
+// 2111_life_cell_converge.cubalc
+// Proof 2111: life_cell converge - convergent extension (CE) after ALIGN.
+// Pay n ATP Myosin-II junction shrink / mediolateral intercalation -> heat +n + reserve +n;
+// age/energy/pmf/pcr/thr/sp held; ready recomputed. Distinct from align (thr+sp+ heat, reserve held),
+// bleb (age+ reserve+), cilia (pmf+), lumen (pcr+), seal (thr+), polar (sp+).
+// Continuum after align. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+ENTITY ceil OF Cell 1 20 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "converge a5"
+GETF gate atp
+ASSERT LAST_N == 4 "converge atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "converge h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "converge pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "converge energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "converge thr10"
+GETF gate setpoint
+LET s0 = LAST_N
+ASSERT s0 == 10 "converge sp10"
+GETF gate pcr
+LET c0 = LAST_N
+ASSERT c0 == 0 "converge pcr0"
+
+SEND gate converge 2
+ASSERT LAST_N == 2 "converge take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "converge atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "converge age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "converge heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "converge e held"
+GETF gate reserve
+ASSERT LAST_N == r0 + 2 "converge r+2"
+GETF gate threshold
+ASSERT LAST_N == t0 "converge thr held"
+GETF gate setpoint
+ASSERT LAST_N == s0 "converge sp held"
+GETF gate pcr
+ASSERT LAST_N == c0 "converge pcr held"
+GETF gate pmf
+ASSERT LAST_N == p0 "converge pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "converge lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+IF eg >= tg THEN
+  ASSERT LAST_N == 1 "converge ready1"
+ELSE
+  ASSERT LAST_N == 0 "converge ready0"
+END
+
+// partial take when n > atp
+SEND poor pulse 3
+SEND poor photosynth 3
+SEND poor glycolyse 2
+SEND poor pump 2
+GETF poor atp
+LET pa = LAST_N
+ASSERT pa >= 1 "poor has atp"
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor reserve
+LET pr0 = LAST_N
+SEND poor converge 100
+ASSERT LAST_N == pa "poor take=all atp"
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+GETF poor heat
+ASSERT LAST_N == ph0 + pa "poor heat+pa"
+GETF poor reserve
+ASSERT LAST_N == pr0 + pa "poor reserve+pa"
+
+// dead / n<1 fail-closed
+SEND dead converge 3
+ASSERT LAST_N == 0 "dead 0"
+SEND gate converge 0
+ASSERT LAST_N == 0 "n0"
+SEND gate converge -3
+ASSERT LAST_N == 0 "nneg"
+
+// empty atp
+SEND twin pulse 4
+SEND twin photosynth 4
+SEND twin glycolyse 3
+SEND twin pump 3
+GETF twin atp
+LET ta = LAST_N
+SEND twin spend ta
+GETF twin atp
+ASSERT LAST_N == 0 "twin atp0"
+GETF twin heat
+LET th0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+SEND twin converge 2
+ASSERT LAST_N == 0 "empty atp 0"
+GETF twin heat
+ASSERT LAST_N == th0 "empty heat held"
+GETF twin reserve
+ASSERT LAST_N == tr0 "empty reserve held"
+
+// G0 ready forced 0 after converge
+SEND g0 pulse 4
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+SEND g0 pump 3
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 atp
+LET ga = LAST_N
+ASSERT ga >= 2 "g0 atp"
+GETF g0 reserve
+LET gr0 = LAST_N
+SEND g0 converge 2
+ASSERT LAST_N == 2 "g0 take2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+GETF g0 reserve
+ASSERT LAST_N == gr0 + 2 "g0 r+2"
+
+// continuum path: seal->polar->lumen->cilia->align->converge
+SEND mac pulse 6
+SEND mac photosynth 8
+SEND mac glycolyse 6
+SEND mac pump 5
+SEND mac photophos 6
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac setpoint
+LET ms0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+GETF mac pcr
+LET mc0 = LAST_N
+GETF mac reserve
+LET mr0 = LAST_N
+GETF mac age
+LET ma0 = LAST_N
+GETF mac energy
+LET me0 = LAST_N
+SEND mac seal 1
+ASSERT LAST_N == 1 "mac seal"
+SEND mac polar 1
+ASSERT LAST_N == 1 "mac polar"
+SEND mac lumen 1
+ASSERT LAST_N == 1 "mac lumen"
+SEND mac cilia 2
+ASSERT LAST_N == 2 "mac cilia"
+SEND mac align 2
+ASSERT LAST_N == 2 "mac align"
+SEND mac converge 3
+ASSERT LAST_N == 3 "mac converge3"
+GETF mac heat
+ASSERT LAST_N == mh0 + 1 + 1 + 1 + 2 + 2 + 3 "mac heat path"
+GETF mac threshold
+ASSERT LAST_N == mt0 + 1 + 2 "mac thr seal+align"
+GETF mac setpoint
+ASSERT LAST_N == ms0 + 1 + 2 "mac sp polar+align"
+GETF mac pmf
+ASSERT LAST_N == mp0 + 2 "mac pmf cilia"
+GETF mac pcr
+ASSERT LAST_N == mc0 + 1 "mac pcr lumen"
+GETF mac reserve
+ASSERT LAST_N == mr0 + 3 "mac reserve converge"
+GETF mac age
+ASSERT LAST_N == ma0 "mac age held"
+GETF mac energy
+ASSERT LAST_N == me0 "mac energy held"
+GETF mac alive
+ASSERT LAST_N == 1 "mac lives"
+
+// multi-step accumulate reserve without thr/sp drift
+SEND ceil pulse 5
+SEND ceil photosynth 8
+SEND ceil glycolyse 6
+SEND ceil pump 4
+SEND ceil photophos 5
+GETF ceil threshold
+LET ct0 = LAST_N
+GETF ceil setpoint
+LET cs0 = LAST_N
+GETF ceil reserve
+LET cr0 = LAST_N
+GETF ceil heat
+LET ch0 = LAST_N
+SEND ceil converge 4
+ASSERT LAST_N == 4 "ceil c4"
+SEND ceil converge 3
+ASSERT LAST_N == 3 "ceil c3"
+GETF ceil reserve
+ASSERT LAST_N == cr0 + 7 "ceil r+7"
+GETF ceil heat
+ASSERT LAST_N == ch0 + 7 "ceil h+7"
+GETF ceil threshold
+ASSERT LAST_N == ct0 "ceil thr held"
+GETF ceil setpoint
+ASSERT LAST_N == cs0 "ceil sp held"
+GETF ceil alive
+ASSERT LAST_N == 1 "ceil lives"
+
+// align then converge: thr/sp from align held through converge; reserve only from converge
+ENTITY axis OF Cell 1 16 0
+SEND axis set_threshold 10
+SEND axis set_setpoint 10
+SEND axis pulse 5
+SEND axis photosynth 7
+SEND axis glycolyse 5
+SEND axis pump 4
+SEND axis photophos 5
+GETF axis atp
+ASSERT LAST_N >= 6 "axis atp"
+GETF axis threshold
+LET xt0 = LAST_N
+GETF axis setpoint
+LET xs0 = LAST_N
+GETF axis reserve
+LET xr0 = LAST_N
+GETF axis heat
+LET xh0 = LAST_N
+SEND axis align 2
+ASSERT LAST_N == 2 "axis align"
+GETF axis threshold
+ASSERT LAST_N == xt0 + 2 "axis thr+2"
+GETF axis setpoint
+ASSERT LAST_N == xs0 + 2 "axis sp+2"
+GETF axis reserve
+ASSERT LAST_N == xr0 "axis r held on align"
+SEND axis converge 3
+ASSERT LAST_N == 3 "axis converge"
+GETF axis threshold
+ASSERT LAST_N == xt0 + 2 "axis thr held after ce"
+GETF axis setpoint
+ASSERT LAST_N == xs0 + 2 "axis sp held after ce"
+GETF axis reserve
+ASSERT LAST_N == xr0 + 3 "axis r+3"
+GETF axis heat
+ASSERT LAST_N == xh0 + 2 + 3 "axis heat align+ce"
+GETF axis alive
+ASSERT LAST_N == 1 "axis lives"
