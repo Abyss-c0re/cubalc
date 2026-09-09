@@ -1,0 +1,128 @@
+// atomic_printer_life_effer.cubalc
+// Science integration: atomic printer continuum casp3->cad->bleb->effer clearance.
+// Dying cell packages apoptotic-body reserve cargo (bleb); macrophage-like clearer
+// pays ATP (MerTK cup) and gains trophic energy — free energy flows corpse to phagocyte.
+// Cube is SoT. ASSERT wonder for AGI INCLUDE life_cell boards.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 16 0
+ENTITY corpse OF Cell 1 16 0
+ENTITY clearer OF Cell 1 18 0
+
+SEND printer set_threshold 12
+SEND corpse set_threshold 12
+SEND clearer set_threshold 12
+
+SEND printer pulse 4
+SEND printer photosynth 6
+SEND printer glycolyse 6
+SEND printer pump 6
+SEND printer bank 3
+GETF printer atp
+ASSERT LAST_N >= 4 "sci printer atp"
+GETF printer energy
+ASSERT LAST_N >= 1 "sci printer e"
+GETF printer pmf
+ASSERT LAST_N >= 1 "sci printer pmf"
+
+SEND corpse pulse 4
+SEND corpse photosynth 6
+SEND corpse glycolyse 6
+SEND corpse pump 6
+SEND corpse bank 2
+GETF corpse atp
+LET cat0 = LAST_N
+ASSERT cat0 >= 6 "sci corpse atp"
+SEND corpse momp 1
+SEND corpse apaf 1
+SEND corpse casp9 1
+SEND corpse casp3 1
+SEND corpse cad 1
+GETF corpse threshold
+ASSERT LAST_N >= 13 "sci corpse thr after cad"
+// recharge work currency after cascade so ROCK blebbing can pack bodies
+SEND corpse glycolyse 4
+SEND corpse photosynth 2
+GETF corpse atp
+LET cat1 = LAST_N
+ASSERT cat1 >= 3 "sci corpse atp for bleb"
+SEND corpse bleb 3
+ASSERT LAST_N == 3 "sci corpse bleb3"
+GETF corpse reserve
+ASSERT LAST_N >= 3 "sci corpse body cargo"
+GETF corpse alive
+ASSERT LAST_N == 1 "sci corpse morph alive"
+
+SEND clearer pulse 3
+SEND clearer photosynth 5
+SEND clearer glycolyse 5
+SEND clearer pump 5
+GETF clearer atp
+LET cl_at0 = LAST_N
+ASSERT cl_at0 >= 4 "sci clearer atp"
+GETF clearer energy
+LET cl_e0 = LAST_N
+GETF clearer heat
+LET cl_h0 = LAST_N
+GETF clearer age
+LET cl_a0 = LAST_N
+GETF clearer reserve
+LET cl_r0 = LAST_N
+GETF clearer pmf
+LET cl_p0 = LAST_N
+GETF clearer threshold
+LET cl_t0 = LAST_N
+
+SEND clearer effer 4
+ASSERT LAST_N == 4 "sci clearer effer4"
+GETF clearer atp
+ASSERT LAST_N == cl_at0 - 4 "sci clearer atp-4"
+GETF clearer heat
+ASSERT LAST_N == cl_h0 + 4 "sci clearer heat+4"
+GETF clearer energy
+ASSERT LAST_N == cl_e0 + 4 "sci clearer e+4"
+GETF clearer age
+ASSERT LAST_N == cl_a0 "sci clearer age held"
+GETF clearer reserve
+ASSERT LAST_N == cl_r0 "sci clearer r held"
+GETF clearer pmf
+ASSERT LAST_N == cl_p0 "sci clearer pmf held"
+GETF clearer threshold
+ASSERT LAST_N == cl_t0 "sci clearer thr held"
+GETF clearer ready
+LET cl_rd = LAST_N
+GETF clearer energy
+LET cl_e1 = LAST_N
+IF cl_e1 >= cl_t0 THEN
+  ASSERT cl_rd == 1 "sci clearer ready"
+ELSE
+  ASSERT cl_rd == 0 "sci clearer not ready"
+END
+
+SEND printer vitality
+ASSERT LAST_N >= 1 "sci printer vitality"
+GETF printer alive
+ASSERT LAST_N == 1 "sci printer alive"
+GETF clearer alive
+ASSERT LAST_N == 1 "sci clearer alive"
+GETF corpse alive
+ASSERT LAST_N == 1 "sci corpse pre-lyse"
+ASSERT cl_e1 == cl_e0 + 4 "sci free energy flow"
+
+SEND corpse lyse
+ASSERT LAST_N >= 1 "sci corpse lyse code"
+GETF corpse alive
+ASSERT LAST_N == 0 "sci corpse cleared dead"
+
+SEND clearer sense
+LET gap = LAST_N
+GETF clearer energy
+LET cl_e2 = LAST_N
+GETF clearer threshold
+LET cl_t2 = LAST_N
+ASSERT cl_e2 - cl_t2 == gap "sci sense coherent"
+SEND clearer warmth
+ASSERT LAST_N >= cl_h0 + 4 "sci warmth"
+ASSERT 1 == 1 "sci effer board seal"

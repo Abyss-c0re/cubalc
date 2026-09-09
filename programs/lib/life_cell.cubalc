@@ -38,6 +38,7 @@
 #   casp3 n              caspase-3 executioner — pay n ATP substrate proteolysis → heat +n + age +n + energy drain n (demolition); pmf/reserve held; after casp9
 #   cad n                CAD/DFF40 nuclease after casp3 — pay n ATP ICAD-liberated DNA ladder → heat +n + age +n + thr +n (checkpoint); energy/pmf/reserve held; ready recompute
 #   bleb n               apoptotic blebbing after cad — pay n ATP ROCK/myosin → heat +n + age +n + reserve +n (body cargo); energy/pmf/thr held; ready recompute
+#   effer n              efferocytosis after bleb — pay n ATP MerTK/TIM-4 cup → heat +n + energy +n (corpse trophic cargo); age/pmf/reserve/thr held; ready recompute
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3938,5 +3939,68 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # EFFER: efferocytosis — phagocytic clearance of apoptotic bodies after BLEB cargo pack.
+  # Spend take=min(n,atp) ATP (MerTK/TIM-4/BAI1 receptor work + Rac1 actin phagocytic cup /
+  # microtubule traffic of corpse cargo). HEAT += take (each cross-bridge / traffic cycle
+  # dissipates as heat). TROPHIC CARGO: energy += take — lipids/proteins/nucleotides from the
+  # apoptotic body are metabolized into active free-energy spark (efferocytosis is known to
+  # rewire phagocyte immunometabolism; free energy must flow from corpse to clearer).
+  # AGE/pmf/reserve/threshold/pcr HELD — clearance is anti-inflammatory resolve (TGF-β/IL-10
+  # quiet), not self-injury (unlike bleb age+ on the dying cell) and not glycogen bank pack
+  # (bleb already staged reserve on the corpse; clearer burns work ATP and gains spark energy).
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from bleb (ATP→heat+n age+n reserve+n on dying cell; energy/thr held),
+  # engulf (pay 1 energy + decode de*1000+dr code; no ATP heat pair), digest (reserve→energy+heat),
+  # pinocyte (pay 1 energy, reserve+n), secrete (outbound code), casp3 (energy drain demolition),
+  # cad (thr+ DNA checkpoint), mcu (pmf→energy). Continuum: …→cad→bleb bodies → effer clearance.
+  # Signature: heat+energy scale with n; age+reserve+thr+pmf held — trophic resolve, not injury.
+  # Usability: AGI models corpse clearance / non-inflammatory phagocytosis under ASSERT boards.
+  # Returns take cleared; dead/n<1/empty atp → 0.
+  METHOD effer n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

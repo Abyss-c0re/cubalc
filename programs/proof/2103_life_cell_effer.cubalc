@@ -1,0 +1,457 @@
+// 2103_life_cell_effer.cubalc
+// Proof 2103: life_cell effer — efferocytosis clearance after BLEB body cargo.
+// Pay n ATP MerTK/TIM-4 phagocytic cup -> heat +n + energy +n (trophic corpse cargo);
+// age/pmf/reserve/threshold held; ready recomputed. Distinct from bleb (age+n reserve+n,
+// energy held), engulf (1 energy + code), digest (reserve burn), pinocyte (reserve+n).
+// Continuum after bleb. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "effer a5"
+GETF gate atp
+ASSERT LAST_N == 4 "effer atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "effer h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "effer pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "effer energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "effer thr10"
+
+SEND gate effer 2
+ASSERT LAST_N == 2 "effer take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "effer atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "effer age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "effer heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 + 2 "effer e+2"
+GETF gate reserve
+ASSERT LAST_N == r0 "effer r held"
+GETF gate threshold
+ASSERT LAST_N == t0 "effer thr held"
+GETF gate pmf
+ASSERT LAST_N == p0 "effer pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "effer lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "effer ready if surplus"
+ELSE
+  ASSERT rd == 0 "effer ready blocked"
+END
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+
+SEND gate effer 10
+ASSERT LAST_N == at1 "effer clamp atp"
+GETF gate atp
+ASSERT LAST_N == 0 "effer atp0 clamp"
+GETF gate age
+ASSERT LAST_N == a1 "effer age held clamp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "effer heat clamp"
+GETF gate energy
+ASSERT LAST_N == e1 + at1 "effer e clamp"
+GETF gate reserve
+ASSERT LAST_N == r1 "effer r held clamp"
+GETF gate threshold
+ASSERT LAST_N == t1 "effer thr held clamp"
+GETF gate pmf
+ASSERT LAST_N == p1 "pmf held clamp"
+GETF gate energy
+LET eg2 = LAST_N
+GETF gate threshold
+LET tg2 = LAST_N
+GETF gate ready
+LET rd2 = LAST_N
+IF eg2 >= tg2 THEN
+  ASSERT rd2 == 1 "effer ready surplus clamp"
+ELSE
+  ASSERT rd2 == 0 "effer ready blocked clamp"
+END
+GETF gate alive
+ASSERT LAST_N == 1 "effer lives clamp"
+
+// dead cell: no-op
+SEND dead effer 3
+ASSERT LAST_N == 0 "dead effer0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays"
+
+// n<1
+SEND twin effer 0
+ASSERT LAST_N == 0 "effer n0"
+SEND twin effer -3
+ASSERT LAST_N == 0 "effer nneg"
+
+// empty ATP
+SEND poor pulse 1
+SEND poor photosynth 1
+GETF poor atp
+LET pa = LAST_N
+IF pa > 0 THEN
+  SEND poor casp9 pa
+END
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+GETF poor age
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor threshold
+LET pt0 = LAST_N
+GETF poor energy
+LET pe0 = LAST_N
+GETF poor reserve
+LET pr0 = LAST_N
+GETF poor pmf
+LET ppm0 = LAST_N
+SEND poor effer 4
+ASSERT LAST_N == 0 "poor effer0"
+GETF poor age
+ASSERT LAST_N == pa0 "poor age held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor heat held"
+GETF poor threshold
+ASSERT LAST_N == pt0 "poor thr held"
+GETF poor energy
+ASSERT LAST_N == pe0 "poor e held"
+GETF poor reserve
+ASSERT LAST_N == pr0 "poor r held"
+GETF poor pmf
+ASSERT LAST_N == ppm0 "poor pmf held"
+
+// G0: effer works, ready forced 0
+SEND g0 quiesce
+SEND g0 pulse 3
+SEND g0 photosynth 6
+SEND g0 glycolyse 6
+SEND g0 pump 4
+GETF g0 atp
+LET ga0 = LAST_N
+ASSERT ga0 >= 2 "g0 atp"
+GETF g0 reserve
+LET gr0 = LAST_N
+GETF g0 threshold
+LET gt0 = LAST_N
+GETF g0 age
+LET gag0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+GETF g0 pmf
+LET gp0 = LAST_N
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+SEND g0 effer 2
+ASSERT LAST_N == 2 "g0 effer2"
+GETF g0 atp
+ASSERT LAST_N == ga0 - 2 "g0 atp-2"
+GETF g0 age
+ASSERT LAST_N == gag0 "g0 age held"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 energy
+ASSERT LAST_N == ge0 + 2 "g0 e+2"
+GETF g0 reserve
+ASSERT LAST_N == gr0 "g0 r held"
+GETF g0 threshold
+ASSERT LAST_N == gt0 "g0 thr held"
+GETF g0 pmf
+ASSERT LAST_N == gp0 "g0 pmf held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+// continuum clearer mac
+SEND mac pulse 4
+SEND mac photosynth 6
+SEND mac glycolyse 6
+SEND mac pump 6
+SEND mac bank 2
+GETF mac atp
+LET ma0 = LAST_N
+ASSERT ma0 >= 6 "mac atp"
+GETF mac energy
+LET me0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac age
+LET mag0 = LAST_N
+GETF mac reserve
+LET mr0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+
+SEND twin pulse 3
+SEND twin photosynth 4
+SEND twin glycolyse 4
+SEND twin pump 4
+SEND twin casp3 1
+SEND twin cad 1
+SEND twin bleb 2
+GETF twin reserve
+ASSERT LAST_N >= 2 "twin body cargo"
+GETF twin alive
+ASSERT LAST_N == 1 "twin still morph"
+
+SEND mac effer 3
+ASSERT LAST_N == 3 "mac effer3"
+GETF mac atp
+ASSERT LAST_N == ma0 - 3 "mac atp-3"
+GETF mac heat
+ASSERT LAST_N == mh0 + 3 "mac heat+3"
+GETF mac energy
+ASSERT LAST_N == me0 + 3 "mac e+3"
+GETF mac age
+ASSERT LAST_N == mag0 "mac age held"
+GETF mac reserve
+ASSERT LAST_N == mr0 "mac r held"
+GETF mac threshold
+ASSERT LAST_N == mt0 "mac thr held"
+GETF mac pmf
+ASSERT LAST_N == mp0 "mac pmf held"
+GETF mac alive
+ASSERT LAST_N == 1 "mac lives"
+
+// contrast bleb: age+ reserve+, energy held
+SEND twin set_threshold 10
+SEND twin pulse 2
+SEND twin photosynth 3
+SEND twin glycolyse 3
+SEND twin pump 3
+GETF twin atp
+LET ta = LAST_N
+ASSERT ta >= 2 "twin atp2"
+GETF twin energy
+LET te0 = LAST_N
+GETF twin age
+LET tag0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+GETF twin threshold
+LET tt0 = LAST_N
+SEND twin bleb 2
+ASSERT LAST_N == 2 "contrast bleb2"
+GETF twin energy
+ASSERT LAST_N == te0 "contrast bleb e held"
+GETF twin age
+ASSERT LAST_N == tag0 + 2 "contrast bleb age+2"
+GETF twin reserve
+ASSERT LAST_N == tr0 + 2 "contrast bleb r+2"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "contrast bleb heat+2"
+GETF twin threshold
+ASSERT LAST_N == tt0 "contrast bleb thr held"
+
+// contrast engulf
+SEND mac feed 5
+GETF mac energy
+LET me1 = LAST_N
+ASSERT me1 >= 3 "mac e for engulf"
+GETF mac atp
+LET ma1 = LAST_N
+GETF mac heat
+LET mh1 = LAST_N
+GETF mac reserve
+LET mr1 = LAST_N
+SEND mac engulf 2003
+ASSERT LAST_N == 5 "engulf got5"
+GETF mac atp
+ASSERT LAST_N == ma1 "engulf atp held"
+GETF mac heat
+ASSERT LAST_N == mh1 "engulf heat held"
+GETF mac energy
+LET me2 = LAST_N
+ASSERT me2 == me1 - 1 + 2 "engulf e-1+de"
+GETF mac reserve
+ASSERT LAST_N == mr1 + 3 "engulf r+dr"
+
+SEND mac vitality
+ASSERT LAST_N >= 1 "mac vitality"
+SEND mac stores
+ASSERT LAST_N == mr1 + 3 "mac stores"
+SEND mac charged
+ASSERT LAST_N == ma1 "mac charged"
+SEND mac warmth
+ASSERT LAST_N >= mh1 "mac warmth"
+
+// second effer after recharge
+SEND mac glycolyse 4
+SEND mac pump 4
+GETF mac atp
+LET ma2 = LAST_N
+ASSERT ma2 >= 2 "mac recharge atp"
+GETF mac energy
+LET me3 = LAST_N
+GETF mac heat
+LET mh2 = LAST_N
+SEND mac effer 2
+ASSERT LAST_N == 2 "mac effer2b"
+GETF mac atp
+ASSERT LAST_N == ma2 - 2 "mac atp after 2b"
+GETF mac energy
+ASSERT LAST_N == me3 + 2 "mac e after 2b"
+GETF mac heat
+ASSERT LAST_N == mh2 + 2 "mac heat after 2b"
+
+SEND mac set_threshold 10
+GETF mac energy
+LET me4 = LAST_N
+GETF mac ready
+LET rd3 = LAST_N
+IF me4 >= 10 THEN
+  ASSERT rd3 == 1 "mac ready after trophic"
+ELSE
+  ASSERT rd3 == 0 "mac not ready"
+END
+
+// partial take
+SEND twin die
+SEND twin birth 20 1
+SEND twin set_threshold 10
+SEND twin photosynth 2
+SEND twin glycolyse 1
+SEND twin pump 1
+GETF twin atp
+ASSERT LAST_N == 1 "rebirth atp1"
+GETF twin energy
+LET re0 = LAST_N
+GETF twin heat
+LET rh0 = LAST_N
+GETF twin age
+LET ra0 = LAST_N
+SEND twin effer 5
+ASSERT LAST_N == 1 "partial take1"
+GETF twin atp
+ASSERT LAST_N == 0 "partial atp0"
+GETF twin energy
+ASSERT LAST_N == re0 + 1 "partial e+1"
+GETF twin heat
+ASSERT LAST_N == rh0 + 1 "partial h+1"
+GETF twin age
+ASSERT LAST_N == ra0 "partial age held"
+
+// recharge twin for pmf + checkpoint boards
+SEND twin feed 8
+SEND twin photosynth 4
+SEND twin glycolyse 4
+SEND twin pump 4
+GETF twin atp
+LET rat2 = LAST_N
+ASSERT rat2 >= 2 "recharge atp"
+GETF twin pmf
+LET rp0 = LAST_N
+ASSERT rp0 >= 1 "pmf present"
+GETF twin energy
+LET re1 = LAST_N
+GETF twin age
+LET ra1 = LAST_N
+SEND twin effer 1
+ASSERT LAST_N == 1 "pmf-test effer1"
+GETF twin pmf
+ASSERT LAST_N == rp0 "pmf held post-effer"
+GETF twin energy
+ASSERT LAST_N == re1 + 1 "e+1 pmf-test"
+GETF twin age
+ASSERT LAST_N == ra1 "age held pmf-test"
+
+GETF twin energy
+LET efp0 = LAST_N
+GETF twin age
+LET afp0 = LAST_N
+GETF twin gen
+LET gfp0 = LAST_N
+GETF twin atp
+LET atfp0 = LAST_N
+ASSERT atfp0 >= 1 "fp atp ready"
+SEND twin feed 3
+SEND twin effer 1
+GETF twin energy
+LET efp1 = LAST_N
+ASSERT efp1 == efp0 + 3 + 1 "feed+effer energy arithmetic"
+GETF twin age
+ASSERT LAST_N == afp0 "age held across feed+effer"
+GETF twin gen
+ASSERT LAST_N == gfp0 "gen held"
+SEND twin checkpoint
+LET fp = LAST_N
+LET expect = gfp0 * 1000
+LET expect = expect + efp1 * 10
+LET expect = expect + afp0
+ASSERT fp == expect "checkpoint fingerprint coherent"
+
+GETF gate alive
+ASSERT LAST_N == 1 "gate final alive"
+GETF mac alive
+ASSERT LAST_N == 1 "mac final alive"
+GETF g0 alive
+ASSERT LAST_N == 1 "g0 final alive"
+GETF poor alive
+ASSERT LAST_N == 1 "poor final alive"
+GETF twin alive
+ASSERT LAST_N == 1 "twin final alive"
+
+GETF mac energy
+ASSERT LAST_N >= 1 "mac e final"
+GETF mac heat
+ASSERT LAST_N >= 1 "mac heat final"
+GETF mac atp
+ASSERT LAST_N >= 0 "mac atp final"
