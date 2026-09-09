@@ -27,10 +27,10 @@
   "science_asserts_ok": 35,
   "host_finish": true,
   "anti_bloat": true,
-  "status": "draft",
+  "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
   "note": "ALIGN co-raises thr+sp with heat pair after cilia pmf bank; free energy age/energy/reserve/pmf/pcr held \u2014 planar polarity tissue-axis competence.",
-  "feat_head": "",
-  "HEAD": ""
+  "feat_head": "1f1364b859ec3eaa3cf0e8df1a005035ebe94117",
+  "HEAD": "1f1364b859ec3eaa3cf0e8df1a005035ebe94117"
 }
