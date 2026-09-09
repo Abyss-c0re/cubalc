@@ -121,6 +121,7 @@
 #   inherit code         apply fission/bud endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
 #   lumen n              apical lumenogenesis after polar — ATP→heat+n pcr+n (secretory ~P); age/energy/pmf/reserve/thr/sp held
 #   cilia n              primary cilia / IFT after lumen — pay n ATP IFT-B/kinesin-2/polycystin trafficking → heat +n + pmf +n (flow-sense chemiosmotic bank, ceiling 1000); age/energy/reserve/thr/sp/pcr held; ready recompute
+#   align n            PCP tissue-axis after cilia — ATP->heat+ thr+ sp+ (age/energy/reserve/pmf/pcr held)
 
 CLASS Cell
   FIELD alive 0
@@ -4392,7 +4393,7 @@ CLASS Cell
   # Distinct from lumen (ATP→heat+n pcr+n pmf held), polar (ATP→heat+n sp+n),
   # seal (ATP→heat+n thr+n), pump (energy→pmf no heat), harness (heat→pmf),
   # biogenesis (ATP+reserve→pmf heat+1). Continuum:
-  # ...→cad→bleb→effer→resolve→restit→seal→polar→lumen→cilia.
+  # ...→cad→bleb→effer→resolve→restit→seal→polar→lumen→cilia→align.
   # Signature: heat+n pmf+n; age+energy+reserve+thr+sp+pcr held — flow-sense life.
   # Usability: AGI models primary-cilia competence under ASSERT boards.
   # Returns take ciliated; dead/n<1/empty atp → 0.
@@ -4447,5 +4448,88 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # ALIGN: planar cell polarity (PCP) tissue-axis competence after CILIA.
+  # Spend take=min(n,atp) ATP (Vangl2/Frizzled asymmetric trafficking,
+  # Dishevelled/Prickle core PCP, actomyosin cable anisotropy, oriented
+  # MT bundles along the tissue plane after primary-cilia flow-sense).
+  # HEAT += take (each GTPase / motor / cable cycle dissipates as heat).
+  # THRESHOLD rises: thr = min(1000, thr + take) — PCP contact-plane
+  # oriented-division restraint (mitotic spindle bar co-locked to axis).
+  # SETPOINT rises: sp = min(1000, sp + take) — aligned epithelium raises
+  # preferred active-energy homeostat (anisotropic pump/gradient demand).
+  # AGE/energy/reserve/pmf/pcr HELD — align is tissue-axis lock after cilia,
+  # not injury (bleb age+), not thr-only TJ seal, not sp-only apical polar,
+  # not pmf flow-sense bank (cilia), not pcr lumen secretory ~P.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from cilia (ATP->heat+n pmf+n thr/sp held), polar (sp+ thr held),
+  # seal (thr+ sp held), lumen (pcr+), fortify (thr+ no heat), set_setpoint
+  # (direct sp write no ATP/heat). Continuum:
+  # ...->cad->bleb->effer->resolve->restit->seal->polar->lumen->cilia->align.
+  # Signature: heat+n thr+n sp+n; age+energy+reserve+pmf+pcr held — PCP life.
+  # Usability: AGI models planar polarity competence under ASSERT boards.
+  # Returns take aligned; dead/n<1/empty atp -> 0.
+  METHOD align n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 1
+    END
+    LET thr = thr + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 0 THEN
+      LET sp = 0
+    END
+    LET sp = sp + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

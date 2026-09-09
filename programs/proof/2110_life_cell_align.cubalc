@@ -1,0 +1,476 @@
+// 2110_life_cell_align.cubalc
+// Proof 2110: life_cell align - planar cell polarity (PCP) after CILIA.
+// Pay n ATP Vangl/Fz/Dvl actomyosin axis lock -> heat +n + thr +n + sp +n;
+// age/energy/reserve/pmf/pcr held; ready recomputed. Distinct from cilia (pmf+ thr/sp held),
+// polar (sp+ thr held), seal (thr+ sp held), lumen (pcr+), fortify (thr+ no heat).
+// Continuum after cilia. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+ENTITY ceil OF Cell 1 20 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "align a5"
+GETF gate atp
+ASSERT LAST_N == 4 "align atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "align h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "align pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "align energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "align thr10"
+GETF gate setpoint
+LET s0 = LAST_N
+ASSERT s0 == 10 "align sp10"
+GETF gate pcr
+LET c0 = LAST_N
+ASSERT c0 == 0 "align pcr0"
+
+SEND gate align 2
+ASSERT LAST_N == 2 "align take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "align atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "align age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "align heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "align e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "align r held"
+GETF gate threshold
+ASSERT LAST_N == t0 + 2 "align thr+2"
+GETF gate setpoint
+ASSERT LAST_N == s0 + 2 "align sp+2"
+GETF gate pcr
+ASSERT LAST_N == c0 "align pcr held"
+GETF gate pmf
+ASSERT LAST_N == p0 "align pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "align lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "align ready1"
+ELSE
+  ASSERT rd == 0 "align ready0"
+END
+
+GETF gate atp
+LET at1 = LAST_N
+ASSERT at1 == at0 - 2 "align atp mid"
+SEND gate align 5
+ASSERT LAST_N == at1 "align partial take"
+GETF gate atp
+ASSERT LAST_N == 0 "align atp0"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 + at1 "align heat partial"
+GETF gate threshold
+ASSERT LAST_N == t0 + 2 + at1 "align thr partial"
+GETF gate setpoint
+ASSERT LAST_N == s0 + 2 + at1 "align sp partial"
+GETF gate pmf
+ASSERT LAST_N == p0 "align pmf still held"
+GETF gate energy
+ASSERT LAST_N == e0 "align e still held"
+GETF gate age
+ASSERT LAST_N == a0 "align age still held"
+GETF gate pcr
+ASSERT LAST_N == c0 "align pcr still held"
+GETF gate reserve
+ASSERT LAST_N == r0 "align r still held"
+
+SEND gate align 1
+ASSERT LAST_N == 0 "align empty0"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 + at1 "align heat unchanged empty"
+GETF gate threshold
+ASSERT LAST_N == t0 + 2 + at1 "align thr unchanged empty"
+GETF gate setpoint
+ASSERT LAST_N == s0 + 2 + at1 "align sp unchanged empty"
+
+SEND gate glycolyse 3
+SEND gate align 0
+ASSERT LAST_N == 0 "align n0"
+SEND gate align -3
+ASSERT LAST_N == 0 "align nneg"
+
+SEND dead set_threshold 10
+SEND dead align 2
+ASSERT LAST_N == 0 "align dead0"
+GETF dead alive
+ASSERT LAST_N == 0 "align dead stays"
+SEND g0 pulse 5
+SEND g0 photosynth 5
+SEND g0 glycolyse 6
+SEND g0 quiesce
+GETF g0 atp
+LET gat = LAST_N
+ASSERT gat >= 2 "align g0 atp"
+GETF g0 threshold
+LET gt0 = LAST_N
+GETF g0 setpoint
+LET gs0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+GETF g0 pmf
+LET gp0 = LAST_N
+GETF g0 age
+LET ga0 = LAST_N
+GETF g0 reserve
+LET gr0 = LAST_N
+GETF g0 pcr
+LET gc0 = LAST_N
+SEND g0 align 2
+ASSERT LAST_N == 2 "align g0 take2"
+GETF g0 ready
+ASSERT LAST_N == 0 "align g0 ready0"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "align g0 heat+2"
+GETF g0 threshold
+ASSERT LAST_N == gt0 + 2 "align g0 thr+2"
+GETF g0 setpoint
+ASSERT LAST_N == gs0 + 2 "align g0 sp+2"
+GETF g0 energy
+ASSERT LAST_N == ge0 "align g0 e held"
+GETF g0 pmf
+ASSERT LAST_N == gp0 "align g0 pmf held"
+GETF g0 age
+ASSERT LAST_N == ga0 "align g0 age held"
+GETF g0 reserve
+ASSERT LAST_N == gr0 "align g0 r held"
+GETF g0 pcr
+ASSERT LAST_N == gc0 "align g0 pcr held"
+GETF g0 atp
+ASSERT LAST_N == gat - 2 "align g0 atp-2"
+
+SEND poor pulse 4
+SEND poor photosynth 4
+SEND poor glycolyse 3
+GETF poor energy
+LET pe = LAST_N
+GETF poor atp
+LET pa = LAST_N
+ASSERT pa >= 1 "align poor atp"
+GETF poor threshold
+LET pt = LAST_N
+GETF poor setpoint
+LET ps = LAST_N
+GETF poor heat
+LET ph = LAST_N
+GETF poor pmf
+LET pp = LAST_N
+SEND poor align 1
+ASSERT LAST_N == 1 "align poor take1"
+GETF poor threshold
+ASSERT LAST_N == pt + 1 "align poor thr+1"
+GETF poor setpoint
+ASSERT LAST_N == ps + 1 "align poor sp+1"
+GETF poor heat
+ASSERT LAST_N == ph + 1 "align poor heat+1"
+GETF poor energy
+ASSERT LAST_N == pe "align poor e held"
+GETF poor pmf
+ASSERT LAST_N == pp "align poor pmf held"
+GETF poor energy
+LET pe2 = LAST_N
+GETF poor threshold
+LET pt2 = LAST_N
+GETF poor ready
+LET pr = LAST_N
+IF pe2 >= pt2 THEN
+  ASSERT pr == 1 "align poor ready1"
+ELSE
+  ASSERT pr == 0 "align poor ready0"
+END
+
+SEND twin pulse 5
+SEND twin photosynth 5
+SEND twin glycolyse 6
+SEND twin pump 3
+GETF twin atp
+LET ta = LAST_N
+ASSERT ta >= 4 "align twin atp"
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin threshold
+LET tt0 = LAST_N
+GETF twin setpoint
+LET ts0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+GETF twin age
+LET tag0 = LAST_N
+GETF twin pcr
+LET tc0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+SEND twin cilia 2
+ASSERT LAST_N == 2 "align twin cilia2"
+GETF twin pmf
+ASSERT LAST_N == tp0 + 2 "align twin pmf cilia"
+GETF twin threshold
+ASSERT LAST_N == tt0 "align twin thr after cilia held"
+GETF twin setpoint
+ASSERT LAST_N == ts0 "align twin sp after cilia held"
+SEND twin align 2
+ASSERT LAST_N == 2 "align twin align2"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 + 2 "align twin heat+4"
+GETF twin pmf
+ASSERT LAST_N == tp0 + 2 "align twin pmf held through align"
+GETF twin threshold
+ASSERT LAST_N == tt0 + 2 "align twin thr+2"
+GETF twin setpoint
+ASSERT LAST_N == ts0 + 2 "align twin sp+2"
+GETF twin energy
+ASSERT LAST_N == te0 "align twin e held"
+GETF twin age
+ASSERT LAST_N == tag0 "align twin age held"
+GETF twin pcr
+ASSERT LAST_N == tc0 "align twin pcr held"
+GETF twin reserve
+ASSERT LAST_N == tr0 "align twin r held"
+GETF twin atp
+ASSERT LAST_N == ta - 4 "align twin atp-4"
+GETF twin alive
+ASSERT LAST_N == 1 "align twin lives"
+
+SEND ceil set_threshold 998
+SEND ceil set_setpoint 999
+SEND ceil pulse 3
+SEND ceil photosynth 3
+SEND ceil glycolyse 8
+GETF ceil atp
+LET ca = LAST_N
+ASSERT ca >= 3 "align ceil atp"
+GETF ceil heat
+LET ch0 = LAST_N
+SEND ceil align 3
+ASSERT LAST_N == 3 "align ceil take3"
+GETF ceil threshold
+ASSERT LAST_N == 1000 "align ceil thr cap"
+GETF ceil setpoint
+ASSERT LAST_N == 1000 "align ceil sp cap"
+GETF ceil heat
+ASSERT LAST_N == ch0 + 3 "align ceil heat+3"
+GETF ceil atp
+ASSERT LAST_N == ca - 3 "align ceil atp-3"
+SEND mac pulse 5
+SEND mac photosynth 5
+SEND mac glycolyse 5
+SEND mac set_threshold 8
+GETF mac energy
+LET me0 = LAST_N
+GETF mac atp
+LET ma0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac setpoint
+LET ms0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+SEND mac align 3
+ASSERT LAST_N == 3 "align mac take3"
+GETF mac threshold
+ASSERT LAST_N == mt0 + 3 "align mac thr+3"
+GETF mac setpoint
+ASSERT LAST_N == ms0 + 3 "align mac sp+3"
+GETF mac heat
+ASSERT LAST_N == mh0 + 3 "align mac heat+3"
+GETF mac energy
+ASSERT LAST_N == me0 "align mac e held"
+GETF mac pmf
+ASSERT LAST_N == mp0 "align mac pmf held"
+GETF mac atp
+ASSERT LAST_N == ma0 - 3 "align mac atp-3"
+GETF mac energy
+LET me1 = LAST_N
+GETF mac threshold
+LET mt1 = LAST_N
+GETF mac ready
+LET mr = LAST_N
+IF me1 >= mt1 THEN
+  ASSERT mr == 1 "align mac ready1"
+ELSE
+  ASSERT mr == 0 "align mac ready0"
+END
+
+ENTITY dseal OF Cell 1 12 0
+SEND dseal set_threshold 10
+SEND dseal set_setpoint 10
+SEND dseal pulse 4
+SEND dseal photosynth 4
+SEND dseal glycolyse 4
+GETF dseal threshold
+LET dst = LAST_N
+GETF dseal setpoint
+LET dss = LAST_N
+GETF dseal heat
+LET dsh = LAST_N
+SEND dseal seal 2
+ASSERT LAST_N == 2 "align vs seal take"
+GETF dseal threshold
+ASSERT LAST_N == dst + 2 "align vs seal thr+"
+GETF dseal setpoint
+ASSERT LAST_N == dss "align vs seal sp held"
+GETF dseal heat
+ASSERT LAST_N == dsh + 2 "align vs seal heat"
+
+ENTITY dpolar OF Cell 1 12 0
+SEND dpolar set_threshold 10
+SEND dpolar set_setpoint 10
+SEND dpolar pulse 4
+SEND dpolar photosynth 4
+SEND dpolar glycolyse 4
+GETF dpolar threshold
+LET dpt = LAST_N
+GETF dpolar setpoint
+LET dps = LAST_N
+GETF dpolar heat
+LET dph = LAST_N
+SEND dpolar polar 2
+ASSERT LAST_N == 2 "align vs polar take"
+GETF dpolar threshold
+ASSERT LAST_N == dpt "align vs polar thr held"
+GETF dpolar setpoint
+ASSERT LAST_N == dps + 2 "align vs polar sp+"
+GETF dpolar heat
+ASSERT LAST_N == dph + 2 "align vs polar heat"
+
+ENTITY dcilia OF Cell 1 12 0
+SEND dcilia set_threshold 10
+SEND dcilia set_setpoint 10
+SEND dcilia pulse 4
+SEND dcilia photosynth 4
+SEND dcilia glycolyse 4
+SEND dcilia pump 2
+GETF dcilia pmf
+LET dcp0 = LAST_N
+GETF dcilia threshold
+LET dct = LAST_N
+GETF dcilia setpoint
+LET dcs = LAST_N
+GETF dcilia heat
+LET dch = LAST_N
+SEND dcilia cilia 2
+ASSERT LAST_N == 2 "align vs cilia take"
+GETF dcilia pmf
+ASSERT LAST_N == dcp0 + 2 "align vs cilia pmf+"
+GETF dcilia threshold
+ASSERT LAST_N == dct "align vs cilia thr held"
+GETF dcilia setpoint
+ASSERT LAST_N == dcs "align vs cilia sp held"
+GETF dcilia heat
+ASSERT LAST_N == dch + 2 "align vs cilia heat"
+
+ENTITY cont OF Cell 1 16 0
+SEND cont set_threshold 10
+SEND cont set_setpoint 10
+SEND cont pulse 8
+SEND cont photosynth 8
+SEND cont glycolyse 16
+SEND cont pump 2
+GETF cont atp
+LET cta = LAST_N
+ASSERT cta >= 8 "align cont atp"
+GETF cont heat
+LET cth0 = LAST_N
+GETF cont threshold
+LET ctt0 = LAST_N
+GETF cont setpoint
+LET cts0 = LAST_N
+GETF cont pmf
+LET ctp0 = LAST_N
+GETF cont pcr
+LET ctc0 = LAST_N
+GETF cont energy
+LET cte0 = LAST_N
+GETF cont age
+LET cta0 = LAST_N
+GETF cont reserve
+LET ctr0 = LAST_N
+SEND cont seal 1
+ASSERT LAST_N == 1 "align cont seal"
+SEND cont polar 1
+ASSERT LAST_N == 1 "align cont polar"
+SEND cont lumen 1
+ASSERT LAST_N == 1 "align cont lumen"
+SEND cont cilia 1
+ASSERT LAST_N == 1 "align cont cilia"
+SEND cont align 2
+ASSERT LAST_N == 2 "align cont align"
+GETF cont threshold
+ASSERT LAST_N == ctt0 + 1 + 2 "align cont thr path"
+GETF cont setpoint
+ASSERT LAST_N == cts0 + 1 + 2 "align cont sp path"
+GETF cont pcr
+ASSERT LAST_N == ctc0 + 1 "align cont pcr lumen"
+GETF cont pmf
+ASSERT LAST_N == ctp0 + 1 "align cont pmf cilia"
+GETF cont heat
+ASSERT LAST_N == cth0 + 1 + 1 + 1 + 1 + 2 "align cont heat path"
+GETF cont energy
+ASSERT LAST_N == cte0 "align cont e held"
+GETF cont age
+ASSERT LAST_N == cta0 "align cont age held"
+GETF cont reserve
+ASSERT LAST_N == ctr0 "align cont r held"
+GETF cont atp
+ASSERT LAST_N == cta - 6 "align cont atp-6"
+GETF cont alive
+ASSERT LAST_N == 1 "align cont lives"
+GETF cont energy
+LET cte1 = LAST_N
+GETF cont threshold
+LET ctt1 = LAST_N
+GETF cont ready
+LET ctrd = LAST_N
+IF cte1 >= ctt1 THEN
+  ASSERT ctrd == 1 "align cont ready1"
+ELSE
+  ASSERT ctrd == 0 "align cont ready0"
+END
+
+PRINT "2110_life_cell_align OK"
