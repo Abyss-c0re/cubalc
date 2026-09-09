@@ -1,0 +1,98 @@
+// atomic_printer_life_recruit.cubalc
+// Science board: atomic printer cell runs vesicle continuum through recruit.
+// Post-mature M6PR hydrolase cargo recruit — free energy must flow. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 48 0
+SEND seed set_threshold 10
+SEND seed pulse 4
+SEND seed photosynth 36
+SEND seed glycolyse 28
+SEND seed pump 20
+SEND seed photophos 18
+SEND seed charge 28
+SEND seed feed 28
+SEND seed converge 2
+SEND seed extend 1
+SEND seed fold 1
+SEND seed zip 1
+SEND seed crest 1
+SEND seed migrate 1
+SEND seed stream 1
+SEND seed condense 1
+SEND seed fate 1
+SEND seed project 1
+SEND seed synapse 1
+SEND seed release 3
+SEND seed reuptake 2
+SEND seed refill 1
+SEND seed dock 1
+SEND seed arm 1
+SEND seed clamp 1
+SEND seed trigger 1
+SEND seed pore 1
+SEND seed mix 1
+SEND seed collapse 1
+SEND seed retrieve 1
+SEND seed photosynth 24
+SEND seed glycolyse 18
+SEND seed pump 14
+SEND seed photophos 12
+SEND seed charge 16
+SEND seed feed 16
+GETF seed energy
+ASSERT LAST_N >= 4 "sci e"
+GETF seed atp
+ASSERT LAST_N >= 4 "sci a"
+SEND seed acidify 2
+ASSERT LAST_N == 2 "sci acidify"
+GETF seed pmf
+LET pmf_ee = LAST_N
+ASSERT pmf_ee >= 2 "sci ee pmf"
+SEND seed mature 2
+ASSERT LAST_N == 2 "sci mature"
+GETF seed pmf
+ASSERT LAST_N == pmf_ee - 2 "sci mature spends ee pmf"
+GETF seed threshold
+LET thr_le = LAST_N
+ASSERT thr_le >= 12 "sci le thr"
+GETF seed reserve
+LET r0 = LAST_N
+GETF seed heat
+LET h0 = LAST_N
+GETF seed energy
+LET e0 = LAST_N
+GETF seed atp
+LET a0 = LAST_N
+GETF seed pmf
+LET p0 = LAST_N
+GETF seed age
+LET ag0 = LAST_N
+GETF seed setpoint
+LET sp0 = LAST_N
+GETF seed pcr
+LET c0 = LAST_N
+SEND seed recruit 3
+ASSERT LAST_N == 3 "sci recruit3"
+GETF seed heat
+ASSERT LAST_N == h0 + 3 "sci heat"
+GETF seed energy
+ASSERT LAST_N == e0 - 3 "sci energy"
+GETF seed atp
+ASSERT LAST_N == a0 - 3 "sci atp"
+GETF seed reserve
+ASSERT LAST_N == r0 + 3 "sci reserve hydrolase bank"
+GETF seed pmf
+ASSERT LAST_N == p0 "sci pmf held"
+GETF seed threshold
+ASSERT LAST_N == thr_le "sci thr held"
+GETF seed age
+ASSERT LAST_N == ag0 "sci age held"
+GETF seed setpoint
+ASSERT LAST_N == sp0 "sci sp held"
+GETF seed pcr
+ASSERT LAST_N == c0 "sci pcr held"
+ASSERT 1 == 1 "atomic printer life recruit ok"
+PRINT "atomic_printer_life_recruit PASS"

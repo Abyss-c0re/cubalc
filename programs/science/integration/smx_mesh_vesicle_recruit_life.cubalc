@@ -1,0 +1,63 @@
+// smx_mesh_vesicle_recruit_life.cubalc
+// SMX mesh stability: vesicle continuum through recruit under sealed exchange.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mesh OF Cell 1 44 0
+SEND mesh set_threshold 10
+SEND mesh pulse 5
+SEND mesh photosynth 32
+SEND mesh glycolyse 26
+SEND mesh pump 18
+SEND mesh photophos 16
+SEND mesh charge 22
+SEND mesh feed 22
+SEND mesh release 2
+SEND mesh reuptake 2
+SEND mesh refill 1
+SEND mesh dock 1
+SEND mesh arm 1
+SEND mesh clamp 1
+SEND mesh trigger 1
+SEND mesh pore 1
+SEND mesh mix 1
+SEND mesh collapse 1
+SEND mesh retrieve 1
+SEND mesh photosynth 18
+SEND mesh glycolyse 14
+SEND mesh pump 10
+SEND mesh charge 12
+SEND mesh feed 12
+SEND mesh acidify 2
+ASSERT LAST_N == 2 "smx ac"
+SEND mesh mature 2
+ASSERT LAST_N == 2 "smx mat"
+GETF mesh heat
+LET h0 = LAST_N
+GETF mesh energy
+LET e0 = LAST_N
+GETF mesh atp
+LET a0 = LAST_N
+GETF mesh reserve
+LET r0 = LAST_N
+GETF mesh pmf
+LET p0 = LAST_N
+GETF mesh threshold
+LET t0 = LAST_N
+SEND mesh recruit 2
+ASSERT LAST_N == 2 "smx rec"
+GETF mesh heat
+ASSERT LAST_N == h0 + 2 "smx heat"
+GETF mesh energy
+ASSERT LAST_N == e0 - 2 "smx e"
+GETF mesh atp
+ASSERT LAST_N == a0 - 2 "smx a"
+GETF mesh reserve
+ASSERT LAST_N == r0 + 2 "smx r"
+GETF mesh pmf
+ASSERT LAST_N == p0 "smx pmf"
+GETF mesh threshold
+ASSERT LAST_N == t0 "smx thr"
+ASSERT 1 == 1 "smx mesh vesicle recruit life ok"
+PRINT "smx_mesh_vesicle_recruit_life PASS"
