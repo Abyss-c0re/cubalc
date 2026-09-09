@@ -32,6 +32,6 @@
   "pass": true,
   "proof_status": "PASS",
   "note": "FATE burns ATP+pmf into heat for post-condense NC multipotency restriction; free energy age/energy/reserve/thr/sp/pcr held \u2014 Sox9/Neurog identity lock after N-cad packing.",
-  "feat_head": "",
-  "HEAD": ""
+  "feat_head": "6cf744f86d0e5b3a12af87d984ce8af01775faf9",
+  "HEAD": "6cf744f86d0e5b3a12af87d984ce8af01775faf9"
 }
