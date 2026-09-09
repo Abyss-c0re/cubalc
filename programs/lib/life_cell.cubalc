@@ -5739,4 +5739,85 @@ CLASS Cell
   END
 
 
+
+  # CLAMP: post-arm complexin fusion clamp / metastable SNARE hold.
+  # Spend take=min(n,atp,energy) — ATP + bulk metabolic fuel fund complexin-I/II
+  # clamp binding on Munc18-Syntaxin-SNAP25 zippered SNAREs after ARM has fully
+  # registered the SNARE complex (post-arm clamp; not multipotent stream, not GRN
+  # fate lock, not growth-cone path sp+, not synaptogenesis thr+ contact, not
+  # release pcr+ dump, not EAAT reserve+ clearance, not VGLUT reserve- pack, not
+  # dock pmf+ tethering, not arm pmf- zipper consume).
+  # HEAT += take (each complexin clamp / accessory-protein register dissipates).
+  # ENERGY -= take (clamp burns active metabolic pool into metastable hold work;
+  #   inverse of crest EMT energy+ spark; kin to arm energy- but setpoint+ clamp
+  #   tension bank instead of pmf- zipper consume).
+  # ATP -= take (complexin ATP-sensitive accessory clamp cycle).
+  # SETPOINT rises: setpoint = min(1000, setpoint + take) — clamp tension raises
+  # the Ca2+/synaptotagmin cooperativity barrier (fusion-threshold poise bank;
+  # distinct from path-length sp growth-cone, contact thr+, release pcr+, dock
+  # pmf+, and arm pmf-).
+  # AGE/reserve/threshold/pmf/pcr HELD — clamp is complexin hold after arm,
+  # not injury age+, not CE bank, not contact thr, not bouton ΔΨm, not
+  # phosphagen pcr. Ready recomputed from post-burn energy vs threshold.
+  # Continuum: ...->project->synapse->release->reuptake->refill->dock->arm->clamp.
+  # Signature: heat+n energy-n sp+n; age+reserve+thr+pmf+pcr held — clamp life-force.
+  # Usability: AGI models post-arm complexin clamp under ASSERT.
+  # Returns take clamped; dead/n<1/empty atp|energy -> 0.
+  METHOD clamp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS setpoint
+    LET sp = LAST_N + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

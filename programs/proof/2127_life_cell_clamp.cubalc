@@ -1,0 +1,377 @@
+// 2127_life_cell_clamp.cubalc
+// Proof 2127: life_cell clamp - post-arm complexin fusion clamp / metastable SNARE hold.
+// Pay min(n,atp,energy) -> heat+n energy-n sp+n; age/reserve/thr/pmf/pcr held.
+// Continuum after arm. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 40 0
+ENTITY poor OF Cell 1 0 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 24 0
+ENTITY twin OF Cell 1 30 0
+ENTITY ceil OF Cell 1 28 0
+ENTITY starved OF Cell 1 36 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 30
+SEND gate glycolyse 24
+SEND gate pump 18
+SEND gate photophos 18
+GETF gate age
+ASSERT LAST_N == 6 "cl a6"
+GETF gate atp
+ASSERT LAST_N >= 20 "cl atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate pmf
+LET pbase = LAST_N
+ASSERT pbase >= 5 "cl pmf base"
+GETF gate threshold
+ASSERT LAST_N == 10 "cl thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "cl sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "cl pcr0"
+
+SEND gate converge 1
+ASSERT LAST_N == 1 "cl prece1"
+SEND gate extend 1
+ASSERT LAST_N == 1 "cl prext1"
+SEND gate fold 1
+ASSERT LAST_N == 1 "cl prefd1"
+SEND gate zip 1
+ASSERT LAST_N == 1 "cl prez1"
+SEND gate crest 1
+ASSERT LAST_N == 1 "cl prec1"
+SEND gate migrate 1
+ASSERT LAST_N == 1 "cl prem1"
+SEND gate stream 1
+ASSERT LAST_N == 1 "cl prest1"
+SEND gate condense 1
+ASSERT LAST_N == 1 "cl precd1"
+SEND gate fate 1
+ASSERT LAST_N == 1 "cl pref1"
+SEND gate project 1
+ASSERT LAST_N == 1 "cl prep1"
+SEND gate synapse 1
+ASSERT LAST_N == 1 "cl presy1"
+SEND gate release 1
+ASSERT LAST_N == 1 "cl prer1"
+SEND gate reuptake 3
+ASSERT LAST_N == 3 "cl preru3"
+SEND gate refill 2
+ASSERT LAST_N == 2 "cl prerf2"
+SEND gate dock 2
+ASSERT LAST_N == 2 "cl predk2"
+SEND gate arm 2
+ASSERT LAST_N == 2 "cl prear2"
+
+GETF gate heat
+LET h1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+GETF gate age
+LET a1 = LAST_N
+ASSERT at1 >= 2 "cl at pre"
+ASSERT e1 >= 2 "cl e pre"
+
+SEND gate clamp 2
+ASSERT LAST_N == 2 "cl cl2"
+GETF gate heat
+ASSERT LAST_N == h1 + 2 "cl h+2"
+GETF gate energy
+ASSERT LAST_N == e1 - 2 "cl e-2"
+GETF gate atp
+ASSERT LAST_N == at1 - 2 "cl atp-2"
+GETF gate setpoint
+ASSERT LAST_N == s1 + 2 "cl sp+2"
+GETF gate pmf
+ASSERT LAST_N == p1 "cl pmf held"
+GETF gate reserve
+ASSERT LAST_N == r1 "cl r held"
+GETF gate threshold
+ASSERT LAST_N == t1 "cl thr held"
+GETF gate pcr
+ASSERT LAST_N == c1 "cl pcr held"
+GETF gate age
+ASSERT LAST_N == a1 "cl age held"
+GETF gate alive
+ASSERT LAST_N == 1 "cl alive"
+
+SEND poor clamp 5
+ASSERT LAST_N == 0 "poor 0"
+GETF poor heat
+ASSERT LAST_N == 0 "poor h0"
+GETF poor energy
+ASSERT LAST_N == 0 "poor e0"
+
+SEND dead clamp 4
+ASSERT LAST_N == 0 "dead 0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead alive0"
+
+SEND g0 clamp 0
+ASSERT LAST_N == 0 "g0 zero"
+
+SEND gate clamp 1
+ASSERT LAST_N == 1 "cl again1"
+GETF gate setpoint
+ASSERT LAST_N == s1 + 3 "cl sp+3 total"
+
+SEND twin pulse 5
+SEND twin photosynth 22
+SEND twin glycolyse 18
+SEND twin pump 14
+SEND twin photophos 14
+SEND twin set_threshold 8
+SEND twin reuptake 3
+ASSERT LAST_N == 3 "twin pre ru3"
+SEND twin refill 2
+ASSERT LAST_N == 2 "twin pre rf2"
+SEND twin dock 2
+ASSERT LAST_N == 2 "twin pre dk2"
+SEND twin arm 2
+ASSERT LAST_N == 2 "twin pre ar2"
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+GETF twin heat
+LET th = LAST_N
+GETF twin reserve
+LET tr = LAST_N
+GETF twin threshold
+LET tt = LAST_N
+GETF twin setpoint
+LET tsp = LAST_N
+GETF twin pcr
+LET tc = LAST_N
+GETF twin age
+LET tage = LAST_N
+GETF twin pmf
+LET tp = LAST_N
+ASSERT te >= 2 "twin e"
+ASSERT ta >= 2 "twin a"
+SEND twin clamp 2
+ASSERT LAST_N == 2 "twin cl2"
+GETF twin heat
+ASSERT LAST_N == th + 2 "twin h+2"
+GETF twin energy
+ASSERT LAST_N == te - 2 "twin e-2"
+GETF twin atp
+ASSERT LAST_N == ta - 2 "twin atp-2"
+GETF twin setpoint
+ASSERT LAST_N == tsp + 2 "twin sp+2"
+GETF twin pmf
+ASSERT LAST_N == tp "twin pmf held"
+GETF twin reserve
+ASSERT LAST_N == tr "twin r held"
+GETF twin threshold
+ASSERT LAST_N == tt "twin thr held"
+GETF twin pcr
+ASSERT LAST_N == tc "twin pcr held"
+GETF twin age
+ASSERT LAST_N == tage "twin age held"
+
+SEND ceil pulse 5
+SEND ceil photosynth 20
+SEND ceil glycolyse 16
+SEND ceil pump 12
+SEND ceil photophos 12
+SEND ceil set_threshold 10
+SEND ceil set_setpoint 10
+SEND ceil reuptake 2
+SEND ceil refill 1
+SEND ceil dock 2
+SEND ceil arm 1
+GETF ceil setpoint
+LET csp = LAST_N
+GETF ceil atp
+LET ca = LAST_N
+GETF ceil energy
+LET ce = LAST_N
+GETF ceil heat
+LET ch = LAST_N
+ASSERT ca >= 1 "ceil a"
+ASSERT ce >= 1 "ceil e"
+SEND ceil clamp 100
+LET took = LAST_N
+ASSERT took >= 1 "ceil took"
+ASSERT took <= ca "ceil <=atp"
+ASSERT took <= ce "ceil <=e"
+GETF ceil setpoint
+ASSERT LAST_N == csp + took "ceil sp burn"
+GETF ceil heat
+ASSERT LAST_N == ch + took "ceil h+"
+GETF ceil atp
+ASSERT LAST_N == ca - took "ceil atp-"
+GETF ceil energy
+ASSERT LAST_N == ce - took "ceil e-"
+
+SEND starved pulse 3
+SEND starved photosynth 14
+SEND starved glycolyse 12
+SEND starved pump 8
+SEND starved set_threshold 50
+SEND starved reuptake 1
+SEND starved refill 1
+SEND starved dock 1
+SEND starved arm 1
+GETF starved energy
+LET se = LAST_N
+GETF starved atp
+LET sa = LAST_N
+GETF starved setpoint
+LET ssp = LAST_N
+GETF starved heat
+LET sh = LAST_N
+GETF starved pmf
+LET spm = LAST_N
+SEND starved clamp 100
+LET stook = LAST_N
+ASSERT stook >= 0 "st took"
+GETF starved heat
+ASSERT LAST_N == sh + stook "st h"
+GETF starved energy
+ASSERT LAST_N == se - stook "st e"
+GETF starved atp
+ASSERT LAST_N == sa - stook "st a"
+GETF starved setpoint
+ASSERT LAST_N == ssp + stook "st sp"
+GETF starved pmf
+ASSERT LAST_N == spm "st p held"
+
+SEND g0 pulse 4
+SEND g0 photosynth 18
+SEND g0 glycolyse 14
+SEND g0 pump 12
+SEND g0 photophos 12
+SEND g0 quiesce 1
+ASSERT LAST_N == 1 "g0 q"
+SEND g0 dock 2
+ASSERT LAST_N == 2 "g0 dk2"
+SEND g0 arm 2
+ASSERT LAST_N == 2 "g0 ar2"
+GETF g0 energy
+LET ge = LAST_N
+GETF g0 atp
+LET ga = LAST_N
+GETF g0 heat
+LET gh = LAST_N
+GETF g0 setpoint
+LET gsp = LAST_N
+GETF g0 pmf
+LET gp = LAST_N
+ASSERT ge >= 2 "g0 e"
+ASSERT ga >= 2 "g0 a"
+SEND g0 clamp 2
+ASSERT LAST_N == 2 "g0 cl2"
+GETF g0 heat
+ASSERT LAST_N == gh + 2 "g0 h+2"
+GETF g0 energy
+ASSERT LAST_N == ge - 2 "g0 e-2"
+GETF g0 atp
+ASSERT LAST_N == ga - 2 "g0 atp-2"
+GETF g0 setpoint
+ASSERT LAST_N == gsp + 2 "g0 sp+2"
+GETF g0 pmf
+ASSERT LAST_N == gp "g0 pmf held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+ENTITY chain OF Cell 1 48 0
+SEND chain set_threshold 5
+SEND chain set_setpoint 10
+SEND chain pulse 8
+SEND chain photosynth 28
+SEND chain glycolyse 22
+SEND chain pump 16
+SEND chain photophos 16
+SEND chain converge 1
+SEND chain extend 1
+SEND chain fold 1
+SEND chain zip 1
+SEND chain crest 1
+SEND chain migrate 1
+SEND chain stream 1
+SEND chain condense 1
+SEND chain fate 1
+SEND chain project 1
+SEND chain synapse 1
+SEND chain release 1
+SEND chain reuptake 3
+ASSERT LAST_N == 3 "ch ru"
+SEND chain refill 2
+ASSERT LAST_N == 2 "ch rf"
+SEND chain dock 2
+ASSERT LAST_N == 2 "ch dk"
+SEND chain arm 2
+ASSERT LAST_N == 2 "ch ar"
+GETF chain heat
+LET chh = LAST_N
+GETF chain energy
+LET che = LAST_N
+GETF chain atp
+LET cha = LAST_N
+GETF chain pmf
+LET chp = LAST_N
+GETF chain reserve
+LET chr = LAST_N
+GETF chain threshold
+LET cht = LAST_N
+GETF chain setpoint
+LET chs = LAST_N
+GETF chain pcr
+LET chc = LAST_N
+GETF chain age
+LET chage = LAST_N
+ASSERT che >= 2 "ch e"
+ASSERT cha >= 2 "ch a"
+SEND chain clamp 2
+ASSERT LAST_N == 2 "ch cl2"
+GETF chain heat
+ASSERT LAST_N == chh + 2 "ch h+2"
+GETF chain energy
+ASSERT LAST_N == che - 2 "ch e-2"
+GETF chain atp
+ASSERT LAST_N == cha - 2 "ch a-2"
+GETF chain setpoint
+ASSERT LAST_N == chs + 2 "ch s+2"
+GETF chain pmf
+ASSERT LAST_N == chp "ch p held"
+GETF chain reserve
+ASSERT LAST_N == chr "ch r"
+GETF chain threshold
+ASSERT LAST_N == cht "ch t"
+GETF chain pcr
+ASSERT LAST_N == chc "ch c"
+GETF chain age
+ASSERT LAST_N == chage "ch age"
+GETF chain alive
+ASSERT LAST_N == 1 "ch alive"
+
+ASSERT 1 == 1 "clamp proof complete"
