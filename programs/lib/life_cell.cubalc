@@ -42,6 +42,7 @@
 #   resolve n            resolution after effer — pay n ATP SPM/TGF-β/IL-10 program → heat +n + thr -n (pro-resolve ease); age/energy/pmf/reserve held; ready recompute
 #   restit n             restitution after resolve — pay n ATP epithelial/TJ rebuild → heat +n + age -n (shed injury); energy/pmf/reserve/thr held; ready recompute
 #   seal n               barrier seal after restit — pay n ATP claudin/occludin TJ lock → heat +n + thr +n (contact-inhibition competence); age/energy/pmf/reserve held; ready recompute
+#   polar n              apical-basal polarity after seal — pay n ATP Par3/aPKC/Crumbs trafficking → heat +n + setpoint +n (polarized homeostat retune, ceiling 1000); age/energy/pmf/reserve/thr held; ready recompute
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -4223,5 +4224,79 @@ CLASS Cell
   END
 
 
+
+  # POLAR: apical-basal polarity competence after SEAL (TJ lock).
+  # Spend take=min(n,atp) ATP (Par3/Par6/aPKC apical complex assembly,
+  # Crumbs/Pals1 apical identity, Scribble/Dlg/Lgl basolateral fence,
+  # oriented vesicle trafficking, lumen-facing microvilli priming).
+  # HEAT += take (each GTPase / kinase polarity cycle dissipates as heat).
+  # SETPOINT rises: sp = min(1000, sp + take) — polarized epithelium raises
+  # preferred active-energy homeostat (pump/gradient maintenance demand;
+  # inverse of thr-only seal contact-inhibition; thr held quiet set-point).
+  # AGE/energy/pmf/reserve/pcr/threshold HELD — polar is identity axis lock,
+  # not injury (bleb age+), not demolition (casp3 energy drain), not cargo
+  # bank (bleb reserve+), not thr-ease (resolve), not age-shed rebuild (restit),
+  # not thr+ contact bar (seal), not fortify (thr+ no heat).
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from seal (ATP→heat+n thr+n sp held TJ competence),
+  # restit (ATP→heat+n age-n thr held), resolve (ATP→heat+n thr-n),
+  # fortify (ATP→thr+ no heat), set_setpoint (direct sp write no ATP/heat),
+  # regulate (bank/draw no heat). Continuum:
+  # ...→cad→bleb→effer→resolve→restit→seal→polar.
+  # Signature: heat+n setpoint+n; age+energy+reserve+pmf+thr held — polarity axis.
+  # Usability: AGI models post-seal epithelial polarity / lumen readiness under ASSERT.
+  # Returns take polarized; dead/n<1/empty atp → 0.
+  METHOD polar n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 1 THEN
+      LET sp = 1
+    END
+    LET sp = sp + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END
