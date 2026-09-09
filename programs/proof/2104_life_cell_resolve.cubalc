@@ -1,0 +1,387 @@
+// 2104_life_cell_resolve.cubalc
+// Proof 2104: life_cell resolve — SPM/TGF-b resolution after EFFER clearance.
+// Pay n ATP lipid-mediator / quiet program -> heat +n + thr -n (pro-resolve ease);
+// age/energy/pmf/reserve held; ready recomputed. Distinct from effer (energy+n thr held),
+// prime (thr- no heat), ease (heat->thr-), cad (thr+), bleb (age+ reserve+).
+// Continuum after effer. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "resolve a5"
+GETF gate atp
+ASSERT LAST_N == 4 "resolve atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "resolve h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "resolve pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "resolve energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "resolve thr10"
+
+SEND gate resolve 2
+ASSERT LAST_N == 2 "resolve take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "resolve atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "resolve age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "resolve heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "resolve e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "resolve r held"
+GETF gate threshold
+ASSERT LAST_N == t0 - 2 "resolve thr-2"
+GETF gate pmf
+ASSERT LAST_N == p0 "resolve pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "resolve lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "resolve ready if surplus"
+ELSE
+  ASSERT rd == 0 "resolve ready blocked"
+END
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+
+SEND gate resolve 100
+ASSERT LAST_N == at1 "resolve clip all atp"
+GETF gate atp
+ASSERT LAST_N == 0 "resolve atp0"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "resolve heat+clip"
+GETF gate threshold
+LET tclip = LAST_N
+ASSERT tclip >= 1 "resolve thr floor1"
+LET texp = t1 - at1
+IF texp < 1 THEN
+  LET texp = 1
+END
+ASSERT tclip == texp "resolve thr clip math"
+GETF gate age
+ASSERT LAST_N == a1 "resolve age held clip"
+GETF gate energy
+ASSERT LAST_N == e1 "resolve e held clip"
+GETF gate reserve
+ASSERT LAST_N == r1 "resolve r held clip"
+GETF gate pmf
+ASSERT LAST_N == p1 "resolve pmf held clip"
+
+GETF gate heat
+LET h2 = LAST_N
+GETF gate threshold
+LET t2 = LAST_N
+SEND gate resolve 3
+ASSERT LAST_N == 0 "resolve empty0"
+GETF gate heat
+ASSERT LAST_N == h2 "resolve heat held empty"
+GETF gate threshold
+ASSERT LAST_N == t2 "resolve thr held empty"
+
+SEND dead set_threshold 10
+SEND dead resolve 2
+ASSERT LAST_N == 0 "resolve dead0"
+GETF dead alive
+ASSERT LAST_N == 0 "resolve dead stays"
+
+SEND gate photosynth 6
+SEND gate glycolyse 8
+SEND gate pump 4
+GETF gate atp
+LET atg = LAST_N
+ASSERT atg >= 3 "resolve reatp"
+GETF gate heat
+LET hg = LAST_N
+GETF gate threshold
+LET tg0 = LAST_N
+SEND gate resolve 0
+ASSERT LAST_N == 0 "resolve n0"
+SEND gate resolve -3
+ASSERT LAST_N == 0 "resolve nneg"
+GETF gate atp
+ASSERT LAST_N == atg "resolve atp held nlt1"
+GETF gate heat
+ASSERT LAST_N == hg "resolve heat held nlt1"
+GETF gate threshold
+ASSERT LAST_N == tg0 "resolve thr held nlt1"
+
+SEND g0 pulse 4
+SEND g0 photosynth 6
+SEND g0 glycolyse 6
+SEND g0 pump 4
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 atp
+LET ga0 = LAST_N
+ASSERT ga0 >= 2 "g0 atp"
+GETF g0 age
+LET gag0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+GETF g0 reserve
+LET gr0 = LAST_N
+GETF g0 threshold
+LET gt0 = LAST_N
+GETF g0 pmf
+LET gp0 = LAST_N
+SEND g0 resolve 2
+ASSERT LAST_N == 2 "g0 resolve2"
+GETF g0 atp
+ASSERT LAST_N == ga0 - 2 "g0 atp-2"
+GETF g0 age
+ASSERT LAST_N == gag0 "g0 age held"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 energy
+ASSERT LAST_N == ge0 "g0 e held"
+GETF g0 reserve
+ASSERT LAST_N == gr0 "g0 r held"
+GETF g0 threshold
+ASSERT LAST_N == gt0 - 2 "g0 thr-2"
+GETF g0 pmf
+ASSERT LAST_N == gp0 "g0 pmf held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 still q"
+
+SEND poor pulse 3
+SEND poor photosynth 6
+SEND poor glycolyse 10
+SEND poor pump 4
+SEND poor set_threshold 3
+GETF poor atp
+LET pa = LAST_N
+ASSERT pa >= 5 "poor atp"
+GETF poor heat
+LET ph = LAST_N
+GETF poor threshold
+ASSERT LAST_N == 3 "poor thr3"
+SEND poor resolve 5
+ASSERT LAST_N == 5 "poor take5"
+GETF poor threshold
+ASSERT LAST_N == 1 "poor thr floor1"
+GETF poor heat
+ASSERT LAST_N == ph + 5 "poor heat+5"
+GETF poor atp
+ASSERT LAST_N == pa - 5 "poor atp-5"
+
+SEND twin pulse 6
+SEND twin photosynth 8
+SEND twin glycolyse 14
+SEND twin pump 6
+SEND twin bank 2
+SEND twin set_threshold 12
+GETF twin atp
+LET ta0 = LAST_N
+ASSERT ta0 >= 8 "twin atp"
+GETF twin energy
+LET te0 = LAST_N
+GETF twin age
+LET tag0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+GETF twin threshold
+LET tt0 = LAST_N
+ASSERT tt0 == 12 "twin thr12"
+GETF twin pmf
+LET tp0 = LAST_N
+
+SEND twin casp3 1
+ASSERT LAST_N == 1 "twin casp3"
+SEND twin cad 1
+ASSERT LAST_N == 1 "twin cad"
+SEND twin bleb 1
+ASSERT LAST_N == 1 "twin bleb"
+SEND twin effer 1
+ASSERT LAST_N == 1 "twin effer"
+GETF twin atp
+LET ta1 = LAST_N
+GETF twin heat
+LET th1 = LAST_N
+GETF twin energy
+LET te1 = LAST_N
+GETF twin age
+LET tag1 = LAST_N
+GETF twin reserve
+LET tr1 = LAST_N
+GETF twin threshold
+LET tt1 = LAST_N
+GETF twin pmf
+LET tp1 = LAST_N
+
+SEND twin resolve 2
+ASSERT LAST_N == 2 "twin resolve2"
+GETF twin atp
+ASSERT LAST_N == ta1 - 2 "twin atp-2"
+GETF twin heat
+ASSERT LAST_N == th1 + 2 "twin heat+2"
+GETF twin energy
+ASSERT LAST_N == te1 "twin e held after resolve"
+GETF twin age
+ASSERT LAST_N == tag1 "twin age held after resolve"
+GETF twin reserve
+ASSERT LAST_N == tr1 "twin r held after resolve"
+GETF twin threshold
+ASSERT LAST_N == tt1 - 2 "twin thr-2"
+GETF twin pmf
+ASSERT LAST_N == tp1 "twin pmf held"
+GETF twin alive
+ASSERT LAST_N == 1 "twin lives continuum"
+
+SEND mac pulse 5
+SEND mac photosynth 6
+SEND mac glycolyse 8
+SEND mac pump 5
+SEND mac set_threshold 11
+GETF mac atp
+LET ma0 = LAST_N
+GETF mac energy
+LET me0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac age
+LET mag0 = LAST_N
+GETF mac reserve
+LET mr0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+
+SEND mac effer 2
+ASSERT LAST_N == 2 "mac effer2"
+GETF mac energy
+ASSERT LAST_N == me0 + 2 "mac e+2 effer"
+GETF mac heat
+ASSERT LAST_N == mh0 + 2 "mac h+2 effer"
+GETF mac threshold
+ASSERT LAST_N == mt0 "mac thr held effer"
+GETF mac atp
+LET ma1 = LAST_N
+GETF mac energy
+LET me1 = LAST_N
+GETF mac heat
+LET mh1 = LAST_N
+GETF mac age
+LET mag1 = LAST_N
+GETF mac reserve
+LET mr1 = LAST_N
+GETF mac threshold
+LET mt1 = LAST_N
+GETF mac pmf
+LET mp1 = LAST_N
+
+SEND mac resolve 2
+ASSERT LAST_N == 2 "mac resolve2"
+GETF mac atp
+ASSERT LAST_N == ma1 - 2 "mac atp-2"
+GETF mac heat
+ASSERT LAST_N == mh1 + 2 "mac heat+2"
+GETF mac energy
+ASSERT LAST_N == me1 "mac e held resolve"
+GETF mac age
+ASSERT LAST_N == mag1 "mac age held"
+GETF mac reserve
+ASSERT LAST_N == mr1 "mac r held"
+GETF mac threshold
+ASSERT LAST_N == mt1 - 2 "mac thr-2"
+GETF mac pmf
+ASSERT LAST_N == mp1 "mac pmf held"
+GETF mac energy
+LET me2 = LAST_N
+GETF mac threshold
+LET mt2 = LAST_N
+GETF mac ready
+LET mrd = LAST_N
+IF me2 >= mt2 THEN
+  ASSERT mrd == 1 "mac ready if surplus"
+ELSE
+  ASSERT mrd == 0 "mac ready blocked"
+END
+
+SEND gate glycolyse 4
+GETF gate atp
+LET atp_p = LAST_N
+GETF gate heat
+LET hp = LAST_N
+GETF gate threshold
+LET tp_before = LAST_N
+SEND gate prime 1
+ASSERT LAST_N == 1 "prime take1"
+GETF gate heat
+ASSERT LAST_N == hp "prime heat held"
+GETF gate threshold
+ASSERT LAST_N == tp_before - 1 "prime thr-1"
+GETF gate atp
+LET atp_after_prime = LAST_N
+ASSERT atp_after_prime == atp_p - 1 "prime atp-1"
+
+GETF gate heat
+LET hp2 = LAST_N
+GETF gate threshold
+LET tp2 = LAST_N
+SEND gate resolve 1
+ASSERT LAST_N == 1 "resolve after prime"
+GETF gate heat
+ASSERT LAST_N == hp2 + 1 "resolve heat+1 vs prime"
+GETF gate threshold
+ASSERT LAST_N == tp2 - 1 "resolve thr-1 stacked"
+
+PRINT "LIFE_CELL_RESOLVE_2104_PASS"

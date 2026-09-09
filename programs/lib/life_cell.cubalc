@@ -39,6 +39,7 @@
 #   cad n                CAD/DFF40 nuclease after casp3 — pay n ATP ICAD-liberated DNA ladder → heat +n + age +n + thr +n (checkpoint); energy/pmf/reserve held; ready recompute
 #   bleb n               apoptotic blebbing after cad — pay n ATP ROCK/myosin → heat +n + age +n + reserve +n (body cargo); energy/pmf/thr held; ready recompute
 #   effer n              efferocytosis after bleb — pay n ATP MerTK/TIM-4 cup → heat +n + energy +n (corpse trophic cargo); age/pmf/reserve/thr held; ready recompute
+#   resolve n            resolution after effer — pay n ATP SPM/TGF-β/IL-10 program → heat +n + thr -n (pro-resolve ease); age/energy/pmf/reserve held; ready recompute
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -4001,6 +4002,76 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+
+  # RESOLVE: specialized pro-resolving mediators (SPM/resolvin/protectin/maresin) + TGF-β/IL-10
+  # after EFFER corpse clearance. Spend take=min(n,atp) ATP (lipid-mediator synthesis /
+  # vesicular release / transcriptional reprogramming to pro-resolve phenotype).
+  # HEAT += take (each biosynthetic / secretory cycle dissipates as heat).
+  # THRESHOLD eases: thr = max(1, thr - take) — resolution lowers inflammatory / mitotic barrier
+  # so tissue can re-enter repair-competent cycle (inverse of CAD DNA-checkpoint thr rise).
+  # AGE/energy/pmf/reserve/pcr HELD — resolve is anti-inflammatory quiet after trophic effer,
+  # not self-injury (bleb age+), not corpse cargo bank (bleb reserve+), not demolition (casp3
+  # energy drain), not pure CDK prime (prime lowers thr without heat pair).
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from effer (ATP->heat+n energy+n; thr held trophic cup), bleb (age+n reserve+n),
+  # cad (thr+n DNA ladder), prime (ATP->thr- only, no heat), ease (heat->thr-, no ATP),
+  # fortify (ATP->thr+), cool (heat leaves system). Continuum: ...->cad->bleb->effer->resolve.
+  # Signature: heat+n thr-n; age+energy+reserve+pmf held — pro-resolve ease, not injury/trophic.
+  # Usability: AGI models post-efferocytosis resolution / SPM program under ASSERT boards.
+  # Returns take resolved; dead/n<1/empty atp -> 0.
+  METHOD resolve n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 1
+    END
+    LET thr = thr - take
+    IF thr < 1 THEN
+      LET thr = 1
+    END
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END

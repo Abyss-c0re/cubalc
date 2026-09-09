@@ -1,0 +1,147 @@
+// atomic_printer_life_resolve.cubalc
+// Science integration: atomic printer continuum casp3->cad->bleb->effer->resolve.
+// Dying cell packages bodies (bleb); clearer gains trophic energy (effer); then SPM/TGF-b
+// resolve eases mitotic/inflammatory threshold while paying biosynthetic heat — free energy
+// flows and tissue returns toward repair-competent quiet. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 16 0
+ENTITY corpse OF Cell 1 16 0
+ENTITY clearer OF Cell 1 18 0
+
+SEND printer set_threshold 12
+SEND corpse set_threshold 12
+SEND clearer set_threshold 12
+
+SEND printer pulse 4
+SEND printer photosynth 6
+SEND printer glycolyse 6
+SEND printer pump 6
+SEND printer bank 3
+GETF printer atp
+ASSERT LAST_N >= 4 "sci printer atp"
+GETF printer energy
+ASSERT LAST_N >= 1 "sci printer e"
+GETF printer pmf
+ASSERT LAST_N >= 1 "sci printer pmf"
+
+SEND corpse pulse 4
+SEND corpse photosynth 6
+SEND corpse glycolyse 6
+SEND corpse pump 6
+SEND corpse bank 2
+GETF corpse atp
+ASSERT LAST_N >= 4 "sci corpse atp"
+
+SEND clearer pulse 5
+SEND clearer photosynth 6
+SEND clearer glycolyse 8
+SEND clearer pump 6
+GETF clearer atp
+ASSERT LAST_N >= 5 "sci clearer atp"
+GETF clearer energy
+LET ce0 = LAST_N
+GETF clearer heat
+LET ch0 = LAST_N
+GETF clearer threshold
+LET ct0 = LAST_N
+ASSERT ct0 == 12 "sci clearer thr12"
+GETF clearer age
+LET ca0 = LAST_N
+GETF clearer reserve
+LET cr0 = LAST_N
+GETF clearer pmf
+LET cp0 = LAST_N
+
+SEND corpse casp3 1
+ASSERT LAST_N == 1 "sci corpse casp3"
+SEND corpse cad 1
+ASSERT LAST_N == 1 "sci corpse cad"
+SEND corpse bleb 2
+ASSERT LAST_N == 2 "sci corpse bleb2"
+GETF corpse reserve
+ASSERT LAST_N >= 2 "sci corpse body cargo"
+GETF corpse alive
+ASSERT LAST_N == 1 "sci corpse still marked alive pre-clear"
+
+SEND clearer effer 2
+ASSERT LAST_N == 2 "sci clearer effer2"
+GETF clearer energy
+ASSERT LAST_N == ce0 + 2 "sci clearer trophic e+2"
+GETF clearer heat
+ASSERT LAST_N == ch0 + 2 "sci clearer heat+2 effer"
+GETF clearer threshold
+ASSERT LAST_N == ct0 "sci thr held through effer"
+GETF clearer age
+ASSERT LAST_N == ca0 "sci age held effer"
+GETF clearer reserve
+ASSERT LAST_N == cr0 "sci reserve held effer"
+GETF clearer pmf
+ASSERT LAST_N == cp0 "sci pmf held effer"
+
+GETF clearer atp
+LET ca_atp = LAST_N
+GETF clearer energy
+LET ce1 = LAST_N
+GETF clearer heat
+LET ch1 = LAST_N
+GETF clearer threshold
+LET ct1 = LAST_N
+
+SEND clearer resolve 2
+ASSERT LAST_N == 2 "sci clearer resolve2"
+GETF clearer atp
+ASSERT LAST_N == ca_atp - 2 "sci resolve atp-2"
+GETF clearer heat
+ASSERT LAST_N == ch1 + 2 "sci resolve heat+2"
+GETF clearer energy
+ASSERT LAST_N == ce1 "sci resolve e held"
+GETF clearer threshold
+ASSERT LAST_N == ct1 - 2 "sci resolve thr-2"
+GETF clearer age
+ASSERT LAST_N == ca0 "sci age held resolve"
+GETF clearer reserve
+ASSERT LAST_N == cr0 "sci r held resolve"
+GETF clearer pmf
+ASSERT LAST_N == cp0 "sci pmf held resolve"
+GETF clearer alive
+ASSERT LAST_N == 1 "sci clearer lives"
+
+GETF clearer energy
+LET ce2 = LAST_N
+GETF clearer threshold
+LET ct2 = LAST_N
+GETF clearer ready
+LET crd = LAST_N
+IF ce2 >= ct2 THEN
+  ASSERT crd == 1 "sci ready if surplus after resolve"
+ELSE
+  ASSERT crd == 0 "sci ready blocked after resolve"
+END
+
+SEND printer casp3 1
+SEND printer cad 1
+SEND printer bleb 1
+SEND printer effer 1
+GETF printer threshold
+LET pt0 = LAST_N
+GETF printer heat
+LET ph0 = LAST_N
+GETF printer energy
+LET pe0 = LAST_N
+GETF printer age
+LET pa0 = LAST_N
+SEND printer resolve 1
+ASSERT LAST_N == 1 "sci printer resolve1"
+GETF printer heat
+ASSERT LAST_N == ph0 + 1 "sci printer heat+1"
+GETF printer threshold
+ASSERT LAST_N == pt0 - 1 "sci printer thr-1"
+GETF printer energy
+ASSERT LAST_N == pe0 "sci printer e held"
+GETF printer age
+ASSERT LAST_N == pa0 "sci printer age held"
+
+PRINT "ATOMIC_PRINTER_LIFE_RESOLVE_PASS"
