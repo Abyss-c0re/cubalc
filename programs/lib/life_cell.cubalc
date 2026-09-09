@@ -34,6 +34,7 @@
 #   mptp n               mito permeability transition pore — collapse n pmf (CypD/ANT/VDAC mPTP) → heat +n + age +1 injury; energy/atp/reserve held
 #   momp n               Bax/Bak MOMP — pay n ATP oligomerize OMM pores → heat +1 + age +n (cyt c/SMAC/AIF release); pmf/energy/reserve held; apoptosis prime after mptp
 #   apaf n               Apaf-1/dATP apoptosome — pay n ATP wheel oligomerize → heat +n + age +1 (caspase-9 platform); pmf/energy/reserve held; after momp
+#   casp9 n              caspase-9 initiator on apoptosome — pay n ATP CARD/dimer cleavage → heat +n + age +n (executioner priming cascade); pmf/energy/reserve held; after apaf
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3701,6 +3702,52 @@ CLASS Cell
     SETF THIS heat h
     GETF THIS age
     LET ag = LAST_N + 1
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+
+  # CASP9: caspase-9 initiator activation on Apaf-1 apoptosome (CARD-CARD dimer / auto-cleavage).
+  # Spend take=min(n,atp) ATP (holoenzyme catalytic cycles / executioner procaspase-3 processing work)
+  # → heat += take (each proteolytic cycle dissipates bond energy as heat).
+  # Cascade injury: age += take (executioner caspase-3/7 priming load scales with initiator dose).
+  # pmf/energy/reserve/pcr held — cytosolic caspase cascade does not dump DYm or burn glycogen spark.
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from apaf (ATP→heat+n age+1 platform unit), momp (ATP→heat+1 age+n pore release),
+  # mptp (pmf→bulk heat age+1, ATP held), mitophagy, die, lyse, uncouple, nclx, mcu, tether, fragment.
+  # Continuum pathophys: tether→mcu→nclx→mptp→momp→apaf→casp9 initiator → executioner branch.
+  # Signature: BOTH heat and age scale with n (catalytic amplification) — not unit platform, not fixed tax.
+  # Usability: AGI models intrinsic apoptosis caspase-9 ignition under ASSERT boards.
+  # Returns take cleaved; dead/n<1/empty atp → 0.
+  METHOD casp9 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS age
+    LET ag = LAST_N + take
     SETF THIS age ag
     RET take
   END

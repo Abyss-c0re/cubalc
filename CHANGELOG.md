@@ -1,3 +1,11 @@
+## [1.15.1585-usability] MI 2099 LIFE_CELL_CASP9 — 2026-09-09
+
+- feat(life): METHOD casp9 n — caspase-9 initiator on Apaf-1 apoptosome
+- Pay take=min(n,atp) ATP → heat +take + age +take (CARD/dimer cleavage / executioner priming)
+- pmf/energy/reserve held (cytosolic cascade ≠ IMM dump); fail-closed on empty ATP
+- Continuum: tether→mcu→nclx→mptp→momp→apaf→**casp9**; signature both heat+age scale (vs apaf age unit)
+- proofs 2099 asserts_ok=82 fail=0; science 40/0; free energy must flow
+
 ## [1.15.1583-usability] MI 2097 LIFE_CELL_MOMP — 2026-09-09
 
 - feat(life): METHOD momp n — Bax/Bak mitochondrial outer membrane permeabilization

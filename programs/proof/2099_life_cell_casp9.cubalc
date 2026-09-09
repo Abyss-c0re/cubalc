@@ -1,0 +1,335 @@
+// 2099_life_cell_casp9.cubalc
+// Proof 2099: life_cell casp9 — caspase-9 initiator on apoptosome.
+// Pay n ATP CARD/dimer cleavage → heat +n + age +n (executioner priming).
+// pmf/energy/reserve held. Distinct from apaf (heat+n age+1 platform),
+// momp (heat+1 age+n pores). Pathophysiology after apaf continuum.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "casp9 a5"
+GETF gate atp
+ASSERT LAST_N == 4 "casp9 atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "casp9 h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "casp9 pmf5"
+GETF gate energy
+LET e0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+
+// CASP9: pay 2 ATP → heat +2 + age +2; pmf/energy held
+SEND gate casp9 2
+ASSERT LAST_N == 2 "casp9 take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "casp9 atp-2"
+GETF gate age
+ASSERT LAST_N == a0 + 2 "casp9 age+2"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "casp9 heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "casp9 e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "casp9 r held"
+GETF gate pmf
+ASSERT LAST_N == p0 "casp9 pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "casp9 lives"
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+
+SEND gate casp9 10
+ASSERT LAST_N == at1 "casp9 clamp atp"
+GETF gate atp
+ASSERT LAST_N == 0 "casp9 atp0"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "casp9 age clamp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "casp9 heat clamp"
+GETF gate pmf
+ASSERT LAST_N == p0 "pmf held clamp"
+
+SEND gate casp9 1
+ASSERT LAST_N == 0 "casp9 empty atp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "heat held empty"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "age held empty"
+
+// n<1 / dead fail-closed
+SEND gate casp9 0
+ASSERT LAST_N == 0 "casp9 n0"
+SEND dead casp9 2
+ASSERT LAST_N == 0 "dead casp90"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays"
+
+// poor: no atp → 0
+SEND poor pulse 3
+SEND poor photosynth 2
+// energy only, no glycolyse → atp 0
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+SEND poor casp9 3
+ASSERT LAST_N == 0 "poor no atp"
+GETF poor heat
+ASSERT LAST_N == 0 "poor heat0"
+GETF poor age
+ASSERT LAST_N == 3 "poor age pulse only"
+
+// G0 still runs caspase-9 initiator (cytosolic; mitosis suppressed)
+SEND g0 quiesce
+SEND g0 pulse 2
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+GETF g0 atp
+LET gat = LAST_N
+ASSERT gat >= 1 "g0 has atp"
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 age
+LET ga0 = LAST_N
+SEND g0 casp9 1
+ASSERT LAST_N == 1 "g0 apaf1"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 1 "g0 heat+1"
+GETF g0 age
+ASSERT LAST_N == ga0 + 1 "g0 age+1"
+GETF g0 atp
+ASSERT LAST_N == gat - 1 "g0 atp-1"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 not ready"
+
+// Distinct from apaf: apaf heat+n age+1; casp9 heat+n age+n
+SEND twin pulse 5
+SEND twin photosynth 5
+SEND twin glycolyse 4
+SEND twin pump 5
+GETF twin atp
+LET tat0 = LAST_N
+GETF twin age
+LET ta0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+SEND twin apaf 2
+ASSERT LAST_N == 2 "twin apaf2"
+GETF twin atp
+ASSERT LAST_N == tat0 - 2 "twin apaf atp"
+GETF twin age
+ASSERT LAST_N == ta0 + 1 "twin apaf age+1"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "twin apaf heat+n"
+GETF twin pmf
+ASSERT LAST_N == tp0 "twin apaf pmf held"
+GETF twin age
+LET ta1 = LAST_N
+GETF twin heat
+LET th1 = LAST_N
+GETF twin atp
+LET tat1 = LAST_N
+// recharge ATP for casp9
+SEND twin photosynth 3
+SEND twin glycolyse 3
+GETF twin atp
+LET tat2 = LAST_N
+ASSERT tat2 >= 2 "twin recharged"
+GETF twin heat
+LET th2 = LAST_N
+GETF twin age
+LET ta2 = LAST_N
+GETF twin energy
+LET te2 = LAST_N
+GETF twin pmf
+LET tp2 = LAST_N
+SEND twin casp9 2
+ASSERT LAST_N == 2 "twin casp92"
+GETF twin atp
+ASSERT LAST_N == tat2 - 2 "twin casp9 atp"
+GETF twin age
+ASSERT LAST_N == ta2 + 2 "twin casp9 age+n"
+GETF twin heat
+ASSERT LAST_N == th2 + 2 "twin casp9 heat+n"
+GETF twin pmf
+ASSERT LAST_N == tp2 "twin casp9 pmf held"
+GETF twin energy
+ASSERT LAST_N == te2 "twin e held casp9"
+GETF twin alive
+ASSERT LAST_N == 1 "twin lives"
+
+// Continuum pathophys: tether -> mcu -> nclx -> mptp -> momp -> apaf -> casp9
+ENTITY path OF Cell 1 14 0
+SEND path set_threshold 10
+SEND path pulse 6
+SEND path photosynth 8
+SEND path glycolyse 7
+SEND path pump 6
+GETF path energy
+LET pe0 = LAST_N
+GETF path atp
+LET pat0 = LAST_N
+SEND path tether 2
+ASSERT LAST_N == 2 "path tether"
+GETF path energy
+LET pe1 = LAST_N
+ASSERT pe1 == pe0 + 2 "path MERCs"
+SEND path mcu 2
+ASSERT LAST_N == 2 "path mcu"
+GETF path energy
+ASSERT LAST_N == pe1 + 2 "path TCA"
+GETF path pmf
+LET pp1 = LAST_N
+GETF path heat
+LET ph1 = LAST_N
+GETF path age
+LET pa1 = LAST_N
+SEND path nclx 1
+ASSERT LAST_N == 1 "path nclx"
+GETF path heat
+ASSERT LAST_N == ph1 + 1 "path nclx tax"
+GETF path age
+ASSERT LAST_N == pa1 "path nclx age held"
+GETF path pmf
+LET pp2 = LAST_N
+GETF path heat
+LET ph2 = LAST_N
+SEND path mptp 2
+ASSERT LAST_N == 2 "path mptp"
+GETF path pmf
+ASSERT LAST_N == pp2 - 2 "path mptp pmf"
+GETF path heat
+ASSERT LAST_N == ph2 + 2 "path mptp heat"
+GETF path age
+ASSERT LAST_N == pa1 + 1 "path mptp age+1"
+GETF path atp
+LET pat1 = LAST_N
+GETF path age
+LET pa2 = LAST_N
+GETF path heat
+LET ph3 = LAST_N
+GETF path pmf
+LET pp3 = LAST_N
+SEND path momp 2
+ASSERT LAST_N == 2 "path momp"
+GETF path atp
+ASSERT LAST_N == pat1 - 2 "path momp atp"
+GETF path age
+ASSERT LAST_N == pa2 + 2 "path momp age+n"
+GETF path heat
+ASSERT LAST_N == ph3 + 1 "path momp heat+1"
+GETF path pmf
+ASSERT LAST_N == pp3 "path momp pmf held"
+GETF path atp
+LET pat2 = LAST_N
+GETF path age
+LET pa3 = LAST_N
+GETF path heat
+LET ph4 = LAST_N
+GETF path energy
+LET pe2 = LAST_N
+GETF path reserve
+LET pr0 = LAST_N
+// may need more ATP after momp spent 2
+SEND path photosynth 2
+SEND path glycolyse 2
+GETF path atp
+LET pat3 = LAST_N
+ASSERT pat3 >= 2 "path atp for apaf"
+GETF path heat
+LET ph5 = LAST_N
+GETF path age
+LET pa4 = LAST_N
+GETF path energy
+LET pe3 = LAST_N
+GETF path pmf
+LET pp4 = LAST_N
+SEND path apaf 2
+ASSERT LAST_N == 2 "path apaf"
+GETF path atp
+ASSERT LAST_N == pat3 - 2 "path apaf atp"
+GETF path age
+ASSERT LAST_N == pa4 + 1 "path apaf age+1"
+GETF path heat
+ASSERT LAST_N == ph5 + 2 "path apaf heat+n"
+GETF path pmf
+ASSERT LAST_N == pp4 "path apaf pmf held"
+GETF path energy
+ASSERT LAST_N == pe3 "path e held full arc"
+GETF path reserve
+ASSERT LAST_N == pr0 "path r held full arc"
+GETF path alive
+ASSERT LAST_N == 1 "path lives full arc"
+
+// vitality still positive after initiator prime (cell not yet executed)
+
+// recharge ATP for caspase-9 initiator after apoptosome
+SEND path photosynth 2
+SEND path glycolyse 2
+GETF path atp
+LET pat4 = LAST_N
+ASSERT pat4 >= 2 "path atp for casp9"
+GETF path heat
+LET ph6 = LAST_N
+GETF path age
+LET pa5 = LAST_N
+GETF path energy
+LET pe4 = LAST_N
+GETF path pmf
+LET pp5 = LAST_N
+GETF path reserve
+LET pr1 = LAST_N
+SEND path casp9 2
+ASSERT LAST_N == 2 "path casp9"
+GETF path atp
+ASSERT LAST_N == pat4 - 2 "path casp9 atp"
+GETF path age
+ASSERT LAST_N == pa5 + 2 "path casp9 age+n"
+GETF path heat
+ASSERT LAST_N == ph6 + 2 "path casp9 heat+n"
+GETF path pmf
+ASSERT LAST_N == pp5 "path casp9 pmf held"
+GETF path energy
+ASSERT LAST_N == pe4 "path e held casp9"
+GETF path reserve
+ASSERT LAST_N == pr1 "path r held casp9"
+GETF path alive
+ASSERT LAST_N == 1 "path lives casp9"
+
+SEND path vitality
+ASSERT LAST_N > 0 "path vitality>0"
+
+PRINT "2099_life_cell_casp9 PASS"
