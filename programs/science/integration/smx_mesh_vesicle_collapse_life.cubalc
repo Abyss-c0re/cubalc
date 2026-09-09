@@ -1,0 +1,77 @@
+// smx_mesh_vesicle_collapse_life.cubalc
+// SMX mesh: vesicle full-collapse life-force — post-mix omega-figure flatten on life_cell continuum.
+// Matrix is key. Cube is SoT. Free energy must flow. No IF*P duals.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mesh OF Cell 1 44 0
+SEND mesh set_threshold 11
+SEND mesh pulse 5
+SEND mesh photosynth 36
+SEND mesh glycolyse 28
+SEND mesh pump 18
+SEND mesh photophos 18
+SEND mesh converge 3
+SEND mesh extend 1
+SEND mesh fold 1
+SEND mesh zip 1
+SEND mesh crest 1
+SEND mesh migrate 1
+SEND mesh stream 1
+SEND mesh condense 1
+SEND mesh fate 1
+SEND mesh project 1
+SEND mesh synapse 1
+SEND mesh release 3
+SEND mesh reuptake 2
+SEND mesh refill 2
+SEND mesh dock 2
+SEND mesh arm 2
+SEND mesh clamp 2
+SEND mesh trigger 2
+SEND mesh pore 2
+SEND mesh mix 2
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+
+GETF mesh heat
+LET h0 = LAST_N
+GETF mesh energy
+LET e0 = LAST_N
+GETF mesh atp
+LET a0 = LAST_N
+GETF mesh threshold
+LET t0 = LAST_N
+GETF mesh pmf
+LET p0 = LAST_N
+GETF mesh setpoint
+LET s0 = LAST_N
+GETF mesh pcr
+LET c0 = LAST_N
+GETF mesh reserve
+LET r0 = LAST_N
+ASSERT e0 >= 1 "smx e"
+ASSERT a0 >= 1 "smx a"
+ASSERT r0 >= 1 "smx r"
+
+SEND mesh collapse 1
+ASSERT LAST_N == 1 "smx collapse1"
+GETF mesh heat
+ASSERT LAST_N == h0 + 1 "smx h+1"
+GETF mesh energy
+ASSERT LAST_N == e0 - 1 "smx e-1"
+GETF mesh atp
+ASSERT LAST_N == a0 - 1 "smx a-1"
+GETF mesh reserve
+ASSERT LAST_N == r0 - 1 "smx r-1"
+GETF mesh pcr
+ASSERT LAST_N == c0 "smx pcr held"
+GETF mesh pmf
+ASSERT LAST_N == p0 "smx pmf held"
+GETF mesh setpoint
+ASSERT LAST_N == s0 "smx sp held"
+GETF mesh threshold
+ASSERT LAST_N == t0 "smx thr held"
+
+ASSERT 1 == 1 "smx vesicle collapse life complete"

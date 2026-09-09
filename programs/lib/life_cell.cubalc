@@ -6079,4 +6079,92 @@ CLASS Cell
   END
 
 
+
+  # COLLAPSE: post-mix Ω-figure full-collapse fusion / vesicle membrane flatten into PM.
+  # Spend take=min(n,atp,energy,reserve) — ATP + bulk metabolic fuel + cortical/CE reserve
+  # bank fund complete vesicle bilayer incorporation into the plasma membrane once MIX has
+  # diluted lumen–cleft contents through the aqueous pore (post-mix collapse; not multipotent
+  # stream, not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+ contact,
+  # not release pcr+ dump, not EAAT reserve+ clearance, not VGLUT reserve- pack, not dock
+  # pmf+ tethering, not arm pmf- zipper, not clamp sp+ hold, not trigger sp- unclamp, not
+  # pore thr- barrier drop, not mix pcr- content dilution).
+  # HEAT += take (each leaflet-flow / curvature-relax / Ω→flat membrane-area step dissipates).
+  # ENERGY -= take (collapse burns active metabolic pool into full-collapse fusion work; kin
+  #   to mix energy- but reserve- membrane-area bank instead of pcr- phosphagen content drive).
+  # ATP -= take (actomyosin/dynamin-adjacent neck scission residual + bilayer flow cycle).
+  # RESERVE falls: reserve = max(0, reserve - take) — cortical/CE lipid-area bank funds PM
+  #   expansion as the vesicle flattens into continuity (inverse of converge reserve+ CE bank;
+  #   distinct from stream reserve- fasciculation consume, release pcr+, mix pcr-, pore thr-).
+  # AGE/threshold/setpoint/pmf/pcr HELD — collapse is Ω-figure flatten after mix, not injury
+  # age+, not contact thr, not clamp-tension sp, not bouton dΨm, not phosphagen pcr.
+  # Ready recomputed from post-burn energy vs threshold.
+  # Continuum: ...->dock->arm->clamp->trigger->pore->mix->collapse.
+  # Signature: heat+n energy-n reserve-n; age+thr+sp+pmf+pcr held — collapse life-force.
+  # Usability: AGI models post-mix full-collapse vesicle→PM fusion under ASSERT.
+  # Returns take collapsed; dead/n<1/empty atp|energy|reserve -> 0.
+  METHOD collapse n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET rv = LAST_N
+    IF rv < 0 THEN
+      LET rv = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > rv THEN
+      LET take = rv
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET rv = rv - take
+    IF rv < 0 THEN
+      LET rv = 0
+    END
+    SETF THIS reserve rv
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
