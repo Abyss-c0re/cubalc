@@ -1,3 +1,12 @@
+## 1.15.1616-usability — MI 2129 LIFE_CELL_PORE (2026-09-09)
+### life_cell pore n — post-trigger fusion-pore open / SNARE-lipid stalk membrane merger
+- Pay min(n,atp,energy) -> heat+n energy-n thr-n; age/reserve/sp/pmf/pcr held; ready recompute
+- Continuum: ...->dock->arm->clamp->trigger->pore
+- Proof programs/proof/2129_life_cell_pore.cubalc asserts_ok=114
+- Science programs/science/integration/atomic_printer_life_pore.cubalc asserts_ok=21
+- SMX programs/science/integration/smx_mesh_fusion_pore_life.cubalc asserts_ok=11
+- Signature distinct from trigger sp- unclamp and clamp sp+ hold (thr- barrier drop)
+
 ## 1.15.1614-usability — MI 2127 LIFE_CELL_CLAMP (2026-09-09)
 
 - METHOD clamp n on life_cell: post-arm complexin clamp
