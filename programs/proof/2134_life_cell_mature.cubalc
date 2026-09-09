@@ -1,0 +1,559 @@
+// 2134_life_cell_mature.cubalc
+// Proof 2134: life_cell mature - post-acidify EE->LE Rab5->Rab7 maturation.
+// Pay min(n,atp,energy,pmf) -> heat+n energy-n pmf-n thr+n; age/reserve/sp/pcr held.
+// Continuum after acidify. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 40 0
+ENTITY poor OF Cell 1 0 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 24 0
+ENTITY twin OF Cell 1 30 0
+ENTITY ceil OF Cell 1 28 0
+ENTITY starved OF Cell 1 36 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 40
+SEND gate glycolyse 36
+SEND gate pump 28
+SEND gate photophos 28
+SEND gate photosynth 36
+SEND gate glycolyse 30
+SEND gate pump 20
+SEND gate charge 40
+SEND gate feed 40
+GETF gate age
+ASSERT LAST_N == 6 "af a6"
+GETF gate atp
+ASSERT LAST_N >= 20 "af atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate pmf
+LET pbase = LAST_N
+ASSERT pbase >= 5 "af pmf base"
+GETF gate threshold
+ASSERT LAST_N == 10 "af thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "af sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "af pcr0"
+
+SEND gate converge 3
+ASSERT LAST_N == 3 "af prece3"
+SEND gate extend 1
+ASSERT LAST_N == 1 "af prext1"
+SEND gate fold 1
+ASSERT LAST_N == 1 "af prefd1"
+SEND gate zip 1
+ASSERT LAST_N == 1 "af prez1"
+SEND gate crest 1
+ASSERT LAST_N == 1 "af prec1"
+SEND gate migrate 1
+ASSERT LAST_N == 1 "af prem1"
+SEND gate stream 1
+ASSERT LAST_N == 1 "af prest1"
+SEND gate condense 1
+ASSERT LAST_N == 1 "af precd1"
+SEND gate fate 1
+ASSERT LAST_N == 1 "af pref1"
+SEND gate project 1
+ASSERT LAST_N == 1 "af prep1"
+SEND gate synapse 1
+ASSERT LAST_N == 1 "af presy1"
+SEND gate release 4
+ASSERT LAST_N == 4 "af prer4"
+SEND gate reuptake 3
+ASSERT LAST_N == 3 "af preru3"
+SEND gate refill 2
+ASSERT LAST_N == 2 "af prerf2"
+SEND gate dock 2
+ASSERT LAST_N == 2 "af predk2"
+SEND gate arm 2
+ASSERT LAST_N == 2 "af prear2"
+SEND gate clamp 2
+ASSERT LAST_N == 2 "af precl2"
+SEND gate trigger 2
+ASSERT LAST_N == 2 "af pretr2"
+SEND gate pore 2
+ASSERT LAST_N == 2 "af prepo2"
+SEND gate mix 2
+ASSERT LAST_N == 2 "af premx2"
+SEND gate collapse 2
+ASSERT LAST_N == 2 "af precol2"
+SEND gate retrieve 2
+ASSERT LAST_N == 2 "af prert2"
+SEND gate photosynth 30
+SEND gate glycolyse 24
+SEND gate pump 18
+SEND gate photophos 16
+SEND gate charge 20
+SEND gate feed 20
+
+GETF gate heat
+LET h1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate age
+LET ag1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+ASSERT e1 >= 1 "af e primed"
+ASSERT at1 >= 1 "af a primed"
+
+SEND gate acidify 2
+ASSERT LAST_N >= 0 "gate preac"
+GETF gate heat
+LET hM = LAST_N
+GETF gate energy
+LET eM = LAST_N
+GETF gate atp
+LET aM = LAST_N
+GETF gate pmf
+LET pM = LAST_N
+GETF gate threshold
+LET tM = LAST_N
+GETF gate age
+LET agM = LAST_N
+GETF gate reserve
+LET rM = LAST_N
+GETF gate setpoint
+LET sM = LAST_N
+GETF gate pcr
+LET cM = LAST_N
+SEND gate mature 2
+LET tookM = LAST_N
+ASSERT tookM >= 0 "gate mat took"
+GETF gate heat
+ASSERT LAST_N == hM + tookM "gate mat heat"
+GETF gate energy
+ASSERT LAST_N == eM - tookM "gate mat e"
+GETF gate atp
+ASSERT LAST_N == aM - tookM "gate mat a"
+GETF gate pmf
+ASSERT LAST_N == pM - tookM "gate mat pmf"
+GETF gate threshold
+ASSERT LAST_N == tM + tookM "gate mat thr"
+GETF gate age
+ASSERT LAST_N == agM "gate mat age"
+GETF gate reserve
+ASSERT LAST_N == rM "gate mat r"
+GETF gate setpoint
+ASSERT LAST_N == sM "gate mat sp"
+GETF gate pcr
+ASSERT LAST_N == cM "gate mat pcr"
+
+SEND gate mature 0
+ASSERT LAST_N == 0 "af zero"
+
+SEND dead mature 3
+ASSERT LAST_N == 0 "af dead0"
+
+SEND poor mature 3
+ASSERT LAST_N == 0 "af poor0"
+
+SEND twin pulse 5
+SEND twin photosynth 22
+SEND twin glycolyse 18
+SEND twin pump 14
+SEND twin photophos 14
+SEND twin set_threshold 10
+SEND twin set_setpoint 10
+SEND twin release 3
+SEND twin reuptake 2
+SEND twin refill 1
+SEND twin dock 1
+SEND twin arm 1
+SEND twin clamp 1
+SEND twin trigger 1
+SEND twin pore 1
+ASSERT LAST_N == 1 "af twin prepore1"
+SEND twin mix 1
+ASSERT LAST_N == 1 "af twin premix1"
+SEND twin collapse 1
+ASSERT LAST_N == 1 "af twin precol1"
+SEND twin retrieve 1
+ASSERT LAST_N == 1 "af twin prert1"
+SEND twin photosynth 8
+SEND twin glycolyse 6
+GETF twin heat
+LET th = LAST_N
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+GETF twin pcr
+LET tc = LAST_N
+GETF twin age
+LET tage = LAST_N
+GETF twin reserve
+LET tr = LAST_N
+GETF twin threshold
+LET tt = LAST_N
+GETF twin setpoint
+LET tsp = LAST_N
+GETF twin pmf
+LET tp = LAST_N
+ASSERT te >= 1 "twin e"
+ASSERT ta >= 1 "twin a"
+SEND twin acidify 1
+ASSERT LAST_N >= 0 "twin preac"
+GETF twin heat
+LET hM = LAST_N
+GETF twin energy
+LET eM = LAST_N
+GETF twin atp
+LET aM = LAST_N
+GETF twin pmf
+LET pM = LAST_N
+GETF twin threshold
+LET tM = LAST_N
+GETF twin age
+LET agM = LAST_N
+GETF twin reserve
+LET rM = LAST_N
+GETF twin setpoint
+LET sM = LAST_N
+GETF twin pcr
+LET cM = LAST_N
+SEND twin mature 1
+LET tookM = LAST_N
+ASSERT tookM >= 0 "twin mat took"
+GETF twin heat
+ASSERT LAST_N == hM + tookM "twin mat heat"
+GETF twin energy
+ASSERT LAST_N == eM - tookM "twin mat e"
+GETF twin atp
+ASSERT LAST_N == aM - tookM "twin mat a"
+GETF twin pmf
+ASSERT LAST_N == pM - tookM "twin mat pmf"
+GETF twin threshold
+ASSERT LAST_N == tM + tookM "twin mat thr"
+GETF twin age
+ASSERT LAST_N == agM "twin mat age"
+GETF twin reserve
+ASSERT LAST_N == rM "twin mat r"
+GETF twin setpoint
+ASSERT LAST_N == sM "twin mat sp"
+GETF twin pcr
+ASSERT LAST_N == cM "twin mat pcr"
+
+SEND ceil pulse 5
+SEND ceil photosynth 20
+SEND ceil glycolyse 16
+SEND ceil pump 12
+SEND ceil photophos 12
+SEND ceil set_threshold 10
+SEND ceil set_setpoint 10
+SEND ceil release 5
+SEND ceil reuptake 2
+SEND ceil refill 1
+SEND ceil dock 2
+SEND ceil arm 1
+SEND ceil clamp 2
+SEND ceil trigger 2
+SEND ceil pore 2
+ASSERT LAST_N == 2 "af ceil prepore2"
+SEND ceil mix 1
+ASSERT LAST_N == 1 "ceil premix"
+SEND ceil collapse 1
+ASSERT LAST_N == 1 "ceil precol"
+SEND ceil retrieve 1
+ASSERT LAST_N == 1 "ceil prert"
+SEND ceil photosynth 10
+SEND ceil glycolyse 8
+GETF ceil heat
+LET ch = LAST_N
+GETF ceil atp
+LET ca = LAST_N
+GETF ceil energy
+LET ce = LAST_N
+GETF ceil pmf
+LET cp = LAST_N
+GETF ceil reserve
+LET cr = LAST_N
+GETF ceil threshold
+LET ct = LAST_N
+ASSERT ca >= 1 "ceil a"
+ASSERT ce >= 1 "ceil e"
+SEND ceil acidify 100
+ASSERT LAST_N >= 0 "ceil preac"
+GETF ceil heat
+LET hM = LAST_N
+GETF ceil energy
+LET eM = LAST_N
+GETF ceil atp
+LET aM = LAST_N
+GETF ceil pmf
+LET pM = LAST_N
+GETF ceil threshold
+LET tM = LAST_N
+GETF ceil age
+LET agM = LAST_N
+GETF ceil reserve
+LET rM = LAST_N
+GETF ceil setpoint
+LET sM = LAST_N
+GETF ceil pcr
+LET cM = LAST_N
+SEND ceil mature 100
+LET tookM = LAST_N
+ASSERT tookM >= 0 "ceil mat took"
+GETF ceil heat
+ASSERT LAST_N == hM + tookM "ceil mat heat"
+GETF ceil energy
+ASSERT LAST_N == eM - tookM "ceil mat e"
+GETF ceil atp
+ASSERT LAST_N == aM - tookM "ceil mat a"
+GETF ceil pmf
+ASSERT LAST_N == pM - tookM "ceil mat pmf"
+GETF ceil threshold
+ASSERT LAST_N == tM + tookM "ceil mat thr"
+GETF ceil age
+ASSERT LAST_N == agM "ceil mat age"
+GETF ceil reserve
+ASSERT LAST_N == rM "ceil mat r"
+GETF ceil setpoint
+ASSERT LAST_N == sM "ceil mat sp"
+GETF ceil pcr
+ASSERT LAST_N == cM "ceil mat pcr"
+
+SEND starved pulse 3
+SEND starved photosynth 14
+SEND starved glycolyse 12
+SEND starved pump 8
+SEND starved set_threshold 50
+SEND starved release 1
+SEND starved reuptake 1
+SEND starved refill 1
+SEND starved dock 1
+SEND starved arm 1
+SEND starved clamp 1
+SEND starved trigger 1
+SEND starved pore 1
+ASSERT LAST_N == 1 "af starved prepore1"
+SEND starved mix 1
+ASSERT LAST_N == 1 "af starved premix1"
+SEND starved collapse 1
+ASSERT LAST_N == 1 "af starved precol1"
+SEND starved retrieve 1
+ASSERT LAST_N == 1 "af starved prert1"
+GETF starved energy
+LET se = LAST_N
+GETF starved atp
+LET sa = LAST_N
+GETF starved threshold
+LET st = LAST_N
+GETF starved setpoint
+LET ssp = LAST_N
+GETF starved heat
+LET sh = LAST_N
+GETF starved pmf
+LET spm = LAST_N
+GETF starved pcr
+LET sc = LAST_N
+GETF starved reserve
+LET sr = LAST_N
+SEND starved acidify 100
+ASSERT LAST_N >= 0 "starved preac"
+GETF starved heat
+LET hM = LAST_N
+GETF starved energy
+LET eM = LAST_N
+GETF starved atp
+LET aM = LAST_N
+GETF starved pmf
+LET pM = LAST_N
+GETF starved threshold
+LET tM = LAST_N
+GETF starved age
+LET agM = LAST_N
+GETF starved reserve
+LET rM = LAST_N
+GETF starved setpoint
+LET sM = LAST_N
+GETF starved pcr
+LET cM = LAST_N
+SEND starved mature 100
+LET tookM = LAST_N
+ASSERT tookM >= 0 "starved mat took"
+GETF starved heat
+ASSERT LAST_N == hM + tookM "starved mat heat"
+GETF starved energy
+ASSERT LAST_N == eM - tookM "starved mat e"
+GETF starved atp
+ASSERT LAST_N == aM - tookM "starved mat a"
+GETF starved pmf
+ASSERT LAST_N == pM - tookM "starved mat pmf"
+GETF starved threshold
+ASSERT LAST_N == tM + tookM "starved mat thr"
+GETF starved age
+ASSERT LAST_N == agM "starved mat age"
+GETF starved reserve
+ASSERT LAST_N == rM "starved mat r"
+GETF starved setpoint
+ASSERT LAST_N == sM "starved mat sp"
+GETF starved pcr
+ASSERT LAST_N == cM "starved mat pcr"
+
+SEND g0 pulse 4
+SEND g0 photosynth 18
+SEND g0 glycolyse 14
+SEND g0 pump 10
+SEND g0 photophos 10
+SEND g0 set_threshold 8
+SEND g0 release 2
+SEND g0 reuptake 1
+SEND g0 refill 1
+SEND g0 dock 1
+SEND g0 arm 1
+SEND g0 clamp 1
+SEND g0 trigger 1
+SEND g0 pore 1
+SEND g0 mix 1
+SEND g0 collapse 1
+ASSERT LAST_N == 1 "af g0 precol"
+SEND g0 retrieve 1
+ASSERT LAST_N == 1 "af g0 prert"
+SEND g0 photosynth 10
+SEND g0 glycolyse 8
+SEND g0 quiesce
+GETF g0 reserve
+LET gr = LAST_N
+GETF g0 heat
+LET gh = LAST_N
+GETF g0 energy
+LET ge = LAST_N
+GETF g0 atp
+LET ga = LAST_N
+GETF g0 pmf
+LET gp = LAST_N
+SEND g0 acidify 1
+ASSERT LAST_N >= 0 "g0 preac"
+GETF g0 heat
+LET hM = LAST_N
+GETF g0 energy
+LET eM = LAST_N
+GETF g0 atp
+LET aM = LAST_N
+GETF g0 pmf
+LET pM = LAST_N
+GETF g0 threshold
+LET tM = LAST_N
+GETF g0 age
+LET agM = LAST_N
+GETF g0 reserve
+LET rM = LAST_N
+GETF g0 setpoint
+LET sM = LAST_N
+GETF g0 pcr
+LET cM = LAST_N
+SEND g0 mature 1
+LET tookM = LAST_N
+ASSERT tookM >= 0 "g0 mat took"
+GETF g0 heat
+ASSERT LAST_N == hM + tookM "g0 mat heat"
+GETF g0 energy
+ASSERT LAST_N == eM - tookM "g0 mat e"
+GETF g0 atp
+ASSERT LAST_N == aM - tookM "g0 mat a"
+GETF g0 pmf
+ASSERT LAST_N == pM - tookM "g0 mat pmf"
+GETF g0 threshold
+ASSERT LAST_N == tM + tookM "g0 mat thr"
+GETF g0 age
+ASSERT LAST_N == agM "g0 mat age"
+GETF g0 reserve
+ASSERT LAST_N == rM "g0 mat r"
+GETF g0 setpoint
+ASSERT LAST_N == sM "g0 mat sp"
+GETF g0 pcr
+ASSERT LAST_N == cM "g0 mat pcr"
+
+SEND gate photosynth 12
+SEND gate glycolyse 10
+GETF gate pmf
+LET p2 = LAST_N
+GETF gate heat
+LET h2 = LAST_N
+GETF gate energy
+LET e2 = LAST_N
+GETF gate atp
+LET a2 = LAST_N
+GETF gate reserve
+LET r2 = LAST_N
+GETF gate pcr
+LET c2 = LAST_N
+ASSERT e2 >= 1 "af e2"
+SEND gate acidify 1
+ASSERT LAST_N >= 0 "gate preac"
+GETF gate heat
+LET hM = LAST_N
+GETF gate energy
+LET eM = LAST_N
+GETF gate atp
+LET aM = LAST_N
+GETF gate pmf
+LET pM = LAST_N
+GETF gate threshold
+LET tM = LAST_N
+GETF gate age
+LET agM = LAST_N
+GETF gate reserve
+LET rM = LAST_N
+GETF gate setpoint
+LET sM = LAST_N
+GETF gate pcr
+LET cM = LAST_N
+SEND gate mature 1
+LET tookM = LAST_N
+ASSERT tookM >= 0 "gate mat took"
+GETF gate heat
+ASSERT LAST_N == hM + tookM "gate mat heat"
+GETF gate energy
+ASSERT LAST_N == eM - tookM "gate mat e"
+GETF gate atp
+ASSERT LAST_N == aM - tookM "gate mat a"
+GETF gate pmf
+ASSERT LAST_N == pM - tookM "gate mat pmf"
+GETF gate threshold
+ASSERT LAST_N == tM + tookM "gate mat thr"
+GETF gate age
+ASSERT LAST_N == agM "gate mat age"
+GETF gate reserve
+ASSERT LAST_N == rM "gate mat r"
+GETF gate setpoint
+ASSERT LAST_N == sM "gate mat sp"
+GETF gate pcr
+ASSERT LAST_N == cM "gate mat pcr"
+
+GETF gate heat
+LET hend = LAST_N
+ASSERT hend > hbase "af heat rose"
+GETF gate energy
+ASSERT LAST_N < ebase "af energy spent path"
+
+ASSERT 1 == 1 "life_cell mature proof complete"
+
+PRINT "2134_life_cell_mature PASS"

@@ -145,6 +145,7 @@
 #   collapse n           post-mix vesicle collapse / Ω-figure flatten into PM — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n; age/thr/sp/pmf/pcr held; ready recompute
 #   retrieve n           post-collapse clathrin/dynamin CME membrane retrieval — pay min(n,atp,energy) → heat +n + energy -n + reserve +n; age/thr/sp/pmf/pcr held; ready recompute
 #   acidify n            post-retrieve early-endosome v-ATPase lumen acidification — pay min(n,atp,energy) → heat +n + energy -n + pmf +n; age/reserve/thr/sp/pcr held; ready recompute
+#   mature n             post-acidify EE->LE maturation / Rab5->Rab7 + ESCRT-ILV commit — pay min(n,atp,energy,pmf) -> heat +n + energy -n + pmf -n + thr +n; age/reserve/sp/pcr held (consume EE delta-pH bank into late-endosome identity)
 
 CLASS Cell
   FIELD alive 0
@@ -6279,7 +6280,7 @@ CLASS Cell
   #   not injury age+, not membrane bank reserve±, not contact thr, not clamp-tension
   #   sp, not phosphagen pcr.
   # Ready recomputed from post-burn energy vs threshold.
-  # Continuum: ...->pore->mix->collapse->retrieve->acidify.
+  # Continuum: ...->pore->mix->collapse->retrieve->acidify->mature.
   # Signature: heat+n energy-n pmf+n; age+reserve+thr+sp+pcr held — acidify life-force.
   # Usability: AGI models post-retrieve EE v-ATPase acidification under ASSERT.
   # Returns take acidified; dead/n<1/empty atp|energy -> 0.
@@ -6342,6 +6343,109 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # MATURE: post-acidify early-endosome -> late-endosome maturation / Rab5->Rab7 conversion.
+  # Spend take=min(n,atp,energy,pmf) — ATP + bulk metabolic fuel + EE lumen delta-pH/dPsi_EE
+  # proton-motive bank fund CORVET->HOPS swap, PIKfyve PI(3,5)P2, and ESCRT-0/I/II/III
+  # ILV inward budding once ACIDIFY has built the v-ATPase EE proton gradient
+  # (post-acidify mature; not multipotent stream, not GRN fate lock, not growth-cone
+  # path sp+, not synaptogenesis thr+ contact, not release pcr+ dump, not EAAT
+  # reserve+ clearance, not VGLUT reserve- pack, not dock pmf+ AZ tethering, not arm
+  # pmf- zipper, not clamp sp+ hold, not trigger sp- unclamp, not pore thr- barrier
+  # drop, not mix pcr- dilution, not collapse reserve- flatten, not retrieve reserve+
+  # CME bank, not acidify pmf+ EE lumen pump).
+  # HEAT += take (each Rab-GAP/GEF exchange / HOPS tether / ESCRT filament / ILV scission
+  #   step dissipates as endosome identity-conversion work).
+  # ENERGY -= take (mature burns active metabolic pool into LE commitment work; kin to
+  #   acidify energy- but pmf- consume of the EE proton bank acidify raised, instead of
+  #   pmf+ lumen acidification).
+  # ATP -= take (Rab5/Rab7 GTPase cycles / AAA VPS4 ESCRT disassembly / PIKfyve kinase).
+  # PMF falls: pmf = max(0, pmf - take) — spend EE lumen delta-pH/dPsi built by acidify into
+  #   maturation machinery (distinct from arm pmf- SNARE zipper, fate GRN pmf- lock,
+  #   and inverse of acidify/dock/biogenesis pmf+).
+  # THRESHOLD rises: threshold = min(1000, thr + take) — LE/lysosome hydrolase-latency
+  #   and cargo-commit checkpoint tightens as Rab7/HOPS identity locks (distinct from
+  #   pore thr- fusion-barrier drop, condense thr+ stream packing, and cad thr+ DNA
+  #   damage gate; not contact synapse thr+).
+  # AGE/reserve/setpoint/pcr HELD — mature is EE->LE Rab conversion after acidify, not
+  #   injury age+, not membrane bank reserve+/-, not clamp-tension sp, not phosphagen pcr.
+  # Ready recomputed from post-burn energy vs (possibly raised) threshold.
+  # Continuum: ...->collapse->retrieve->acidify->mature.
+  # Signature: heat+n energy-n pmf-n thr+n; age+reserve+sp+pcr held — mature life-force.
+  # Usability: AGI models post-acidify EE->LE maturation under ASSERT.
+  # Returns take matured; dead/n<1/empty atp|energy|pmf -> 0.
+  METHOD mature n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET p = p - take
+    IF p < 0 THEN
+      LET p = 0
+    END
+    SETF THIS pmf p
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET thr = thr + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 
