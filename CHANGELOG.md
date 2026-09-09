@@ -1,3 +1,9 @@
+## 1.15.1620-usability — LIFE_CELL_ACIDIFY (MI 2133)
+
+- feat(life): post-retrieve EE v-ATPase acidify — heat+ energy- atp- pmf+; continuum after retrieve
+- proof programs/proof/2133_life_cell_acidify.cubalc asserts_fail:0
+- science atomic_printer_life_acidify + smx_mesh_vesicle_acidify_life
+
 ## 1.15.1619-usability — MI 2132 LIFE_CELL_RETRIEVE (2026-09-09)
 ### life_cell retrieve n — post-collapse clathrin/dynamin CME membrane retrieval
 - Pay min(n,atp,energy) -> heat+n energy-n reserve+n; age/thr/sp/pmf/pcr held; ready recompute

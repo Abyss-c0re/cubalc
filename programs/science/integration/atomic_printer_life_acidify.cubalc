@@ -1,0 +1,110 @@
+// atomic_printer_life_acidify.cubalc
+// Science board: life_cell acidify — post-retrieve EE v-ATPase lumen acidification.
+// Atomic printer life-force continuum slice. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 50 0
+SEND printer set_threshold 12
+SEND printer pulse 4
+SEND printer photosynth 28
+SEND printer glycolyse 20
+SEND printer pump 16
+SEND printer photophos 16
+SEND printer photosynth 16
+SEND printer glycolyse 12
+
+SEND printer converge 1
+SEND printer extend 1
+SEND printer fold 1
+SEND printer zip 1
+SEND printer crest 1
+SEND printer migrate 1
+SEND printer stream 1
+SEND printer condense 1
+SEND printer fate 1
+SEND printer project 1
+SEND printer synapse 1
+SEND printer release 4
+SEND printer reuptake 2
+SEND printer refill 2
+SEND printer dock 2
+SEND printer arm 2
+SEND printer clamp 3
+SEND printer trigger 2
+SEND printer pore 2
+SEND printer mix 2
+SEND printer collapse 2
+SEND printer retrieve 2
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer age
+LET age0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+GETF printer pmf
+LET p0 = LAST_N
+GETF printer pcr
+LET c0 = LAST_N
+ASSERT e0 >= 2 "sci e primed"
+ASSERT a0 >= 2 "sci a primed"
+
+SEND printer acidify 2
+ASSERT LAST_N == 2 "sci acidify2"
+
+GETF printer heat
+ASSERT LAST_N == h0 + 2 "sci heat+2"
+GETF printer energy
+ASSERT LAST_N == e0 - 2 "sci e-2"
+GETF printer atp
+ASSERT LAST_N == a0 - 2 "sci a-2"
+GETF printer pmf
+ASSERT LAST_N == p0 + 2 "sci pmf+2"
+GETF printer reserve
+ASSERT LAST_N == r0 "sci reserve held"
+GETF printer age
+ASSERT LAST_N == age0 "sci age held"
+GETF printer threshold
+ASSERT LAST_N == t0 "sci thr held"
+GETF printer setpoint
+ASSERT LAST_N == s0 "sci sp held"
+GETF printer pcr
+ASSERT LAST_N == c0 "sci pcr held"
+
+SEND printer photosynth 8
+SEND printer glycolyse 6
+GETF printer heat
+LET h1 = LAST_N
+GETF printer pmf
+LET p1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+SEND printer acidify 1
+ASSERT LAST_N == 1 "sci acidify1"
+GETF printer heat
+ASSERT LAST_N == h1 + 1 "sci h1+"
+GETF printer pmf
+ASSERT LAST_N == p1 + 1 "sci p1+"
+GETF printer energy
+ASSERT LAST_N == e1 - 1 "sci e1-"
+
+ENTITY dead OF Cell 0 20 0
+SEND dead acidify 2
+ASSERT LAST_N == 0 "sci dead0"
+
+ENTITY poor OF Cell 1 0 0
+SEND poor set_threshold 5
+SEND poor acidify 2
+ASSERT LAST_N == 0 "sci poor0"
+
+ASSERT 1 == 1 "atomic printer life acidify complete"
