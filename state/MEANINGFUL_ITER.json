@@ -28,9 +28,9 @@
   "host_finish": true,
   "anti_bloat": true,
   "feat_head": "8b03b29bbe2780cdb8a35e695e223c8ea889fe0c",
-  "head": "c1ec21bad39f48d54ff14a541e781080f4ad99b3",
-  "tip": "c1ec21bad39f48d54ff14a541e781080f4ad99b3",
-  "pinned_head": "c1ec21bad39f48d54ff14a541e781080f4ad99b3",
-  "commit": "c1ec21bad",
-  "short": "c1ec21bad"
+  "head": "2c493ec8483cb8e9cd627de8dfbbb7324a61fec8",
+  "tip": "2c493ec8483cb8e9cd627de8dfbbb7324a61fec8",
+  "pinned_head": "2c493ec8483cb8e9cd627de8dfbbb7324a61fec8",
+  "commit": "2c493ec84",
+  "short": "2c493ec84"
 }
