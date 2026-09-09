@@ -122,6 +122,8 @@
 #   lumen n              apical lumenogenesis after polar — ATP→heat+n pcr+n (secretory ~P); age/energy/pmf/reserve/thr/sp held
 #   cilia n              primary cilia / IFT after lumen — pay n ATP IFT-B/kinesin-2/polycystin trafficking → heat +n + pmf +n (flow-sense chemiosmotic bank, ceiling 1000); age/energy/reserve/thr/sp/pcr held; ready recompute
 #   align n            PCP tissue-axis after cilia — ATP->heat+ thr+ sp+ (age/energy/reserve/pmf/pcr held)
+#   converge n           CE after align — ATP->heat+n reserve+n (age/energy/pmf/pcr/thr/sp held)
+#   extend n             A-P elongation after converge — pay n ATP + n reserve tensile bank → heat +n + energy +n (FAK/YAP mechanotransduction); age/pmf/pcr/thr/sp held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -4549,7 +4551,7 @@ CLASS Cell
   # Distinct from align (ATP->heat+n thr+n sp+n reserve held), bleb (heat+n age+n
   # reserve+n), cilia (heat+n pmf+n), lumen (heat+n pcr+n), seal (heat+n thr+n),
   # polar (heat+n sp+n), fortify (thr+ no heat). Continuum:
-  # ...->seal->polar->lumen->cilia->align->converge.
+  # ...->seal->polar->lumen->cilia->align->converge->extend.
   # Signature: heat+n reserve+n; age+energy+pmf+pcr+thr+sp held — CE life-force.
   # Usability: AGI models post-PCP convergent-extension competence under ASSERT boards.
   # Returns take converged; dead/n<1/empty atp -> 0.
@@ -4592,6 +4594,79 @@ CLASS Cell
     END
     GETF THIS energy
     LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # EXTEND: A-P tissue elongation after CONVERGE (CE tensile bank deploy).
+  # Spend take=min(n,atp,reserve) — needs BOTH charged ATP (protrusive bipolar
+  # actomyosin cables / mediolateral-to-axial neighbor exchange completion) AND
+  # reserve tensile work banked by converge (junctional Myosin-II cargo).
+  # HEAT += take (cross-bridge / adhesion-turnover cycles dissipate as heat).
+  # RESERVE -= take (deploy CE cortical-tension cargo into axial elongation).
+  # ENERGY += take (integrin–FAK–YAP / piezo mechanotransduction returns metabolic
+  # free energy from tensile work — life-force flow, not demolition).
+  # AGE/pmf/pcr/threshold/setpoint HELD — extend is post-CE A-P lengthening, not
+  # PCP axis write (align thr+sp), not CE bank (converge reserve+), not bleb age+,
+  # not effer trophic energy-only, not draw (reserve→energy no ATP/heat).
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp or reserve cannot fund take>=1.
+  # Distinct from converge (ATP→heat+n reserve+n energy held), align (thr+sp+),
+  # effer (ATP→heat+n energy+n reserve held), draw (reserve→energy no heat),
+  # bleb (age+ reserve+), tether (ATP→energy pmf held). Continuum:
+  # ...->align->converge->extend.
+  # Signature: heat+n energy+n reserve-n; age+pmf+pcr+thr+sp held — CE→A-P life-force.
+  # Usability: AGI models post-CE elongation competence under ASSERT boards.
+  # Returns take extended; dead/n<1/empty atp or reserve -> 0.
+  METHOD extend n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
     GETF THIS threshold
     LET thr = LAST_N
     LET rd = 0

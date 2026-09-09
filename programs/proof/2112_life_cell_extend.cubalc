@@ -1,0 +1,365 @@
+// 2112_life_cell_extend.cubalc
+// Proof 2112: life_cell extend - A-P elongation after CONVERGE.
+// Pay min(n,atp,reserve) -> heat+n energy+n reserve-n; age/pmf/pcr/thr/sp held.
+// Continuum after converge. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+ENTITY ceil OF Cell 1 20 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 8
+SEND gate glycolyse 6
+SEND gate pump 5
+SEND gate photophos 4
+GETF gate age
+ASSERT LAST_N == 5 "ext a5"
+GETF gate atp
+ASSERT LAST_N >= 8 "ext atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate pmf
+LET pbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "ext thr10"
+GETF gate setpoint
+LET s0 = LAST_N
+ASSERT s0 == 10 "ext sp10"
+GETF gate pcr
+LET c0 = LAST_N
+ASSERT c0 == 0 "ext pcr0"
+GETF gate age
+LET a0 = LAST_N
+
+SEND gate converge 3
+ASSERT LAST_N == 3 "ext prece3"
+GETF gate reserve
+ASSERT LAST_N == rbase + 3 "ext r bank"
+GETF gate energy
+ASSERT LAST_N == ebase "ext e held ce"
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+
+SEND gate extend 2
+ASSERT LAST_N == 2 "ext take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "ext atp-2"
+GETF gate reserve
+ASSERT LAST_N == r1 - 2 "ext r-2"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "ext h+2"
+GETF gate energy
+ASSERT LAST_N == e1 + 2 "ext e+2"
+GETF gate age
+ASSERT LAST_N == a0 "ext age held"
+GETF gate threshold
+ASSERT LAST_N == t0 "ext thr held"
+GETF gate setpoint
+ASSERT LAST_N == s0 "ext sp held"
+GETF gate pcr
+ASSERT LAST_N == c0 "ext pcr held"
+GETF gate pmf
+ASSERT LAST_N == p0 "ext pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "ext lives"
+
+// clamp by remaining reserve after first extend
+GETF gate atp
+LET at1 = LAST_N
+GETF gate reserve
+LET r2 = LAST_N
+ASSERT r2 == r1 - 2 "ext r after first"
+SEND gate extend 99
+ASSERT LAST_N == r2 "ext clamp r"
+GETF gate reserve
+ASSERT LAST_N == 0 "ext r0"
+GETF gate atp
+ASSERT LAST_N == at1 - r2 "ext atp clamp"
+GETF gate energy
+ASSERT LAST_N == e1 + 2 + r2 "ext e total"
+
+SEND dead extend 3
+ASSERT LAST_N == 0 "dead ext0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays"
+
+SEND gate extend 0
+ASSERT LAST_N == 0 "ext n0"
+
+// poor: ensure zero reserve then fail-closed
+SEND poor pulse 2
+SEND poor photosynth 4
+SEND poor glycolyse 3
+GETF poor reserve
+LET pr = LAST_N
+// drain any reserve via draw into energy (no heat)
+IF pr > 0 THEN
+  SEND poor draw pr
+END
+GETF poor reserve
+ASSERT LAST_N == 0 "poor r0"
+GETF poor atp
+ASSERT LAST_N >= 1 "poor atp"
+GETF poor energy
+LET pe0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+SEND poor extend 2
+ASSERT LAST_N == 0 "poor no r"
+GETF poor energy
+ASSERT LAST_N == pe0 "poor e held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor h held"
+
+// starved: reserve without ATP
+ENTITY starved OF Cell 1 20 0
+SEND starved set_threshold 10
+SEND starved pulse 2
+SEND starved pinocyte 5
+ASSERT LAST_N == 5 "star pin"
+GETF starved reserve
+LET sr0 = LAST_N
+ASSERT sr0 >= 5 "star r"
+GETF starved atp
+LET sat = LAST_N
+IF sat > 0 THEN
+  SEND starved uncouple sat
+END
+// uncouple may not zero atp; burn via converge if any
+GETF starved atp
+LET sat2 = LAST_N
+IF sat2 > 0 THEN
+  SEND starved converge sat2
+END
+GETF starved atp
+ASSERT LAST_N == 0 "star atp0"
+GETF starved reserve
+LET sr = LAST_N
+ASSERT sr >= 1 "star r left"
+SEND starved extend 2
+ASSERT LAST_N == 0 "star no atp"
+GETF starved reserve
+ASSERT LAST_N == sr "star r held"
+
+SEND g0 pulse 4
+SEND g0 photosynth 5
+SEND g0 glycolyse 4
+SEND g0 pump 3
+SEND g0 quiesce
+SEND g0 converge 2
+ASSERT LAST_N == 2 "g0 ce"
+GETF g0 energy
+LET g0e = LAST_N
+GETF g0 reserve
+LET g0r = LAST_N
+GETF g0 heat
+LET g0h = LAST_N
+SEND g0 extend 2
+ASSERT LAST_N == 2 "g0 ext"
+GETF g0 energy
+ASSERT LAST_N == g0e + 2 "g0 e+2"
+GETF g0 reserve
+ASSERT LAST_N == g0r - 2 "g0 r-2"
+GETF g0 heat
+ASSERT LAST_N == g0h + 2 "g0 h+2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+SEND twin pulse 5
+SEND twin photosynth 7
+SEND twin glycolyse 5
+SEND twin pump 4
+SEND twin photophos 5
+GETF twin threshold
+LET tt0 = LAST_N
+GETF twin setpoint
+LET ts0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin pcr
+LET tc0 = LAST_N
+SEND twin align 2
+ASSERT LAST_N == 2 "twin align"
+GETF twin threshold
+ASSERT LAST_N == tt0 + 2 "twin thr+2"
+GETF twin setpoint
+ASSERT LAST_N == ts0 + 2 "twin sp+2"
+SEND twin converge 3
+ASSERT LAST_N == 3 "twin ce"
+GETF twin reserve
+ASSERT LAST_N == tr0 + 3 "twin r+3"
+GETF twin energy
+ASSERT LAST_N == te0 "twin e held ce"
+SEND twin extend 2
+ASSERT LAST_N == 2 "twin ext"
+GETF twin threshold
+ASSERT LAST_N == tt0 + 2 "twin thr held"
+GETF twin setpoint
+ASSERT LAST_N == ts0 + 2 "twin sp held"
+GETF twin reserve
+ASSERT LAST_N == tr0 + 1 "twin r net"
+GETF twin energy
+ASSERT LAST_N == te0 + 2 "twin e+2"
+GETF twin heat
+ASSERT LAST_N == th0 + 7 "twin heat"
+GETF twin pmf
+ASSERT LAST_N == tp0 "twin pmf"
+GETF twin pcr
+ASSERT LAST_N == tc0 "twin pcr"
+GETF twin age
+ASSERT LAST_N == 5 "twin age"
+GETF twin alive
+ASSERT LAST_N == 1 "twin lives"
+
+SEND mac pulse 6
+SEND mac photosynth 8
+SEND mac glycolyse 6
+SEND mac pump 5
+SEND mac photophos 6
+GETF mac age
+LET ma0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac energy
+LET me0 = LAST_N
+GETF mac reserve
+LET mr0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac setpoint
+LET ms0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+GETF mac pcr
+LET mc0 = LAST_N
+SEND mac seal 1
+ASSERT LAST_N == 1 "mac seal"
+SEND mac polar 1
+ASSERT LAST_N == 1 "mac polar"
+SEND mac lumen 1
+ASSERT LAST_N == 1 "mac lumen"
+SEND mac cilia 2
+ASSERT LAST_N == 2 "mac cilia"
+SEND mac align 2
+ASSERT LAST_N == 2 "mac align"
+SEND mac converge 3
+ASSERT LAST_N == 3 "mac ce"
+SEND mac extend 2
+ASSERT LAST_N == 2 "mac ext"
+GETF mac heat
+ASSERT LAST_N == mh0 + 12 "mac heat"
+GETF mac threshold
+ASSERT LAST_N == mt0 + 3 "mac thr"
+GETF mac setpoint
+ASSERT LAST_N == ms0 + 3 "mac sp"
+GETF mac pmf
+ASSERT LAST_N == mp0 + 2 "mac pmf"
+GETF mac pcr
+ASSERT LAST_N == mc0 + 1 "mac pcr"
+GETF mac reserve
+ASSERT LAST_N == mr0 + 1 "mac r net"
+GETF mac energy
+ASSERT LAST_N == me0 + 2 "mac e+2"
+GETF mac age
+ASSERT LAST_N == ma0 "mac age"
+GETF mac alive
+ASSERT LAST_N == 1 "mac lives"
+
+SEND ceil pulse 5
+SEND ceil photosynth 8
+SEND ceil glycolyse 6
+SEND ceil pump 4
+SEND ceil photophos 5
+SEND ceil converge 6
+ASSERT LAST_N == 6 "ceil ce6"
+GETF ceil threshold
+LET ct0 = LAST_N
+GETF ceil setpoint
+LET cs0 = LAST_N
+GETF ceil reserve
+LET cr0 = LAST_N
+GETF ceil heat
+LET ch0 = LAST_N
+GETF ceil energy
+LET ce0 = LAST_N
+SEND ceil extend 2
+ASSERT LAST_N == 2 "ceil e2"
+SEND ceil extend 3
+ASSERT LAST_N == 3 "ceil e3"
+GETF ceil reserve
+ASSERT LAST_N == cr0 - 5 "ceil r-5"
+GETF ceil heat
+ASSERT LAST_N == ch0 + 5 "ceil h+5"
+GETF ceil energy
+ASSERT LAST_N == ce0 + 5 "ceil e+5"
+GETF ceil threshold
+ASSERT LAST_N == ct0 "ceil thr"
+GETF ceil setpoint
+ASSERT LAST_N == cs0 "ceil sp"
+GETF ceil alive
+ASSERT LAST_N == 1 "ceil lives"
+
+ENTITY axis OF Cell 1 16 0
+SEND axis set_threshold 10
+SEND axis set_setpoint 10
+SEND axis pulse 5
+SEND axis photosynth 7
+SEND axis glycolyse 5
+SEND axis pump 4
+SEND axis photophos 5
+GETF axis atp
+ASSERT LAST_N >= 8 "axis atp"
+GETF axis energy
+LET xe0 = LAST_N
+GETF axis reserve
+LET xr0 = LAST_N
+GETF axis heat
+LET xh0 = LAST_N
+SEND axis converge 4
+ASSERT LAST_N == 4 "axis ce"
+GETF axis reserve
+ASSERT LAST_N == xr0 + 4 "axis r+4"
+GETF axis energy
+ASSERT LAST_N == xe0 "axis e held ce"
+SEND axis extend 3
+ASSERT LAST_N == 3 "axis ext"
+GETF axis reserve
+ASSERT LAST_N == xr0 + 1 "axis r net"
+GETF axis energy
+ASSERT LAST_N == xe0 + 3 "axis e+3"
+GETF axis heat
+ASSERT LAST_N == xh0 + 7 "axis heat"
+GETF axis alive
+ASSERT LAST_N == 1 "axis lives"
