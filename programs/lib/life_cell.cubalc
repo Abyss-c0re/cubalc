@@ -4982,7 +4982,7 @@ CLASS Cell
   # CE bank (converge reserve+), not polar sp+.
   # ready recomputed vs energy/threshold (G0 still forces ready 0).
   # Fail-closed before mutation if atp or reserve cannot fund take>=1.
-  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense->fate.
   # Signature: heat+n reserve-n; age+energy+pmf+thr+sp+pcr held — stream life-force.
   # Usability: AGI models collective NC chain-migration under ASSERT boards.
   # Returns take streamed; dead/n<1/empty atp|reserve -> 0.
@@ -5057,7 +5057,7 @@ CLASS Cell
   # lumen pcr+, not cilia pmf+.
   # ready recomputed vs energy/threshold (G0 still forces ready 0).
   # Fail-closed before mutation if atp or energy cannot fund take>=1.
-  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense->fate.
   # Signature: heat+n energy-n thr+n; age+pmf+reserve+sp+pcr held — condense life-force.
   # Usability: AGI models NC stream terminal mesenchymal condensation under ASSERT.
   # Returns take condensed; dead/n<1/empty atp|energy -> 0.
@@ -5107,6 +5107,77 @@ CLASS Cell
       SETF THIS ready 0
       RET take
     END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # FATE: neural-crest fate commitment / lineage restriction after CONDENSE packing.
+  # Spend take=min(n,atp,pmf) — ATP + chemiosmotic competence fund chromatin remodelers
+  # (SWI/SNF, Polycomb/Trithorax), Sox9/Sox10/Neurog2 GRN lock, mito-nuclear
+  # retrograde signals that extinguish multipotency at the condensate core
+  # (post-N-cad packing identity restriction; not EMT spark, not packing thr bar).
+  # HEAT += take (each remodeler / TF / mito-nuclear cycle dissipates as heat).
+  # PMF falls: pmf = max(0, pmf - take) — fate commitment draws ΔΨm / mito poise
+  # as cells trade sensory/chemiosmotic flexibility for stable lineage (inverse of
+  # cilia pmf+ flow-sense competence; distinct from migrate sp-, stream reserve-,
+  # condense energy- thr+, fold energy-, crest energy+).
+  # AGE/energy/reserve/threshold/setpoint/pcr HELD — fate is post-condense identity
+  # lock, not injury age+, not thr bar (zip/condense/align), not CE bank, not pcr
+  # lumen secretory, not polar sp+.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp or pmf cannot fund take>=1.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense->fate.
+  # Signature: heat+n pmf-n; age+energy+reserve+thr+sp+pcr held — fate life-force.
+  # Usability: AGI models NC multipotency restriction under ASSERT boards.
+  # Returns take fated; dead/n<1/empty atp|pmf -> 0.
+  METHOD fate n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
     LET rd = 0
     IF e >= thr THEN
       LET rd = 1
