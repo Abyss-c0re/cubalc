@@ -34,8 +34,8 @@
   "pass": true,
   "proof_status": "PASS",
   "note": "MATURE burns ATP+energy+pmf into heat and raises thr (LE hydrolase-latency commit) after acidify EE pmf bank.",
-  "feat_head": "PENDING",
-  "HEAD": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "commit": "PENDING"
+  "feat_head": "e72bfcf94b266b6e4359db2c16b9b5da3b6c9c12",
+  "HEAD": "e72bfcf94b266b6e4359db2c16b9b5da3b6c9c12",
+  "FEAT_HEAD": "e72bfcf94b266b6e4359db2c16b9b5da3b6c9c12",
+  "commit": "e72bfcf94b266b6e4359db2c16b9b5da3b6c9c12"
 }
