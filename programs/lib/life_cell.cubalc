@@ -27,6 +27,7 @@
 #   mitophagy n          selective mito QC — recycle n age + drain pmf debris → energy +1 heat; ATP/energy selectivity tax
 #   biogenesis n         mito biogenesis — invest n ATP + n reserve → n nascent pmf +1 heat; PGC-1α rebuild after QC
 #   fusion n             mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; gradient held
+#   fragment n           mito fission — pay n ATP (DRP1/FIS1 dynamin) → heat +1; nick min(n,age,pmf) gradient on cut tips; age held for mitophagy
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3346,6 +3347,68 @@ CLASS Cell
     GETF THIS heat
     LET h = LAST_N + 1
     SETF THIS heat h
+    RET take
+  END
+
+  # Fragment: mitochondrial fission (DRP1/FIS1 dynamin-related GTPase).
+  # Pay take=min(n,atp) ATP → heat += 1 (constriction / membrane scission tax).
+  # Damaged-tip nick: lose min(take, age, pmf) pmf when cut frees worn foci (age held).
+  # Age is NOT shed here — mitophagy clears isolates after partition; fusion is the inverse network step.
+  # pmf nick only when age>=1 and pmf>=1 (young pristine network: ATP tax + heat, gradient held).
+  # Fail-closed before mutation if ATP cannot fund take>=1.
+  # Distinct from fusion (ATP→age shed, pmf held), mitophagy (age→energy + pmf drain + tax),
+  # biogenesis (ATP+reserve→pmf), uncouple (pmf→heat), cytokinesis fission (cell split endowment),
+  # autophagy/scavenge/repair/renew.
+  # Completes dynamics: fragment isolate → mitophagy clear → biogenesis rebuild → fusion network.
+  # Usability: AGI models stress-induced mito fragmentation / DRP1 under ASSERT boards.
+  # Returns take fragmented; dead/n<1/empty atp → 0.
+  METHOD fragment n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    # damaged-tip gradient nick (age held for downstream mitophagy)
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET nick = take
+    IF nick > ag THEN
+      LET nick = ag
+    END
+    IF nick > p THEN
+      LET nick = p
+    END
+    IF nick > 0 THEN
+      LET p = p - nick
+      SETF THIS pmf p
+    END
     RET take
   END
 

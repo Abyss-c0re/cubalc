@@ -1,0 +1,256 @@
+// 2092_life_cell_fragment.cubalc
+// Proof 2092: life_cell fragment — mitochondrial fission (DRP1/FIS1 dynamin).
+// Pay n ATP → heat +1; nick min(n,age,pmf) gradient on cut tips; age held.
+// Completes dynamics: fragment isolate → mitophagy → biogenesis → fusion.
+// Distinct from fusion, mitophagy, biogenesis, uncouple, cytokinesis fission.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cut OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY young OF Cell 1 15 0
+ENTITY aged OF Cell 1 18 0
+ENTITY chain OF Cell 1 22 0
+
+SEND cut set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND young set_threshold 10
+SEND aged set_threshold 10
+SEND chain set_threshold 10
+
+// fund age + ATP + pmf
+SEND cut pulse 6
+SEND cut photosynth 5
+SEND cut glycolyse 4
+SEND cut feed 3
+SEND cut pump 5
+GETF cut age
+ASSERT LAST_N == 6 "cut a6"
+GETF cut atp
+ASSERT LAST_N == 4 "cut atp4"
+GETF cut pmf
+ASSERT LAST_N == 5 "cut pmf5"
+GETF cut heat
+ASSERT LAST_N == 0 "cut h0"
+GETF cut energy
+LET e0 = LAST_N
+GETF cut reserve
+LET r0 = LAST_N
+
+// fragment 3: pay 3 ATP, heat+1, nick min(3,6,5)=3 pmf, age held
+SEND cut fragment 3
+ASSERT LAST_N == 3 "cut frag3"
+GETF cut atp
+ASSERT LAST_N == 1 "cut atp-3"
+GETF cut age
+ASSERT LAST_N == 6 "cut age held"
+GETF cut pmf
+ASSERT LAST_N == 2 "cut pmf nick3"
+GETF cut heat
+ASSERT LAST_N == 1 "cut heat1"
+GETF cut energy
+ASSERT LAST_N == e0 "cut e held"
+GETF cut reserve
+ASSERT LAST_N == r0 "cut r held"
+GETF cut alive
+ASSERT LAST_N == 1 "cut lives"
+
+// clamp to remaining ATP (1)
+SEND cut fragment 10
+ASSERT LAST_N == 1 "cut clamp1"
+GETF cut atp
+ASSERT LAST_N == 0 "cut atp0"
+GETF cut pmf
+ASSERT LAST_N == 1 "cut pmf nick1 more"
+GETF cut age
+ASSERT LAST_N == 6 "cut age still"
+GETF cut heat
+ASSERT LAST_N == 2 "cut heat2"
+
+// empty ATP fail-closed
+SEND cut fragment 1
+ASSERT LAST_N == 0 "cut empty atp"
+GETF cut pmf
+ASSERT LAST_N == 1 "pmf held empty"
+GETF cut heat
+ASSERT LAST_N == 2 "heat held empty"
+
+// n < 1 fail
+SEND poor pulse 4
+SEND poor photosynth 3
+SEND poor glycolyse 2
+SEND poor pump 3
+SEND poor fragment 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF poor atp
+ASSERT LAST_N == 2 "poor atp held"
+GETF poor pmf
+ASSERT LAST_N == 3 "poor pmf held"
+
+// young pristine: ATP tax + heat, no pmf nick (age=0)
+SEND young photosynth 4
+SEND young glycolyse 3
+SEND young pump 4
+GETF young age
+ASSERT LAST_N == 0 "young a0"
+GETF young atp
+ASSERT LAST_N == 3 "young atp3"
+GETF young pmf
+ASSERT LAST_N == 4 "young pmf4"
+SEND young fragment 2
+ASSERT LAST_N == 2 "young frag2"
+GETF young atp
+ASSERT LAST_N == 1 "young atp-2"
+GETF young pmf
+ASSERT LAST_N == 4 "young pmf held"
+GETF young heat
+ASSERT LAST_N == 1 "young heat1"
+GETF young age
+ASSERT LAST_N == 0 "young a0 held"
+
+// age only, no ATP -> 0
+SEND aged pulse 5
+SEND aged pump 3
+GETF aged age
+ASSERT LAST_N == 5 "aged a5"
+GETF aged atp
+ASSERT LAST_N == 0 "aged atp0"
+GETF aged pmf
+ASSERT LAST_N == 3 "aged pmf3"
+SEND aged fragment 2
+ASSERT LAST_N == 0 "aged no atp"
+GETF aged age
+ASSERT LAST_N == 5 "aged a held"
+GETF aged pmf
+ASSERT LAST_N == 3 "aged pmf held"
+
+// dead cell
+SEND dead fragment 2
+ASSERT LAST_N == 0 "dead fail"
+
+// G0 still fragments (not mitosis-gated)
+SEND g0 pulse 4
+SEND g0 photosynth 3
+SEND g0 glycolyse 3
+SEND g0 pump 3
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+GETF g0 atp
+ASSERT LAST_N == 3 "g0 atp3"
+GETF g0 age
+ASSERT LAST_N == 4 "g0 a4"
+GETF g0 pmf
+ASSERT LAST_N == 3 "g0 pmf3"
+SEND g0 fragment 2
+ASSERT LAST_N == 2 "g0 frag2"
+GETF g0 atp
+ASSERT LAST_N == 1 "g0 atp1"
+GETF g0 age
+ASSERT LAST_N == 4 "g0 a held"
+GETF g0 pmf
+ASSERT LAST_N == 1 "g0 pmf nick2"
+GETF g0 heat
+ASSERT LAST_N == 1 "g0 heat1"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 unready"
+
+// dynamics chain: fragment → mitophagy → biogenesis → fusion
+SEND chain pulse 8
+SEND chain photosynth 10
+SEND chain glycolyse 6
+SEND chain feed 6
+SEND chain pump 6
+GETF chain age
+ASSERT LAST_N == 8 "chain a8"
+GETF chain pmf
+ASSERT LAST_N == 6 "chain pmf6"
+GETF chain atp
+LET ca0 = LAST_N
+ASSERT ca0 >= 4 "chain atp fund"
+SEND chain fragment 3
+ASSERT LAST_N == 3 "chain frag3"
+GETF chain age
+ASSERT LAST_N == 8 "chain a held after frag"
+GETF chain pmf
+ASSERT LAST_N == 3 "chain pmf nick3"
+// mitophagy clears isolated wear + residual debris
+SEND chain mitophagy 4
+ASSERT LAST_N == 4 "chain mito4"
+GETF chain age
+ASSERT LAST_N == 4 "chain a4"
+// restock membranes for biogenesis
+SEND chain photosynth 5
+GETF chain atp
+LET ca1 = LAST_N
+ASSERT ca1 >= 2 "chain atp bio"
+GETF chain reserve
+LET cr1 = LAST_N
+ASSERT cr1 >= 2 "chain r bio"
+SEND chain biogenesis 2
+ASSERT LAST_N == 2 "chain bio2"
+GETF chain pmf
+LET cp1 = LAST_N
+ASSERT cp1 >= 2 "chain pmf reborn"
+// restock ATP for MFN/OPA1 after biogenesis spend
+SEND chain photosynth 3
+SEND chain glycolyse 2
+// fusion networks remaining wear without draining pmf
+GETF chain atp
+LET ca2 = LAST_N
+ASSERT ca2 >= 1 "chain atp fus"
+GETF chain age
+LET cag = LAST_N
+ASSERT cag >= 1 "chain age left"
+GETF chain pmf
+LET cp0 = LAST_N
+SEND chain fusion 1
+ASSERT LAST_N == 1 "chain fus1"
+GETF chain pmf
+ASSERT LAST_N == cp0 "chain pmf held fus"
+GETF chain age
+ASSERT LAST_N == cag - 1 "chain a-1 fus"
+GETF chain alive
+ASSERT LAST_N == 1 "chain lives"
+
+// inverse of fusion: fragment does not shed age; fusion does not nick pmf
+ENTITY inv OF Cell 1 16 0
+SEND inv set_threshold 10
+SEND inv pulse 5
+SEND inv photosynth 6
+SEND inv glycolyse 5
+SEND inv pump 4
+GETF inv age
+LET ia0 = LAST_N
+GETF inv pmf
+LET ip0 = LAST_N
+GETF inv atp
+LET it0 = LAST_N
+SEND inv fragment 2
+ASSERT LAST_N == 2 "inv frag"
+GETF inv age
+ASSERT LAST_N == ia0 "inv age not shed"
+GETF inv pmf
+ASSERT LAST_N == ip0 - 2 "inv pmf nicked"
+SEND inv photosynth 2
+SEND inv glycolyse 2
+// fusion path: shed age, hold pmf
+GETF inv age
+LET ia1 = LAST_N
+GETF inv pmf
+LET ip1 = LAST_N
+GETF inv atp
+ASSERT LAST_N >= 2 "inv atp fus"
+SEND inv fusion 2
+ASSERT LAST_N == 2 "inv fus"
+GETF inv age
+ASSERT LAST_N == ia1 - 2 "inv age shed"
+GETF inv pmf
+ASSERT LAST_N == ip1 "inv pmf held fus"
+
+PRINT "2092_life_cell_fragment PASS"

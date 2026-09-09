@@ -1,0 +1,74 @@
+// atomic_printer_life_fragment.cubalc
+// Science board: DRP1/FIS1 mitochondrial fission on the atomic printer life cell.
+// Stress isolates worn foci (fragment) → mitophagy clears → biogenesis rebuilds → fusion networks.
+// Cube is SoT. Free energy must flow. AGI INCLUDE life_cell wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+SEND printer set_threshold 10
+
+// Place metabolic budget: age, ATP, reserve, pmf
+SEND printer pulse 7
+SEND printer photosynth 8
+SEND printer glycolyse 5
+SEND printer feed 5
+SEND printer pump 6
+
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+GETF printer age
+ASSERT LAST_N == 7 "printer aged"
+GETF printer atp
+ASSERT LAST_N >= 5 "printer charged"
+GETF printer pmf
+ASSERT LAST_N == 6 "printer gradient"
+
+// Stress fission: DRP1 cuts network — ATP tax, heat, tip nick, age held for QC
+SEND printer fragment 3
+ASSERT LAST_N == 3 "frag take"
+GETF printer heat
+ASSERT LAST_N >= 1 "scission heat"
+GETF printer age
+ASSERT LAST_N == 7 "wear not shed yet"
+GETF printer pmf
+ASSERT LAST_N == 3 "tip nick"
+
+// Selective mitophagy of isolates
+SEND printer mitophagy 3
+ASSERT LAST_N == 3 "mito clear"
+GETF printer age
+ASSERT LAST_N == 4 "wear reduced"
+
+// PGC-1α biogenesis rebuilds fleet — restock ATP + membranes after QC tax
+SEND printer photosynth 6
+SEND printer glycolyse 3
+SEND printer feed 2
+GETF printer atp
+ASSERT LAST_N >= 2 "atp for bio"
+GETF printer reserve
+ASSERT LAST_N >= 2 "membranes"
+SEND printer biogenesis 2
+ASSERT LAST_N == 2 "bio mint"
+GETF printer pmf
+ASSERT LAST_N >= 2 "nascent cristae"
+
+// MFN/OPA1 fusion complements remaining phenotype
+GETF printer atp
+ASSERT LAST_N >= 1 "atp for fus"
+GETF printer age
+LET aleft = LAST_N
+ASSERT aleft >= 1 "wear left"
+GETF printer pmf
+LET pheld = LAST_N
+SEND printer fusion 1
+ASSERT LAST_N == 1 "fus take"
+GETF printer age
+ASSERT LAST_N == aleft - 1 "complementation"
+GETF printer pmf
+ASSERT LAST_N == pheld "gradient held"
+
+GETF printer alive
+ASSERT LAST_N == 1 "colony lives"
+PRINT "atomic_printer_life_fragment PASS"
