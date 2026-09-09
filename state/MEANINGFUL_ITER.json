@@ -26,5 +26,11 @@
   "asserts_fail": 0,
   "science_asserts_ok": 17,
   "host_finish": true,
-  "anti_bloat": true
+  "anti_bloat": true,
+  "feat_head": "8c136d3bc14c4e53a3be8e2df1d7c5edb368a7d1",
+  "head": "8c136d3bc14c4e53a3be8e2df1d7c5edb368a7d1",
+  "tip": "8c136d3bc14c4e53a3be8e2df1d7c5edb368a7d1",
+  "pinned_head": "8c136d3bc14c4e53a3be8e2df1d7c5edb368a7d1",
+  "commit": "8c136d3bc",
+  "short": "8c136d3bc"
 }
