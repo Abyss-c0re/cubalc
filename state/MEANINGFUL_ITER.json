@@ -2,27 +2,24 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2137,
   "MEANINGFUL_ITER": 2137,
-  "iter": 2137,
+  "iter": 2138,
   "n": 2137,
-  "version": "1.15.1620-usability",
+  "version": "1.15.1621-usability",
   "VERSION": "1.15.1620-usability",
   "feature": "life_cell_degrade",
   "FEATURE": "LIFE_CELL_DEGRADE",
   "name": "LIFE_CELL_DEGRADE",
-  "title": "life cell degrade",
+  "title": "smx mesh vesicle export life",
   "label": "LIFE_CELL_DEGRADE",
   "ship": "2137_life_cell_degrade",
   "proof": "programs/proof/2137_life_cell_degrade.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2137_life_cell_degrade.cubalc",
-    "programs/science/integration/atomic_printer_life_degrade.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_degrade_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_export_life.cubalc"
   ],
-  "item": "life cell degrade",
-  "item_id": "mi_life_cell_degrade",
-  "summary": "Post-activate lysosomal substrate proteolysis / cathepsin processive cut for life_cell.",
-  "ts": "2026-09-09T23:28:24Z",
+  "item": "smx mesh vesicle export life",
+  "item_id": "mi_smx_mesh_vesicle_export_life",
+  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_export_life).",
+  "ts": "2026-09-09T23:38:41Z",
   "asserts_ok": 140,
   "asserts_fail": 0,
   "science_asserts_ok": 13,
@@ -37,5 +34,5 @@
   "feat_head": "ae585ae20b9f032b653d9036adae5bb6579975d8",
   "HEAD": "ae585ae20b9f032b653d9036adae5bb6579975d8",
   "FEAT_HEAD": "ae585ae20b9f032b653d9036adae5bb6579975d8",
-  "commit": "ae585ae20b9f032b653d9036adae5bb6579975d8"
+  "commit": "d5af3fa71"
 }
