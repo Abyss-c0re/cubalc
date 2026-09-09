@@ -1,0 +1,14 @@
+SHIP 2096 LIFE_CELL_MPTP
+feature: LIFE_CELL_MPTP
+version: 1.15.1259-usability
+proof: programs/proof/2096_life_cell_mptp.cubalc PASS asserts_ok=61 fail=0
+atomic: programs/science/integration/atomic_printer_life_mptp.cubalc PASS asserts_ok=21 fail=0
+flagship_1620: PASS asserts_ok=12
+lib: programs/lib/life_cell.cubalc METHOD mptp
+note: collapse take=min(n,pmf) as bulk heat; age+1 injury cue; energy/atp/reserve held
+distinct: uncouple (no age), nclx (+1 heat), mcu (TCA spark), synthase, tether
+pathophys: tether→mcu→nclx overload → mptp open (CypD/ANT/VDAC)
+hold_flash: 1
+MEANINGFUL_ITER: 2096
+HEAD_pin_target: tip after chore pin
+verified_at: 2026-09-09T04:40:00Z
