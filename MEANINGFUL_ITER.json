@@ -30,11 +30,11 @@
   "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
-  "feat_head": "PENDING",
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pinned_head": "PENDING",
-  "commit": "PENDING",
-  "short": "PENDING",
+  "feat_head": "c832697cddae3cb90965c4d1433098b344e622c6",
+  "head": "c832697cddae3cb90965c4d1433098b344e622c6",
+  "tip": "c832697cddae3cb90965c4d1433098b344e622c6",
+  "pinned_head": "c832697cddae3cb90965c4d1433098b344e622c6",
+  "commit": "c832697cd",
+  "short": "c832697cd",
   "note": "NCLX extrudes matrix Ca2+ after MCU TCA spark; pmf tax +1 heat; no energy/ATP mint; twin of MCU on MERCs continuum"
 }
