@@ -134,6 +134,8 @@
 #   project n             post-fate axonal/process projection — pay min(n,atp,energy) → heat +n + energy -n + sp +n (growth-cone MT/actin path length); age/pmf/reserve/thr/pcr held; ready recompute
 #   synapse n             post-project target innervation / chemical synapse assembly — pay min(n,atp,energy) → heat +n + energy -n + thr +n (SNARE/neurexin–neuroligin/PSD contact competence); age/pmf/reserve/sp/pcr held; ready recompute
 #   release n             post-synapse quantal vesicle fusion / neurotransmitter cleft dump — pay min(n,atp,energy) → heat +n + energy -n + pcr +n (Ca2+-SNARE fusion + NSF recycling + CK phosphagen shuttle at active zone); age/pmf/reserve/thr/sp held; ready recompute
+#   reuptake n            post-release neurotransmitter cleft clearance / EAAT reload — pay min(n,atp,energy) → heat +n + energy -n + reserve +n (EAAT/GAT Na+-coupled clearance + vesicle-pool reload bank); age/pmf/thr/sp/pcr held; ready recompute
+#   refill n              post-reuptake vesicular transmitter reload / VGLUT-v-ATPase packing — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n (proton-ATPase vesicle acidification + VGLUT/VGAT quanta pack from recovered-transmitter bank); age/pmf/thr/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5474,6 +5476,83 @@ CLASS Cell
       LET r = 1000
     END
     SETF THIS reserve r
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # REFILL: post-reuptake vesicular neurotransmitter reload / VGLUT-v-ATPase packing.
+  # Spend take=min(n,atp,energy,reserve) — ATP + bulk metabolic fuel + recovered-transmitter
+  # bank fund v-ATPase vesicle acidification and VGLUT/VGAT secondary-active transmitter
+  # packing into fusion-competent quanta once EAAT/GAT cleft clearance has recharged the
+  # terminal reserve bank (post-reuptake refill; not multipotent stream, not GRN fate lock,
+  # not growth-cone path sp+, not synaptogenesis thr+ contact, not release pcr+ dump, not
+  # reuptake reserve+ cleft clearance alone).
+  # HEAT += take (each proton-ATPase turn / VGLUT cycle / vesicle acidification dissipates).
+  # ENERGY -= take (vesicular reload burns active metabolic pool into quantal packing;
+  #   inverse of crest EMT energy+ spark; kin to reuptake energy- but reserve- pack-out
+  #   instead of reserve+ recovered-transmitter bank).
+  # RESERVE falls: reserve = reserve - take — recovered transmitter is packed into
+  # vesicular quanta (distinct from photosynth light->reserve, scavenge salvage, reuptake
+  # reserve+, and release pcr+ CK shuttle). Caps at 0.
+  # AGE/pmf/threshold/setpoint/pcr HELD — refill is vesicular reload after cleft clearance,
+  # not injury age+, not chemiosmotic fate pmf-, not contact thr, not path-length sp, not
+  # phosphagen pcr. Ready recomputed from energy vs thr.
+  METHOD refill n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
     GETF THIS quiescent
     IF LAST_N == 1 THEN
       SETF THIS ready 0
