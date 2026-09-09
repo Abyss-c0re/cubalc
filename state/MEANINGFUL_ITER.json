@@ -30,11 +30,11 @@
   "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
-  "feat_head": "",
-  "head": "",
-  "tip": "",
-  "pinned_head": "",
-  "commit": "",
-  "short": "",
+  "feat_head": "c52dea5f6a1fb8ae43f7c0259684fc72a65e9754",
+  "head": "c52dea5f6a1fb8ae43f7c0259684fc72a65e9754",
+  "tip": "c52dea5f6a1fb8ae43f7c0259684fc72a65e9754",
+  "pinned_head": "c52dea5f6a1fb8ae43f7c0259684fc72a65e9754",
+  "commit": "c52dea5f6",
+  "short": "c52dea5f6",
   "note": "MOMP OMM pores release IMS factors after mPTP continuum; ATP-paid age load; pmf held (unlike mPTP)"
 }
