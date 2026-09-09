@@ -1,0 +1,234 @@
+// 2096_life_cell_mptp.cubalc
+// Proof 2096: life_cell mptp — mito permeability transition pore (CypD/ANT/VDAC).
+// Collapse n pmf as bulk heat (take); age +1 injury cue; energy/atp/reserve held.
+// Distinct from uncouple (UCP leak, no age), nclx (+1 heat, Ca efflux), mcu (TCA spark),
+// synthase, reverse, tether. Pathophysiology after Ca2+ continuum overload.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "mptp a5"
+GETF gate atp
+ASSERT LAST_N == 4 "mptp atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "mptp h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "mptp pmf5"
+GETF gate energy
+LET e0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+
+// MPTP collapse: dump 2 pmf as heat + age injury
+SEND gate mptp 2
+ASSERT LAST_N == 2 "mptp take2"
+GETF gate pmf
+ASSERT LAST_N == 3 "mptp pmf-2"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "mptp heat+2"
+GETF gate age
+ASSERT LAST_N == a0 + 1 "mptp age+1"
+GETF gate energy
+ASSERT LAST_N == e0 "mptp e held"
+GETF gate atp
+ASSERT LAST_N == at0 "mptp atp held"
+GETF gate reserve
+ASSERT LAST_N == r0 "mptp r held"
+GETF gate alive
+ASSERT LAST_N == 1 "mptp lives"
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+
+SEND gate mptp 10
+ASSERT LAST_N == 3 "mptp clamp3"
+GETF gate pmf
+ASSERT LAST_N == 0 "mptp pmf0"
+GETF gate heat
+ASSERT LAST_N == h1 + 3 "mptp heat+3"
+GETF gate age
+ASSERT LAST_N == a1 + 1 "mptp age second injury"
+GETF gate energy
+ASSERT LAST_N == e0 "e held clamp"
+
+SEND gate mptp 1
+ASSERT LAST_N == 0 "mptp empty pmf"
+GETF gate heat
+ASSERT LAST_N == h1 + 3 "heat held empty"
+GETF gate age
+ASSERT LAST_N == a1 + 1 "age held empty"
+
+// poor: no pump -> pmf 0
+SEND poor pulse 3
+SEND poor photosynth 3
+SEND poor glycolyse 2
+GETF poor pmf
+ASSERT LAST_N == 0 "poor pmf0"
+GETF poor age
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+SEND poor mptp 2
+ASSERT LAST_N == 0 "poor no pmf"
+GETF poor age
+ASSERT LAST_N == pa0 "poor age held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor heat held"
+
+// dead cell
+SEND dead mptp 3
+ASSERT LAST_N == 0 "dead mptp0"
+
+// n < 1
+SEND gate mptp 0
+ASSERT LAST_N == 0 "mptp n0"
+
+// G0 still collapses gradient
+SEND g0 pulse 4
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+SEND g0 pump 4
+SEND g0 quiesce
+GETF g0 pmf
+ASSERT LAST_N == 4 "g0 pmf4"
+GETF g0 age
+LET ga0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+SEND g0 mptp 2
+ASSERT LAST_N == 2 "g0 mptp2"
+GETF g0 pmf
+ASSERT LAST_N == 2 "g0 pmf2"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 age
+ASSERT LAST_N == ga0 + 1 "g0 age+1"
+GETF g0 energy
+ASSERT LAST_N == ge0 "g0 e held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 still not ready"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 still G0"
+
+// Distinct from uncouple: uncouple dumps heat without age injury
+SEND twin pulse 5
+SEND twin photosynth 5
+SEND twin glycolyse 4
+SEND twin pump 5
+GETF twin age
+LET ta0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin pmf
+ASSERT LAST_N == 5 "twin pmf5"
+SEND twin uncouple 2
+ASSERT LAST_N == 2 "uncouple take2"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "uncouple heat+2"
+GETF twin age
+ASSERT LAST_N == ta0 "uncouple age held"
+GETF twin pmf
+ASSERT LAST_N == 3 "uncouple pmf3"
+SEND twin mptp 3
+ASSERT LAST_N == 3 "twin mptp3"
+GETF twin pmf
+ASSERT LAST_N == 0 "twin pmf0"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 + 3 "twin heat bulk"
+GETF twin age
+ASSERT LAST_N == ta0 + 1 "twin mptp injury"
+
+// Continuum pathophys: tether -> mcu -> nclx -> overload mptp
+ENTITY path OF Cell 1 14 0
+SEND path set_threshold 10
+SEND path pulse 6
+SEND path photosynth 6
+SEND path glycolyse 5
+SEND path pump 6
+GETF path energy
+LET pe0 = LAST_N
+GETF path atp
+LET pat0 = LAST_N
+SEND path tether 2
+ASSERT LAST_N == 2 "path tether"
+GETF path energy
+LET pe1 = LAST_N
+ASSERT pe1 == pe0 + 2 "path MERCs"
+SEND path mcu 2
+ASSERT LAST_N == 2 "path mcu"
+GETF path energy
+ASSERT LAST_N == pe1 + 2 "path TCA"
+GETF path pmf
+LET pp1 = LAST_N
+GETF path heat
+LET ph1 = LAST_N
+GETF path age
+LET pa1 = LAST_N
+SEND path nclx 1
+ASSERT LAST_N == 1 "path nclx"
+GETF path heat
+ASSERT LAST_N == ph1 + 1 "path nclx tax"
+GETF path age
+ASSERT LAST_N == pa1 "path nclx age held"
+GETF path pmf
+LET pp2 = LAST_N
+SEND path mptp 2
+ASSERT LAST_N == 2 "path mptp"
+GETF path pmf
+ASSERT LAST_N == pp2 - 2 "path mptp pmf"
+GETF path heat
+ASSERT LAST_N == ph1 + 1 + 2 "path mptp heat"
+GETF path age
+ASSERT LAST_N == pa1 + 1 "path injury"
+GETF path atp
+ASSERT LAST_N == pat0 - 2 "path atp after tether only"
+GETF path alive
+ASSERT LAST_N == 1 "path lives"
+
+// yield drops by collapsed pmf
+ENTITY yld OF Cell 1 10 0
+SEND yld set_threshold 10
+SEND yld pulse 2
+SEND yld photosynth 3
+SEND yld glycolyse 2
+SEND yld pump 3
+SEND yld yield
+LET y0 = LAST_N
+GETF yld pmf
+ASSERT LAST_N == 3 "yld pmf3"
+SEND yld mptp 3
+ASSERT LAST_N == 3 "yld mptp3"
+SEND yld yield
+LET y1 = LAST_N
+ASSERT y1 == y0 - 3 "yield sheds collapsed pmf"
+GETF yld heat
+ASSERT LAST_N == 3 "yld heat3"
+
+PRINT "2096_life_cell_mptp PASS"
