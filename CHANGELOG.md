@@ -1,3 +1,12 @@
+## 1.15.1612-usability — MI 2125 LIFE_CELL_DOCK (2026-09-09)
+
+### Life-force
+- `METHOD dock n` on `life_cell`: post-refill active-zone vesicle docking (Munc13/RIM/Rab3)
+- take=min(n,atp,energy) → heat+n energy-n pmf+n; age/reserve/thr/sp/pcr held
+- Continuum: `…→project→synapse→release→reuptake→refill→dock`
+- Proof `programs/proof/2125_life_cell_dock.cubalc` asserts_ok=101
+- Science `programs/science/integration/atomic_printer_life_dock.cubalc` asserts_ok=45
+
 ## 1.15.1594-usability — MI 2108 LIFE_CELL_LUMEN (2026-09-09)
 
 - **life_cell.lumen n**: apical lumenogenesis competence after POLAR — spend ATP

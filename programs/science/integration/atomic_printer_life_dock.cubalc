@@ -1,0 +1,183 @@
+// atomic_printer_life_dock.cubalc
+// Science integration: atomic printer life-force dock after refill (Munc13/RIM AZ).
+// Cube is SoT. Free energy must flow. No IF*P duals.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 28 0
+ENTITY axon OF Cell 1 22 0
+ENTITY empty OF Cell 1 10 0
+
+SEND printer set_threshold 8
+SEND printer set_setpoint 12
+SEND printer pulse 6
+SEND printer photosynth 16
+SEND printer glycolyse 14
+SEND printer pump 12
+SEND printer photophos 12
+SEND printer converge 1
+SEND printer extend 1
+SEND printer fold 1
+SEND printer zip 1
+SEND printer crest 1
+SEND printer migrate 1
+SEND printer stream 1
+SEND printer condense 1
+SEND printer fate 1
+SEND printer project 1
+SEND printer synapse 1
+SEND printer release 1
+SEND printer reuptake 3
+ASSERT LAST_N == 3 "sci preru"
+SEND printer refill 2
+ASSERT LAST_N == 2 "sci prerf"
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET a1 = LAST_N
+GETF printer pmf
+LET p1 = LAST_N
+GETF printer reserve
+LET r1 = LAST_N
+GETF printer threshold
+LET t1 = LAST_N
+GETF printer setpoint
+LET s1 = LAST_N
+GETF printer pcr
+LET c1 = LAST_N
+GETF printer age
+LET age1 = LAST_N
+ASSERT e1 >= 2 "sci e"
+ASSERT a1 >= 2 "sci a"
+SEND printer dock 2
+ASSERT LAST_N == 2 "sci dk2"
+GETF printer heat
+ASSERT LAST_N == h1 + 2 "sci h+2"
+GETF printer energy
+ASSERT LAST_N == e1 - 2 "sci e-2"
+GETF printer atp
+ASSERT LAST_N == a1 - 2 "sci atp-2"
+GETF printer pmf
+ASSERT LAST_N == p1 + 2 "sci pmf+2"
+GETF printer reserve
+ASSERT LAST_N == r1 "sci r held"
+GETF printer threshold
+ASSERT LAST_N == t1 "sci thr held"
+GETF printer setpoint
+ASSERT LAST_N == s1 "sci sp held"
+GETF printer pcr
+ASSERT LAST_N == c1 "sci pcr held"
+GETF printer age
+ASSERT LAST_N == age1 "sci age held"
+
+SEND axon set_threshold 6
+SEND axon set_setpoint 20
+SEND axon pulse 5
+SEND axon photosynth 12
+SEND axon glycolyse 10
+SEND axon pump 8
+SEND axon photophos 8
+SEND axon project 1
+SEND axon synapse 1
+SEND axon release 1
+SEND axon reuptake 3
+ASSERT LAST_N == 3 "ax preru"
+SEND axon refill 2
+ASSERT LAST_N == 2 "ax prerf"
+GETF axon energy
+LET ae = LAST_N
+GETF axon atp
+LET aa = LAST_N
+GETF axon heat
+LET ah = LAST_N
+GETF axon threshold
+LET at0 = LAST_N
+GETF axon setpoint
+LET as0 = LAST_N
+GETF axon reserve
+LET ar0 = LAST_N
+GETF axon pcr
+LET ac = LAST_N
+GETF axon pmf
+LET ap0 = LAST_N
+ASSERT ae >= 3 "ax e"
+ASSERT aa >= 3 "ax a"
+SEND axon dock 2
+ASSERT LAST_N == 2 "ax dk2"
+GETF axon heat
+ASSERT LAST_N == ah + 2 "ax h+2"
+GETF axon energy
+ASSERT LAST_N == ae - 2 "ax e-2"
+GETF axon atp
+ASSERT LAST_N == aa - 2 "ax atp-2"
+GETF axon pmf
+ASSERT LAST_N == ap0 + 2 "ax pmf+2"
+GETF axon reserve
+ASSERT LAST_N == ar0 "ax r held"
+GETF axon threshold
+ASSERT LAST_N == at0 "ax thr held"
+GETF axon setpoint
+ASSERT LAST_N == as0 "ax sp held"
+GETF axon pcr
+ASSERT LAST_N == ac "ax pcr held"
+GETF axon alive
+ASSERT LAST_N == 1 "ax alive"
+
+SEND empty dock 5
+ASSERT LAST_N == 0 "empty 0"
+GETF empty heat
+ASSERT LAST_N == 0 "empty h0"
+GETF empty energy
+ASSERT LAST_N == 10 "empty e held"
+GETF empty threshold
+ASSERT LAST_N == 10 "empty thr held"
+
+ENTITY cone OF Cell 1 36 0
+SEND cone set_threshold 5
+SEND cone set_setpoint 10
+SEND cone pulse 6
+SEND cone photosynth 18
+SEND cone glycolyse 14
+SEND cone pump 10
+SEND cone photophos 10
+SEND cone reuptake 3
+ASSERT LAST_N == 3 "cone preru"
+SEND cone refill 2
+ASSERT LAST_N == 2 "cone prerf"
+GETF cone energy
+LET ce0 = LAST_N
+GETF cone atp
+LET ca0 = LAST_N
+GETF cone heat
+LET ch0 = LAST_N
+GETF cone threshold
+LET ct0 = LAST_N
+GETF cone setpoint
+LET cs0 = LAST_N
+GETF cone reserve
+LET cr0 = LAST_N
+GETF cone pmf
+LET cp0 = LAST_N
+ASSERT ce0 >= 5 "cone e"
+ASSERT ca0 >= 5 "cone a"
+SEND cone dock 3
+ASSERT LAST_N == 3 "cone dk3"
+GETF cone heat
+ASSERT LAST_N == ch0 + 3 "cone h+3"
+GETF cone energy
+ASSERT LAST_N == ce0 - 3 "cone e-3"
+GETF cone atp
+ASSERT LAST_N == ca0 - 3 "cone atp-3"
+GETF cone pmf
+ASSERT LAST_N == cp0 + 3 "cone pmf+3"
+GETF cone reserve
+ASSERT LAST_N == cr0 "cone r held"
+GETF cone threshold
+ASSERT LAST_N == ct0 "cone thr held"
+GETF cone setpoint
+ASSERT LAST_N == cs0 "cone sp held"
+
+NOTE "atomic_printer_life_dock PASS — Munc13/RIM AZ dock after VGLUT refill"

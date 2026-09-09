@@ -1,0 +1,354 @@
+// 2125_life_cell_dock.cubalc
+// Proof 2125: life_cell dock - post-refill active-zone vesicle docking / Munc13-RIM-Rab3 tethering.
+// Pay min(n,atp,energy) -> heat+n energy-n pmf+n; age/reserve/thr/sp/pcr held.
+// Continuum after refill. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 24 0
+ENTITY poor OF Cell 1 0 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 16 0
+ENTITY twin OF Cell 1 18 0
+ENTITY ceil OF Cell 1 20 0
+ENTITY starved OF Cell 1 30 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 18
+SEND gate glycolyse 16
+SEND gate pump 14
+SEND gate photophos 14
+GETF gate age
+ASSERT LAST_N == 6 "dk a6"
+GETF gate atp
+ASSERT LAST_N >= 20 "dk atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate pmf
+LET pbase = LAST_N
+ASSERT pbase >= 5 "dk pmf base"
+GETF gate threshold
+ASSERT LAST_N == 10 "dk thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "dk sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "dk pcr0"
+
+SEND gate converge 2
+ASSERT LAST_N == 2 "dk prece2"
+SEND gate extend 1
+ASSERT LAST_N == 1 "dk prext1"
+SEND gate fold 1
+ASSERT LAST_N == 1 "dk prefd1"
+SEND gate zip 1
+ASSERT LAST_N == 1 "dk prez1"
+SEND gate crest 1
+ASSERT LAST_N == 1 "dk prec1"
+SEND gate migrate 1
+ASSERT LAST_N == 1 "dk prem1"
+SEND gate stream 1
+ASSERT LAST_N == 1 "dk prest1"
+SEND gate condense 1
+ASSERT LAST_N == 1 "dk precd1"
+SEND gate fate 1
+ASSERT LAST_N == 1 "dk pref1"
+SEND gate project 1
+ASSERT LAST_N == 1 "dk prep1"
+SEND gate synapse 1
+ASSERT LAST_N == 1 "dk presy1"
+SEND gate release 1
+ASSERT LAST_N == 1 "dk prer1"
+SEND gate reuptake 4
+ASSERT LAST_N == 4 "dk preru4"
+SEND gate refill 2
+ASSERT LAST_N == 2 "dk prerf2"
+
+GETF gate heat
+LET h1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+GETF gate age
+LET a1 = LAST_N
+ASSERT at1 >= 3 "dk atp3"
+ASSERT e1 >= 3 "dk e3"
+
+SEND gate dock 3
+ASSERT LAST_N == 3 "dk dock3"
+GETF gate heat
+ASSERT LAST_N == h1 + 3 "dk h+3"
+GETF gate energy
+ASSERT LAST_N == e1 - 3 "dk e-3"
+GETF gate atp
+ASSERT LAST_N == at1 - 3 "dk atp-3"
+GETF gate pmf
+ASSERT LAST_N == p1 + 3 "dk pmf+3"
+GETF gate reserve
+ASSERT LAST_N == r1 "dk r held"
+GETF gate threshold
+ASSERT LAST_N == t1 "dk thr held"
+GETF gate setpoint
+ASSERT LAST_N == s1 "dk sp held"
+GETF gate pcr
+ASSERT LAST_N == c1 "dk pcr held"
+GETF gate age
+ASSERT LAST_N == a1 "dk age held"
+GETF gate alive
+ASSERT LAST_N == 1 "dk alive"
+
+SEND poor dock 5
+ASSERT LAST_N == 0 "poor 0"
+GETF poor heat
+ASSERT LAST_N == 0 "poor h0"
+GETF poor energy
+ASSERT LAST_N == 0 "poor e0"
+GETF poor pmf
+ASSERT LAST_N == 0 "poor p0"
+
+SEND dead dock 4
+ASSERT LAST_N == 0 "dead 0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead alive0"
+
+SEND g0 dock 0
+ASSERT LAST_N == 0 "g0 zero"
+
+SEND gate dock 1
+ASSERT LAST_N == 1 "dk again1"
+GETF gate pmf
+ASSERT LAST_N == p1 + 4 "dk pmf+4 total"
+
+SEND twin pulse 5
+SEND twin photosynth 14
+SEND twin glycolyse 12
+SEND twin pump 10
+SEND twin photophos 10
+SEND twin set_threshold 8
+SEND twin reuptake 4
+ASSERT LAST_N == 4 "twin pre ru4"
+SEND twin refill 2
+ASSERT LAST_N == 2 "twin pre rf2"
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+GETF twin heat
+LET th = LAST_N
+GETF twin reserve
+LET tr = LAST_N
+GETF twin threshold
+LET tt = LAST_N
+GETF twin setpoint
+LET tsp = LAST_N
+GETF twin pcr
+LET tc = LAST_N
+GETF twin age
+LET tage = LAST_N
+GETF twin pmf
+LET tp = LAST_N
+ASSERT te >= 4 "twin e"
+ASSERT ta >= 4 "twin a"
+SEND twin dock 4
+ASSERT LAST_N == 4 "twin dk4"
+GETF twin heat
+ASSERT LAST_N == th + 4 "twin h+4"
+GETF twin energy
+ASSERT LAST_N == te - 4 "twin e-4"
+GETF twin atp
+ASSERT LAST_N == ta - 4 "twin atp-4"
+GETF twin pmf
+ASSERT LAST_N == tp + 4 "twin pmf+4"
+GETF twin reserve
+ASSERT LAST_N == tr "twin r held"
+GETF twin threshold
+ASSERT LAST_N == tt "twin thr held"
+GETF twin setpoint
+ASSERT LAST_N == tsp "twin sp held"
+GETF twin pcr
+ASSERT LAST_N == tc "twin pcr held"
+GETF twin age
+ASSERT LAST_N == tage "twin age held"
+
+
+SEND ceil pulse 4
+SEND ceil photosynth 12
+SEND ceil glycolyse 10
+SEND ceil pump 8
+SEND ceil photophos 8
+SEND ceil set_threshold 10
+SEND ceil set_setpoint 10
+GETF ceil atp
+LET ca2 = LAST_N
+GETF ceil energy
+LET ce2 = LAST_N
+GETF ceil heat
+LET ch2 = LAST_N
+GETF ceil pmf
+LET cp1 = LAST_N
+ASSERT ca2 >= 2 "ceil a"
+ASSERT ce2 >= 2 "ceil e"
+SEND ceil dock 2
+LET gotc = LAST_N
+ASSERT gotc == 2 "ceil dk2"
+GETF ceil pmf
+LET cp3 = LAST_N
+ASSERT cp3 == cp1 + 2 "ceil pmf+2"
+ASSERT cp3 <= 1000 "ceil pmf<=1000"
+GETF ceil heat
+ASSERT LAST_N == ch2 + 2 "ceil h+2"
+GETF ceil energy
+ASSERT LAST_N == ce2 - 2 "ceil e-2"
+GETF ceil atp
+ASSERT LAST_N == ca2 - 2 "ceil atp-2"
+
+SEND starved pulse 3
+SEND starved set_threshold 100
+SEND starved glycolyse 2
+GETF starved energy
+LET se2 = LAST_N
+GETF starved atp
+LET sa2 = LAST_N
+GETF starved heat
+LET sh2 = LAST_N
+GETF starved pmf
+LET spm2 = LAST_N
+SEND starved dock 8
+LET got = LAST_N
+ASSERT got >= 0 "starved got"
+ASSERT got <= 8 "starved <=want"
+ASSERT got <= sa2 "starved <=atp"
+ASSERT got <= se2 "starved <=e"
+GETF starved heat
+ASSERT LAST_N == sh2 + got "starved h"
+GETF starved pmf
+ASSERT LAST_N == spm2 + got "starved pmf"
+GETF starved energy
+ASSERT LAST_N == se2 - got "starved e"
+GETF starved atp
+ASSERT LAST_N == sa2 - got "starved atp"
+
+ENTITY chain OF Cell 1 40 0
+SEND chain set_threshold 5
+SEND chain set_setpoint 10
+SEND chain pulse 8
+SEND chain photosynth 20
+SEND chain glycolyse 16
+SEND chain pump 12
+SEND chain photophos 12
+SEND chain converge 2
+SEND chain extend 1
+SEND chain fold 1
+SEND chain zip 1
+SEND chain crest 1
+SEND chain migrate 1
+SEND chain stream 1
+SEND chain condense 1
+SEND chain fate 1
+ASSERT LAST_N == 1 "chain fate1"
+SEND chain project 1
+ASSERT LAST_N == 1 "chain preprj"
+SEND chain synapse 1
+ASSERT LAST_N == 1 "chain presyn"
+SEND chain release 1
+ASSERT LAST_N == 1 "chain prerel"
+SEND chain reuptake 3
+ASSERT LAST_N == 3 "chain preru"
+SEND chain refill 2
+ASSERT LAST_N == 2 "chain prerf"
+GETF chain energy
+LET che = LAST_N
+GETF chain heat
+LET chh = LAST_N
+GETF chain setpoint
+LET chs = LAST_N
+GETF chain threshold
+LET cht = LAST_N
+GETF chain atp
+LET cha = LAST_N
+GETF chain reserve
+LET chr = LAST_N
+GETF chain pcr
+LET chp = LAST_N
+GETF chain pmf
+LET chpm = LAST_N
+GETF chain age
+LET chage = LAST_N
+ASSERT che >= 2 "chain e"
+ASSERT cha >= 2 "chain a"
+SEND chain dock 2
+ASSERT LAST_N == 2 "chain dk2"
+GETF chain heat
+ASSERT LAST_N == chh + 2 "chain h+2"
+GETF chain energy
+ASSERT LAST_N == che - 2 "chain e-2"
+GETF chain atp
+ASSERT LAST_N == cha - 2 "chain atp-2"
+GETF chain pmf
+ASSERT LAST_N == chpm + 2 "chain pmf+2"
+GETF chain reserve
+ASSERT LAST_N == chr "chain r held"
+GETF chain threshold
+ASSERT LAST_N == cht "chain thr held"
+GETF chain setpoint
+ASSERT LAST_N == chs "chain sp held"
+GETF chain pcr
+ASSERT LAST_N == chp "chain pcr held"
+GETF chain age
+ASSERT LAST_N == chage "chain age held"
+GETF chain alive
+ASSERT LAST_N == 1 "chain alive"
+
+SEND g0 pulse 4
+SEND g0 photosynth 10
+SEND g0 glycolyse 8
+SEND g0 pump 6
+SEND g0 photophos 6
+SEND g0 quiesce
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q1"
+GETF g0 energy
+LET ge = LAST_N
+GETF g0 atp
+LET ga = LAST_N
+GETF g0 heat
+LET gh = LAST_N
+GETF g0 pmf
+LET gp = LAST_N
+ASSERT ga >= 2 "g0 a"
+ASSERT ge >= 2 "g0 e"
+SEND g0 dock 2
+ASSERT LAST_N == 2 "g0 dk2"
+GETF g0 heat
+ASSERT LAST_N == gh + 2 "g0 h+2"
+GETF g0 energy
+ASSERT LAST_N == ge - 2 "g0 e-2"
+GETF g0 atp
+ASSERT LAST_N == ga - 2 "g0 atp-2"
+GETF g0 pmf
+ASSERT LAST_N == gp + 2 "g0 pmf+2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+NOTE "2125 life_cell dock PASS continuum ...->project->synapse->release->reuptake->refill->dock"
