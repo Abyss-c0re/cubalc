@@ -140,6 +140,7 @@
 #   arm n                post-dock SNARE complex arming / Munc18-Syntaxin-SNAP25 zipper — pay min(n,atp,energy,pmf) → heat +n + energy -n + pmf -n; age/reserve/thr/sp/pcr held; ready recompute
 #   clamp n              post-arm complexin fusion clamp / metastable SNARE hold — pay min(n,atp,energy) → heat +n + energy -n + sp +n; age/reserve/thr/pmf/pcr held; ready recompute
 #   trigger n            post-clamp synaptotagmin Ca2+ trigger / complexin clamp release — pay min(n,atp,energy,setpoint) → heat +n + energy -n + sp -n; age/reserve/thr/pmf/pcr held; ready recompute
+#   pore n               post-trigger fusion-pore open / SNARE-lipid stalk membrane merger — pay min(n,atp,energy) → heat +n + energy -n + thr -n; age/reserve/sp/pmf/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5909,5 +5910,87 @@ CLASS Cell
   END
 
 
+  # PORE: post-trigger fusion-pore open / SNARE-lipid stalk membrane merger.
+  # Spend take=min(n,atp,energy) — ATP + bulk metabolic fuel fund SNARE C-terminal
+  # zipper completion and lipid-stalk to fusion-pore nucleation after TRIGGER has
+  # displaced complexin via Syt1 C2 Ca2+ sensors (post-trigger pore; not multipotent
+  # stream, not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+
+  # contact, not release pcr+ dump, not EAAT reserve+ clearance, not VGLUT reserve-
+  # pack, not dock pmf+ tethering, not arm pmf- zipper consume, not clamp sp+ hold,
+  # not trigger sp- unclamp).
+  # HEAT += take (each lipid-stalk bend / pore-nucleation / leaflet-merger step
+  # dissipates as membrane-curvature commit work).
+  # ENERGY -= take (pore burns active metabolic pool into stalk-to-pore fusion work;
+  #   kin to trigger energy- but thr- barrier drop instead of sp- clamp release).
+  # ATP -= take (NSF/SNAP-adjacent SNARE completion / PIP2-microdomain pore cycle).
+  # THRESHOLD falls: threshold = max(0, threshold - take) — fusion barrier drops as
+  # the aqueous pore opens (membrane continuity; inverse of zip/synapse thr+ contact
+  # competence bank; distinct from path-length sp, release pcr+, dock pmf+, arm pmf-,
+  # clamp sp+, and trigger sp-).
+  # AGE/reserve/setpoint/pmf/pcr HELD — pore is lipid-stalk open after trigger, not
+  # injury age+, not CE bank, not clamp-tension sp, not bouton dPsi_m, not phosphagen
+  # pcr. Ready recomputed from post-burn energy vs post-drop threshold.
+  # Continuum: ...->project->synapse->release->reuptake->refill->dock->arm->clamp->trigger->pore.
+  # Signature: heat+n energy-n thr-n; age+reserve+sp+pmf+pcr held — pore life-force.
+  # Usability: AGI models post-trigger fusion-pore open under ASSERT.
+  # Returns take porated; dead/n<1/empty atp|energy -> 0.
+  METHOD pore n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET thr = thr - take
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    SETF THIS threshold thr
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END
+
