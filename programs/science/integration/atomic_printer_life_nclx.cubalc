@@ -1,0 +1,82 @@
+// atomic_printer_life_nclx.cubalc
+// Science board: mito Na+/Ca2+ exchanger (NCLX/SLC8B1) on the atomic printer life cell.
+// ΔΨm-paid Ca2+ efflux ends matrix TCA window; heat tax +1; energy/atp/age/reserve held.
+// Continuum: MERCs tether deliver → MCU admit (TCA spark) → NCLX extrude (reset).
+// Cube is SoT. Free energy must flow. AGI INCLUDE life_cell wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+SEND printer set_threshold 10
+
+SEND printer pulse 6
+SEND printer photosynth 7
+SEND printer glycolyse 4
+SEND printer feed 4
+SEND printer pump 6
+
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+GETF printer age
+ASSERT LAST_N == 6 "printer aged"
+GETF printer atp
+ASSERT LAST_N >= 4 "printer charged"
+GETF printer pmf
+ASSERT LAST_N == 6 "printer gradient"
+
+GETF printer energy
+LET e0 = LAST_N
+GETF printer age
+LET a0 = LAST_N
+GETF printer pmf
+LET p0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer atp
+LET at0 = LAST_N
+
+SEND printer tether 2
+ASSERT LAST_N == 2 "tether take"
+GETF printer energy
+ASSERT LAST_N == e0 + 2 "MERCs yield"
+GETF printer energy
+LET e1 = LAST_N
+GETF printer pmf
+LET p1 = LAST_N
+GETF printer atp
+LET at1 = LAST_N
+
+SEND printer mcu 3
+ASSERT LAST_N == 3 "mcu take"
+GETF printer energy
+ASSERT LAST_N == e1 + 3 "TCA spark"
+GETF printer pmf
+ASSERT LAST_N == p1 - 3 "mcu spends pmf"
+GETF printer atp
+ASSERT LAST_N == at1 "mcu atp held"
+GETF printer energy
+LET e2 = LAST_N
+GETF printer pmf
+LET p2 = LAST_N
+GETF printer heat
+LET h2 = LAST_N
+
+SEND printer nclx 2
+ASSERT LAST_N == 2 "nclx take"
+GETF printer pmf
+ASSERT LAST_N == p2 - 2 "nclx spends pmf"
+GETF printer energy
+ASSERT LAST_N == e2 "nclx e held"
+GETF printer atp
+ASSERT LAST_N == at1 "nclx atp held"
+GETF printer heat
+ASSERT LAST_N == h2 + 1 "exchanger tax"
+GETF printer age
+ASSERT LAST_N == a0 "age held"
+GETF printer reserve
+ASSERT LAST_N == r0 "cargo held"
+
+GETF printer alive
+ASSERT LAST_N == 1 "colony lives"
+PRINT "atomic_printer_life_nclx PASS"

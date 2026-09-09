@@ -1,0 +1,240 @@
+// 2095_life_cell_nclx.cubalc
+// Proof 2095: life_cell nclx — mito Na+/Ca2+ exchanger (NCLX/SLC8B1 + NHE).
+// Spend n pmf (net Ca2+/H+ efflux after MCU load) -> heat +1; energy/atp/age/reserve held.
+// Distinct from mcu (pmf→energy TCA kick), uncouple (pmf→heat bulk), synthase (pmf→ATP),
+// reverse, tether, pump. Completes Ca2+ continuum: tether → mcu → nclx reset.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "nclx a5"
+GETF gate atp
+ASSERT LAST_N == 4 "nclx atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "nclx h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "nclx pmf5"
+GETF gate energy
+LET e0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+
+// MCU first: admit Ca2+ (TCA spark), then NCLX extrudes (reset window)
+SEND gate mcu 2
+ASSERT LAST_N == 2 "pre mcu"
+GETF gate pmf
+ASSERT LAST_N == 3 "pmf after mcu"
+GETF gate energy
+LET e1 = LAST_N
+ASSERT e1 == e0 + 2 "e after mcu"
+GETF gate heat
+ASSERT LAST_N == 1 "heat after mcu"
+
+SEND gate nclx 2
+ASSERT LAST_N == 2 "nclx take2"
+GETF gate pmf
+ASSERT LAST_N == 1 "nclx pmf-2"
+GETF gate heat
+ASSERT LAST_N == 2 "nclx heat2"
+GETF gate energy
+ASSERT LAST_N == e1 "nclx e held"
+GETF gate atp
+ASSERT LAST_N == at0 "nclx atp held"
+GETF gate reserve
+ASSERT LAST_N == r0 "nclx r held"
+GETF gate age
+ASSERT LAST_N == a0 "nclx age held"
+GETF gate alive
+ASSERT LAST_N == 1 "nclx lives"
+
+SEND gate nclx 10
+ASSERT LAST_N == 1 "nclx clamp1"
+GETF gate pmf
+ASSERT LAST_N == 0 "nclx pmf0"
+GETF gate heat
+ASSERT LAST_N == 3 "nclx heat3"
+GETF gate energy
+ASSERT LAST_N == e1 "e held clamp"
+
+SEND gate nclx 1
+ASSERT LAST_N == 0 "nclx empty pmf"
+GETF gate heat
+ASSERT LAST_N == 3 "heat held empty"
+
+SEND poor pulse 3
+SEND poor photosynth 3
+SEND poor glycolyse 2
+// no pump → pmf 0
+GETF poor pmf
+ASSERT LAST_N == 0 "poor pmf0"
+SEND poor nclx 2
+ASSERT LAST_N == 0 "poor no pmf"
+GETF poor heat
+ASSERT LAST_N == 0 "poor h held"
+SEND poor nclx 0
+ASSERT LAST_N == 0 "n0 fail"
+
+SEND dead photosynth 4
+SEND dead pump 3
+SEND dead nclx 2
+ASSERT LAST_N == 0 "dead fail"
+
+SEND g0 wake
+SEND g0 pulse 2
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+SEND g0 pump 3
+GETF g0 pmf
+ASSERT LAST_N == 3 "g0 pmf3"
+GETF g0 energy
+LET ge0 = LAST_N
+SEND g0 nclx 2
+ASSERT LAST_N == 2 "g0 nclx"
+GETF g0 pmf
+ASSERT LAST_N == 1 "g0 pmf1"
+GETF g0 energy
+ASSERT LAST_N == ge0 "g0 e held"
+GETF g0 heat
+ASSERT LAST_N == 1 "g0 heat1"
+
+// Continuum arc: tether MERCs → mcu admit → nclx extrude
+ENTITY arc OF Cell 1 16 0
+SEND arc set_threshold 10
+SEND arc pulse 4
+SEND arc photosynth 6
+SEND arc glycolyse 4
+SEND arc feed 3
+SEND arc pump 6
+GETF arc energy
+LET ae0 = LAST_N
+GETF arc age
+LET aa0 = LAST_N
+GETF arc atp
+LET aat0 = LAST_N
+GETF arc pmf
+LET ap0 = LAST_N
+GETF arc reserve
+LET ar0 = LAST_N
+
+SEND arc tether 2
+ASSERT LAST_N == 2 "arc tether"
+GETF arc energy
+ASSERT LAST_N == ae0 + 2 "arc e tether"
+GETF arc energy
+LET ae1 = LAST_N
+GETF arc atp
+LET aat1 = LAST_N
+GETF arc pmf
+LET ap1 = LAST_N
+
+SEND arc mcu 3
+ASSERT LAST_N == 3 "arc mcu"
+GETF arc pmf
+ASSERT LAST_N == ap1 - 3 "arc pmf spent mcu"
+GETF arc atp
+ASSERT LAST_N == aat1 "arc atp held mcu"
+GETF arc energy
+ASSERT LAST_N == ae1 + 3 "arc e mcu"
+GETF arc energy
+LET ae2 = LAST_N
+GETF arc pmf
+LET ap2 = LAST_N
+GETF arc heat
+LET ah2 = LAST_N
+
+SEND arc nclx 2
+ASSERT LAST_N == 2 "arc nclx"
+GETF arc pmf
+ASSERT LAST_N == ap2 - 2 "arc pmf spent nclx"
+GETF arc energy
+ASSERT LAST_N == ae2 "arc e held nclx"
+GETF arc atp
+ASSERT LAST_N == aat1 "arc atp held nclx"
+GETF arc heat
+ASSERT LAST_N == ah2 + 1 "arc heat nclx"
+GETF arc age
+ASSERT LAST_N == aa0 "arc age held continuum"
+GETF arc reserve
+ASSERT LAST_N == ar0 "arc reserve held"
+GETF arc alive
+ASSERT LAST_N == 1 "arc lives"
+
+// Distinct from uncouple: uncouple burns pmf to heat bulk take (no fixed +1 tax)
+ENTITY un OF Cell 1 12 0
+SEND un set_threshold 10
+SEND un pulse 2
+SEND un photosynth 4
+SEND un glycolyse 3
+SEND un pump 4
+GETF un pmf
+ASSERT LAST_N == 4 "un pmf4"
+GETF un heat
+ASSERT LAST_N == 0 "un h0"
+GETF un energy
+LET ue0 = LAST_N
+SEND un uncouple 3
+ASSERT LAST_N == 3 "uncouple take"
+GETF un pmf
+ASSERT LAST_N == 1 "uncouple pmf"
+GETF un heat
+ASSERT LAST_N == 3 "uncouple heat bulk"
+GETF un energy
+ASSERT LAST_N == ue0 "uncouple e held"
+// nclx on residual: tax +1 heat only
+SEND un nclx 1
+ASSERT LAST_N == 1 "post-unc nclx"
+GETF un heat
+ASSERT LAST_N == 4 "nclx tax +1 not bulk"
+GETF un energy
+ASSERT LAST_N == ue0 "post-unc e held"
+
+// Distinct from synthase: synthase mints ATP from pmf
+ENTITY syn OF Cell 1 12 0
+SEND syn set_threshold 10
+SEND syn pulse 2
+SEND syn photosynth 4
+SEND syn glycolyse 3
+SEND syn pump 3
+GETF syn atp
+LET sat0 = LAST_N
+GETF syn energy
+LET se0 = LAST_N
+SEND syn synthase 2
+ASSERT LAST_N == 2 "synthase"
+GETF syn atp
+ASSERT LAST_N == sat0 + 2 "synthase atp+"
+GETF syn energy
+ASSERT LAST_N == se0 "synthase e held"
+GETF syn pmf
+LET sp1 = LAST_N
+SEND syn reverse 1
+// restore a unit then nclx spends pmf without ATP mint
+GETF syn atp
+LET sat1 = LAST_N
+SEND syn nclx 1
+ASSERT LAST_N == 1 "syn nclx"
+GETF syn atp
+ASSERT LAST_N == sat1 "nclx no atp mint"
+GETF syn energy
+ASSERT LAST_N == se0 "nclx no e mint vs synthase path"
+
+PRINT "2095_life_cell_nclx PASS"

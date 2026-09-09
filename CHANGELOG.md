@@ -1,3 +1,10 @@
+## 1.15.1581-usability — MI 2095 LIFE_CELL_NCLX
+
+- METHOD nclx n: mito Na+/Ca2+ exchanger (NCLX/SLC8B1 + NHE) — spend min(n,pmf) → heat +1; energy/atp/age/reserve held
+- Completes Ca2+ continuum: tether (MERCs deliver) → mcu (admit/TCA spark) → nclx (extrude/reset)
+- Distinct from mcu (pmf→energy), uncouple (pmf→heat bulk), synthase (pmf→ATP)
+- Proof 2095 asserts_ok=62 fail=0; atomic_printer_life_nclx science asserts_ok=19
+
 ## Unreleased — AUGOGEN pair confirm (hive mind)
 
 - `programs/hive_mind/augogen_confirm.cubalc` — guide + oversee as one braincube
