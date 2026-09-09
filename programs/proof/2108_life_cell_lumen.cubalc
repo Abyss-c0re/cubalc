@@ -1,0 +1,403 @@
+// 2108_life_cell_lumen.cubalc
+// Proof 2108: life_cell lumen — apical lumenogenesis after POLAR.
+// Pay n ATP Rab11a/ezrin/CFTR trafficking -> heat +n + pcr +n (apical ~P bank);
+// age/energy/pmf/reserve/thr/sp held; ready recomputed. Distinct from polar (sp+ pcr held),
+// seal (thr+), charge_pcr (pcr+ no heat), restit (age-), fortify (thr+ no heat).
+// Continuum after polar. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+ENTITY ceil OF Cell 1 20 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "lumen a5"
+GETF gate atp
+ASSERT LAST_N == 4 "lumen atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "lumen h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "lumen pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "lumen energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "lumen thr10"
+GETF gate setpoint
+LET s0 = LAST_N
+ASSERT s0 == 10 "lumen sp10"
+GETF gate pcr
+LET c0 = LAST_N
+ASSERT c0 == 0 "lumen pcr0"
+
+SEND gate lumen 2
+ASSERT LAST_N == 2 "lumen take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "lumen atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "lumen age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "lumen heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "lumen e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "lumen r held"
+GETF gate threshold
+ASSERT LAST_N == t0 "lumen thr held"
+GETF gate setpoint
+ASSERT LAST_N == s0 "lumen sp held"
+GETF gate pcr
+ASSERT LAST_N == c0 + 2 "lumen pcr+2"
+GETF gate pmf
+ASSERT LAST_N == p0 "lumen pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "lumen lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "lumen ready if surplus"
+ELSE
+  ASSERT rd == 0 "lumen ready blocked"
+END
+
+
+// Partial take when ATP short
+SEND poor pulse 2
+SEND poor photosynth 1
+SEND poor glycolyse 1
+SEND poor pump 1
+GETF poor atp
+LET pat = LAST_N
+ASSERT pat >= 1 "poor atp"
+ASSERT pat < 5 "poor atp low"
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor pcr
+LET pc0 = LAST_N
+GETF poor setpoint
+LET ps0 = LAST_N
+GETF poor threshold
+LET pt0 = LAST_N
+GETF poor age
+LET pa0 = LAST_N
+SEND poor lumen 9
+LET ptake = LAST_N
+ASSERT ptake == pat "poor take all"
+ASSERT ptake >= 1 "poor took"
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+GETF poor heat
+ASSERT LAST_N == ph0 + ptake "poor heat+"
+GETF poor pcr
+ASSERT LAST_N == pc0 + ptake "poor pcr+"
+GETF poor threshold
+ASSERT LAST_N == pt0 "poor thr held"
+GETF poor setpoint
+ASSERT LAST_N == ps0 "poor sp held"
+GETF poor age
+ASSERT LAST_N == pa0 "poor age held"
+
+// Dead / n<1 fail-closed
+SEND dead lumen 3
+ASSERT LAST_N == 0 "dead polar0"
+SEND gate lumen 0
+ASSERT LAST_N == 0 "n0 polar0"
+SEND gate lumen -1
+ASSERT LAST_N == 0 "neg polar0"
+
+// Empty ATP fail-closed
+SEND twin pulse 1
+SEND twin photosynth 1
+SEND twin glycolyse 1
+SEND twin pump 1
+GETF twin atp
+LET ta = LAST_N
+IF ta >= 1 THEN
+  SEND twin seal ta
+END
+GETF twin atp
+ASSERT LAST_N == 0 "twin atp0"
+GETF twin setpoint
+LET ts0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+SEND twin lumen 2
+ASSERT LAST_N == 0 "empty polar0"
+GETF twin setpoint
+ASSERT LAST_N == ts0 "empty sp held"
+GETF twin heat
+ASSERT LAST_N == th0 "empty heat held"
+
+// G0: polar works, ready forced 0
+SEND g0 pulse 3
+SEND g0 photosynth 3
+SEND g0 glycolyse 3
+SEND g0 pump 2
+SEND g0 quiesce
+GETF g0 atp
+LET ga0 = LAST_N
+ASSERT ga0 >= 2 "g0 atp"
+GETF g0 pcr
+LET gc0 = LAST_N
+GETF g0 setpoint
+LET gs0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 threshold
+LET gt0 = LAST_N
+SEND g0 lumen 2
+ASSERT LAST_N == 2 "g0 take2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+GETF g0 pcr
+ASSERT LAST_N == gc0 + 2 "g0 pcr+2"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 threshold
+ASSERT LAST_N == gt0 "g0 thr held"
+GETF g0 setpoint
+ASSERT LAST_N == gs0 "g0 sp held"
+GETF g0 atp
+ASSERT LAST_N == ga0 - 2 "g0 atp-2"
+
+// Distinct from polar: lumen pcr+, polar sp+
+SEND mac pulse 4
+SEND mac photosynth 4
+SEND mac glycolyse 4
+SEND mac pump 3
+SEND mac set_threshold 10
+SEND mac set_setpoint 10
+GETF mac atp
+LET ma0 = LAST_N
+ASSERT ma0 >= 4 "mac atp"
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac setpoint
+LET ms0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac pcr
+LET mc0 = LAST_N
+GETF mac age
+LET mag0 = LAST_N
+SEND mac polar 1
+ASSERT LAST_N == 1 "dist polar1"
+GETF mac setpoint
+ASSERT LAST_N == ms0 + 1 "dist sp+polar"
+GETF mac pcr
+ASSERT LAST_N == mc0 "dist pcr held polar"
+GETF mac heat
+ASSERT LAST_N == mh0 + 1 "dist heat+polar"
+GETF mac threshold
+LET mt1 = LAST_N
+GETF mac setpoint
+LET ms1 = LAST_N
+GETF mac heat
+LET mh1 = LAST_N
+GETF mac pcr
+LET mc1 = LAST_N
+GETF mac age
+LET mag1 = LAST_N
+GETF mac atp
+LET ma1 = LAST_N
+SEND mac lumen 1
+ASSERT LAST_N == 1 "dist lumen1"
+GETF mac pcr
+ASSERT LAST_N == mc1 + 1 "dist pcr+lumen"
+GETF mac setpoint
+ASSERT LAST_N == ms1 "dist sp held lumen"
+GETF mac threshold
+ASSERT LAST_N == mt1 "dist thr held lumen"
+GETF mac age
+ASSERT LAST_N == mag1 "dist age held lumen"
+GETF mac heat
+ASSERT LAST_N == mh1 + 1 "dist heat+lumen"
+GETF mac atp
+ASSERT LAST_N == ma1 - 1 "dist atp-1"
+
+
+// Distinct from charge_pcr: lumen pairs heat+pcr+, charge_pcr pcr+ no heat
+SEND gate photophos 4
+GETF gate atp
+LET fa0 = LAST_N
+ASSERT fa0 >= 2 "fdist atp"
+GETF gate pcr
+LET fc0 = LAST_N
+GETF gate heat
+LET fh0 = LAST_N
+SEND gate charge_pcr 1
+ASSERT LAST_N == 1 "fdist cpcr1"
+GETF gate pcr
+ASSERT LAST_N == fc0 + 1 "fdist pcr+cpcr"
+GETF gate heat
+ASSERT LAST_N == fh0 "fdist heat held cpcr"
+GETF gate pcr
+LET fc1 = LAST_N
+GETF gate heat
+LET fh1 = LAST_N
+GETF gate atp
+LET fa1 = LAST_N
+SEND gate lumen 1
+ASSERT LAST_N == 1 "fdist lumen1"
+GETF gate pcr
+ASSERT LAST_N == fc1 + 1 "fdist pcr+lumen"
+GETF gate heat
+ASSERT LAST_N == fh1 + 1 "fdist heat+lumen"
+GETF gate atp
+ASSERT LAST_N == fa1 - 1 "fdist atp-1"
+
+// Distinct from seal: lumen pcr+, seal thr+
+SEND gate photophos 4
+GETF gate atp
+LET xa0 = LAST_N
+ASSERT xa0 >= 2 "sdist atp"
+GETF gate threshold
+LET xt0 = LAST_N
+GETF gate pcr
+LET xc0 = LAST_N
+GETF gate heat
+LET xh0 = LAST_N
+SEND gate seal 1
+ASSERT LAST_N == 1 "sdist seal1"
+GETF gate threshold
+ASSERT LAST_N == xt0 + 1 "sdist thr+seal"
+GETF gate pcr
+ASSERT LAST_N == xc0 "sdist pcr held seal"
+GETF gate heat
+ASSERT LAST_N == xh0 + 1 "sdist heat+seal"
+GETF gate threshold
+LET xt1 = LAST_N
+GETF gate pcr
+LET xc1 = LAST_N
+GETF gate heat
+LET xh1 = LAST_N
+GETF gate atp
+LET xa1 = LAST_N
+SEND gate lumen 1
+ASSERT LAST_N == 1 "sdist lumen1"
+GETF gate pcr
+ASSERT LAST_N == xc1 + 1 "sdist pcr+lumen"
+GETF gate threshold
+ASSERT LAST_N == xt1 "sdist thr held lumen"
+GETF gate heat
+ASSERT LAST_N == xh1 + 1 "sdist heat+lumen"
+
+// Continuum polar then lumen
+SEND gate set_threshold 12
+SEND gate set_setpoint 10
+SEND gate photophos 6
+GETF gate atp
+LET ca0 = LAST_N
+ASSERT ca0 >= 4 "cont atp"
+GETF gate threshold
+LET ct0 = LAST_N
+GETF gate setpoint
+LET cs0 = LAST_N
+GETF gate heat
+LET ch0 = LAST_N
+GETF gate age
+LET cag0 = LAST_N
+GETF gate energy
+LET ce0 = LAST_N
+GETF gate pmf
+LET cp0 = LAST_N
+GETF gate reserve
+LET cr0 = LAST_N
+GETF gate pcr
+LET cc0 = LAST_N
+SEND gate polar 1
+ASSERT LAST_N == 1 "cont polar1"
+GETF gate setpoint
+ASSERT LAST_N == cs0 + 1 "cont sp+polar"
+GETF gate pcr
+ASSERT LAST_N == cc0 "cont pcr held polar"
+SEND gate lumen 2
+ASSERT LAST_N == 2 "cont lumen2"
+GETF gate pcr
+ASSERT LAST_N == cc0 + 2 "cont pcr+2"
+GETF gate setpoint
+ASSERT LAST_N == cs0 + 1 "cont sp still +1"
+GETF gate threshold
+ASSERT LAST_N == ct0 "cont thr held"
+GETF gate heat
+ASSERT LAST_N == ch0 + 1 + 2 "cont heat+3"
+GETF gate age
+ASSERT LAST_N == cag0 "cont age held"
+GETF gate energy
+ASSERT LAST_N == ce0 "cont e held"
+GETF gate pmf
+ASSERT LAST_N == cp0 "cont pmf held"
+GETF gate reserve
+ASSERT LAST_N == cr0 "cont r held"
+GETF gate atp
+ASSERT LAST_N == ca0 - 3 "cont atp-3"
+
+// Ceiling 1000 on pcr — climb with lumen batches; never exceed 1000; heat pairs take
+SEND ceil set_threshold 10
+SEND ceil set_setpoint 10
+SEND ceil photophos 200
+SEND ceil lumen 200
+GETF ceil pcr
+LET cA = LAST_N
+ASSERT cA == 200 "ceil bat1"
+SEND ceil photophos 200
+SEND ceil lumen 200
+GETF ceil pcr
+ASSERT LAST_N == 400 "ceil bat2"
+SEND ceil photophos 200
+SEND ceil lumen 200
+GETF ceil pcr
+ASSERT LAST_N == 600 "ceil bat3"
+SEND ceil photophos 200
+SEND ceil lumen 200
+GETF ceil pcr
+ASSERT LAST_N == 800 "ceil bat4"
+SEND ceil photophos 200
+SEND ceil lumen 200
+GETF ceil pcr
+ASSERT LAST_N == 1000 "ceil bat5 cap"
+GETF ceil heat
+LET zh0 = LAST_N
+SEND ceil photophos 10
+SEND ceil lumen 7
+LET ztake = LAST_N
+ASSERT ztake >= 1 "ceil over take"
+GETF ceil pcr
+ASSERT LAST_N == 1000 "ceil pcr1000 held"
+GETF ceil heat
+ASSERT LAST_N == zh0 + ztake "ceil heat+ overcap"
+
+// vitality still alive after lumen
+SEND gate vitality
+ASSERT LAST_N >= 1 "vital"

@@ -1,3 +1,12 @@
+## 1.15.1594-usability — MI 2108 LIFE_CELL_LUMEN (2026-09-09)
+
+- **life_cell.lumen n**: apical lumenogenesis competence after POLAR — spend ATP
+  (Rab11a/Myo5b/ezrin/CFTR apical trafficking) → heat +n + pcr +n (ceiling 1000);
+  age/energy/pmf/reserve/threshold/setpoint held; ready recompute; G0/fail-closed.
+- Continuum: cad→bleb→effer→resolve→restit→seal→polar→**lumen**.
+- Proof `programs/proof/2108_life_cell_lumen.cubalc` asserts_ok=98 fail=0.
+- Science `programs/science/integration/atomic_printer_life_lumen.cubalc` asserts_ok=32.
+
 ## 1.15.1592-usability — LIFE_CELL_SEAL (MI 2106)
 
 - **feat** `a81659bd1` life_cell `seal n`: TJ/barrier competence lock after epithelial restitution
