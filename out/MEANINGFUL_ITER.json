@@ -30,5 +30,7 @@
   "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
-  "note": "CONVERGE banks reserve with heat pair after align thr+sp lock; free energy age/energy/pmf/pcr/thr/sp held \u2014 CE tissue-flow competence."
+  "note": "CONVERGE banks reserve with heat pair after align thr+sp lock; free energy age/energy/pmf/pcr/thr/sp held \u2014 CE tissue-flow competence.",
+  "feat_head": "e7fcf03b3bfc4fa87732424319efc13b00f267ae",
+  "HEAD": "e7fcf03b3bfc4fa87732424319efc13b00f267ae"
 }
