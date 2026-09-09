@@ -1,0 +1,234 @@
+// 2093_life_cell_tether.cubalc
+// Proof 2093: life_cell tether — ER-mito MERCs (Mfn2/IP3R-VDAC-GRP75).
+// Pay n ATP -> heat +1 + n energy (Ca2/lipid coupling); pmf/age/reserve held.
+// Completes organelle continuum after fragment->mitophagy->biogenesis->fusion.
+// Distinct from biogenesis, fusion, fragment, pump, feed, synthase, reverse.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY merc OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+
+SEND merc set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+
+SEND merc pulse 5
+SEND merc photosynth 5
+SEND merc glycolyse 4
+SEND merc pump 3
+GETF merc age
+ASSERT LAST_N == 5 "tether a5"
+GETF merc atp
+ASSERT LAST_N == 4 "tether atp4"
+GETF merc heat
+ASSERT LAST_N == 0 "tether h0"
+GETF merc pmf
+ASSERT LAST_N == 3 "tether pmf3"
+GETF merc energy
+LET e0 = LAST_N
+GETF merc reserve
+LET r0 = LAST_N
+GETF merc age
+LET a0 = LAST_N
+
+SEND merc tether 3
+ASSERT LAST_N == 3 "tether take3"
+GETF merc atp
+ASSERT LAST_N == 1 "tether atp-3"
+GETF merc heat
+ASSERT LAST_N == 1 "tether heat1"
+GETF merc energy
+ASSERT LAST_N == e0 + 3 "tether e+3"
+GETF merc reserve
+ASSERT LAST_N == r0 "tether r held"
+GETF merc pmf
+ASSERT LAST_N == 3 "tether pmf held"
+GETF merc age
+ASSERT LAST_N == a0 "tether age held"
+GETF merc alive
+ASSERT LAST_N == 1 "tether lives"
+
+SEND merc tether 10
+ASSERT LAST_N == 1 "tether clamp1"
+GETF merc atp
+ASSERT LAST_N == 0 "tether atp0"
+GETF merc heat
+ASSERT LAST_N == 2 "tether heat2"
+GETF merc energy
+ASSERT LAST_N == e0 + 4 "tether e+4"
+
+SEND merc tether 1
+ASSERT LAST_N == 0 "tether empty atp"
+GETF merc heat
+ASSERT LAST_N == 2 "heat held empty"
+GETF merc energy
+ASSERT LAST_N == e0 + 4 "e held empty"
+
+SEND poor pulse 3
+SEND poor photosynth 3
+SEND poor glycolyse 2
+SEND poor tether 0
+ASSERT LAST_N == 0 "n0 fail"
+GETF poor atp
+ASSERT LAST_N == 2 "poor atp held"
+GETF poor heat
+ASSERT LAST_N == 0 "poor h held"
+
+SEND dead photosynth 4
+SEND dead tether 2
+ASSERT LAST_N == 0 "dead fail"
+
+SEND g0 wake
+SEND g0 pulse 2
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+SEND g0 quiesce
+GETF g0 atp
+ASSERT LAST_N >= 3 "g0 atp"
+GETF g0 energy
+LET ge0 = LAST_N
+SEND g0 tether 2
+ASSERT LAST_N == 2 "g0 tether"
+GETF g0 energy
+ASSERT LAST_N == ge0 + 2 "g0 e+2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready held"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 still q"
+
+ENTITY readyish OF Cell 1 8 0
+SEND readyish set_threshold 10
+SEND readyish photosynth 3
+SEND readyish glycolyse 2
+GETF readyish energy
+LET re0 = LAST_N
+ASSERT re0 < 10 "below thr"
+GETF readyish atp
+ASSERT LAST_N >= 2 "ready atp"
+SEND readyish tether 2
+ASSERT LAST_N == 2 "ready take"
+GETF readyish energy
+ASSERT LAST_N == re0 + 2 "ready e"
+GETF readyish ready
+ASSERT LAST_N == 1 "ready set"
+
+ENTITY inv OF Cell 1 14 0
+SEND inv set_threshold 10
+SEND inv pulse 6
+SEND inv photosynth 6
+SEND inv glycolyse 4
+SEND inv pump 4
+GETF inv age
+LET ia0 = LAST_N
+GETF inv pmf
+LET ip0 = LAST_N
+GETF inv energy
+LET ie0 = LAST_N
+GETF inv atp
+ASSERT LAST_N >= 4 "inv atp"
+SEND inv tether 2
+ASSERT LAST_N == 2 "inv tether"
+GETF inv age
+ASSERT LAST_N == ia0 "inv age held tether"
+GETF inv pmf
+ASSERT LAST_N == ip0 "inv pmf held tether"
+GETF inv energy
+ASSERT LAST_N == ie0 + 2 "inv e from mercs"
+SEND inv photosynth 2
+SEND inv glycolyse 2
+GETF inv age
+LET ia1 = LAST_N
+GETF inv pmf
+LET ip1 = LAST_N
+GETF inv energy
+LET ie1 = LAST_N
+GETF inv atp
+ASSERT LAST_N >= 2 "inv atp fus"
+SEND inv fusion 2
+ASSERT LAST_N == 2 "inv fus"
+GETF inv age
+ASSERT LAST_N == ia1 - 2 "inv age shed fus"
+GETF inv pmf
+ASSERT LAST_N == ip1 "inv pmf held fus"
+GETF inv energy
+ASSERT LAST_N == ie1 "inv e held fus"
+
+ENTITY fr OF Cell 1 14 0
+SEND fr set_threshold 10
+SEND fr pulse 5
+SEND fr photosynth 5
+SEND fr glycolyse 3
+SEND fr pump 4
+GETF fr age
+LET fa0 = LAST_N
+GETF fr pmf
+LET fp0 = LAST_N
+GETF fr energy
+LET fe0 = LAST_N
+SEND fr fragment 2
+ASSERT LAST_N == 2 "fr frag"
+GETF fr age
+ASSERT LAST_N == fa0 "fr age held"
+GETF fr pmf
+ASSERT LAST_N == fp0 - 2 "fr pmf nick"
+GETF fr energy
+ASSERT LAST_N == fe0 "fr e held frag"
+SEND fr photosynth 3
+SEND fr glycolyse 2
+GETF fr pmf
+LET fp1 = LAST_N
+GETF fr energy
+LET fe1 = LAST_N
+SEND fr tether 2
+ASSERT LAST_N == 2 "fr tether"
+GETF fr pmf
+ASSERT LAST_N == fp1 "fr pmf held tether"
+GETF fr energy
+ASSERT LAST_N == fe1 + 2 "fr e mercs"
+
+ENTITY bio OF Cell 1 12 0
+SEND bio set_threshold 10
+SEND bio pulse 2
+SEND bio photosynth 4
+SEND bio glycolyse 3
+SEND bio feed 4
+SEND bio bank 3
+GETF bio reserve
+ASSERT LAST_N >= 2 "bio reserve"
+GETF bio atp
+ASSERT LAST_N >= 2 "bio atp"
+GETF bio pmf
+LET bp0 = LAST_N
+GETF bio energy
+LET be0 = LAST_N
+SEND bio biogenesis 2
+ASSERT LAST_N == 2 "bio mint"
+GETF bio pmf
+ASSERT LAST_N == bp0 + 2 "bio pmf+"
+GETF bio energy
+ASSERT LAST_N == be0 "bio e held"
+SEND bio photosynth 3
+SEND bio glycolyse 2
+GETF bio pmf
+LET bp1 = LAST_N
+GETF bio energy
+LET be1 = LAST_N
+GETF bio reserve
+LET br1 = LAST_N
+SEND bio tether 2
+ASSERT LAST_N == 2 "bio tether"
+GETF bio pmf
+ASSERT LAST_N == bp1 "bio pmf held tether"
+GETF bio energy
+ASSERT LAST_N == be1 + 2 "bio e+"
+GETF bio reserve
+ASSERT LAST_N == br1 "bio r held tether"
+
+GETF merc alive
+ASSERT LAST_N == 1 "colony lives"
+PRINT "2093_life_cell_tether PASS"

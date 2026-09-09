@@ -1,0 +1,66 @@
+// atomic_printer_life_tether.cubalc
+// Science board: ER-mito MERCs (Mfn2/IP3R-VDAC) on the atomic printer life cell.
+// ATP-paid tethers couple Ca2/lipids -> energy while holding pmf/age/reserve.
+// Cube is SoT. Free energy must flow. AGI INCLUDE life_cell wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 14 0
+SEND printer set_threshold 10
+
+SEND printer pulse 6
+SEND printer photosynth 7
+SEND printer glycolyse 4
+SEND printer feed 4
+SEND printer pump 5
+
+GETF printer alive
+ASSERT LAST_N == 1 "printer lives"
+GETF printer age
+ASSERT LAST_N == 6 "printer aged"
+GETF printer atp
+ASSERT LAST_N >= 4 "printer charged"
+GETF printer pmf
+ASSERT LAST_N == 5 "printer gradient"
+
+GETF printer energy
+LET e0 = LAST_N
+GETF printer age
+LET a0 = LAST_N
+GETF printer pmf
+LET p0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+SEND printer tether 3
+ASSERT LAST_N == 3 "tether take"
+GETF printer heat
+ASSERT LAST_N >= 1 "assembly heat"
+GETF printer energy
+ASSERT LAST_N == e0 + 3 "Ca2 lipid yield"
+GETF printer age
+ASSERT LAST_N == a0 "age held"
+GETF printer pmf
+ASSERT LAST_N == p0 "gradient held"
+GETF printer reserve
+ASSERT LAST_N == r0 "cargo held"
+
+SEND printer photosynth 3
+SEND printer glycolyse 2
+GETF printer atp
+ASSERT LAST_N >= 2 "atp for fus"
+GETF printer age
+LET aleft = LAST_N
+ASSERT aleft >= 1 "wear left"
+GETF printer pmf
+LET pheld = LAST_N
+SEND printer fusion 1
+ASSERT LAST_N == 1 "fus take"
+GETF printer age
+ASSERT LAST_N == aleft - 1 "complementation"
+GETF printer pmf
+ASSERT LAST_N == pheld "gradient held fus"
+
+GETF printer alive
+ASSERT LAST_N == 1 "colony lives"
+PRINT "atomic_printer_life_tether PASS"

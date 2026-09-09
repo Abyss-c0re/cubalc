@@ -28,6 +28,7 @@
 #   biogenesis n         mito biogenesis — invest n ATP + n reserve → n nascent pmf +1 heat; PGC-1α rebuild after QC
 #   fusion n             mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; gradient held
 #   fragment n           mito fission — pay n ATP (DRP1/FIS1 dynamin) → heat +1; nick min(n,age,pmf) gradient on cut tips; age held for mitophagy
+#   tether n             ER–mito MERCs — pay n ATP (Mfn2/IP3R–VDAC tethers) → heat +1 + n energy (Ca2+/lipid coupling); pmf/age/reserve held
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3411,6 +3412,64 @@ CLASS Cell
     END
     RET take
   END
+
+
+
+  # Tether: ER–mitochondria contact sites (MERCs / Mfn2–IP3R–VDAC–GRP75).
+  # Pay take=min(n,atp) ATP → heat += 1 (tether-complex assembly tax).
+  # Ca2+/lipid coupling yields take energy (dehydrogenase kick + phospholipid spark).
+  # pmf/age/reserve/pcr untouched — contacts organize flux without bulk rebuild or QC shed.
+  # Fail-closed before mutation if ATP cannot fund take>=1.
+  # Distinct from biogenesis (ATP+reserve→pmf mass), fusion (ATP→age shed), fragment (ATP→pmf nick),
+  # pump (energy→pmf), feed (free nutrient), synthase (pmf→ATP), reverse (ATP→pmf), photosynth.
+  # Completes organelle continuum: fragment/mitophagy/biogenesis/fusion dynamics + ER interface.
+  # Usability: AGI models MERCs / ER-mito free-energy coupling under ASSERT science boards.
+  # Returns take tethered; dead/n<1/empty atp → 0.
+  METHOD tether n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
