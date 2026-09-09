@@ -129,6 +129,7 @@
 #   crest n              neural-crest EMT delamination after zip — ATP→heat+n energy+n (Snail/FoxD3 multipotent unplug); age/pmf/reserve/thr/sp/pcr held; ready recompute
 #   migrate n            multipotent NC stream locomotion after crest — ATP→heat+n setpoint-n (Rac1/RhoA/CXCL12 lean homeostat); age/energy/pmf/reserve/thr/pcr held; ready recompute
 #   stream n             collective NC chain-stream fasciculation after migrate — pay min(n,atp,reserve) → heat +n + reserve -n (Cx43/N-cad trail; consume CE bank); age/energy/pmf/thr/sp/pcr held; ready recompute
+#   condense n            post-stream mesenchymal condensation — ATP+energy→heat+n energy-n thr+n (N-cad/Sox9 pack); age/pmf/reserve/sp/pcr held
 
 CLASS Cell
   FIELD alive 0
@@ -4981,7 +4982,7 @@ CLASS Cell
   # CE bank (converge reserve+), not polar sp+.
   # ready recomputed vs energy/threshold (G0 still forces ready 0).
   # Fail-closed before mutation if atp or reserve cannot fund take>=1.
-  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense.
   # Signature: heat+n reserve-n; age+energy+pmf+thr+sp+pcr held — stream life-force.
   # Usability: AGI models collective NC chain-migration under ASSERT boards.
   # Returns take streamed; dead/n<1/empty atp|reserve -> 0.
@@ -5029,6 +5030,83 @@ CLASS Cell
     LET e = LAST_N
     GETF THIS threshold
     LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # CONDENSE: mesenchymal condensation after STREAM fasciculation.
+  # Spend take=min(n,atp,energy) — ATP + active-energy fund N-cad cis/trans
+  # clustering, cortical actomyosin purse-string packing, fibronectin fibril
+  # assembly and Sox9 pre-cartilage / pre-ganglion nodule densification at the
+  # stream terminus (post-Cx43 chain fasciculation target packing).
+  # HEAT += take (each adhesion / contractility / matrix-assembly cycle dissipates).
+  # ENERGY -= take (structural packing work draws active pool; inverse of crest
+  #   EMT energy+ spark; distinct from fold hinge energy- which holds thr).
+  # THRESHOLD rises: thr = min(1000, thr + take) — dense condensate restores
+  # contact-inhibition / Hippo packing barrier as multipotent stream arrests
+  # into a nodule (zip thr+ is neural-tube zipper after fold, not stream pack;
+  # migrate lowers sp, stream burns reserve trail, condense locks density bar).
+  # AGE/pmf/reserve/setpoint/pcr HELD — condense is post-stream packing, not
+  # EMT spark (crest energy+), not lean sp- (migrate), not CE trail (stream
+  # reserve-), not hinge-only energy- (fold thr held), not polar sp+, not
+  # lumen pcr+, not cilia pmf+.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp or energy cannot fund take>=1.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense.
+  # Signature: heat+n energy-n thr+n; age+pmf+reserve+sp+pcr held — condense life-force.
+  # Usability: AGI models NC stream terminal mesenchymal condensation under ASSERT.
+  # Returns take condensed; dead/n<1/empty atp|energy -> 0.
+  METHOD condense n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
     LET rd = 0
     IF e >= thr THEN
       LET rd = 1
