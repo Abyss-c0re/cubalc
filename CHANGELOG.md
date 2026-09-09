@@ -1,3 +1,12 @@
+## 1.15.1618-usability — MI 2130 LIFE_CELL_MIX (2026-09-09)
+### life_cell mix n — post-pore vesicle content mix / lumen-cleft aqueous dilution
+- Pay min(n,atp,energy,pcr) -> heat+n energy-n pcr-n; age/reserve/thr/sp/pmf held; ready recompute
+- Continuum: ...->dock->arm->clamp->trigger->pore->mix
+- Proof programs/proof/2130_life_cell_mix.cubalc asserts_ok=99
+- Science programs/science/integration/atomic_printer_life_mix.cubalc asserts_ok=23
+- SMX programs/science/integration/smx_mesh_vesicle_mix_life.cubalc asserts_ok=13
+- Signature distinct from pore thr- barrier drop and release pcr+ dump (pcr- content mix)
+
 ## 1.15.1616-usability — MI 2129 LIFE_CELL_PORE (2026-09-09)
 ### life_cell pore n — post-trigger fusion-pore open / SNARE-lipid stalk membrane merger
 - Pay min(n,atp,energy) -> heat+n energy-n thr-n; age/reserve/sp/pmf/pcr held; ready recompute

@@ -1,0 +1,135 @@
+// atomic_printer_life_mix.cubalc
+// Science board: life_cell mix — post-pore vesicle content mix / lumen-cleft aqueous dilution.
+// Atomic printer life-force continuum slice. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 50 0
+SEND printer set_threshold 12
+SEND printer pulse 4
+SEND printer photosynth 28
+SEND printer glycolyse 20
+SEND printer pump 16
+SEND printer photophos 16
+
+SEND printer converge 1
+SEND printer extend 1
+SEND printer fold 1
+SEND printer zip 1
+SEND printer crest 1
+SEND printer migrate 1
+SEND printer stream 1
+SEND printer condense 1
+SEND printer fate 1
+SEND printer project 1
+SEND printer synapse 1
+SEND printer release 4
+SEND printer reuptake 2
+SEND printer refill 2
+SEND printer dock 2
+SEND printer arm 2
+SEND printer clamp 3
+SEND printer trigger 2
+SEND printer pore 2
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer age
+LET age0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+GETF printer pmf
+LET p0 = LAST_N
+GETF printer pcr
+LET c0 = LAST_N
+ASSERT c0 >= 3 "sci pcr primed"
+ASSERT e0 >= 3 "sci e primed"
+ASSERT a0 >= 3 "sci a primed"
+
+SEND printer mix 3
+ASSERT LAST_N == 3 "sci mix3"
+
+GETF printer heat
+ASSERT LAST_N == h0 + 3 "sci heat+3"
+GETF printer energy
+ASSERT LAST_N == e0 - 3 "sci energy-3"
+GETF printer atp
+ASSERT LAST_N == a0 - 3 "sci atp-3"
+GETF printer pcr
+ASSERT LAST_N == c0 - 3 "sci pcr-3"
+GETF printer age
+ASSERT LAST_N == age0 "sci age held"
+GETF printer reserve
+ASSERT LAST_N == r0 "sci reserve held"
+GETF printer threshold
+ASSERT LAST_N == t0 "sci thr held"
+GETF printer setpoint
+ASSERT LAST_N == s0 "sci sp held"
+GETF printer pmf
+ASSERT LAST_N == p0 "sci pmf held"
+
+ENTITY dead OF Cell 0 20 0
+SEND dead mix 2
+ASSERT LAST_N == 0 "sci dead0"
+
+ENTITY poor OF Cell 1 0 0
+SEND poor set_threshold 5
+SEND poor mix 2
+ASSERT LAST_N == 0 "sci poor0"
+
+ENTITY slim OF Cell 1 40 0
+SEND slim set_threshold 9
+SEND slim pulse 3
+SEND slim photosynth 20
+SEND slim glycolyse 16
+SEND slim pump 12
+SEND slim photophos 12
+SEND slim converge 1
+SEND slim extend 1
+SEND slim fold 1
+SEND slim zip 1
+SEND slim crest 1
+SEND slim migrate 1
+SEND slim stream 1
+SEND slim condense 1
+SEND slim fate 1
+SEND slim project 1
+SEND slim synapse 1
+SEND slim release 3
+SEND slim reuptake 1
+SEND slim refill 1
+SEND slim dock 1
+SEND slim arm 1
+SEND slim clamp 1
+SEND slim trigger 1
+SEND slim pore 1
+GETF slim pcr
+LET sc = LAST_N
+GETF slim heat
+LET sh = LAST_N
+GETF slim energy
+LET se = LAST_N
+GETF slim atp
+LET sa = LAST_N
+ASSERT sc >= 1 "sci slim pcr"
+SEND slim mix 1
+ASSERT LAST_N == 1 "sci slim mix1"
+GETF slim pcr
+ASSERT LAST_N == sc - 1 "sci slim pcr-"
+GETF slim heat
+ASSERT LAST_N == sh + 1 "sci slim h+"
+GETF slim energy
+ASSERT LAST_N == se - 1 "sci slim e-"
+GETF slim atp
+ASSERT LAST_N == sa - 1 "sci slim a-"
+
+ASSERT 1 == 1 "atomic printer life mix complete"

@@ -1,0 +1,352 @@
+// 2130_life_cell_mix.cubalc
+// Proof 2130: life_cell mix - post-pore vesicle content mix / lumen-cleft aqueous dilution.
+// Pay min(n,atp,energy,pcr) -> heat+n energy-n pcr-n; age/reserve/thr/sp/pmf held.
+// Continuum after pore. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 40 0
+ENTITY poor OF Cell 1 0 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 24 0
+ENTITY twin OF Cell 1 30 0
+ENTITY ceil OF Cell 1 28 0
+ENTITY starved OF Cell 1 36 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 30
+SEND gate glycolyse 24
+SEND gate pump 18
+SEND gate photophos 18
+GETF gate age
+ASSERT LAST_N == 6 "mx a6"
+GETF gate atp
+ASSERT LAST_N >= 20 "mx atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate pmf
+LET pbase = LAST_N
+ASSERT pbase >= 5 "mx pmf base"
+GETF gate threshold
+ASSERT LAST_N == 10 "mx thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "mx sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "mx pcr0"
+
+SEND gate converge 1
+ASSERT LAST_N == 1 "mx prece1"
+SEND gate extend 1
+ASSERT LAST_N == 1 "mx prext1"
+SEND gate fold 1
+ASSERT LAST_N == 1 "mx prefd1"
+SEND gate zip 1
+ASSERT LAST_N == 1 "mx prez1"
+SEND gate crest 1
+ASSERT LAST_N == 1 "mx prec1"
+SEND gate migrate 1
+ASSERT LAST_N == 1 "mx prem1"
+SEND gate stream 1
+ASSERT LAST_N == 1 "mx prest1"
+SEND gate condense 1
+ASSERT LAST_N == 1 "mx precd1"
+SEND gate fate 1
+ASSERT LAST_N == 1 "mx pref1"
+SEND gate project 1
+ASSERT LAST_N == 1 "mx prep1"
+SEND gate synapse 1
+ASSERT LAST_N == 1 "mx presy1"
+SEND gate release 4
+ASSERT LAST_N == 4 "mx prer4"
+SEND gate reuptake 3
+ASSERT LAST_N == 3 "mx preru3"
+SEND gate refill 2
+ASSERT LAST_N == 2 "mx prerf2"
+SEND gate dock 2
+ASSERT LAST_N == 2 "mx predk2"
+SEND gate arm 2
+ASSERT LAST_N == 2 "mx prear2"
+SEND gate clamp 2
+ASSERT LAST_N == 2 "mx precl2"
+SEND gate trigger 2
+ASSERT LAST_N == 2 "mx pretr2"
+SEND gate pore 2
+ASSERT LAST_N == 2 "mx prepo2"
+
+GETF gate heat
+LET h1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate age
+LET ag1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+ASSERT c1 >= 2 "mx pcr primed"
+ASSERT e1 >= 2 "mx e primed"
+ASSERT at1 >= 2 "mx a primed"
+
+SEND gate mix 2
+ASSERT LAST_N == 2 "mx gate mix2"
+GETF gate heat
+ASSERT LAST_N == h1 + 2 "mx h+2"
+GETF gate energy
+ASSERT LAST_N == e1 - 2 "mx e-2"
+GETF gate atp
+ASSERT LAST_N == at1 - 2 "mx a-2"
+GETF gate pcr
+ASSERT LAST_N == c1 - 2 "mx pcr-2"
+GETF gate age
+ASSERT LAST_N == ag1 "mx age held"
+GETF gate reserve
+ASSERT LAST_N == r1 "mx reserve held"
+GETF gate threshold
+ASSERT LAST_N == t1 "mx thr held"
+GETF gate setpoint
+ASSERT LAST_N == s1 "mx sp held"
+GETF gate pmf
+ASSERT LAST_N == p1 "mx pmf held"
+
+SEND gate mix 0
+ASSERT LAST_N == 0 "mx zero"
+
+SEND dead mix 3
+ASSERT LAST_N == 0 "mx dead0"
+
+SEND poor mix 3
+ASSERT LAST_N == 0 "mx poor0"
+
+SEND twin pulse 5
+SEND twin photosynth 22
+SEND twin glycolyse 18
+SEND twin pump 14
+SEND twin photophos 14
+SEND twin set_threshold 10
+SEND twin set_setpoint 10
+SEND twin release 3
+SEND twin reuptake 2
+SEND twin refill 1
+SEND twin dock 1
+SEND twin arm 1
+SEND twin clamp 1
+SEND twin trigger 1
+SEND twin pore 1
+ASSERT LAST_N == 1 "mx twin prepore1"
+GETF twin heat
+LET th = LAST_N
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+GETF twin pcr
+LET tc = LAST_N
+GETF twin age
+LET tage = LAST_N
+GETF twin reserve
+LET tr = LAST_N
+GETF twin threshold
+LET tt = LAST_N
+GETF twin setpoint
+LET tsp = LAST_N
+GETF twin pmf
+LET tp = LAST_N
+ASSERT tc >= 1 "twin pcr"
+ASSERT te >= 1 "twin e"
+ASSERT ta >= 1 "twin a"
+SEND twin mix 1
+ASSERT LAST_N == 1 "twin mix1"
+GETF twin heat
+ASSERT LAST_N == th + 1 "twin h+"
+GETF twin energy
+ASSERT LAST_N == te - 1 "twin e-"
+GETF twin atp
+ASSERT LAST_N == ta - 1 "twin a-"
+GETF twin pcr
+ASSERT LAST_N == tc - 1 "twin pcr-"
+GETF twin age
+ASSERT LAST_N == tage "twin age held"
+GETF twin reserve
+ASSERT LAST_N == tr "twin r held"
+GETF twin threshold
+ASSERT LAST_N == tt "twin thr held"
+GETF twin setpoint
+ASSERT LAST_N == tsp "twin sp held"
+GETF twin pmf
+ASSERT LAST_N == tp "twin pmf held"
+
+SEND ceil pulse 5
+SEND ceil photosynth 20
+SEND ceil glycolyse 16
+SEND ceil pump 12
+SEND ceil photophos 12
+SEND ceil set_threshold 10
+SEND ceil set_setpoint 10
+SEND ceil release 5
+SEND ceil reuptake 2
+SEND ceil refill 1
+SEND ceil dock 2
+SEND ceil arm 1
+SEND ceil clamp 2
+SEND ceil trigger 2
+SEND ceil pore 2
+ASSERT LAST_N == 2 "mx ceil prepore2"
+GETF ceil threshold
+LET ct = LAST_N
+GETF ceil atp
+LET ca = LAST_N
+GETF ceil energy
+LET ce = LAST_N
+GETF ceil heat
+LET ch = LAST_N
+GETF ceil pcr
+LET cc = LAST_N
+ASSERT ca >= 1 "ceil a"
+ASSERT ce >= 1 "ceil e"
+ASSERT cc >= 1 "ceil pcr"
+SEND ceil mix 100
+LET took = LAST_N
+ASSERT took >= 1 "ceil took"
+ASSERT took <= ca "ceil <=atp"
+ASSERT took <= ce "ceil <=e"
+ASSERT took <= cc "ceil <=pcr"
+GETF ceil pcr
+ASSERT LAST_N == cc - took "ceil pcr burn"
+GETF ceil heat
+ASSERT LAST_N == ch + took "ceil h+"
+GETF ceil atp
+ASSERT LAST_N == ca - took "ceil atp-"
+GETF ceil energy
+ASSERT LAST_N == ce - took "ceil e-"
+GETF ceil threshold
+ASSERT LAST_N == ct "ceil thr held"
+
+SEND starved pulse 3
+SEND starved photosynth 14
+SEND starved glycolyse 12
+SEND starved pump 8
+SEND starved set_threshold 50
+SEND starved release 1
+SEND starved reuptake 1
+SEND starved refill 1
+SEND starved dock 1
+SEND starved arm 1
+SEND starved clamp 1
+SEND starved trigger 1
+SEND starved pore 1
+ASSERT LAST_N == 1 "mx starved prepore1"
+GETF starved energy
+LET se = LAST_N
+GETF starved atp
+LET sa = LAST_N
+GETF starved threshold
+LET st = LAST_N
+GETF starved setpoint
+LET ssp = LAST_N
+GETF starved heat
+LET sh = LAST_N
+GETF starved pmf
+LET spm = LAST_N
+GETF starved pcr
+LET sc = LAST_N
+SEND starved mix 100
+LET stook = LAST_N
+ASSERT stook >= 0 "st took"
+GETF starved heat
+ASSERT LAST_N == sh + stook "st h"
+GETF starved energy
+ASSERT LAST_N == se - stook "st e"
+GETF starved atp
+ASSERT LAST_N == sa - stook "st a"
+GETF starved pcr
+ASSERT LAST_N == sc - stook "st pcr"
+GETF starved threshold
+ASSERT LAST_N == st "st thr held"
+GETF starved pmf
+ASSERT LAST_N == spm "st p held"
+GETF starved setpoint
+ASSERT LAST_N == ssp "st sp held"
+
+SEND g0 pulse 4
+SEND g0 photosynth 18
+SEND g0 glycolyse 14
+SEND g0 pump 12
+SEND g0 photophos 12
+SEND g0 release 3
+SEND g0 quiesce 1
+ASSERT LAST_N == 1 "g0 q"
+SEND g0 dock 2
+ASSERT LAST_N == 2 "g0 dk2"
+SEND g0 arm 2
+ASSERT LAST_N == 2 "g0 ar2"
+SEND g0 clamp 1
+ASSERT LAST_N == 1 "g0 cl1"
+SEND g0 trigger 1
+ASSERT LAST_N == 1 "g0 tr1"
+SEND g0 pore 1
+ASSERT LAST_N == 1 "g0 po1"
+GETF g0 pcr
+LET g0c = LAST_N
+GETF g0 heat
+LET g0h = LAST_N
+GETF g0 energy
+LET g0e = LAST_N
+GETF g0 atp
+LET g0a = LAST_N
+SEND g0 mix 1
+LET g0t = LAST_N
+ASSERT g0t >= 0 "g0 took"
+ASSERT g0t <= 1 "g0 <=1"
+GETF g0 heat
+ASSERT LAST_N == g0h + g0t "g0 h"
+GETF g0 energy
+ASSERT LAST_N == g0e - g0t "g0 e"
+GETF g0 atp
+ASSERT LAST_N == g0a - g0t "g0 a"
+GETF g0 pcr
+ASSERT LAST_N == g0c - g0t "g0 pcr"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+SEND gate release 3
+ASSERT LAST_N == 3 "mx gate rerelease"
+GETF gate pcr
+LET c2 = LAST_N
+GETF gate heat
+LET h2 = LAST_N
+GETF gate energy
+LET e2 = LAST_N
+GETF gate atp
+LET a2 = LAST_N
+ASSERT c2 >= 1 "mx pcr2"
+SEND gate mix 1
+ASSERT LAST_N == 1 "mx gate mix again"
+GETF gate pcr
+ASSERT LAST_N == c2 - 1 "mx pcr again"
+GETF gate heat
+ASSERT LAST_N == h2 + 1 "mx h again"
+GETF gate energy
+ASSERT LAST_N == e2 - 1 "mx e again"
+GETF gate atp
+ASSERT LAST_N == a2 - 1 "mx a again"
+
+ASSERT 1 == 1 "life_cell mix proof complete"
