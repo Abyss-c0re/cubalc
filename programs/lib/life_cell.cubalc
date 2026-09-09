@@ -29,6 +29,7 @@
 #   fusion n             mito fusion — pay n ATP (MFN/OPA1 GTPase) → shed n age via complementation +1 heat; gradient held
 #   fragment n           mito fission — pay n ATP (DRP1/FIS1 dynamin) → heat +1; nick min(n,age,pmf) gradient on cut tips; age held for mitophagy
 #   tether n             ER–mito MERCs — pay n ATP (Mfn2/IP3R–VDAC tethers) → heat +1 + n energy (Ca2+/lipid coupling); pmf/age/reserve held
+#   mcu n                mito Ca2+ uniporter — spend n pmf (MCU/MICU ΔΨm drive) → heat +1 + n energy (PDH/ICD/OGDH kick); atp/age/reserve held
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3447,6 +3448,63 @@ CLASS Cell
     END
     LET a = a - take
     SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # MCU: mitochondrial Ca2+ uniporter (MCU/MICU1/EMRE complex).
+  # Spend take=min(n,pmf) proton-motive drive → heat += 1 (ion transit / buffering tax).
+  # Matrix Ca2+ activates PDH/ICD/OGDH dehydrogenases → mint take energy (TCA spark).
+  # atp/age/reserve/pcr untouched — electrophoretic Ca2+ entry organizes flux without ATP tax or QC shed.
+  # Fail-closed before mutation if pmf cannot fund take>=1.
+  # Distinct from tether (ATP→energy, pmf held), uncouple (pmf→heat only), synthase (pmf→ATP),
+  # reverse (ATP→pmf), pump (energy→pmf), oxidize/respire, biogenesis, fusion, fragment.
+  # Extends organelle continuum: MERCs deliver Ca2+; MCU admits it down ΔΨm into matrix catalysis.
+  # Usability: AGI models excitation-bioenergetic coupling / Ca2+-stimulated OXPHOS under ASSERT boards.
+  # Returns take admitted; dead/n<1/empty pmf → 0.
+  METHOD mcu n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
     GETF THIS heat
     LET h = LAST_N + 1
     SETF THIS heat h
