@@ -124,6 +124,7 @@
 #   align n            PCP tissue-axis after cilia — ATP->heat+ thr+ sp+ (age/energy/reserve/pmf/pcr held)
 #   converge n           CE after align — ATP->heat+n reserve+n (age/energy/pmf/pcr/thr/sp held)
 #   extend n             A-P elongation after converge — pay n ATP + n reserve tensile bank → heat +n + energy +n (FAK/YAP mechanotransduction); age/pmf/pcr/thr/sp held; ready recompute
+#   fold n               apical constriction / hinge after extend — pay min(n,atp,energy) → heat +n + energy -n; age/pmf/pcr/reserve/thr/sp held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -4620,7 +4621,7 @@ CLASS Cell
   # Distinct from converge (ATP→heat+n reserve+n energy held), align (thr+sp+),
   # effer (ATP→heat+n energy+n reserve held), draw (reserve→energy no heat),
   # bleb (age+ reserve+), tether (ATP→energy pmf held). Continuum:
-  # ...->align->converge->extend.
+  # ...->align->converge->extend->fold.
   # Signature: heat+n energy+n reserve-n; age+pmf+pcr+thr+sp held — CE→A-P life-force.
   # Usability: AGI models post-CE elongation competence under ASSERT boards.
   # Returns take extended; dead/n<1/empty atp or reserve -> 0.
@@ -4676,6 +4677,78 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # FOLD: apical constriction / hinge-point tissue folding after EXTEND (A-P length).
+  # Spend take=min(n,atp,energy) — needs BOTH charged ATP (Shroom3/ROCK/Myosin-II
+  # apical purse-string, adherens-junction endocytosis, basolateral wedge) AND
+  # bulk metabolic energy (membrane trafficking / cortical remodeling fuel).
+  # HEAT += take (each cross-bridge / endocytic cycle dissipates as heat).
+  # ENERGY -= take (folding burns metabolic free-energy into curvature work;
+  # not FAK/YAP return of extend, not reserve bank of converge).
+  # AGE/pmf/pcr/reserve/threshold/setpoint HELD — fold is post-CE hinge bending
+  # after A-P elongation, not PCP axis (align thr+sp), not CE bank (converge
+  # reserve+), not extend (reserve→energy), not bleb age+, not resolve thr-,
+  # not polar sp+, not seal thr+.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp or energy cannot fund take>=1.
+  # Distinct from extend (ATP+reserve→heat+n energy+n reserve-n), converge
+  # (ATP→heat+n reserve+n), effer (ATP→heat+n energy+n), spend (ATP only),
+  # draw (reserve→energy no heat), resolve (ATP→heat+n thr-n). Continuum:
+  # ...->align->converge->extend->fold.
+  # Signature: heat+n energy-n atp-n; age+pmf+pcr+reserve+thr+sp held — hinge life-force.
+  # Usability: AGI models neural-plate / gut invagination competence under ASSERT.
+  # Returns take folded; dead/n<1/empty atp|energy -> 0.
+  METHOD fold n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 

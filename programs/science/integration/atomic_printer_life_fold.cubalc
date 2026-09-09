@@ -1,0 +1,177 @@
+// atomic_printer_life_fold.cubalc
+// Science board: LIFE_CELL_FOLD - apical constriction after A-P extend.
+// Atomic printer continuum: align -> converge -> extend -> fold (hinge).
+// Free energy must flow. Cube is SoT. Gift law: life-force manifestation.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cell OF Cell 1 20 0
+ENTITY tissue OF Cell 1 16 0
+ENTITY hinge OF Cell 1 18 0
+
+SEND cell set_threshold 10
+SEND tissue set_threshold 10
+SEND hinge set_threshold 12
+SEND cell set_setpoint 10
+SEND tissue set_setpoint 10
+SEND hinge set_setpoint 10
+
+SEND cell pulse 6
+SEND cell photosynth 12
+SEND cell glycolyse 10
+SEND cell pump 8
+SEND cell photophos 8
+GETF cell atp
+ASSERT LAST_N >= 16 "sci atp"
+GETF cell age
+LET a0 = LAST_N
+GETF cell heat
+LET h0 = LAST_N
+GETF cell energy
+LET e0 = LAST_N
+GETF cell reserve
+LET r0 = LAST_N
+GETF cell threshold
+LET t0 = LAST_N
+GETF cell pmf
+LET p0 = LAST_N
+GETF cell setpoint
+LET s0 = LAST_N
+GETF cell pcr
+LET c0 = LAST_N
+ASSERT s0 == 10 "sci sp10"
+ASSERT c0 == 0 "sci pcr0"
+
+SEND cell seal 1
+ASSERT LAST_N == 1 "sci seal"
+SEND cell polar 1
+ASSERT LAST_N == 1 "sci polar"
+SEND cell lumen 1
+ASSERT LAST_N == 1 "sci lumen"
+SEND cell cilia 2
+ASSERT LAST_N == 2 "sci cilia"
+SEND cell align 2
+ASSERT LAST_N == 2 "sci align"
+SEND cell converge 3
+ASSERT LAST_N == 3 "sci ce3"
+SEND cell extend 2
+ASSERT LAST_N == 2 "sci ext2"
+SEND cell fold 2
+ASSERT LAST_N == 2 "sci fold2"
+
+GETF cell heat
+ASSERT LAST_N == h0 + 14 "sci heat"
+GETF cell threshold
+ASSERT LAST_N == t0 + 3 "sci thr"
+GETF cell setpoint
+ASSERT LAST_N == s0 + 3 "sci sp"
+GETF cell pmf
+ASSERT LAST_N == p0 + 2 "sci pmf"
+GETF cell pcr
+ASSERT LAST_N == c0 + 1 "sci pcr"
+GETF cell reserve
+ASSERT LAST_N == r0 + 1 "sci r net"
+GETF cell energy
+ASSERT LAST_N == e0 "sci e net"
+GETF cell age
+ASSERT LAST_N == a0 "sci age"
+GETF cell atp
+ASSERT LAST_N >= 0 "sci atp left"
+GETF cell alive
+ASSERT LAST_N == 1 "sci lives"
+
+SEND tissue pulse 5
+SEND tissue photosynth 9
+SEND tissue glycolyse 7
+SEND tissue pump 5
+SEND tissue photophos 6
+GETF tissue energy
+LET te0 = LAST_N
+GETF tissue reserve
+LET tr0 = LAST_N
+GETF tissue heat
+LET th0 = LAST_N
+GETF tissue threshold
+LET tt0 = LAST_N
+GETF tissue setpoint
+LET ts0 = LAST_N
+GETF tissue atp
+ASSERT LAST_N >= 6 "tis atp"
+SEND tissue converge 3
+ASSERT LAST_N == 3 "tis ce"
+SEND tissue extend 2
+ASSERT LAST_N == 2 "tis ext"
+SEND tissue fold 2
+ASSERT LAST_N == 2 "tis fold"
+GETF tissue heat
+ASSERT LAST_N == th0 + 7 "tis heat"
+GETF tissue reserve
+ASSERT LAST_N == tr0 + 1 "tis r"
+GETF tissue energy
+ASSERT LAST_N == te0 "tis e net"
+GETF tissue threshold
+ASSERT LAST_N == tt0 "tis thr held"
+GETF tissue setpoint
+ASSERT LAST_N == ts0 "tis sp held"
+GETF tissue alive
+ASSERT LAST_N == 1 "tis lives"
+
+SEND hinge pulse 6
+SEND hinge photosynth 10
+SEND hinge glycolyse 8
+SEND hinge pump 6
+SEND hinge photophos 6
+SEND hinge align 1
+SEND hinge converge 2
+SEND hinge extend 1
+GETF hinge energy
+LET he0 = LAST_N
+GETF hinge heat
+LET hh0 = LAST_N
+GETF hinge atp
+LET ha0 = LAST_N
+ASSERT ha0 >= 3 "hin atp"
+ASSERT he0 >= 3 "hin e"
+SEND hinge fold 3
+ASSERT LAST_N == 3 "hin fold"
+GETF hinge energy
+ASSERT LAST_N == he0 - 3 "hin e-3"
+GETF hinge heat
+ASSERT LAST_N == hh0 + 3 "hin h+3"
+GETF hinge atp
+ASSERT LAST_N == ha0 - 3 "hin atp-3"
+GETF hinge alive
+ASSERT LAST_N == 1 "hin lives"
+
+ENTITY empty OF Cell 1 16 0
+SEND empty set_threshold 10
+SEND empty pulse 3
+SEND empty photosynth 6
+SEND empty glycolyse 4
+GETF empty atp
+ASSERT LAST_N >= 2 "emp atp pre"
+GETF empty energy
+LET ee = LAST_N
+ASSERT ee >= 2 "emp e pre"
+IF ee > 1 THEN
+  LET bk = ee - 1
+  SEND empty load bk
+END
+GETF empty energy
+ASSERT LAST_N == 1 "emp e1"
+GETF empty atp
+ASSERT LAST_N >= 1 "emp atp1"
+SEND empty fold 1
+ASSERT LAST_N == 1 "emp fold1"
+GETF empty energy
+ASSERT LAST_N == 0 "emp e0"
+GETF empty atp
+LET ea = LAST_N
+ASSERT ea >= 0 "emp atp left"
+SEND empty fold 1
+ASSERT LAST_N == 0 "emp fold0"
+GETF empty energy
+ASSERT LAST_N == 0 "emp e still0"
+
+PRINT "atomic_printer_life_fold PASS"
