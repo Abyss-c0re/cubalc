@@ -1,0 +1,96 @@
+// atomic_printer_life_degrade.cubalc
+// Atomic printer life-force: post-activate lysosomal substrate proteolysis.
+// Continuum ...->mature->recruit->activate->degrade. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cell OF Cell 1 40 0
+SEND cell set_threshold 10
+SEND cell pulse 4
+SEND cell photosynth 36
+SEND cell glycolyse 30
+SEND cell pump 20
+SEND cell photophos 18
+SEND cell charge 30
+SEND cell feed 30
+
+SEND cell converge 2
+SEND cell extend 1
+SEND cell fold 1
+SEND cell zip 1
+SEND cell crest 1
+SEND cell migrate 1
+SEND cell stream 1
+SEND cell condense 1
+SEND cell fate 1
+SEND cell project 1
+SEND cell synapse 1
+SEND cell release 2
+SEND cell reuptake 2
+SEND cell refill 2
+SEND cell dock 2
+SEND cell arm 2
+SEND cell clamp 2
+SEND cell trigger 2
+SEND cell pore 2
+SEND cell mix 2
+SEND cell collapse 2
+SEND cell retrieve 2
+SEND cell acidify 2
+SEND cell mature 2
+SEND cell photosynth 12
+SEND cell glycolyse 10
+SEND cell charge 12
+SEND cell feed 12
+SEND cell recruit 2
+ASSERT LAST_N >= 0 "sci rec"
+SEND cell activate 2
+ASSERT LAST_N >= 0 "sci act"
+SEND cell photosynth 10
+SEND cell glycolyse 8
+SEND cell charge 10
+SEND cell feed 10
+
+GETF cell heat
+LET h0 = LAST_N
+GETF cell energy
+LET e0 = LAST_N
+GETF cell atp
+LET a0 = LAST_N
+GETF cell age
+LET ag0 = LAST_N
+GETF cell pcr
+LET c0 = LAST_N
+GETF cell reserve
+LET r0 = LAST_N
+GETF cell threshold
+LET t0 = LAST_N
+GETF cell pmf
+LET p0 = LAST_N
+GETF cell setpoint
+LET s0 = LAST_N
+
+SEND cell degrade 2
+LET took = LAST_N
+ASSERT took == 2 "sci deg took2"
+GETF cell heat
+ASSERT LAST_N == h0 + took "sci deg heat"
+GETF cell energy
+ASSERT LAST_N == e0 - took "sci deg e"
+GETF cell atp
+ASSERT LAST_N == a0 - took "sci deg a"
+GETF cell age
+ASSERT LAST_N == ag0 - took "sci deg age"
+GETF cell pcr
+ASSERT LAST_N == c0 + took "sci deg pcr"
+GETF cell reserve
+ASSERT LAST_N == r0 "sci deg r held"
+GETF cell threshold
+ASSERT LAST_N == t0 "sci deg thr held"
+GETF cell pmf
+ASSERT LAST_N == p0 "sci deg pmf held"
+GETF cell setpoint
+ASSERT LAST_N == s0 "sci deg sp held"
+
+PRINT "atomic_printer_life_degrade PASS"
