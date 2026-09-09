@@ -1,0 +1,318 @@
+// 2116_life_cell_migrate.cubalc
+// Proof 2116: life_cell migrate - multipotent NC stream after CREST.
+// Pay min(n,atp) -> heat+n setpoint-n; age/energy/pmf/reserve/thr/pcr held.
+// Continuum after crest. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 24 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 16 0
+ENTITY twin OF Cell 1 18 0
+ENTITY ceil OF Cell 1 20 0
+ENTITY starved OF Cell 1 30 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 12
+SEND gate glycolyse 10
+SEND gate pump 8
+SEND gate photophos 8
+GETF gate age
+ASSERT LAST_N == 6 "mig a6"
+GETF gate atp
+ASSERT LAST_N >= 14 "mig atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate threshold
+ASSERT LAST_N == 10 "mig thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "mig sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "mig pcr0"
+
+SEND gate converge 3
+ASSERT LAST_N == 3 "mig prece3"
+SEND gate extend 2
+ASSERT LAST_N == 2 "mig preext2"
+SEND gate fold 2
+ASSERT LAST_N == 2 "mig prefold2"
+SEND gate zip 2
+ASSERT LAST_N == 2 "mig prezip2"
+SEND gate crest 2
+ASSERT LAST_N == 2 "mig precrest2"
+GETF gate energy
+LET e1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+GETF gate age
+LET a1 = LAST_N
+ASSERT at1 >= 3 "mig atp3"
+ASSERT s1 == 10 "mig sp pre10"
+
+SEND gate migrate 3
+ASSERT LAST_N == 3 "mig 3"
+GETF gate heat
+ASSERT LAST_N == h1 + 3 "mig h+3"
+GETF gate setpoint
+ASSERT LAST_N == s1 - 3 "mig sp-3"
+GETF gate energy
+ASSERT LAST_N == e1 "mig e held"
+GETF gate atp
+ASSERT LAST_N == at1 - 3 "mig atp-3"
+GETF gate threshold
+ASSERT LAST_N == t1 "mig thr held"
+GETF gate reserve
+ASSERT LAST_N == r1 "mig r held"
+GETF gate age
+ASSERT LAST_N == a1 "mig age held"
+GETF gate pmf
+ASSERT LAST_N == p1 "mig pmf held"
+GETF gate pcr
+ASSERT LAST_N == c1 "mig pcr held"
+
+SEND gate photosynth 4
+SEND gate glycolyse 4
+SEND gate pump 2
+SEND gate photophos 2
+GETF gate atp
+LET at2 = LAST_N
+GETF gate heat
+LET h2 = LAST_N
+GETF gate setpoint
+LET s2 = LAST_N
+GETF gate energy
+LET e2 = LAST_N
+ASSERT at2 >= 2 "mig atp2"
+SEND gate migrate 2
+ASSERT LAST_N == 2 "mig 2b"
+GETF gate heat
+ASSERT LAST_N == h2 + 2 "mig h+2b"
+GETF gate setpoint
+ASSERT LAST_N == s2 - 2 "mig sp-2b"
+GETF gate energy
+ASSERT LAST_N == e2 "mig e2 held"
+GETF gate atp
+ASSERT LAST_N == at2 - 2 "mig atp-2b"
+
+SEND ceil pulse 4
+SEND ceil photosynth 10
+SEND ceil glycolyse 8
+SEND ceil pump 6
+SEND ceil photophos 6
+SEND ceil set_setpoint 3
+GETF ceil setpoint
+ASSERT LAST_N == 3 "ceil sp3"
+GETF ceil atp
+LET ca = LAST_N
+ASSERT ca >= 5 "ceil atp"
+GETF ceil heat
+LET ch = LAST_N
+SEND ceil migrate 5
+ASSERT LAST_N == 5 "ceil mig5"
+GETF ceil setpoint
+ASSERT LAST_N == 1 "ceil sp floor1"
+GETF ceil heat
+ASSERT LAST_N == ch + 5 "ceil h+5"
+GETF ceil atp
+ASSERT LAST_N == ca - 5 "ceil atp-5"
+
+SEND dead migrate 3
+ASSERT LAST_N == 0 "dead mig0"
+GETF dead heat
+ASSERT LAST_N == 0 "dead h0"
+GETF dead energy
+ASSERT LAST_N == 20 "dead e20"
+GETF dead setpoint
+ASSERT LAST_N == 10 "dead sp10"
+
+SEND poor pulse 4
+SEND poor photosynth 8
+SEND poor glycolyse 6
+SEND poor pump 4
+SEND poor photophos 4
+GETF poor atp
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor setpoint
+LET ps0 = LAST_N
+SEND poor migrate 0
+ASSERT LAST_N == 0 "n0 mig"
+SEND poor migrate -3
+ASSERT LAST_N == 0 "neg mig"
+GETF poor atp
+ASSERT LAST_N == pa0 "poor atp held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor h held"
+GETF poor setpoint
+ASSERT LAST_N == ps0 "poor sp held"
+
+SEND starved pulse 3
+GETF starved atp
+LET sa = LAST_N
+IF sa > 0 THEN
+  SEND starved migrate sa
+END
+GETF starved atp
+ASSERT LAST_N == 0 "star atp0"
+GETF starved energy
+LET se = LAST_N
+GETF starved heat
+LET sh0 = LAST_N
+GETF starved setpoint
+LET ss0 = LAST_N
+GETF starved reserve
+LET sr0 = LAST_N
+SEND starved migrate 2
+ASSERT LAST_N == 0 "star no atp"
+GETF starved energy
+ASSERT LAST_N == se "star e held"
+GETF starved heat
+ASSERT LAST_N == sh0 "star h held"
+GETF starved setpoint
+ASSERT LAST_N == ss0 "star sp held"
+GETF starved reserve
+ASSERT LAST_N == sr0 "star r held"
+
+SEND g0 pulse 5
+SEND g0 photosynth 8
+SEND g0 glycolyse 6
+SEND g0 pump 4
+SEND g0 photophos 4
+SEND g0 quiesce
+GETF g0 energy
+LET g0e = LAST_N
+GETF g0 heat
+LET g0h = LAST_N
+GETF g0 atp
+LET g0a = LAST_N
+GETF g0 setpoint
+LET g0s = LAST_N
+ASSERT g0a >= 2 "g0 atp"
+SEND g0 migrate 2
+ASSERT LAST_N == 2 "g0 mig"
+GETF g0 heat
+ASSERT LAST_N == g0h + 2 "g0 h+2"
+GETF g0 setpoint
+ASSERT LAST_N == g0s - 2 "g0 sp-2"
+GETF g0 energy
+ASSERT LAST_N == g0e "g0 e held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+SEND twin pulse 6
+SEND twin photosynth 10
+SEND twin glycolyse 8
+SEND twin pump 6
+SEND twin photophos 6
+SEND twin converge 2
+SEND twin extend 1
+SEND twin fold 1
+SEND twin zip 1
+SEND twin crest 1
+GETF twin threshold
+LET tt0 = LAST_N
+GETF twin setpoint
+LET ts0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin pcr
+LET tc0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+GETF twin age
+LET ta0 = LAST_N
+GETF twin atp
+LET tat0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+ASSERT tat0 >= 2 "twin atp"
+SEND twin migrate 2
+ASSERT LAST_N == 2 "twin mig2"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "twin h+2"
+GETF twin setpoint
+ASSERT LAST_N == ts0 - 2 "twin sp-2"
+GETF twin energy
+ASSERT LAST_N == te0 "twin e held"
+GETF twin threshold
+ASSERT LAST_N == tt0 "twin thr held"
+GETF twin reserve
+ASSERT LAST_N == tr0 "twin r held"
+GETF twin age
+ASSERT LAST_N == ta0 "twin age held"
+GETF twin pmf
+ASSERT LAST_N == tp0 "twin pmf held"
+GETF twin pcr
+ASSERT LAST_N == tc0 "twin pcr held"
+GETF twin atp
+ASSERT LAST_N == tat0 - 2 "twin atp-2"
+
+SEND poor photosynth 6
+SEND poor glycolyse 4
+SEND poor pump 2
+GETF poor atp
+LET pa1 = LAST_N
+IF pa1 < 1 THEN
+  SEND poor photosynth 8
+  SEND poor glycolyse 6
+  GETF poor atp
+  LET pa1 = LAST_N
+END
+ASSERT pa1 >= 1 "partial atp"
+GETF poor heat
+LET ph1 = LAST_N
+GETF poor setpoint
+LET ps1 = LAST_N
+LET want = pa1 + 5
+SEND poor migrate want
+ASSERT LAST_N == pa1 "partial take"
+GETF poor atp
+ASSERT LAST_N == 0 "partial atp0"
+GETF poor heat
+ASSERT LAST_N == ph1 + pa1 "partial h"
+LET ps_exp = ps1 - pa1
+IF ps_exp < 1 THEN
+  LET ps_exp = 1
+END
+GETF poor setpoint
+ASSERT LAST_N == ps_exp "partial sp"
+
+SEND gate set_threshold 10
+GETF gate energy
+LET ge = LAST_N
+GETF gate threshold
+LET gt = LAST_N
+GETF gate ready
+LET grd = LAST_N
+IF ge >= gt THEN
+  ASSERT grd == 1 "ready1 when e>=thr"
+END
+
+ASSERT 1 == 1 "migrate proof sealed"
