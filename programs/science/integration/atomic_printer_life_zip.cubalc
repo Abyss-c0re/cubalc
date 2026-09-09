@@ -1,0 +1,154 @@
+// atomic_printer_life_zip.cubalc
+// Science integration: neural-tube zipper after apical fold hinge.
+// Atomic printer continuum: converge -> extend -> fold -> zip.
+// N-cadherin / Ephrin zipper burns ATP into heat + raises mitosis thr
+// for closed-tube contact competence. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY plate OF Cell 1 28 0
+ENTITY hinge OF Cell 1 22 0
+ENTITY roof OF Cell 1 18 0
+
+SEND plate set_threshold 10
+SEND hinge set_threshold 10
+SEND roof set_threshold 10
+
+SEND plate pulse 4
+SEND plate photosynth 14
+SEND plate glycolyse 12
+SEND plate pump 10
+SEND plate photophos 10
+GETF plate atp
+ASSERT LAST_N >= 20 "sci atp"
+GETF plate energy
+LET e0 = LAST_N
+GETF plate heat
+LET h0 = LAST_N
+GETF plate reserve
+LET r0 = LAST_N
+GETF plate threshold
+ASSERT LAST_N == 10 "sci thr0"
+GETF plate pmf
+LET p0 = LAST_N
+GETF plate setpoint
+LET s0 = LAST_N
+GETF plate pcr
+LET c0 = LAST_N
+GETF plate age
+LET a0 = LAST_N
+
+SEND plate converge 4
+ASSERT LAST_N == 4 "sci ce4"
+GETF plate reserve
+ASSERT LAST_N == r0 + 4 "sci r+4"
+
+SEND plate extend 3
+ASSERT LAST_N == 3 "sci ext3"
+GETF plate energy
+LET e1 = LAST_N
+ASSERT e1 == e0 + 3 "sci e+3"
+GETF plate reserve
+LET r1 = LAST_N
+ASSERT r1 == r0 + 1 "sci r after ext"
+
+SEND plate fold 3
+ASSERT LAST_N == 3 "sci fold3"
+GETF plate energy
+LET e2 = LAST_N
+ASSERT e2 == e1 - 3 "sci e after fold"
+GETF plate heat
+LET h2 = LAST_N
+GETF plate atp
+LET a2 = LAST_N
+GETF plate threshold
+LET t2 = LAST_N
+ASSERT t2 == 10 "sci thr pre-zip"
+GETF plate reserve
+LET r2 = LAST_N
+GETF plate pmf
+LET p2 = LAST_N
+GETF plate setpoint
+LET s2 = LAST_N
+GETF plate pcr
+LET c2 = LAST_N
+GETF plate age
+LET age2 = LAST_N
+
+SEND plate zip 4
+ASSERT LAST_N == 4 "sci zip4"
+GETF plate heat
+ASSERT LAST_N == h2 + 4 "sci h+4"
+GETF plate threshold
+ASSERT LAST_N == t2 + 4 "sci thr+4"
+GETF plate energy
+ASSERT LAST_N == e2 "sci e held"
+GETF plate atp
+ASSERT LAST_N == a2 - 4 "sci atp-4"
+GETF plate reserve
+ASSERT LAST_N == r2 "sci r held"
+GETF plate pmf
+ASSERT LAST_N == p2 "sci pmf held"
+GETF plate setpoint
+ASSERT LAST_N == s2 "sci sp held"
+GETF plate pcr
+ASSERT LAST_N == c2 "sci pcr held"
+GETF plate age
+ASSERT LAST_N == age2 "sci age held"
+
+SEND hinge pulse 5
+SEND hinge photosynth 10
+SEND hinge glycolyse 8
+SEND hinge pump 6
+SEND hinge photophos 6
+SEND hinge converge 2
+SEND hinge extend 2
+SEND hinge fold 2
+GETF hinge threshold
+LET ht = LAST_N
+GETF hinge heat
+LET hh = LAST_N
+GETF hinge energy
+LET he = LAST_N
+SEND hinge zip 2
+ASSERT LAST_N == 2 "hinge zip2"
+GETF hinge threshold
+ASSERT LAST_N == ht + 2 "hinge thr+2"
+GETF hinge heat
+ASSERT LAST_N == hh + 2 "hinge h+2"
+GETF hinge energy
+ASSERT LAST_N == he "hinge e held"
+
+SEND roof pulse 2
+GETF roof atp
+ASSERT LAST_N == 0 "roof atp0"
+GETF roof threshold
+LET rt = LAST_N
+GETF roof heat
+LET rh = LAST_N
+SEND roof zip 3
+ASSERT LAST_N == 0 "roof zip0"
+GETF roof threshold
+ASSERT LAST_N == rt "roof thr held"
+GETF roof heat
+ASSERT LAST_N == rh "roof h held"
+
+ENTITY tube OF Cell 1 12 0
+SEND tube set_threshold 10
+SEND tube photosynth 8
+SEND tube glycolyse 6
+SEND tube photophos 6
+GETF tube energy
+ASSERT LAST_N == 12 "tube e12"
+SEND tube zip 5
+ASSERT LAST_N == 5 "tube zip5"
+GETF tube threshold
+ASSERT LAST_N == 15 "tube thr15"
+GETF tube energy
+ASSERT LAST_N == 12 "tube e12h"
+GETF tube ready
+ASSERT LAST_N == 0 "tube ready0 contact-inhib"
+
+PRINT "atomic_printer_life_zip PASS"
+

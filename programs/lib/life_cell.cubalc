@@ -125,6 +125,7 @@
 #   converge n           CE after align — ATP->heat+n reserve+n (age/energy/pmf/pcr/thr/sp held)
 #   extend n             A-P elongation after converge — pay n ATP + n reserve tensile bank → heat +n + energy +n (FAK/YAP mechanotransduction); age/pmf/pcr/thr/sp held; ready recompute
 #   fold n               apical constriction / hinge after extend — pay min(n,atp,energy) → heat +n + energy -n; age/pmf/pcr/reserve/thr/sp held; ready recompute
+#   zip n                neural-tube zipper after fold — pay min(n,atp) ATP N-cad/Ephrin hinge fusion → heat +n + thr +n (closed-tube contact competence); age/energy/pmf/reserve/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -4748,6 +4749,75 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+  # ZIP: neural-tube / epithelial zipper fusion after FOLD (apical hinge closure).
+  # Spend take=min(n,atp) ATP (N-cadherin trans-binding, Ephrin/Eph repulsion
+  # clearance, actin-cable purse-string completion, apical junction remodeling
+  # that fuses bilateral neural folds into a sealed tube lumen roof).
+  # HEAT += take (each cadherin/Eph cycle + actomyosin zipper step dissipates).
+  # THRESHOLD rises: thr = thr + take — closed-tube contact-inhibition /
+  # epithelial roof competence (post-fusion cells raise mitosis floor so the
+  # sealed tube holds shape; distinct from seal thr+ TJ lock, cad thr+ DNA
+  # checkpoint, align thr+ PCP axis, polar sp+ homeostat).
+  # AGE/energy/pmf/reserve/setpoint/pcr HELD — zip is post-fold bilateral fusion,
+  # not hinge bend (fold energy-), not CE bank (converge reserve+), not extend
+  # (reserve→energy), not lumen pcr+, not cilia pmf+, not polar sp+.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from fold (ATP+energy→heat+n energy-n), seal (ATP→heat+n thr+n
+  # after restit), align (ATP→heat+ thr+ sp+), cad (ATP→heat+n age+n thr+n),
+  # converge (ATP→heat+n reserve+n). Continuum:
+  # ...->align->converge->extend->fold->zip.
+  # Signature: heat+n thr+n; age+energy+pmf+reserve+sp+pcr held — zipper life-force.
+  # Usability: AGI models neural-tube closure / epithelial fusion under ASSERT.
+  # Returns take zipped; dead/n<1/empty atp -> 0.
+  METHOD zip n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET thr = thr + take
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 
