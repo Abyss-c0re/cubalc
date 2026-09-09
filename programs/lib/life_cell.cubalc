@@ -130,6 +130,8 @@
 #   migrate n            multipotent NC stream locomotion after crest — ATP→heat+n setpoint-n (Rac1/RhoA/CXCL12 lean homeostat); age/energy/pmf/reserve/thr/pcr held; ready recompute
 #   stream n             collective NC chain-stream fasciculation after migrate — pay min(n,atp,reserve) → heat +n + reserve -n (Cx43/N-cad trail; consume CE bank); age/energy/pmf/thr/sp/pcr held; ready recompute
 #   condense n            post-stream mesenchymal condensation — ATP+energy→heat+n energy-n thr+n (N-cad/Sox9 pack); age/pmf/reserve/sp/pcr held
+#   fate n                NC fate commitment / lineage restriction after condense — pay min(n,atp,pmf) → heat +n + pmf -n (Sox9/Neurog GRN lock); age/energy/reserve/thr/sp/pcr held; ready recompute
+#   project n             post-fate axonal/process projection — pay min(n,atp,energy) → heat +n + energy -n + sp +n (growth-cone MT/actin path length); age/pmf/reserve/thr/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5130,7 +5132,7 @@ CLASS Cell
   # lumen secretory, not polar sp+.
   # ready recomputed vs energy/threshold (G0 still forces ready 0).
   # Fail-closed before mutation if atp or pmf cannot fund take>=1.
-  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense->fate.
+  # Continuum: ...->align->converge->extend->fold->zip->crest->migrate->stream->condense->fate->project.
   # Signature: heat+n pmf-n; age+energy+reserve+thr+sp+pcr held — fate life-force.
   # Usability: AGI models NC multipotency restriction under ASSERT boards.
   # Returns take fated; dead/n<1/empty atp|pmf -> 0.
@@ -5176,6 +5178,86 @@ CLASS Cell
     END
     GETF THIS energy
     LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PROJECT: post-fate axonal / process projection pathfinding after FATE lock.
+  # Spend take=min(n,atp,energy) — ATP + bulk metabolic fuel fund growth-cone
+  # actin treadmilling (Arp2/3, cofilin), microtubule plus-end polymerization
+  # (EB1/XMAP215), membrane vesicle addition and Robo/Slit·Netrin·Eph path
+  # selection once Sox9/Neurog identity is restricted (post-fate projection;
+  # not multipotent stream migrate, not condensate pack, not GRN fate lock).
+  # HEAT += take (each treadmilling / polymerization / vesicle cycle dissipates).
+  # ENERGY -= take (projection burns active metabolic pool into cytoskeletal
+  #   work; inverse of crest EMT energy+ spark; distinct from condense energy-
+  #   thr+ pack and fold hinge energy- which hold sp).
+  # SETPOINT rises: sp = min(1000, sp + take) — axon/process path-length
+  # homeostat extends polarity axis as growth cone advances (inverse of migrate
+  # lean sp- CXCL12 chemotaxis; distinct from polar sp+ apical-basal without
+  # energy drain, align thr+sp PCP without energy-).
+  # AGE/pmf/reserve/threshold/pcr HELD — project is post-fate outgrowth, not
+  # injury age+, not chemiosmotic fate pmf-, not CE bank, not thr bar
+  # (zip/condense/align), not lumen pcr+.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp or energy cannot fund take>=1.
+  # Continuum: ...->crest->migrate->stream->condense->fate->project.
+  # Signature: heat+n energy-n sp+n; age+pmf+reserve+thr+pcr held — project life-force.
+  # Usability: AGI models NC-derivative axonal/process projection under ASSERT.
+  # Returns take projected; dead/n<1/empty atp|energy -> 0.
+  METHOD project n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS setpoint
+    LET sp = LAST_N + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
     GETF THIS threshold
     LET thr = LAST_N
     LET rd = 0
