@@ -1,0 +1,209 @@
+// atomic_printer_life_stream.cubalc
+// Science integration: collective NC chain-stream after migrate.
+// Atomic printer continuum: converge -> extend -> fold -> zip -> crest -> migrate -> stream.
+// Cx43 fasciculation burns ATP+CE reserve into heat (trail consume). Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY plate OF Cell 1 28 0
+ENTITY hinge OF Cell 1 22 0
+ENTITY bare OF Cell 1 18 0
+
+SEND plate set_threshold 10
+SEND hinge set_threshold 10
+SEND bare set_threshold 10
+
+SEND plate pulse 4
+SEND plate photosynth 14
+SEND plate glycolyse 12
+SEND plate pump 10
+SEND plate photophos 10
+GETF plate atp
+ASSERT LAST_N >= 20 "sci atp"
+GETF plate energy
+LET e0 = LAST_N
+GETF plate heat
+LET h0 = LAST_N
+GETF plate reserve
+LET r0 = LAST_N
+GETF plate threshold
+ASSERT LAST_N == 10 "sci thr0"
+GETF plate pmf
+LET p0 = LAST_N
+GETF plate setpoint
+LET s0 = LAST_N
+GETF plate pcr
+LET c0 = LAST_N
+GETF plate age
+LET a0 = LAST_N
+
+SEND plate converge 5
+ASSERT LAST_N == 5 "sci ce5"
+GETF plate reserve
+ASSERT LAST_N == r0 + 5 "sci r+5"
+
+SEND plate extend 2
+ASSERT LAST_N == 2 "sci ext2"
+GETF plate energy
+LET e1 = LAST_N
+ASSERT e1 == e0 + 2 "sci e+2"
+GETF plate reserve
+LET r1 = LAST_N
+ASSERT r1 == r0 + 3 "sci r after ext"
+
+SEND plate fold 2
+ASSERT LAST_N == 2 "sci fold2"
+GETF plate energy
+LET e2 = LAST_N
+ASSERT e2 == e1 - 2 "sci e after fold"
+GETF plate heat
+LET h2 = LAST_N
+GETF plate atp
+LET a2 = LAST_N
+GETF plate threshold
+LET t2 = LAST_N
+ASSERT t2 == 10 "sci thr pre-zip"
+GETF plate reserve
+LET r2 = LAST_N
+GETF plate pmf
+LET p2 = LAST_N
+GETF plate setpoint
+LET s2 = LAST_N
+GETF plate pcr
+LET c2 = LAST_N
+GETF plate age
+LET age2 = LAST_N
+
+SEND plate zip 2
+ASSERT LAST_N == 2 "sci zip2"
+GETF plate threshold
+LET t3 = LAST_N
+ASSERT t3 == 12 "sci thr after zip"
+GETF plate energy
+LET e3 = LAST_N
+ASSERT e3 == e2 "sci e zip held"
+GETF plate heat
+LET h3 = LAST_N
+GETF plate atp
+LET a3 = LAST_N
+GETF plate reserve
+LET r3 = LAST_N
+GETF plate pmf
+LET p3 = LAST_N
+GETF plate setpoint
+LET s3 = LAST_N
+GETF plate pcr
+LET c3 = LAST_N
+GETF plate age
+LET age3 = LAST_N
+
+SEND plate crest 2
+ASSERT LAST_N == 2 "sci crest2"
+GETF plate energy
+LET e4 = LAST_N
+ASSERT e4 == e3 + 2 "sci e crest+"
+GETF plate heat
+LET h4 = LAST_N
+ASSERT h4 == h3 + 2 "sci h crest+"
+GETF plate atp
+LET a4 = LAST_N
+ASSERT a4 == a3 - 2 "sci atp crest-"
+GETF plate setpoint
+LET s4 = LAST_N
+ASSERT s4 == s3 "sci sp crest held"
+GETF plate threshold
+LET t4 = LAST_N
+ASSERT t4 == t3 "sci thr crest held"
+
+SEND plate migrate 2
+ASSERT LAST_N == 2 "sci mig2"
+GETF plate heat
+LET h5 = LAST_N
+ASSERT h5 == h4 + 2 "sci h mig+"
+GETF plate setpoint
+LET s5 = LAST_N
+ASSERT s5 == s4 - 2 "sci sp mig-"
+GETF plate energy
+LET e5 = LAST_N
+ASSERT e5 == e4 "sci e mig held"
+GETF plate atp
+LET a5 = LAST_N
+ASSERT a5 == a4 - 2 "sci atp mig-"
+GETF plate reserve
+LET r5 = LAST_N
+ASSERT r5 == r3 "sci r mig held"
+GETF plate threshold
+LET t5 = LAST_N
+ASSERT t5 == t4 "sci thr mig held"
+
+SEND plate stream 3
+ASSERT LAST_N == 3 "sci str3"
+GETF plate heat
+ASSERT LAST_N == h5 + 3 "sci h+3"
+GETF plate reserve
+ASSERT LAST_N == r5 - 3 "sci r-3"
+GETF plate energy
+ASSERT LAST_N == e5 "sci e held"
+GETF plate atp
+ASSERT LAST_N == a5 - 3 "sci atp-3"
+GETF plate threshold
+ASSERT LAST_N == t5 "sci thr held"
+GETF plate setpoint
+ASSERT LAST_N == s5 "sci sp held"
+GETF plate pmf
+ASSERT LAST_N == p3 "sci pmf held"
+GETF plate pcr
+ASSERT LAST_N == c3 "sci pcr held"
+GETF plate age
+ASSERT LAST_N == age3 "sci age held"
+
+SEND hinge pulse 5
+SEND hinge photosynth 12
+SEND hinge glycolyse 10
+SEND hinge pump 8
+SEND hinge photophos 8
+SEND hinge converge 3
+SEND hinge extend 1
+SEND hinge fold 1
+SEND hinge zip 1
+SEND hinge crest 1
+SEND hinge migrate 1
+GETF hinge energy
+LET he = LAST_N
+GETF hinge heat
+LET hh = LAST_N
+GETF hinge reserve
+LET hr = LAST_N
+GETF hinge setpoint
+LET hs = LAST_N
+SEND hinge stream 2
+ASSERT LAST_N == 2 "hinge str2"
+GETF hinge energy
+ASSERT LAST_N == he "hinge e held"
+GETF hinge heat
+ASSERT LAST_N == hh + 2 "hinge h+2"
+GETF hinge reserve
+ASSERT LAST_N == hr - 2 "hinge r-2"
+GETF hinge setpoint
+ASSERT LAST_N == hs "hinge sp held"
+
+SEND bare pulse 2
+GETF bare atp
+ASSERT LAST_N == 0 "bare atp0"
+GETF bare energy
+LET se = LAST_N
+GETF bare heat
+LET sh = LAST_N
+GETF bare reserve
+LET sr = LAST_N
+SEND bare stream 3
+ASSERT LAST_N == 0 "bare str0"
+GETF bare energy
+ASSERT LAST_N == se "bare e held"
+GETF bare heat
+ASSERT LAST_N == sh "bare h held"
+GETF bare reserve
+ASSERT LAST_N == sr "bare r held"
+
+ASSERT 1 == 1 "stream science sealed"
