@@ -1,32 +1,28 @@
 // atomic_printer_life_synapse.cubalc
 // Science board: post-project NC-derivative synaptogenesis under atomic printer.
-// synapse n burns ATP+energy into heat and extends threshold contact-length homeostat.
+// synapse n burns ATP+energy into heat and raises threshold contact competence.
 // Continuum ...->fate->project->synapse. Free energy must flow. Cube is SoT.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
 ENTITY printer OF Cell 1 30 0
-ENTITY axon OF Cell 1 28 0
-ENTITY empty OF Cell 0 10 0
+ENTITY axon OF Cell 1 24 0
+ENTITY empty OF Cell 1 10 0
 
 SEND printer set_threshold 8
 SEND printer set_setpoint 12
 SEND printer pulse 7
-SEND printer photosynth 16
-SEND printer glycolyse 14
-SEND printer pump 12
-SEND printer photophos 12
+SEND printer photosynth 22
+SEND printer glycolyse 18
+SEND printer pump 14
+SEND printer photophos 14
 GETF printer age
 ASSERT LAST_N == 7 "sci a7"
 GETF printer atp
 ASSERT LAST_N >= 24 "sci atp"
 GETF printer pmf
 ASSERT LAST_N >= 8 "sci pmf"
-GETF printer energy
-LET e0 = LAST_N
-GETF printer heat
-LET h0 = LAST_N
 GETF printer setpoint
 LET s0 = LAST_N
 ASSERT s0 == 12 "sci sp12"
@@ -51,8 +47,8 @@ SEND printer condense 2
 ASSERT LAST_N == 2 "sci cdn2"
 SEND printer fate 2
 ASSERT LAST_N == 2 "sci fate2"
-SEND printer project 1
-ASSERT LAST_N == 1 "sci preprj"
+SEND printer project 2
+ASSERT LAST_N == 2 "sci preprj2"
 
 GETF printer energy
 LET e1 = LAST_N
@@ -136,8 +132,8 @@ GETF empty heat
 ASSERT LAST_N == 0 "empty h0"
 GETF empty energy
 ASSERT LAST_N == 10 "empty e held"
-GETF empty setpoint
-ASSERT LAST_N == 10 "empty sp held"
+GETF empty threshold
+ASSERT LAST_N == 10 "empty thr held"
 
 ENTITY cone OF Cell 1 36 0
 SEND cone set_threshold 5
@@ -149,23 +145,27 @@ SEND cone pump 10
 SEND cone photophos 10
 GETF cone energy
 LET ce0 = LAST_N
+GETF cone atp
+LET ca0 = LAST_N
+GETF cone heat
+LET ch0 = LAST_N
 GETF cone threshold
 LET ct0 = LAST_N
 GETF cone setpoint
 LET cs0 = LAST_N
-GETF cone heat
-LET ch0 = LAST_N
-SEND cone synapse 2
-ASSERT LAST_N == 2 "cone p2"
-SEND cone synapse 2
-ASSERT LAST_N == 2 "cone p2b"
-SEND cone synapse 1
-ASSERT LAST_N == 1 "cone p1"
-GETF cone threshold
-ASSERT LAST_N == ct0 + 5 "cone thr+5"
+ASSERT ce0 >= 5 "cone e"
+ASSERT ca0 >= 5 "cone a"
+SEND cone synapse 5
+ASSERT LAST_N == 5 "cone syn5"
 GETF cone heat
 ASSERT LAST_N == ch0 + 5 "cone h+5"
 GETF cone energy
 ASSERT LAST_N == ce0 - 5 "cone e-5"
-GETF cone alive
-ASSERT LAST_N == 1 "cone alive"
+GETF cone atp
+ASSERT LAST_N == ca0 - 5 "cone atp-5"
+GETF cone threshold
+ASSERT LAST_N == ct0 + 5 "cone thr+5"
+GETF cone setpoint
+ASSERT LAST_N == cs0 "cone sp held"
+
+NOTE "science LIFE_CELL_SYNAPSE atomic_printer PASS"
