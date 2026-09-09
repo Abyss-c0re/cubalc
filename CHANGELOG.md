@@ -1,3 +1,11 @@
+## 2100 — LIFE_CELL_CASP3 (1.15.1586-usability)
+
+- feat(life): `casp3 n` executioner caspase-3/7 after casp9 initiator.
+- Pay take=min(n,atp) ATP → heat+take, age+take, energy drain take (demolition).
+- pmf/reserve held; distinct from casp9 (energy held), apaf (age+1), momp (heat+1).
+- Continuum: tether→mcu→nclx→mptp→momp→apaf→casp9→casp3.
+- Proof programs/proof/2100_life_cell_casp3.cubalc asserts_ok=78 + science 41.
+
 ## [1.15.1585-usability] MI 2099 LIFE_CELL_CASP9 — 2026-09-09
 
 - feat(life): METHOD casp9 n — caspase-9 initiator on Apaf-1 apoptosome

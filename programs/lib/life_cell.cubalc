@@ -35,6 +35,7 @@
 #   momp n               Bax/Bak MOMP — pay n ATP oligomerize OMM pores → heat +1 + age +n (cyt c/SMAC/AIF release); pmf/energy/reserve held; apoptosis prime after mptp
 #   apaf n               Apaf-1/dATP apoptosome — pay n ATP wheel oligomerize → heat +n + age +1 (caspase-9 platform); pmf/energy/reserve held; after momp
 #   casp9 n              caspase-9 initiator on apoptosome — pay n ATP CARD/dimer cleavage → heat +n + age +n (executioner priming cascade); pmf/energy/reserve held; after apaf
+#   casp3 n              caspase-3 executioner — pay n ATP substrate proteolysis → heat +n + age +n + energy drain n (demolition); pmf/reserve held; after casp9
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3751,6 +3752,63 @@ CLASS Cell
     SETF THIS age ag
     RET take
   END
+
+
+  # CASP3: caspase-3/7 executioner proteolysis after caspase-9 initiator priming.
+  # Spend take=min(n,atp) ATP (cleavage of ICAD, PARP, lamin, cytoskeletal substrates) → heat += take
+  # (each peptide-bond scission dissipates as heat). Cascade injury: age += take (demolition load).
+  # ENERGY DRAIN: energy = max(0, energy - take) — executioner catabolism dismantles metabolic stores
+  # (glycogen/metabolite pools) as cells dismantle from within; distinct from initiator casp9 which holds energy.
+  # pmf/reserve/pcr held — DYm not dumped by cytosolic CAD/PARP cut; banked reserve not auto-drawn.
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from casp9 (ATP→heat+n age+n, energy HELD initiator priming), apaf (heat+n age+1 platform),
+  # momp (heat+1 age+n pores), mptp, mitophagy, die, lyse, uncouple, spend, nclx, mcu.
+  # Continuum pathophys: tether→mcu→nclx→mptp→momp→apaf→casp9→casp3 executioner demolition.
+  # Signature: heat+age scale with n AND energy drains by take — not pure initiator, not die.
+  # Usability: AGI models intrinsic apoptosis execution phase under ASSERT boards.
+  # Returns take cleaved; dead/n<1/empty atp → 0.
+  METHOD casp3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS age
+    LET ag = LAST_N + take
+    SETF THIS age ag
+    GETF THIS energy
+    LET en = LAST_N
+    IF en < 0 THEN
+      LET en = 0
+    END
+    LET drain = take
+    IF drain > en THEN
+      LET drain = en
+    END
+    LET en = en - drain
+    SETF THIS energy en
+    RET take
+  END
+
 
 
 

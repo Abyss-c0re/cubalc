@@ -1,0 +1,345 @@
+// 2100_life_cell_casp3.cubalc
+// Proof 2100: life_cell casp3 — caspase-3/7 executioner after casp9.
+// Pay n ATP substrate proteolysis → heat +n + age +n + energy drain n (demolition).
+// pmf/reserve held. Distinct from casp9 (energy HELD initiator), apaf (age+1 platform),
+// momp (heat+1 pores). Pathophysiology after casp9 continuum.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "casp3 a5"
+GETF gate atp
+ASSERT LAST_N == 4 "casp3 atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "casp3 h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "casp3 pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "casp3 energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+
+// CASP3: pay 2 ATP -> heat +2 + age +2 + energy -2; pmf/reserve held
+SEND gate casp3 2
+ASSERT LAST_N == 2 "casp3 take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "casp3 atp-2"
+GETF gate age
+ASSERT LAST_N == a0 + 2 "casp3 age+2"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "casp3 heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 - 2 "casp3 e drain2"
+GETF gate reserve
+ASSERT LAST_N == r0 "casp3 r held"
+GETF gate pmf
+ASSERT LAST_N == p0 "casp3 pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "casp3 lives"
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+
+SEND gate casp3 10
+ASSERT LAST_N == at1 "casp3 clamp atp"
+GETF gate atp
+ASSERT LAST_N == 0 "casp3 atp0"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "casp3 age clamp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "casp3 heat clamp"
+GETF gate energy
+LET e2 = LAST_N
+LET ed = at1
+IF ed > e1 THEN
+  LET ed = e1
+END
+ASSERT e2 == e1 - ed "casp3 e drain clamp"
+GETF gate pmf
+ASSERT LAST_N == p0 "pmf held clamp"
+GETF gate reserve
+ASSERT LAST_N == r0 "r held clamp"
+
+SEND gate casp3 1
+ASSERT LAST_N == 0 "casp3 empty atp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "heat held empty"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "age held empty"
+
+SEND gate casp3 0
+ASSERT LAST_N == 0 "casp3 n0"
+SEND dead casp3 2
+ASSERT LAST_N == 0 "casp3 dead"
+
+// poor path
+SEND poor pulse 3
+SEND poor photosynth 2
+SEND poor glycolyse 3
+SEND poor pump 2
+GETF poor atp
+LET pat = LAST_N
+GETF poor energy
+LET pe0 = LAST_N
+GETF poor age
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor pmf
+LET pp0 = LAST_N
+GETF poor reserve
+LET pr0 = LAST_N
+SEND poor casp3 1
+ASSERT LAST_N == 1 "poor take1"
+GETF poor atp
+ASSERT LAST_N == pat - 1 "poor atp-1"
+GETF poor age
+ASSERT LAST_N == pa0 + 1 "poor age+1"
+GETF poor heat
+ASSERT LAST_N == ph0 + 1 "poor heat+1"
+GETF poor energy
+LET pe1 = LAST_N
+IF pe0 >= 1 THEN
+  ASSERT pe1 == pe0 - 1 "poor e-1"
+ELSE
+  ASSERT pe1 == 0 "poor e0"
+END
+GETF poor pmf
+ASSERT LAST_N == pp0 "poor pmf held"
+GETF poor reserve
+ASSERT LAST_N == pr0 "poor r held"
+
+SEND g0 casp3 3
+GETF g0 alive
+ASSERT LAST_N == 1 "g0 lives"
+
+// twin: casp9 holds energy; casp3 drains
+SEND twin pulse 5
+SEND twin photosynth 5
+SEND twin glycolyse 4
+SEND twin pump 5
+GETF twin energy
+LET te0 = LAST_N
+SEND twin casp9 2
+ASSERT LAST_N == 2 "twin casp9"
+GETF twin energy
+ASSERT LAST_N == te0 "twin casp9 e held"
+GETF twin atp
+LET tat1 = LAST_N
+GETF twin age
+LET ta1 = LAST_N
+GETF twin heat
+LET th1 = LAST_N
+GETF twin energy
+LET te1 = LAST_N
+SEND twin casp3 2
+ASSERT LAST_N == 2 "twin casp3"
+GETF twin atp
+ASSERT LAST_N == tat1 - 2 "twin casp3 atp"
+GETF twin age
+ASSERT LAST_N == ta1 + 2 "twin casp3 age"
+GETF twin heat
+ASSERT LAST_N == th1 + 2 "twin casp3 heat"
+GETF twin energy
+ASSERT LAST_N == te1 - 2 "twin casp3 e drain"
+GETF twin alive
+ASSERT LAST_N == 1 "twin lives"
+
+// continuum: apaf -> casp9 -> casp3
+ENTITY path OF Cell 1 20 0
+SEND path set_threshold 10
+SEND path pulse 4
+SEND path photosynth 8
+SEND path glycolyse 6
+SEND path pump 6
+GETF path energy
+LET ce0 = LAST_N
+GETF path age
+LET ca0 = LAST_N
+GETF path heat
+LET ch0 = LAST_N
+GETF path pmf
+LET cp0 = LAST_N
+GETF path reserve
+LET cr0 = LAST_N
+SEND path apaf 2
+ASSERT LAST_N == 2 "path apaf"
+GETF path age
+ASSERT LAST_N == ca0 + 1 "path apaf age+1"
+GETF path heat
+ASSERT LAST_N == ch0 + 2 "path apaf heat+2"
+GETF path energy
+ASSERT LAST_N == ce0 "path apaf e held"
+GETF path age
+LET ca1 = LAST_N
+GETF path heat
+LET ch1 = LAST_N
+SEND path casp9 2
+ASSERT LAST_N == 2 "path casp9"
+GETF path age
+ASSERT LAST_N == ca1 + 2 "path casp9 age"
+GETF path heat
+ASSERT LAST_N == ch1 + 2 "path casp9 heat"
+GETF path energy
+ASSERT LAST_N == ce0 "path casp9 e held"
+GETF path atp
+LET cat2 = LAST_N
+GETF path age
+LET ca2 = LAST_N
+GETF path heat
+LET ch2 = LAST_N
+GETF path energy
+LET ce2 = LAST_N
+SEND path casp3 2
+ASSERT LAST_N == 2 "path casp3"
+GETF path atp
+ASSERT LAST_N == cat2 - 2 "path casp3 atp"
+GETF path age
+ASSERT LAST_N == ca2 + 2 "path casp3 age"
+GETF path heat
+ASSERT LAST_N == ch2 + 2 "path casp3 heat"
+GETF path energy
+ASSERT LAST_N == ce2 - 2 "path casp3 e drain"
+GETF path pmf
+ASSERT LAST_N == cp0 "path pmf held"
+GETF path reserve
+ASSERT LAST_N == cr0 "path r held"
+GETF path alive
+ASSERT LAST_N == 1 "path lives"
+
+// dry energy clamp
+ENTITY dry OF Cell 1 30 0
+SEND dry set_threshold 10
+SEND dry pulse 2
+SEND dry photosynth 10
+SEND dry glycolyse 10
+GETF dry energy
+LET de0 = LAST_N
+SEND dry casp3 1
+ASSERT LAST_N == 1 "dry take1"
+GETF dry energy
+LET de1 = LAST_N
+IF de0 >= 1 THEN
+  ASSERT de1 == de0 - 1 "dry e-1"
+ELSE
+  ASSERT de1 == 0 "dry e empty"
+END
+GETF dry atp
+LET dat1 = LAST_N
+GETF dry energy
+LET de2 = LAST_N
+// casp3 take clamps to atp; energy drain clamps to min(take, energy)
+IF dat1 >= 1 THEN
+  IF de2 >= 1 THEN
+    SEND dry casp3 dat1
+    ASSERT LAST_N == dat1 "dry take atp"
+    GETF dry atp
+    ASSERT LAST_N == 0 "dry atp0"
+    GETF dry energy
+    LET de3 = LAST_N
+    LET want = dat1
+    IF want > de2 THEN
+      LET want = de2
+    END
+    ASSERT de3 == de2 - want "dry e drained by min"
+  END
+END
+GETF dry alive
+ASSERT LAST_N == 1 "dry lives"
+
+ENTITY vs OF Cell 1 16 0
+SEND vs set_threshold 10
+SEND vs pulse 4
+SEND vs photosynth 6
+SEND vs glycolyse 5
+SEND vs pump 4
+GETF vs atp
+LET vat = LAST_N
+GETF vs energy
+LET ve = LAST_N
+GETF vs age
+LET va = LAST_N
+GETF vs heat
+LET vh = LAST_N
+SEND vs casp3 3
+ASSERT LAST_N == 3 "vs take3"
+GETF vs atp
+ASSERT LAST_N == vat - 3 "vs atp"
+GETF vs age
+ASSERT LAST_N == va + 3 "vs age"
+GETF vs heat
+ASSERT LAST_N == vh + 3 "vs heat"
+GETF vs energy
+ASSERT LAST_N == ve - 3 "vs e"
+
+GETF gate alive
+ASSERT LAST_N == 1 "fin gate"
+GETF twin alive
+ASSERT LAST_N == 1 "fin twin"
+GETF path alive
+ASSERT LAST_N == 1 "fin path"
+GETF dead alive
+ASSERT LAST_N == 0 "fin dead"
+
+ENTITY big OF Cell 1 8 0
+SEND big set_threshold 10
+SEND big pulse 3
+SEND big photosynth 3
+SEND big glycolyse 2
+GETF big atp
+LET bat = LAST_N
+GETF big energy
+LET be = LAST_N
+GETF big age
+LET ba = LAST_N
+GETF big heat
+LET bh = LAST_N
+SEND big casp3 100
+ASSERT LAST_N == bat "big clamp"
+GETF big atp
+ASSERT LAST_N == 0 "big atp0"
+GETF big age
+ASSERT LAST_N == ba + bat "big age"
+GETF big heat
+ASSERT LAST_N == bh + bat "big heat"
+GETF big energy
+LET be2 = LAST_N
+IF be >= bat THEN
+  ASSERT be2 == be - bat "big e full drain"
+ELSE
+  ASSERT be2 == 0 "big e to zero"
+END
+
+PRINT "2100_life_cell_casp3 PASS"
