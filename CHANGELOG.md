@@ -1,3 +1,11 @@
+## 1.15.1614-usability — MI 2127 LIFE_CELL_CLAMP (2026-09-09)
+
+- METHOD clamp n on life_cell: post-arm complexin clamp
+- Pay min(n,atp,energy) -> heat+n energy-n sp+n
+- Continuum dock->arm->clamp
+- Proof 2127 asserts_ok=105
+- Science atomic_printer_life_clamp asserts_ok=36
+
 ## 1.15.1612-usability — MI 2125 LIFE_CELL_DOCK (2026-09-09)
 
 ### Life-force
