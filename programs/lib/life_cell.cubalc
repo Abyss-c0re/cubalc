@@ -138,6 +138,8 @@
 #   refill n              post-reuptake vesicular transmitter reload / VGLUT-v-ATPase packing — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n (proton-ATPase vesicle acidification + VGLUT/VGAT quanta pack from recovered-transmitter bank); age/pmf/thr/sp/pcr held; ready recompute
 #   dock n               post-refill active-zone vesicle docking / Munc13-RIM-Rab3 tethering — pay min(n,atp,energy) → heat +n + energy -n + pmf +n; age/reserve/thr/sp/pcr held; ready recompute
 #   arm n                post-dock SNARE complex arming / Munc18-Syntaxin-SNAP25 zipper — pay min(n,atp,energy,pmf) → heat +n + energy -n + pmf -n; age/reserve/thr/sp/pcr held; ready recompute
+#   clamp n              post-arm complexin fusion clamp / metastable SNARE hold — pay min(n,atp,energy) → heat +n + energy -n + sp +n; age/reserve/thr/pmf/pcr held; ready recompute
+#   trigger n            post-clamp synaptotagmin Ca2+ trigger / complexin clamp release — pay min(n,atp,energy,setpoint) → heat +n + energy -n + sp -n; age/reserve/thr/pmf/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5818,6 +5820,94 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+
+
+  # TRIGGER: post-clamp synaptotagmin Ca2+ trigger / complexin clamp release.
+  # Spend take=min(n,atp,energy,setpoint) — ATP + bulk metabolic fuel + clamp-tension
+  # bank fund Syt1 C2A/C2B Ca2+-sensor domains that displace complexin-I/II from the
+  # metastable SNARE bundle after CLAMP has raised the fusion-threshold poise bank
+  # (post-clamp trigger; not multipotent stream, not GRN fate lock, not growth-cone
+  # path sp+, not synaptogenesis thr+ contact, not release pcr+ dump, not EAAT
+  # reserve+ clearance, not VGLUT reserve- pack, not dock pmf+ tethering, not arm
+  # pmf- zipper consume, not clamp sp+ hold).
+  # HEAT += take (each Syt C2 insert / complexin unclamp / lipid-penetration step
+  # dissipates as fusion-pore commit work).
+  # ENERGY -= take (trigger burns active metabolic pool into Ca2+-coupled sensor
+  # work; kin to clamp energy- but setpoint- unclamp instead of sp+ tension bank).
+  # ATP -= take (Syt ATP-sensitive accessory / NSF-adjacent re-prime adjacency).
+  # SETPOINT falls: setpoint = max(0, setpoint - take) — clamp tension released as
+  # complexin vacates the SNARE groove (fusion-pore commit; inverse of clamp sp+;
+  # distinct from path-length sp growth-cone, contact thr+, release pcr+, dock
+  # pmf+, arm pmf-, and clamp sp+).
+  # AGE/reserve/threshold/pmf/pcr HELD — trigger is Syt Ca2+ unclamp after clamp,
+  # not injury age+, not CE bank, not contact thr, not bouton dPsi_m, not phosphagen
+  # pcr. Ready recomputed from post-burn energy vs threshold.
+  # Continuum: ...->project->synapse->release->reuptake->refill->dock->arm->clamp->trigger.
+  # Signature: heat+n energy-n sp-n; age+reserve+thr+pmf+pcr held — trigger life-force.
+  # Usability: AGI models post-clamp synaptotagmin Ca2+ trigger under ASSERT.
+  # Returns take triggered; dead/n<1/empty atp|energy|setpoint -> 0.
+  METHOD trigger n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 0 THEN
+      LET sp = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > sp THEN
+      LET take = sp
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET sp = sp - take
+    SETF THIS setpoint sp
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
