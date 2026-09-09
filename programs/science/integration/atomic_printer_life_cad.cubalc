@@ -1,0 +1,185 @@
+// atomic_printer_life_cad.cubalc
+// Science board: atomic printer life-force — CAD/DFF40 DNA ladder after CASP3.
+// Place cell, energize chemiosmotic path, run tether->mcu->nclx->mptp->momp->apaf->casp9->casp3->cad.
+// ASSERT free energy: energy drains on casp3 only; cad holds energy, raises thr checkpoint.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY seed OF Cell 1 16 0
+SEND seed set_threshold 10
+
+SEND seed pulse 4
+SEND seed photosynth 14
+SEND seed glycolyse 12
+SEND seed pump 10
+SEND seed synthase 4
+SEND seed glycolyse 4
+
+GETF seed alive
+ASSERT LAST_N == 1 "sci alive"
+GETF seed atp
+LET at0 = LAST_N
+ASSERT at0 >= 8 "sci atp primed"
+GETF seed pmf
+LET p0 = LAST_N
+ASSERT p0 >= 4 "sci pmf"
+GETF seed energy
+LET e0 = LAST_N
+ASSERT e0 >= 4 "sci energy"
+GETF seed reserve
+LET r0 = LAST_N
+GETF seed age
+LET a0 = LAST_N
+GETF seed heat
+LET h0 = LAST_N
+GETF seed threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "sci thr10"
+
+SEND seed tether 1
+ASSERT LAST_N == 1 "sci tether"
+SEND seed mcu 2
+ASSERT LAST_N == 2 "sci mcu"
+SEND seed nclx 1
+ASSERT LAST_N == 1 "sci nclx"
+
+GETF seed pmf
+LET p1 = LAST_N
+GETF seed heat
+LET h1 = LAST_N
+GETF seed age
+LET a1 = LAST_N
+GETF seed energy
+LET e_ap = LAST_N
+
+SEND seed mptp 2
+ASSERT LAST_N == 2 "sci mptp"
+GETF seed pmf
+ASSERT LAST_N == p1 - 2 "sci mptp pmf"
+GETF seed heat
+ASSERT LAST_N == h1 + 2 "sci mptp heat"
+GETF seed age
+ASSERT LAST_N == a1 + 1 "sci mptp age"
+
+GETF seed atp
+LET at2 = LAST_N
+GETF seed age
+LET a2 = LAST_N
+GETF seed heat
+LET h2 = LAST_N
+GETF seed pmf
+LET p2 = LAST_N
+
+SEND seed momp 2
+ASSERT LAST_N == 2 "sci momp"
+GETF seed heat
+ASSERT LAST_N == h2 + 1 "sci momp heat"
+GETF seed age
+ASSERT LAST_N == a2 + 2 "sci momp age"
+GETF seed energy
+ASSERT LAST_N == e_ap "sci momp e held"
+GETF seed pmf
+ASSERT LAST_N == p2 "sci momp pmf held"
+
+GETF seed age
+LET a3 = LAST_N
+GETF seed heat
+LET h3 = LAST_N
+SEND seed apaf 2
+ASSERT LAST_N == 2 "sci apaf"
+GETF seed age
+ASSERT LAST_N == a3 + 1 "sci apaf age"
+GETF seed heat
+ASSERT LAST_N == h3 + 2 "sci apaf heat"
+GETF seed energy
+ASSERT LAST_N == e_ap "sci apaf e held"
+
+GETF seed age
+LET a4 = LAST_N
+GETF seed heat
+LET h4 = LAST_N
+SEND seed casp9 2
+ASSERT LAST_N == 2 "sci casp9"
+GETF seed age
+ASSERT LAST_N == a4 + 2 "sci casp9 age"
+GETF seed heat
+ASSERT LAST_N == h4 + 2 "sci casp9 heat"
+GETF seed energy
+ASSERT LAST_N == e_ap "sci casp9 e held"
+
+GETF seed atp
+LET at5 = LAST_N
+GETF seed age
+LET a5 = LAST_N
+GETF seed heat
+LET h5 = LAST_N
+GETF seed energy
+LET e5 = LAST_N
+SEND seed casp3 2
+ASSERT LAST_N == 2 "sci casp3"
+GETF seed atp
+ASSERT LAST_N == at5 - 2 "sci casp3 atp"
+GETF seed age
+ASSERT LAST_N == a5 + 2 "sci casp3 age"
+GETF seed heat
+ASSERT LAST_N == h5 + 2 "sci casp3 heat"
+GETF seed energy
+ASSERT LAST_N == e5 - 2 "sci casp3 e drain"
+GETF seed threshold
+ASSERT LAST_N == t0 "sci casp3 thr held"
+GETF seed pmf
+LET p5 = LAST_N
+GETF seed reserve
+LET r5 = LAST_N
+
+GETF seed atp
+LET at6 = LAST_N
+ASSERT at6 >= 1 "sci atp for cad"
+GETF seed age
+LET a6 = LAST_N
+GETF seed heat
+LET h6 = LAST_N
+GETF seed energy
+LET e6 = LAST_N
+GETF seed threshold
+LET t6 = LAST_N
+LET ctake = 2
+IF ctake > at6 THEN
+  LET ctake = at6
+END
+SEND seed cad ctake
+ASSERT LAST_N == ctake "sci cad"
+GETF seed atp
+ASSERT LAST_N == at6 - ctake "sci cad atp"
+GETF seed age
+ASSERT LAST_N == a6 + ctake "sci cad age"
+GETF seed heat
+ASSERT LAST_N == h6 + ctake "sci cad heat"
+GETF seed threshold
+ASSERT LAST_N == t6 + ctake "sci cad thr"
+GETF seed energy
+ASSERT LAST_N == e6 "sci cad e held"
+GETF seed pmf
+ASSERT LAST_N == p5 "sci cad pmf held"
+GETF seed reserve
+ASSERT LAST_N == r5 "sci cad r held"
+GETF seed alive
+ASSERT LAST_N == 1 "sci lives"
+GETF seed energy
+LET e_fin = LAST_N
+GETF seed threshold
+LET t_fin = LAST_N
+GETF seed ready
+LET rd_fin = LAST_N
+IF e_fin >= t_fin THEN
+  ASSERT rd_fin == 1 "sci ready if surplus"
+ELSE
+  ASSERT rd_fin == 0 "sci ready ladder-blocked"
+END
+
+GETF seed pmf
+ASSERT LAST_N >= 1 "sci free energy pmf flows held"
+SEND seed vitality
+ASSERT LAST_N >= 0 "sci vitality nonneg"

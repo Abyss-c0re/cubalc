@@ -1,0 +1,468 @@
+// 2101_life_cell_cad.cubalc
+// Proof 2101: life_cell cad — CAD/DFF40 nuclease after casp3 executioner.
+// Pay n ATP ICAD-liberated DNA ladder -> heat +n + age +n + threshold +n (checkpoint);
+// energy/pmf/reserve held; ready recomputed. Distinct from casp3 (energy drain, thr held),
+// casp9 (thr+energy held), fortify (thr only). Continuum after casp3 terminal ladder.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "cad a5"
+GETF gate atp
+ASSERT LAST_N == 4 "cad atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "cad h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "cad pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "cad energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "cad thr10"
+
+SEND gate cad 2
+ASSERT LAST_N == 2 "cad take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "cad atp-2"
+GETF gate age
+ASSERT LAST_N == a0 + 2 "cad age+2"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "cad heat+2"
+GETF gate threshold
+ASSERT LAST_N == t0 + 2 "cad thr+2"
+GETF gate energy
+ASSERT LAST_N == e0 "cad e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "cad r held"
+GETF gate pmf
+ASSERT LAST_N == p0 "cad pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "cad lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "cad ready if surplus"
+ELSE
+  ASSERT rd == 0 "cad ready blocked by ladder thr"
+END
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+
+SEND gate cad 10
+ASSERT LAST_N == at1 "cad clamp atp"
+GETF gate atp
+ASSERT LAST_N == 0 "cad atp0"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "cad age clamp"
+GETF gate heat
+ASSERT LAST_N == h1 + at1 "cad heat clamp"
+GETF gate threshold
+ASSERT LAST_N == t1 + at1 "cad thr clamp"
+GETF gate energy
+ASSERT LAST_N == e1 "cad e held clamp"
+GETF gate pmf
+ASSERT LAST_N == p0 "pmf held clamp"
+GETF gate reserve
+ASSERT LAST_N == r0 "r held clamp"
+GETF gate ready
+ASSERT LAST_N == 0 "cad ready 0 after thr climb"
+GETF gate alive
+ASSERT LAST_N == 1 "cad lives clamp"
+
+// dead cell: no-op
+SEND dead cad 3
+ASSERT LAST_N == 0 "dead cad0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays"
+
+// n<1
+SEND twin cad 0
+ASSERT LAST_N == 0 "cad n0"
+SEND twin cad -3
+ASSERT LAST_N == 0 "cad nneg"
+
+// empty ATP
+SEND poor pulse 1
+SEND poor photosynth 1
+GETF poor atp
+LET pa = LAST_N
+IF pa > 0 THEN
+  SEND poor casp9 pa
+END
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+GETF poor age
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor threshold
+LET pt0 = LAST_N
+GETF poor energy
+LET pe0 = LAST_N
+SEND poor cad 4
+ASSERT LAST_N == 0 "poor cad0"
+GETF poor age
+ASSERT LAST_N == pa0 "poor age held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor heat held"
+GETF poor threshold
+ASSERT LAST_N == pt0 "poor thr held"
+GETF poor energy
+ASSERT LAST_N == pe0 "poor e held"
+
+// G0: cad works, ready forced 0
+SEND g0 quiesce
+SEND g0 pulse 3
+SEND g0 photosynth 6
+SEND g0 glycolyse 6
+SEND g0 pump 4
+GETF g0 atp
+LET ga0 = LAST_N
+ASSERT ga0 >= 2 "g0 atp"
+GETF g0 threshold
+LET gt0 = LAST_N
+GETF g0 age
+LET gag0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 q"
+SEND g0 cad 2
+ASSERT LAST_N == 2 "g0 cad2"
+GETF g0 atp
+ASSERT LAST_N == ga0 - 2 "g0 atp-2"
+GETF g0 age
+ASSERT LAST_N == gag0 + 2 "g0 age+2"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 threshold
+ASSERT LAST_N == gt0 + 2 "g0 thr+2"
+GETF g0 energy
+ASSERT LAST_N == ge0 "g0 e held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 still q"
+
+// casp3 vs cad contrast: casp3 drains energy + thr held; cad thr+ energy held
+ENTITY cx OF Cell 1 20 0
+SEND cx set_threshold 10
+SEND cx pulse 4
+SEND cx photosynth 8
+SEND cx glycolyse 8
+SEND cx pump 6
+GETF cx atp
+LET cxa = LAST_N
+ASSERT cxa >= 4 "cx atp"
+GETF cx energy
+LET cxe0 = LAST_N
+GETF cx threshold
+LET cxt0 = LAST_N
+GETF cx age
+LET cxa0 = LAST_N
+GETF cx heat
+LET cxh0 = LAST_N
+SEND cx casp3 2
+ASSERT LAST_N == 2 "cx casp3"
+GETF cx energy
+ASSERT LAST_N == cxe0 - 2 "cx casp3 e drain"
+GETF cx threshold
+ASSERT LAST_N == cxt0 "cx casp3 thr held"
+GETF cx age
+ASSERT LAST_N == cxa0 + 2 "cx casp3 age"
+GETF cx heat
+ASSERT LAST_N == cxh0 + 2 "cx casp3 heat"
+GETF cx energy
+LET cxe1 = LAST_N
+GETF cx threshold
+LET cxt1 = LAST_N
+GETF cx age
+LET cxa1 = LAST_N
+GETF cx heat
+LET cxh1 = LAST_N
+GETF cx atp
+LET cxat1 = LAST_N
+SEND cx cad 2
+ASSERT LAST_N == 2 "cx cad"
+GETF cx energy
+ASSERT LAST_N == cxe1 "cx cad e held"
+GETF cx threshold
+ASSERT LAST_N == cxt1 + 2 "cx cad thr+2"
+GETF cx age
+ASSERT LAST_N == cxa1 + 2 "cx cad age"
+GETF cx heat
+ASSERT LAST_N == cxh1 + 2 "cx cad heat"
+GETF cx atp
+ASSERT LAST_N == cxat1 - 2 "cx cad atp"
+
+// full continuum path: tether->mcu->nclx->mptp->momp->apaf->casp9->casp3->cad
+ENTITY path OF Cell 1 24 0
+SEND path set_threshold 10
+SEND path pulse 4
+SEND path photosynth 12
+SEND path glycolyse 10
+SEND path pump 10
+SEND path synthase 2
+GETF path atp
+LET pat0 = LAST_N
+ASSERT pat0 >= 8 "path atp"
+GETF path pmf
+LET pp0 = LAST_N
+GETF path energy
+LET pe_prime = LAST_N
+GETF path reserve
+LET pr0 = LAST_N
+GETF path age
+LET pa0b = LAST_N
+GETF path heat
+LET ph0b = LAST_N
+GETF path threshold
+LET pt0b = LAST_N
+
+SEND path tether 1
+ASSERT LAST_N == 1 "path tether"
+SEND path mcu 2
+ASSERT LAST_N == 2 "path mcu"
+SEND path nclx 1
+ASSERT LAST_N == 1 "path nclx"
+GETF path pmf
+LET pp1 = LAST_N
+GETF path heat
+LET ph1 = LAST_N
+GETF path age
+LET pa1 = LAST_N
+GETF path energy
+LET pe0b = LAST_N
+SEND path mptp 2
+ASSERT LAST_N == 2 "path mptp"
+GETF path pmf
+ASSERT LAST_N == pp1 - 2 "path mptp pmf"
+GETF path heat
+ASSERT LAST_N == ph1 + 2 "path mptp heat"
+GETF path age
+ASSERT LAST_N == pa1 + 1 "path mptp age"
+
+GETF path atp
+LET pat1 = LAST_N
+GETF path age
+LET pa2 = LAST_N
+GETF path heat
+LET ph2 = LAST_N
+SEND path momp 2
+ASSERT LAST_N == 2 "path momp"
+GETF path heat
+ASSERT LAST_N == ph2 + 1 "path momp heat+1"
+GETF path age
+ASSERT LAST_N == pa2 + 2 "path momp age+2"
+GETF path energy
+ASSERT LAST_N == pe0b "path momp e held"
+
+GETF path atp
+LET pat2 = LAST_N
+GETF path age
+LET pa3 = LAST_N
+GETF path heat
+LET ph3 = LAST_N
+SEND path apaf 2
+ASSERT LAST_N == 2 "path apaf"
+GETF path age
+ASSERT LAST_N == pa3 + 1 "path apaf age+1"
+GETF path heat
+ASSERT LAST_N == ph3 + 2 "path apaf heat+2"
+GETF path energy
+ASSERT LAST_N == pe0b "path apaf e held"
+
+GETF path age
+LET pa4 = LAST_N
+GETF path heat
+LET ph4 = LAST_N
+SEND path casp9 2
+ASSERT LAST_N == 2 "path casp9"
+GETF path age
+ASSERT LAST_N == pa4 + 2 "path casp9 age"
+GETF path heat
+ASSERT LAST_N == ph4 + 2 "path casp9 heat"
+GETF path energy
+ASSERT LAST_N == pe0b "path casp9 e held"
+
+GETF path atp
+LET pat3 = LAST_N
+GETF path age
+LET pa5 = LAST_N
+GETF path heat
+LET ph5 = LAST_N
+GETF path energy
+LET pe5 = LAST_N
+SEND path casp3 2
+ASSERT LAST_N == 2 "path casp3"
+GETF path atp
+ASSERT LAST_N == pat3 - 2 "path casp3 atp"
+GETF path age
+ASSERT LAST_N == pa5 + 2 "path casp3 age"
+GETF path heat
+ASSERT LAST_N == ph5 + 2 "path casp3 heat"
+GETF path energy
+ASSERT LAST_N == pe5 - 2 "path casp3 e drain"
+GETF path threshold
+ASSERT LAST_N == pt0b "path casp3 thr held"
+
+GETF path atp
+LET pat4 = LAST_N
+GETF path age
+LET pa6 = LAST_N
+GETF path heat
+LET ph6 = LAST_N
+GETF path energy
+LET pe6 = LAST_N
+GETF path threshold
+LET pt6 = LAST_N
+GETF path pmf
+LET pp6 = LAST_N
+GETF path reserve
+LET pr6 = LAST_N
+SEND path cad 2
+ASSERT LAST_N == 2 "path cad"
+GETF path atp
+ASSERT LAST_N == pat4 - 2 "path cad atp"
+GETF path age
+ASSERT LAST_N == pa6 + 2 "path cad age"
+GETF path heat
+ASSERT LAST_N == ph6 + 2 "path cad heat"
+GETF path threshold
+ASSERT LAST_N == pt6 + 2 "path cad thr"
+GETF path energy
+ASSERT LAST_N == pe6 "path cad e held"
+GETF path pmf
+ASSERT LAST_N == pp6 "path cad pmf held"
+GETF path reserve
+ASSERT LAST_N == pr6 "path cad r held"
+GETF path alive
+ASSERT LAST_N == 1 "path lives"
+GETF path energy
+LET pe_fin = LAST_N
+GETF path threshold
+LET pt_fin = LAST_N
+GETF path ready
+LET prd = LAST_N
+IF pe_fin >= pt_fin THEN
+  ASSERT prd == 1 "path ready if energy>=thr"
+ELSE
+  ASSERT prd == 0 "path ready blocked"
+END
+
+// ready recompute: feed enough energy past raised thr
+ENTITY feedc OF Cell 1 8 0
+SEND feedc set_threshold 5
+SEND feedc photosynth 4
+SEND feedc glycolyse 6
+SEND feedc pump 4
+GETF feedc atp
+LET fa = LAST_N
+ASSERT fa >= 2 "feedc atp"
+GETF feedc energy
+LET fe0 = LAST_N
+SEND feedc cad 1
+ASSERT LAST_N == 1 "feedc cad1"
+GETF feedc threshold
+LET ft1 = LAST_N
+ASSERT ft1 == 6 "feedc thr6"
+GETF feedc energy
+LET fe1 = LAST_N
+ASSERT fe1 == fe0 "feedc e held"
+GETF feedc ready
+LET fr1 = LAST_N
+IF fe1 >= ft1 THEN
+  ASSERT fr1 == 1 "feedc ready on"
+ELSE
+  ASSERT fr1 == 0 "feedc ready off"
+END
+SEND feedc feed 20
+GETF feedc energy
+LET fe2 = LAST_N
+GETF feedc threshold
+LET ft2 = LAST_N
+GETF feedc ready
+ASSERT LAST_N == 1 "feedc ready after feed"
+ASSERT fe2 >= ft2 "feedc surplus"
+
+// distinct from fortify: fortify only thr, no age/heat
+ENTITY ft OF Cell 1 15 0
+SEND ft set_threshold 10
+SEND ft pulse 2
+SEND ft photosynth 6
+SEND ft glycolyse 6
+SEND ft pump 4
+GETF ft atp
+LET fta0 = LAST_N
+ASSERT fta0 >= 3 "ft atp"
+GETF ft age
+LET ftag0 = LAST_N
+GETF ft heat
+LET fth0 = LAST_N
+GETF ft threshold
+LET ftthr0 = LAST_N
+SEND ft fortify 1
+ASSERT LAST_N == 1 "ft fortify"
+GETF ft threshold
+ASSERT LAST_N == ftthr0 + 1 "ft thr+1"
+GETF ft age
+ASSERT LAST_N == ftag0 "ft age held fortify"
+GETF ft heat
+ASSERT LAST_N == fth0 "ft heat held fortify"
+GETF ft age
+LET ftag1 = LAST_N
+GETF ft heat
+LET fth1 = LAST_N
+GETF ft threshold
+LET ftthr1 = LAST_N
+SEND ft cad 1
+ASSERT LAST_N == 1 "ft cad"
+GETF ft threshold
+ASSERT LAST_N == ftthr1 + 1 "ft cad thr"
+GETF ft age
+ASSERT LAST_N == ftag1 + 1 "ft cad age"
+GETF ft heat
+ASSERT LAST_N == fth1 + 1 "ft cad heat"
