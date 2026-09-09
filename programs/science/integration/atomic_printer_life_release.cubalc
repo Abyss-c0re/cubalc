@@ -1,0 +1,177 @@
+// atomic_printer_life_release.cubalc
+// Science board: post-synapse quantal vesicle fusion / neurotransmitter cleft dump under atomic printer.
+// release n burns ATP+energy into heat and raises phosphagen pcr shuttle at active zone.
+// Continuum ...->fate->project->synapse->release. Free energy must flow. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 30 0
+ENTITY axon OF Cell 1 24 0
+ENTITY empty OF Cell 1 10 0
+
+SEND printer set_threshold 8
+SEND printer set_setpoint 12
+SEND printer pulse 7
+SEND printer photosynth 22
+SEND printer glycolyse 18
+SEND printer pump 14
+SEND printer photophos 14
+GETF printer age
+ASSERT LAST_N == 7 "sci a7"
+GETF printer atp
+ASSERT LAST_N >= 24 "sci atp"
+GETF printer pmf
+ASSERT LAST_N >= 8 "sci pmf"
+GETF printer setpoint
+LET s0 = LAST_N
+ASSERT s0 == 12 "sci sp12"
+
+SEND printer align 2
+ASSERT LAST_N == 2 "sci align2"
+SEND printer converge 3
+ASSERT LAST_N == 3 "sci ce3"
+SEND printer extend 2
+ASSERT LAST_N == 2 "sci ext2"
+SEND printer fold 2
+ASSERT LAST_N == 2 "sci fold2"
+SEND printer zip 2
+ASSERT LAST_N == 2 "sci zip2"
+SEND printer crest 2
+ASSERT LAST_N == 2 "sci crest2"
+SEND printer migrate 2
+ASSERT LAST_N == 2 "sci mig2"
+SEND printer stream 2
+ASSERT LAST_N == 2 "sci st2"
+SEND printer condense 2
+ASSERT LAST_N == 2 "sci cdn2"
+SEND printer fate 2
+ASSERT LAST_N == 2 "sci fate2"
+SEND printer project 2
+ASSERT LAST_N == 2 "sci preprj2"
+SEND printer synapse 2
+ASSERT LAST_N == 2 "sci presyn2"
+
+GETF printer energy
+LET e1 = LAST_N
+GETF printer heat
+LET h1 = LAST_N
+GETF printer atp
+LET a1 = LAST_N
+GETF printer pmf
+LET p1 = LAST_N
+GETF printer reserve
+LET r1 = LAST_N
+GETF printer threshold
+LET t1 = LAST_N
+GETF printer setpoint
+LET s1 = LAST_N
+GETF printer pcr
+LET c1 = LAST_N
+GETF printer age
+LET age1 = LAST_N
+ASSERT e1 >= 4 "sci e4"
+ASSERT a1 >= 4 "sci a4"
+
+SEND printer release 4
+ASSERT LAST_N == 4 "sci rel4"
+GETF printer heat
+ASSERT LAST_N == h1 + 4 "sci h+4"
+GETF printer energy
+ASSERT LAST_N == e1 - 4 "sci e-4"
+GETF printer atp
+ASSERT LAST_N == a1 - 4 "sci atp-4"
+GETF printer threshold
+ASSERT LAST_N == t1 "sci thr held"
+GETF printer pmf
+ASSERT LAST_N == p1 "sci pmf held"
+GETF printer reserve
+ASSERT LAST_N == r1 "sci r held"
+GETF printer setpoint
+ASSERT LAST_N == s1 "sci sp held"
+GETF printer pcr
+ASSERT LAST_N == c1 + 4 "sci pcr+4"
+GETF printer age
+ASSERT LAST_N == age1 "sci age held"
+
+SEND axon set_threshold 6
+SEND axon set_setpoint 20
+SEND axon pulse 5
+SEND axon photosynth 12
+SEND axon glycolyse 10
+SEND axon pump 8
+SEND axon photophos 8
+GETF axon energy
+LET ae = LAST_N
+GETF axon atp
+LET aa = LAST_N
+GETF axon heat
+LET ah = LAST_N
+GETF axon threshold
+LET at0 = LAST_N
+GETF axon setpoint
+LET as0 = LAST_N
+ASSERT ae >= 3 "ax e"
+ASSERT aa >= 3 "ax a"
+SEND axon release 3
+ASSERT LAST_N == 3 "ax syn3"
+GETF axon heat
+ASSERT LAST_N == ah + 3 "ax h+3"
+GETF axon energy
+ASSERT LAST_N == ae - 3 "ax e-3"
+GETF axon atp
+ASSERT LAST_N == aa - 3 "ax atp-3"
+GETF axon threshold
+ASSERT LAST_N == at0 "ax thr held"
+GETF axon pcr
+ASSERT LAST_N >= 3 "ax pcr+"
+GETF axon setpoint
+ASSERT LAST_N == as0 "ax sp held"
+GETF axon alive
+ASSERT LAST_N == 1 "ax alive"
+
+SEND empty release 5
+ASSERT LAST_N == 0 "empty 0"
+GETF empty heat
+ASSERT LAST_N == 0 "empty h0"
+GETF empty energy
+ASSERT LAST_N == 10 "empty e held"
+GETF empty threshold
+ASSERT LAST_N == 10 "empty thr held"
+
+ENTITY cone OF Cell 1 36 0
+SEND cone set_threshold 5
+SEND cone set_setpoint 10
+SEND cone pulse 6
+SEND cone photosynth 18
+SEND cone glycolyse 14
+SEND cone pump 10
+SEND cone photophos 10
+GETF cone energy
+LET ce0 = LAST_N
+GETF cone atp
+LET ca0 = LAST_N
+GETF cone heat
+LET ch0 = LAST_N
+GETF cone threshold
+LET ct0 = LAST_N
+GETF cone setpoint
+LET cs0 = LAST_N
+ASSERT ce0 >= 5 "cone e"
+ASSERT ca0 >= 5 "cone a"
+SEND cone release 5
+ASSERT LAST_N == 5 "cone syn5"
+GETF cone heat
+ASSERT LAST_N == ch0 + 5 "cone h+5"
+GETF cone energy
+ASSERT LAST_N == ce0 - 5 "cone e-5"
+GETF cone atp
+ASSERT LAST_N == ca0 - 5 "cone atp-5"
+GETF cone threshold
+ASSERT LAST_N == ct0 "cone thr held"
+GETF cone pcr
+ASSERT LAST_N >= 5 "cone pcr+"
+GETF cone setpoint
+ASSERT LAST_N == cs0 "cone sp held"
+
+NOTE "science LIFE_CELL_SYNAPSE atomic_printer PASS"
