@@ -120,6 +120,7 @@
 #   spore               endospore survival pack: keep spark=1, pack (energy-1)+full reserve as code=de*1000+dr; ready cleared
 #   inherit code         apply fission/bud endowment to daughter (energy+=de, reserve+=dr); ready recompute — maternal glycogen + spark dowry
 #   lumen n              apical lumenogenesis after polar — ATP→heat+n pcr+n (secretory ~P); age/energy/pmf/reserve/thr/sp held
+#   cilia n              primary cilia / IFT after lumen — pay n ATP IFT-B/kinesin-2/polycystin trafficking → heat +n + pmf +n (flow-sense chemiosmotic bank, ceiling 1000); age/energy/reserve/thr/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -4373,5 +4374,78 @@ CLASS Cell
     RET take
   END
 
+
+
+
+  # CILIA: primary cilia / IFT flow-sensing competence after LUMEN (apical open).
+  # Spend take=min(n,atp) ATP (IFT-B/kinesin-2 anterograde train, dynein-2 return,
+  # polycystin-1/2 complex trafficking, BBSome gate, axoneme tubulin delivery).
+  # HEAT += take (each IFT / motor / ciliary membrane cycle dissipates as heat).
+  # PMF rises: pmf = min(1000, pmf + take) — ciliary pocket / flow-coupled
+  # chemiosmotic competence bank (polycystin Ca2+ → mito ΔΨm poise for sensory
+  # work; distinct from pump energy→pmf no heat, harness heat→pmf, lumen pcr+
+  # secretory ~P, polar sp+, seal thr+, biogenesis ATP+reserve→pmf heat+1).
+  # AGE/energy/reserve/threshold/setpoint/pcr HELD — cilia is sensory organelle
+  # competence after lumen fluid space, not injury, not thr/sp retune, not pcr bank.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from lumen (ATP→heat+n pcr+n pmf held), polar (ATP→heat+n sp+n),
+  # seal (ATP→heat+n thr+n), pump (energy→pmf no heat), harness (heat→pmf),
+  # biogenesis (ATP+reserve→pmf heat+1). Continuum:
+  # ...→cad→bleb→effer→resolve→restit→seal→polar→lumen→cilia.
+  # Signature: heat+n pmf+n; age+energy+reserve+thr+sp+pcr held — flow-sense life.
+  # Usability: AGI models primary-cilia competence under ASSERT boards.
+  # Returns take ciliated; dead/n<1/empty atp → 0.
+  METHOD cilia n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET p = p + take
+    IF p > 1000 THEN
+      LET p = 1000
+    END
+    SETF THIS pmf p
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END

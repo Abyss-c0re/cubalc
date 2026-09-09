@@ -1,0 +1,131 @@
+// atomic_printer_life_cilia.cubalc
+// Science board: primary cilia / IFT after lumenogenesis on atomic printer life path.
+// AGI INCLUDE life_cell — continuum cad->bleb->effer->resolve->restit->seal->polar->lumen->cilia.
+// Free energy must flow. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cell OF Cell 1 16 0
+ENTITY tissue OF Cell 1 14 0
+
+SEND cell set_threshold 10
+SEND tissue set_threshold 10
+SEND cell set_setpoint 10
+SEND tissue set_setpoint 10
+
+SEND cell pulse 6
+SEND cell photosynth 8
+SEND cell glycolyse 6
+SEND cell pump 5
+SEND cell photophos 6
+GETF cell atp
+ASSERT LAST_N >= 10 "sci atp"
+GETF cell age
+LET a0 = LAST_N
+GETF cell heat
+LET h0 = LAST_N
+GETF cell energy
+LET e0 = LAST_N
+GETF cell reserve
+LET r0 = LAST_N
+GETF cell threshold
+LET t0 = LAST_N
+GETF cell pmf
+LET p0 = LAST_N
+GETF cell setpoint
+LET s0 = LAST_N
+GETF cell pcr
+LET c0 = LAST_N
+ASSERT s0 == 10 "sci sp10"
+ASSERT c0 == 0 "sci pcr0"
+
+SEND cell cad 1
+ASSERT LAST_N == 1 "sci cad"
+SEND cell bleb 1
+ASSERT LAST_N == 1 "sci bleb"
+SEND cell effer 1
+ASSERT LAST_N == 1 "sci effer"
+SEND cell resolve 1
+ASSERT LAST_N == 1 "sci resolve"
+SEND cell restit 1
+ASSERT LAST_N == 1 "sci restit"
+SEND cell seal 1
+ASSERT LAST_N == 1 "sci seal"
+SEND cell polar 1
+ASSERT LAST_N == 1 "sci polar"
+SEND cell lumen 1
+ASSERT LAST_N == 1 "sci lumen"
+GETF cell threshold
+LET t1 = LAST_N
+ASSERT t1 == t0 + 1 "sci thr +1 after seal net"
+GETF cell setpoint
+LET s1 = LAST_N
+ASSERT s1 == s0 + 1 "sci sp +1 after polar"
+GETF cell pcr
+LET c1 = LAST_N
+ASSERT c1 == c0 + 1 "sci pcr +1 after lumen"
+GETF cell pmf
+LET p1 = LAST_N
+ASSERT p1 == p0 "sci pmf held through lumen"
+GETF cell age
+LET a1 = LAST_N
+GETF cell heat
+LET h1 = LAST_N
+GETF cell energy
+LET e1 = LAST_N
+GETF cell reserve
+LET r1 = LAST_N
+GETF cell atp
+LET at1 = LAST_N
+ASSERT at1 >= 2 "sci atp for cilia"
+
+SEND cell cilia 2
+ASSERT LAST_N == 2 "sci cilia2"
+GETF cell pmf
+ASSERT LAST_N == p1 + 2 "sci pmf+2"
+GETF cell pcr
+ASSERT LAST_N == c1 "sci pcr held cilia"
+GETF cell setpoint
+ASSERT LAST_N == s1 "sci sp held cilia"
+GETF cell threshold
+ASSERT LAST_N == t1 "sci thr held cilia"
+GETF cell age
+ASSERT LAST_N == a1 "sci age held cilia"
+GETF cell energy
+ASSERT LAST_N == e1 "sci e held cilia"
+GETF cell reserve
+ASSERT LAST_N == r1 "sci r held cilia"
+GETF cell heat
+ASSERT LAST_N == h1 + 2 "sci heat+2"
+GETF cell atp
+ASSERT LAST_N == at1 - 2 "sci atp-2"
+GETF cell alive
+ASSERT LAST_N == 1 "sci lives"
+SEND cell vitality
+ASSERT LAST_N >= 1 "sci vitality"
+
+// Tissue sibling: lumen then cilia flow-sense bank under feast
+SEND tissue pulse 4
+SEND tissue photosynth 5
+SEND tissue glycolyse 4
+SEND tissue pump 3
+SEND tissue photophos 5
+SEND tissue polar 1
+SEND tissue lumen 1
+SEND tissue cilia 3
+GETF tissue pmf
+ASSERT LAST_N == 6 "sci tissue pmf6"
+GETF tissue pcr
+ASSERT LAST_N == 1 "sci tissue pcr1"
+GETF tissue setpoint
+ASSERT LAST_N == 11 "sci tissue sp11"
+GETF tissue alive
+ASSERT LAST_N == 1 "sci tissue lives"
+SEND tissue regulate
+GETF tissue energy
+LET te = LAST_N
+GETF tissue pmf
+LET tp = LAST_N
+ASSERT te >= 1 "sci tissue spark"
+ASSERT tp == 6 "sci tissue pmf stable"
