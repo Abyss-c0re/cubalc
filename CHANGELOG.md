@@ -1,3 +1,12 @@
+## [1.15.1583-usability] MI 2097 LIFE_CELL_MOMP — 2026-09-09
+
+- feat(life): METHOD momp n — Bax/Bak mitochondrial outer membrane permeabilization
+- Pay take=min(n,atp) ATP → heat +1 assembly tax + age +take (cyt c/SMAC/AIF release cue)
+- pmf/energy/reserve held (OMM ≠ IMM mPTP dump); fail-closed on empty ATP
+- Continuum: tether → mcu → nclx → mptp → **momp** apoptosis prime
+- Distinct from mptp (pmf bulk heat, age+1 once, ATP held), mitophagy, fragment, die
+- Proof 2097 asserts_ok=62; science atomic_printer_life_momp asserts_ok=24
+
 ## 1.15.1581-usability — MI 2095 LIFE_CELL_NCLX
 
 - METHOD nclx n: mito Na+/Ca2+ exchanger (NCLX/SLC8B1 + NHE) — spend min(n,pmf) → heat +1; energy/atp/age/reserve held

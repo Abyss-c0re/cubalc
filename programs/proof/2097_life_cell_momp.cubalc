@@ -1,0 +1,249 @@
+// 2097_life_cell_momp.cubalc
+// Proof 2097: life_cell momp — Bax/Bak MOMP (OMM permeabilization).
+// Pay n ATP oligomerize pores → heat +1 + age +n (cyt c/SMAC/AIF release injury).
+// pmf/energy/reserve held. Distinct from mptp (pmf bulk heat, ATP held, age+1 once),
+// mitophagy, fragment, die. Pathophysiology after mptp continuum overload.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "momp a5"
+GETF gate atp
+ASSERT LAST_N == 4 "momp atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "momp h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "momp pmf5"
+GETF gate energy
+LET e0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+
+// MOMP: pay 2 ATP → age +2 + heat +1; pmf/energy held
+SEND gate momp 2
+ASSERT LAST_N == 2 "momp take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "momp atp-2"
+GETF gate age
+ASSERT LAST_N == a0 + 2 "momp age+2"
+GETF gate heat
+ASSERT LAST_N == h0 + 1 "momp heat+1"
+GETF gate energy
+ASSERT LAST_N == e0 "momp e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "momp r held"
+GETF gate pmf
+ASSERT LAST_N == p0 "momp pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "momp lives"
+
+GETF gate age
+LET a1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+
+SEND gate momp 10
+ASSERT LAST_N == at1 "momp clamp atp"
+GETF gate atp
+ASSERT LAST_N == 0 "momp atp0"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "momp age clamp"
+GETF gate heat
+ASSERT LAST_N == h1 + 1 "momp heat+1 clamp"
+GETF gate pmf
+ASSERT LAST_N == p0 "pmf held clamp"
+
+SEND gate momp 1
+ASSERT LAST_N == 0 "momp empty atp"
+GETF gate heat
+ASSERT LAST_N == h1 + 1 "heat held empty"
+GETF gate age
+ASSERT LAST_N == a1 + at1 "age held empty"
+
+// poor: no glycolyse → atp 0
+SEND poor pulse 3
+SEND poor photosynth 3
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+SEND poor momp 2
+ASSERT LAST_N == 0 "poor momp0"
+GETF poor age
+ASSERT LAST_N == 3 "poor age held"
+
+SEND dead momp 3
+ASSERT LAST_N == 0 "dead momp0"
+
+SEND g0 pulse 4
+SEND g0 photosynth 4
+SEND g0 glycolyse 3
+SEND g0 pump 2
+SEND g0 quiesce
+GETF g0 atp
+LET gat = LAST_N
+GETF g0 age
+LET ga0 = LAST_N
+GETF g0 heat
+LET gh0 = LAST_N
+SEND g0 momp 1
+ASSERT LAST_N == 1 "g0 momp1"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 stays G0"
+GETF g0 age
+ASSERT LAST_N == ga0 + 1 "g0 age+1"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 1 "g0 heat+1"
+GETF g0 atp
+ASSERT LAST_N == gat - 1 "g0 atp-1"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 not ready"
+
+// Distinct from mptp: mptp dumps pmf bulk heat + age+1, ATP held
+SEND twin pulse 5
+SEND twin photosynth 5
+SEND twin glycolyse 4
+SEND twin pump 5
+GETF twin atp
+LET tat0 = LAST_N
+GETF twin age
+LET ta0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+SEND twin mptp 2
+ASSERT LAST_N == 2 "twin mptp2"
+GETF twin pmf
+ASSERT LAST_N == tp0 - 2 "twin mptp pmf"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "twin mptp bulk heat"
+GETF twin age
+ASSERT LAST_N == ta0 + 1 "twin mptp age+1 once"
+GETF twin atp
+ASSERT LAST_N == tat0 "twin mptp atp held"
+GETF twin age
+LET ta1 = LAST_N
+GETF twin heat
+LET th1 = LAST_N
+GETF twin atp
+LET tat1 = LAST_N
+GETF twin pmf
+LET tp1 = LAST_N
+SEND twin momp 2
+ASSERT LAST_N == 2 "twin momp2"
+GETF twin atp
+ASSERT LAST_N == tat1 - 2 "twin momp atp"
+GETF twin age
+ASSERT LAST_N == ta1 + 2 "twin momp age+n"
+GETF twin heat
+ASSERT LAST_N == th1 + 1 "twin momp heat+1"
+GETF twin pmf
+ASSERT LAST_N == tp1 "twin momp pmf held"
+GETF twin energy
+ASSERT LAST_N == te0 "twin e held full arc"
+
+// Continuum pathophys: tether -> mcu -> nclx -> mptp -> momp
+ENTITY path OF Cell 1 14 0
+SEND path set_threshold 10
+SEND path pulse 6
+SEND path photosynth 6
+SEND path glycolyse 5
+SEND path pump 6
+GETF path energy
+LET pe0 = LAST_N
+GETF path atp
+LET pat0 = LAST_N
+SEND path tether 2
+ASSERT LAST_N == 2 "path tether"
+GETF path energy
+LET pe1 = LAST_N
+ASSERT pe1 == pe0 + 2 "path MERCs"
+SEND path mcu 2
+ASSERT LAST_N == 2 "path mcu"
+GETF path energy
+ASSERT LAST_N == pe1 + 2 "path TCA"
+GETF path pmf
+LET pp1 = LAST_N
+GETF path heat
+LET ph1 = LAST_N
+GETF path age
+LET pa1 = LAST_N
+SEND path nclx 1
+ASSERT LAST_N == 1 "path nclx"
+GETF path heat
+ASSERT LAST_N == ph1 + 1 "path nclx tax"
+GETF path age
+ASSERT LAST_N == pa1 "path nclx age held"
+GETF path pmf
+LET pp2 = LAST_N
+GETF path heat
+LET ph2 = LAST_N
+SEND path mptp 2
+ASSERT LAST_N == 2 "path mptp"
+GETF path pmf
+ASSERT LAST_N == pp2 - 2 "path mptp pmf"
+GETF path heat
+ASSERT LAST_N == ph2 + 2 "path mptp heat"
+GETF path age
+ASSERT LAST_N == pa1 + 1 "path mptp injury"
+GETF path atp
+LET pat2 = LAST_N
+GETF path age
+LET pa2 = LAST_N
+GETF path heat
+LET ph3 = LAST_N
+GETF path pmf
+LET pp3 = LAST_N
+SEND path momp 2
+ASSERT LAST_N == 2 "path momp"
+GETF path atp
+ASSERT LAST_N == pat2 - 2 "path momp atp"
+GETF path age
+ASSERT LAST_N == pa2 + 2 "path cyt-c load"
+GETF path heat
+ASSERT LAST_N == ph3 + 1 "path momp tax"
+GETF path pmf
+ASSERT LAST_N == pp3 "path momp pmf held"
+GETF path energy
+ASSERT LAST_N == pe0 + 2 + 2 "path e after tether+mcu only"
+GETF path alive
+ASSERT LAST_N == 1 "path lives"
+
+// n<1 and zero
+ENTITY z OF Cell 1 8 0
+SEND z pulse 2
+SEND z glycolyse 2
+SEND z momp 0
+ASSERT LAST_N == 0 "momp n0"
+SEND z momp -3
+ASSERT LAST_N == 0 "momp neg"
+
+PRINT "2097_life_cell_momp PASS"
