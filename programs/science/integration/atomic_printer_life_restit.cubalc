@@ -1,0 +1,137 @@
+// atomic_printer_life_restit.cubalc
+// Science board: epithelial restitution after resolve on atomic printer life path.
+// AGI INCLUDE life_cell — continuum cad->bleb->effer->resolve->restit.
+// Free energy must flow. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY cell OF Cell 1 16 0
+ENTITY tissue OF Cell 1 14 0
+
+SEND cell set_threshold 10
+SEND tissue set_threshold 10
+
+SEND cell pulse 6
+SEND cell photosynth 8
+SEND cell glycolyse 10
+SEND cell pump 6
+GETF cell atp
+ASSERT LAST_N >= 8 "sci atp"
+GETF cell age
+LET a0 = LAST_N
+GETF cell heat
+LET h0 = LAST_N
+GETF cell energy
+LET e0 = LAST_N
+GETF cell reserve
+LET r0 = LAST_N
+GETF cell threshold
+LET t0 = LAST_N
+GETF cell pmf
+LET p0 = LAST_N
+
+SEND cell cad 1
+ASSERT LAST_N == 1 "sci cad"
+SEND cell bleb 1
+ASSERT LAST_N == 1 "sci bleb"
+SEND cell effer 1
+ASSERT LAST_N == 1 "sci effer"
+SEND cell resolve 1
+ASSERT LAST_N == 1 "sci resolve"
+GETF cell threshold
+LET t1 = LAST_N
+ASSERT t1 == t0 "sci thr net0 after cad+resolve"
+GETF cell age
+LET a1 = LAST_N
+GETF cell heat
+LET h1 = LAST_N
+GETF cell energy
+LET e1 = LAST_N
+GETF cell reserve
+LET r1 = LAST_N
+GETF cell pmf
+LET p1 = LAST_N
+GETF cell atp
+LET at1 = LAST_N
+
+SEND cell restit 2
+ASSERT LAST_N == 2 "sci restit2"
+GETF cell atp
+ASSERT LAST_N == at1 - 2 "sci atp-2"
+GETF cell heat
+ASSERT LAST_N == h1 + 2 "sci heat+2"
+GETF cell age
+LET a2 = LAST_N
+LET exp = a1 - 2
+IF exp < 0 THEN
+  LET exp = 0
+END
+ASSERT a2 == exp "sci age-2"
+GETF cell energy
+ASSERT LAST_N == e1 "sci e held"
+GETF cell reserve
+ASSERT LAST_N == r1 "sci r held"
+GETF cell threshold
+ASSERT LAST_N == t1 "sci thr held"
+GETF cell pmf
+ASSERT LAST_N == p1 "sci pmf held"
+GETF cell alive
+ASSERT LAST_N == 1 "sci lives"
+SEND cell vitality
+ASSERT LAST_N >= 1 "sci vitality"
+
+// Tissue twin: resolve ease then restit rebuild
+SEND tissue pulse 5
+SEND tissue photosynth 6
+SEND tissue glycolyse 8
+SEND tissue pump 5
+SEND tissue set_threshold 12
+GETF tissue age
+LET ta0 = LAST_N
+GETF tissue threshold
+LET tt0 = LAST_N
+GETF tissue heat
+LET th0 = LAST_N
+GETF tissue energy
+LET te0 = LAST_N
+GETF tissue atp
+LET tat0 = LAST_N
+ASSERT tat0 >= 4 "tissue atp"
+SEND tissue resolve 2
+ASSERT LAST_N == 2 "tissue resolve2"
+GETF tissue threshold
+ASSERT LAST_N == tt0 - 2 "tissue thr-2"
+GETF tissue age
+ASSERT LAST_N == ta0 "tissue age held resolve"
+GETF tissue heat
+LET th1 = LAST_N
+GETF tissue age
+LET ta1 = LAST_N
+GETF tissue threshold
+LET tt1 = LAST_N
+GETF tissue energy
+LET te1 = LAST_N
+GETF tissue atp
+LET tat1 = LAST_N
+SEND tissue restit 2
+ASSERT LAST_N == 2 "tissue restit2"
+GETF tissue atp
+ASSERT LAST_N == tat1 - 2 "tissue atp-2"
+GETF tissue heat
+ASSERT LAST_N == th1 + 2 "tissue heat+2"
+GETF tissue age
+LET ta2 = LAST_N
+LET texp = ta1 - 2
+IF texp < 0 THEN
+  LET texp = 0
+END
+ASSERT ta2 == texp "tissue age-2"
+GETF tissue energy
+ASSERT LAST_N == te1 "tissue e held"
+GETF tissue threshold
+ASSERT LAST_N == tt1 "tissue thr held"
+GETF tissue alive
+ASSERT LAST_N == 1 "tissue lives"
+SEND tissue vitality
+ASSERT LAST_N >= 1 "tissue vitality"
