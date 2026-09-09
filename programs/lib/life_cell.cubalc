@@ -33,6 +33,7 @@
 #   nclx n               mito Na+/Ca2+ exchanger — spend n pmf (NCLX/SLC8B1 + NHE net Ca/H) → heat +1; energy/atp/age/reserve held (efflux ends TCA window)
 #   mptp n               mito permeability transition pore — collapse n pmf (CypD/ANT/VDAC mPTP) → heat +n + age +1 injury; energy/atp/reserve held
 #   momp n               Bax/Bak MOMP — pay n ATP oligomerize OMM pores → heat +1 + age +n (cyt c/SMAC/AIF release); pmf/energy/reserve held; apoptosis prime after mptp
+#   apaf n               Apaf-1/dATP apoptosome — pay n ATP wheel oligomerize → heat +n + age +1 (caspase-9 platform); pmf/energy/reserve held; after momp
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3659,6 +3660,51 @@ CLASS Cell
     SETF THIS age ag
     RET take
   END
+
+
+  # APAF: Apaf-1 / dATP apoptosome assembly (wheel of death) after MOMP cyt-c cue.
+  # Spend take=min(n,atp) ATP/dATP (nucleotide binding for heptameric apoptosome) → heat += take
+  # (each dATP hydrolysis in CARD oligomerization contributes assembly heat).
+  # Platform injury: age += 1 once (caspase-9 docking / apoptosome forms as single holoenzyme cue).
+  # pmf/energy/reserve/pcr held — cytosolic apoptosome does not dump DYm or burn glycogen spark.
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from momp (ATP→heat+1 fixed + age+n pore release), mptp (pmf→bulk heat + age+1, ATP held),
+  # mitophagy, die, lyse, uncouple, nclx, mcu, tether, fragment.
+  # Continuum pathophys: tether→mcu→nclx→mptp overload → momp cyt-c → apaf apoptosome → caspase branch.
+  # Signature invert vs momp: heat scales with n, age is unit platform (not pore-count injury).
+  # Usability: AGI models intrinsic apoptosis apoptosome priming under ASSERT boards.
+  # Returns take assembled; dead/n<1/empty atp → 0.
+  METHOD apaf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS age
+    LET ag = LAST_N + 1
+    SETF THIS age ag
+    RET take
+  END
+
 
 
 END
