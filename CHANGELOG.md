@@ -3,6 +3,7 @@
 - `programs/hive_mind/augogen_confirm.cubalc` — guide + oversee as one braincube
 - Next-step suggestion pending until COMPARE/HARMONY; never SYS SPAWN
 - Law: pair vote before next_prompt; mesh may veto; observer NexusCore
+- v2 GENESIS auto_execute=1 (host nanobot enqueues; board still never SYS SPAWN)
 
 ## 1.15.1577-usability — 2091 LIFE_CELL_FUSION
 

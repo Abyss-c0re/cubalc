@@ -8,7 +8,7 @@ SHARE state_matrix_only
 BUDGET 48
 CREED "C3"
 
-GENESIS "AUGOGEN v1 | type=pair_confirm | api=x.ai/suggestPrompt | auto_execute=0 | observer=NexusCore | smx_only=1 |"
+GENESIS "AUGOGEN v2 | type=pair_confirm | api=x.ai/suggestPrompt | auto_execute=1 | observer=NexusCore | smx_only=1 |"
 
 CUBE core     ROLE kernel_sot  PROTON 1
 CUBE suggest  ROLE atom        PROTON 1
@@ -103,7 +103,7 @@ END
 DECIDE nexus
 PRINT "augogen_confirm" confirm DECIDE DIGIT(brain) COMPAT UNITY HARMONY ENERGY SMX_OK SMX_TALKS
 
-# 4. machine accept — no auto-execute
+# 4. machine accept — pair confirm; host nanobot may auto-enqueue (never SYS SPAWN)
 ASSERT CUBES >= 6
 ASSERT SET(guide) >= 1
 ASSERT SET(oversee) >= 1
