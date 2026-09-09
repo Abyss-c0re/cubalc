@@ -1,3 +1,10 @@
+## 1.15.1590-usability — LIFE_CELL_RESOLVE (MI 2104)
+
+- **feat** `58b07c300` life_cell `resolve n`: SPM/TGF-β/IL-10 pro-resolve after efferocytosis
+- pay n ATP → heat +n + threshold -n (floor 1); age/energy/pmf/reserve held; ready recompute
+- continuum casp3→cad→bleb→effer→resolve; proof 90/0 + science 34/0
+- free energy flows then tissue quiets (not dual IF*P)
+
 ## 2100 — LIFE_CELL_CASP3 (1.15.1586-usability)
 
 - feat(life): `casp3 n` executioner caspase-3/7 after casp9 initiator.
