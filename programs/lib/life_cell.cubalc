@@ -37,6 +37,7 @@
 #   casp9 n              caspase-9 initiator on apoptosome — pay n ATP CARD/dimer cleavage → heat +n + age +n (executioner priming cascade); pmf/energy/reserve held; after apaf
 #   casp3 n              caspase-3 executioner — pay n ATP substrate proteolysis → heat +n + age +n + energy drain n (demolition); pmf/reserve held; after casp9
 #   cad n                CAD/DFF40 nuclease after casp3 — pay n ATP ICAD-liberated DNA ladder → heat +n + age +n + thr +n (checkpoint); energy/pmf/reserve held; ready recompute
+#   bleb n               apoptotic blebbing after cad — pay n ATP ROCK/myosin → heat +n + age +n + reserve +n (body cargo); energy/pmf/thr held; ready recompute
 #   set_threshold t      retune mitosis energy floor
 #   feed n               nutrient pulse — add energy, recompute ready
 #   checkpoint           lineage fingerprint = gen*1000 + energy*10 + age
@@ -3870,5 +3871,72 @@ CLASS Cell
   END
 
 
+
+
+
+  # BLEB: apoptotic membrane blebbing (ROCK–actomyosin) after CAD/DFF40 DNA ladder.
+  # Spend take=min(n,atp) ATP (myosin-II ATPase cycles driving bleb extrusion / apoptotic bodies)
+  # → heat += take (each cross-bridge cycle dissipates as heat). Morphological injury: age += take
+  # (plasma-membrane remodeling and cortex demolition scale with dose).
+  # CARGO PACK: reserve += take — cytosolic fragments packaged into apoptotic bodies as transferable
+  # free-energy cargo for efferocytosis (conserved, not burned). ENERGY/pmf/threshold/pcr HELD —
+  # blebbing is mechanical packaging after CAD checkpoint; does not raise DNA thr further nor drain
+  # metabolite pools (casp3 already did) nor dump DYm.
+  # ready recomputed vs energy/threshold (G0 still forces ready 0).
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from cad (ATP→heat+n age+n thr+n, reserve HELD DNA checkpoint), casp3 (energy drain,
+  # thr+reserve held), secrete (deliberate energy/reserve→inherit code, mother chooses yield),
+  # fortify (thr only), die (zero all).
+  # Continuum pathophys: tether→mcu→nclx→mptp→momp→apaf→casp9→casp3→cad→bleb bodies → clearance.
+  # Signature: heat+age+reserve all scale with n; energy+thr held — not DNA checkpoint, not executioner drain.
+  # Usability: AGI models intrinsic apoptosis morphological packaging under ASSERT boards.
+  # Returns take blebs formed; dead/n<1/empty atp → 0.
+  METHOD bleb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS age
+    LET ag = LAST_N + take
+    SETF THIS age ag
+    GETF THIS reserve
+    LET rv = LAST_N + take
+    SETF THIS reserve rv
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END
