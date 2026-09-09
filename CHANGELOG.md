@@ -1,3 +1,10 @@
+## 1.15.1620-usability — LIFE_CELL_ACTIVATE (MI 2136)
+
+- feat(life): post-recruit LE zymogen activate — heat+ energy- atp- reserve- thr-; continuum after recruit
+- proof programs/proof/2136_life_cell_activate.cubalc (asserts_ok=134 fail=0)
+- science programs/science/integration/atomic_printer_life_activate.cubalc
+- smx programs/science/integration/smx_mesh_vesicle_activate_life.cubalc
+
 ## 1.15.1620-usability — LIFE_CELL_ACIDIFY (MI 2133)
 
 - feat(life): post-retrieve EE v-ATPase acidify — heat+ energy- atp- pmf+; continuum after retrieve
