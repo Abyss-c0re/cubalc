@@ -5417,4 +5417,77 @@ CLASS Cell
   END
 
 
+  # REUPTAKE: post-release neurotransmitter cleft clearance / EAAT reload.
+  # Spend take=min(n,atp,energy) — ATP + bulk metabolic fuel fund secondary-active
+  # EAAT/GAT Na+-coupled transmitter reuptake, Na+/K+ ATPase clamp restore, and
+  # terminal vesicle-pool reload once quantal release has dumped cleft transmitter
+  # (post-release reuptake; not multipotent stream, not GRN fate lock, not
+  # growth-cone path sp+, not synaptogenesis thr+ contact, not release pcr+ dump).
+  # HEAT += take (each cotransport / ATPase / reload cycle dissipates).
+  # ENERGY -= take (cleft clearance burns active metabolic pool into Na+ gradient
+  #   work + reload; inverse of crest EMT energy+ spark; kin to release energy-
+  #   but reserve+ recovered-transmitter bank instead of pcr+ phosphagen shuttle).
+  # RESERVE rises: reserve = min(1000, reserve + take) — recovered transmitter /
+  # glutamine–glutamate shuttle bank charges terminals (distinct from photosynth
+  # light→reserve, scavenge salvage, and release pcr+ CK shuttle).
+  # AGE/pmf/threshold/setpoint/pcr HELD — reuptake is cleft clearance after
+  # quantal dump, not injury age+, not chemiosmotic fate pmf-, not contact thr,
+  # not path-length sp, not phosphagen pcr. Ready recomputed from energy vs thr.
+  METHOD reuptake n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS reserve
+    LET r = LAST_N + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
