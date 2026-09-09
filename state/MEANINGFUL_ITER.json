@@ -27,8 +27,14 @@
   "science_asserts_ok": 41,
   "host_finish": true,
   "anti_bloat": true,
-  "status": "open",
+  "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
-  "note": "CASP3 executioner drains energy stores while casp9 only primes; free energy pmf/reserve still held"
+  "note": "CASP3 executioner drains energy stores while casp9 only primes; free energy pmf/reserve still held",
+  "feat_head": "5a7022d2528e63fbe782b7578a4a7f3be335e678",
+  "head": "5a7022d2528e63fbe782b7578a4a7f3be335e678",
+  "tip": "5a7022d2528e63fbe782b7578a4a7f3be335e678",
+  "pinned_head": "5a7022d2528e63fbe782b7578a4a7f3be335e678",
+  "commit": "5a7022d25",
+  "short": "5a7022d25"
 }
