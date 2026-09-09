@@ -1,3 +1,10 @@
+## 1.15.1592-usability — LIFE_CELL_SEAL (MI 2106)
+
+- **feat** `a81659bd1` life_cell `seal n`: TJ/barrier competence lock after epithelial restitution
+- pay n ATP → heat +n + threshold +n (ceiling 1000); age/energy/pmf/reserve held; ready recompute
+- continuum casp3→cad→bleb→effer→resolve→restit→seal; proof 98/0 + science 31/0
+- distinct from restit (age- thr held), resolve (thr-), fortify (thr+ no heat), cad (age+ thr+)
+
 ## 1.15.1590-usability — LIFE_CELL_RESOLVE (MI 2104)
 
 - **feat** `58b07c300` life_cell `resolve n`: SPM/TGF-β/IL-10 pro-resolve after efferocytosis

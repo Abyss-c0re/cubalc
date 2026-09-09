@@ -1,0 +1,407 @@
+// 2106_life_cell_seal.cubalc
+// Proof 2106: life_cell seal — TJ/barrier competence lock after RESTIT.
+// Pay n ATP claudin/occludin strand lock -> heat +n + thr +n (contact-inhibition);
+// age/energy/pmf/reserve held; ready recomputed. Distinct from restit (age- thr held),
+// resolve (thr- age held), fortify (thr+ no heat), cad (age+ thr+).
+// Continuum after restit. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 12 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 10 0
+ENTITY twin OF Cell 1 12 0
+ENTITY mac OF Cell 1 14 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND mac set_threshold 10
+
+SEND gate pulse 5
+SEND gate photosynth 5
+SEND gate glycolyse 4
+SEND gate pump 5
+GETF gate age
+ASSERT LAST_N == 5 "seal a5"
+GETF gate atp
+ASSERT LAST_N == 4 "seal atp4"
+GETF gate heat
+ASSERT LAST_N == 0 "seal h0"
+GETF gate pmf
+ASSERT LAST_N == 5 "seal pmf5"
+GETF gate energy
+LET e0 = LAST_N
+ASSERT e0 >= 2 "seal energy primed"
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET a0 = LAST_N
+GETF gate atp
+LET at0 = LAST_N
+GETF gate heat
+LET h0 = LAST_N
+GETF gate pmf
+LET p0 = LAST_N
+GETF gate threshold
+LET t0 = LAST_N
+ASSERT t0 == 10 "seal thr10"
+
+SEND gate seal 2
+ASSERT LAST_N == 2 "seal take2"
+GETF gate atp
+ASSERT LAST_N == at0 - 2 "seal atp-2"
+GETF gate age
+ASSERT LAST_N == a0 "seal age held"
+GETF gate heat
+ASSERT LAST_N == h0 + 2 "seal heat+2"
+GETF gate energy
+ASSERT LAST_N == e0 "seal e held"
+GETF gate reserve
+ASSERT LAST_N == r0 "seal r held"
+GETF gate threshold
+ASSERT LAST_N == t0 + 2 "seal thr+2"
+GETF gate pmf
+ASSERT LAST_N == p0 "seal pmf held"
+GETF gate alive
+ASSERT LAST_N == 1 "seal lives"
+GETF gate energy
+LET eg = LAST_N
+GETF gate threshold
+LET tg = LAST_N
+GETF gate ready
+LET rd = LAST_N
+IF eg >= tg THEN
+  ASSERT rd == 1 "seal ready if surplus"
+ELSE
+  ASSERT rd == 0 "seal ready blocked"
+END
+
+// Partial take when ATP short
+SEND poor pulse 2
+SEND poor photosynth 1
+SEND poor glycolyse 1
+SEND poor pump 1
+GETF poor atp
+LET pat = LAST_N
+ASSERT pat >= 1 "poor atp"
+ASSERT pat < 5 "poor atp low"
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor threshold
+LET pt0 = LAST_N
+GETF poor age
+LET pa0 = LAST_N
+GETF poor energy
+LET pe0 = LAST_N
+SEND poor seal 9
+LET ptake = LAST_N
+ASSERT ptake == pat "poor take=atp"
+ASSERT ptake >= 1 "poor take>=1"
+GETF poor atp
+ASSERT LAST_N == 0 "poor atp0"
+GETF poor heat
+ASSERT LAST_N == ph0 + ptake "poor heat+"
+GETF poor threshold
+ASSERT LAST_N == pt0 + ptake "poor thr+"
+GETF poor age
+ASSERT LAST_N == pa0 "poor age held"
+GETF poor energy
+ASSERT LAST_N == pe0 "poor e held"
+
+// Dead: no-op
+SEND dead seal 3
+ASSERT LAST_N == 0 "dead seal0"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays"
+
+// n < 1
+SEND gate seal 0
+ASSERT LAST_N == 0 "n0"
+SEND gate seal -3
+ASSERT LAST_N == 0 "nneg"
+
+// Empty ATP
+SEND twin pulse 1
+SEND twin set_threshold 10
+GETF twin atp
+LET tat = LAST_N
+IF tat > 0 THEN
+  SEND twin futile tat
+END
+GETF twin atp
+ASSERT LAST_N == 0 "twin atp0"
+GETF twin heat
+LET th0 = LAST_N
+GETF twin threshold
+LET tt0 = LAST_N
+GETF twin age
+LET ta0 = LAST_N
+SEND twin seal 2
+ASSERT LAST_N == 0 "empty seal0"
+GETF twin heat
+ASSERT LAST_N == th0 "empty heat held"
+GETF twin threshold
+ASSERT LAST_N == tt0 "empty thr held"
+GETF twin age
+ASSERT LAST_N == ta0 "empty age held"
+
+// G0: seal works, ready forced 0
+SEND g0 pulse 4
+SEND g0 photosynth 4
+SEND g0 glycolyse 4
+SEND g0 pump 4
+SEND g0 quiesce
+GETF g0 atp
+LET ga0 = LAST_N
+ASSERT ga0 >= 2 "g0 atp"
+GETF g0 heat
+LET gh0 = LAST_N
+GETF g0 threshold
+LET gt0 = LAST_N
+GETF g0 age
+LET gag0 = LAST_N
+GETF g0 energy
+LET ge0 = LAST_N
+SEND g0 seal 2
+ASSERT LAST_N == 2 "g0 seal2"
+GETF g0 atp
+ASSERT LAST_N == ga0 - 2 "g0 atp-2"
+GETF g0 heat
+ASSERT LAST_N == gh0 + 2 "g0 heat+2"
+GETF g0 threshold
+ASSERT LAST_N == gt0 + 2 "g0 thr+2"
+GETF g0 age
+ASSERT LAST_N == gag0 "g0 age held"
+GETF g0 energy
+ASSERT LAST_N == ge0 "g0 e held"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+GETF g0 quiescent
+ASSERT LAST_N == 1 "g0 still G0"
+
+// Continuum cad->bleb->effer->resolve->restit->seal on mac
+SEND mac pulse 6
+SEND mac photosynth 8
+SEND mac glycolyse 10
+SEND mac pump 6
+SEND mac set_threshold 10
+GETF mac atp
+ASSERT LAST_N >= 8 "mac atp"
+GETF mac age
+LET ma0 = LAST_N
+GETF mac heat
+LET mh0 = LAST_N
+GETF mac energy
+LET me0 = LAST_N
+GETF mac reserve
+LET mr0 = LAST_N
+GETF mac threshold
+LET mt0 = LAST_N
+GETF mac pmf
+LET mp0 = LAST_N
+
+SEND mac cad 1
+ASSERT LAST_N == 1 "mac cad"
+SEND mac bleb 1
+ASSERT LAST_N == 1 "mac bleb"
+SEND mac effer 1
+ASSERT LAST_N == 1 "mac effer"
+SEND mac resolve 1
+ASSERT LAST_N == 1 "mac resolve"
+SEND mac restit 1
+ASSERT LAST_N == 1 "mac restit"
+GETF mac threshold
+LET mt1 = LAST_N
+ASSERT mt1 == mt0 "mac thr net0 pre-seal"
+GETF mac age
+LET ma1 = LAST_N
+GETF mac heat
+LET mh1 = LAST_N
+GETF mac energy
+LET me1 = LAST_N
+GETF mac reserve
+LET mr1 = LAST_N
+GETF mac pmf
+LET mp1 = LAST_N
+GETF mac atp
+LET mat1 = LAST_N
+ASSERT mat1 >= 2 "mac atp pre-seal"
+
+SEND mac seal 2
+ASSERT LAST_N == 2 "mac seal2"
+GETF mac atp
+ASSERT LAST_N == mat1 - 2 "mac atp-2"
+GETF mac heat
+ASSERT LAST_N == mh1 + 2 "mac heat+2"
+GETF mac threshold
+ASSERT LAST_N == mt1 + 2 "mac thr+2"
+GETF mac age
+ASSERT LAST_N == ma1 "mac age held"
+GETF mac energy
+ASSERT LAST_N == me1 "mac e held"
+GETF mac reserve
+ASSERT LAST_N == mr1 "mac r held"
+GETF mac pmf
+ASSERT LAST_N == mp1 "mac pmf held"
+GETF mac alive
+ASSERT LAST_N == 1 "mac lives"
+SEND mac vitality
+ASSERT LAST_N >= 1 "mac vitality"
+
+// Distinct from restit: seal raises thr, holds age
+SEND gate pulse 3
+SEND gate photosynth 4
+SEND gate glycolyse 6
+SEND gate pump 3
+SEND gate set_threshold 10
+GETF gate atp
+LET da0 = LAST_N
+ASSERT da0 >= 4 "dist atp"
+GETF gate age
+LET dag0 = LAST_N
+GETF gate heat
+LET dh0 = LAST_N
+GETF gate threshold
+LET dt0 = LAST_N
+GETF gate energy
+LET de0 = LAST_N
+SEND gate restit 1
+ASSERT LAST_N == 1 "dist restit1"
+GETF gate age
+LET dag1 = LAST_N
+LET dex = dag0 - 1
+IF dex < 0 THEN
+  LET dex = 0
+END
+ASSERT dag1 == dex "dist age-restit"
+GETF gate threshold
+ASSERT LAST_N == dt0 "dist thr held restit"
+GETF gate heat
+LET dh1 = LAST_N
+GETF gate threshold
+LET dt1 = LAST_N
+GETF gate energy
+LET de1 = LAST_N
+GETF gate atp
+LET da1 = LAST_N
+SEND gate seal 1
+ASSERT LAST_N == 1 "dist seal1"
+GETF gate threshold
+ASSERT LAST_N == dt1 + 1 "dist thr+seal"
+GETF gate age
+ASSERT LAST_N == dag1 "dist age held seal"
+GETF gate heat
+ASSERT LAST_N == dh1 + 1 "dist heat+seal"
+GETF gate energy
+ASSERT LAST_N == de1 "dist e held"
+GETF gate atp
+ASSERT LAST_N == da1 - 1 "dist atp-1"
+
+// Distinct from resolve: seal thr+, resolve thr-
+SEND gate pulse 2
+SEND gate photosynth 3
+SEND gate glycolyse 4
+SEND gate pump 2
+SEND gate set_threshold 12
+GETF gate atp
+LET ra0 = LAST_N
+ASSERT ra0 >= 3 "rdist atp"
+GETF gate threshold
+LET rt0 = LAST_N
+GETF gate age
+LET rag0 = LAST_N
+GETF gate heat
+LET rh0 = LAST_N
+SEND gate resolve 1
+ASSERT LAST_N == 1 "rdist resolve1"
+GETF gate threshold
+ASSERT LAST_N == rt0 - 1 "rdist thr-resolve"
+GETF gate age
+ASSERT LAST_N == rag0 "rdist age held resolve"
+GETF gate threshold
+LET rt1 = LAST_N
+GETF gate age
+LET rag1 = LAST_N
+GETF gate heat
+LET rh1 = LAST_N
+GETF gate atp
+LET ra1 = LAST_N
+SEND gate seal 1
+ASSERT LAST_N == 1 "rdist seal1"
+GETF gate threshold
+ASSERT LAST_N == rt1 + 1 "rdist thr+seal"
+GETF gate age
+ASSERT LAST_N == rag1 "rdist age held seal"
+GETF gate heat
+ASSERT LAST_N == rh1 + 1 "rdist heat+seal"
+
+// Distinct from fortify: seal pairs heat+, fortify no heat
+SEND gate pulse 2
+SEND gate photosynth 2
+SEND gate glycolyse 3
+SEND gate pump 2
+SEND gate set_threshold 10
+GETF gate atp
+LET fa0 = LAST_N
+ASSERT fa0 >= 2 "fdist atp"
+GETF gate heat
+LET fh0 = LAST_N
+GETF gate threshold
+LET ft0 = LAST_N
+SEND gate fortify 1
+ASSERT LAST_N == 1 "fdist fortify1"
+GETF gate threshold
+ASSERT LAST_N == ft0 + 1 "fdist thr+fortify"
+GETF gate heat
+ASSERT LAST_N == fh0 "fdist heat held fortify"
+GETF gate heat
+LET fh1 = LAST_N
+GETF gate threshold
+LET ft1 = LAST_N
+GETF gate atp
+LET fa1 = LAST_N
+SEND gate seal 1
+ASSERT LAST_N == 1 "fdist seal1"
+GETF gate threshold
+ASSERT LAST_N == ft1 + 1 "fdist thr+seal"
+GETF gate heat
+ASSERT LAST_N == fh1 + 1 "fdist heat+seal"
+GETF gate atp
+ASSERT LAST_N == fa1 - 1 "fdist atp-1"
+
+// thr ceiling 1000
+SEND gate set_threshold 999
+GETF gate atp
+LET ca0 = LAST_N
+ASSERT ca0 >= 2 "ceil atp"
+GETF gate heat
+LET ch0 = LAST_N
+SEND gate seal 5
+LET ctake = LAST_N
+ASSERT ctake >= 1 "ceil take"
+GETF gate threshold
+LET ct1 = LAST_N
+ASSERT ct1 == 1000 "ceil thr1000"
+GETF gate heat
+ASSERT LAST_N == ch0 + ctake "ceil heat+"
+GETF gate atp
+LET ca1 = LAST_N
+ASSERT ca1 >= 1 "ceil2 atp"
+GETF gate heat
+LET ch1 = LAST_N
+SEND gate seal 1
+ASSERT LAST_N == 1 "ceil2 take1"
+GETF gate threshold
+ASSERT LAST_N == 1000 "ceil2 thr stays"
+GETF gate atp
+ASSERT LAST_N == ca1 - 1 "ceil2 atp-1"
+GETF gate heat
+ASSERT LAST_N == ch1 + 1 "ceil2 heat+1"
+
+// vitality after seal
+SEND gate vitality
+ASSERT LAST_N >= 1 "gate vitality"
