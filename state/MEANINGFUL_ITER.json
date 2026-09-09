@@ -28,10 +28,10 @@
   "flagship_asserts_ok": 12,
   "host_finish": true,
   "anti_bloat": true,
-  "status": "unsealed_feat",
+  "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
   "note": "DOCK burns ATP+energy into heat and raises pmf bouton microdomain fusion-competence bank after VGLUT refill; free energy age/reserve/thr/sp/pcr held \u2014 Munc13/RIM/Rab3 AZ dock after vesicular pack.",
-  "feat_head": "",
-  "HEAD": ""
+  "feat_head": "584bcac8729fdc4708b6d0820b40acd77171d96f",
+  "HEAD": "584bcac8729fdc4708b6d0820b40acd77171d96f"
 }
