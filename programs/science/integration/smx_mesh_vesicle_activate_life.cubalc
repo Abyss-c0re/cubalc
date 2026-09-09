@@ -1,0 +1,53 @@
+// smx_mesh_vesicle_activate_life.cubalc
+// SMX mesh board: LE zymogen activate after recruit on life_cell vesicle continuum.
+// Free energy must flow. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mesh OF Cell 1 40 0
+SEND mesh set_threshold 10
+SEND mesh pulse 4
+SEND mesh photosynth 28
+SEND mesh glycolyse 22
+SEND mesh pump 16
+SEND mesh photophos 14
+SEND mesh charge 20
+SEND mesh feed 20
+SEND mesh release 2
+SEND mesh reuptake 2
+SEND mesh refill 1
+SEND mesh dock 1
+SEND mesh arm 1
+SEND mesh clamp 1
+SEND mesh trigger 1
+SEND mesh pore 1
+SEND mesh mix 1
+SEND mesh collapse 1
+SEND mesh retrieve 1
+SEND mesh photosynth 12
+SEND mesh glycolyse 10
+SEND mesh acidify 1
+SEND mesh mature 1
+SEND mesh recruit 2
+ASSERT LAST_N == 2 "smx recruit"
+GETF mesh reserve
+LET r0 = LAST_N
+GETF mesh heat
+LET h0 = LAST_N
+GETF mesh threshold
+LET t0 = LAST_N
+GETF mesh pmf
+LET p0 = LAST_N
+SEND mesh activate 2
+ASSERT LAST_N == 2 "smx activate"
+GETF mesh reserve
+ASSERT LAST_N == r0 - 2 "smx r"
+GETF mesh heat
+ASSERT LAST_N == h0 + 2 "smx heat"
+GETF mesh threshold
+ASSERT LAST_N == t0 - 2 "smx thr"
+GETF mesh pmf
+ASSERT LAST_N == p0 "smx pmf"
+GETF mesh alive
+ASSERT LAST_N == 1 "smx alive"
