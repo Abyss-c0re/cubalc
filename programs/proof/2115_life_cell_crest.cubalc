@@ -1,0 +1,312 @@
+// 2115_life_cell_crest.cubalc
+// Proof 2115: life_cell crest - neural-crest EMT delamination after ZIP.
+// Pay min(n,atp) -> heat+n energy+n; age/pmf/reserve/thr/sp/pcr held.
+// Continuum after zip. Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 24 0
+ENTITY poor OF Cell 1 20 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 16 0
+ENTITY twin OF Cell 1 18 0
+ENTITY ceil OF Cell 1 20 0
+ENTITY starved OF Cell 1 30 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+SEND gate pulse 6
+SEND gate photosynth 12
+SEND gate glycolyse 10
+SEND gate pump 8
+SEND gate photophos 8
+GETF gate age
+ASSERT LAST_N == 6 "crest a6"
+GETF gate atp
+ASSERT LAST_N >= 14 "crest atp"
+GETF gate heat
+LET hbase = LAST_N
+GETF gate energy
+LET ebase = LAST_N
+GETF gate reserve
+LET rbase = LAST_N
+GETF gate threshold
+ASSERT LAST_N == 10 "crest thr10"
+GETF gate setpoint
+ASSERT LAST_N == 10 "crest sp10"
+GETF gate pcr
+ASSERT LAST_N == 0 "crest pcr0"
+
+SEND gate converge 3
+ASSERT LAST_N == 3 "crest prece3"
+SEND gate extend 2
+ASSERT LAST_N == 2 "crest preext2"
+SEND gate fold 2
+ASSERT LAST_N == 2 "crest prefold2"
+SEND gate zip 2
+ASSERT LAST_N == 2 "crest prezip2"
+GETF gate energy
+LET e1 = LAST_N
+GETF gate heat
+LET h1 = LAST_N
+GETF gate atp
+LET at1 = LAST_N
+GETF gate pmf
+LET p1 = LAST_N
+GETF gate reserve
+LET r1 = LAST_N
+GETF gate threshold
+LET t1 = LAST_N
+GETF gate setpoint
+LET s1 = LAST_N
+GETF gate pcr
+LET c1 = LAST_N
+GETF gate age
+LET a1 = LAST_N
+ASSERT at1 >= 3 "crest atp3"
+ASSERT t1 == 12 "crest thr pre12"
+
+SEND gate crest 3
+ASSERT LAST_N == 3 "crest 3"
+GETF gate heat
+ASSERT LAST_N == h1 + 3 "crest h+3"
+GETF gate energy
+ASSERT LAST_N == e1 + 3 "crest e+3"
+GETF gate atp
+ASSERT LAST_N == at1 - 3 "crest atp-3"
+GETF gate threshold
+ASSERT LAST_N == t1 "crest thr held"
+GETF gate reserve
+ASSERT LAST_N == r1 "crest r held"
+GETF gate age
+ASSERT LAST_N == a1 "crest age held"
+GETF gate pmf
+ASSERT LAST_N == p1 "crest pmf held"
+GETF gate pcr
+ASSERT LAST_N == c1 "crest pcr held"
+GETF gate setpoint
+ASSERT LAST_N == s1 "crest sp held"
+
+SEND gate photosynth 4
+SEND gate glycolyse 4
+SEND gate photophos 2
+GETF gate atp
+LET ap = LAST_N
+ASSERT ap >= 1 "crest clamp atp"
+GETF gate heat
+LET hp = LAST_N
+GETF gate threshold
+LET tp = LAST_N
+GETF gate energy
+LET ep = LAST_N
+SEND gate crest 500
+ASSERT LAST_N == ap "crest clamp take"
+GETF gate atp
+ASSERT LAST_N == 0 "crest atp0"
+GETF gate heat
+ASSERT LAST_N == hp + ap "crest h clamp"
+GETF gate threshold
+ASSERT LAST_N == tp "crest thr clamp held"
+GETF gate energy
+ASSERT LAST_N == ep + ap "crest e clamp"
+
+SEND dead crest 3
+ASSERT LAST_N == 0 "dead crest0"
+GETF dead heat
+ASSERT LAST_N == 0 "dead h0"
+GETF dead energy
+ASSERT LAST_N == 20 "dead e20"
+GETF dead threshold
+ASSERT LAST_N == 10 "dead thr10"
+
+SEND poor pulse 4
+SEND poor photosynth 8
+SEND poor glycolyse 6
+SEND poor pump 4
+SEND poor photophos 4
+GETF poor atp
+LET pa0 = LAST_N
+GETF poor heat
+LET ph0 = LAST_N
+GETF poor threshold
+LET pt0 = LAST_N
+SEND poor crest 0
+ASSERT LAST_N == 0 "n0 crest"
+SEND poor crest -3
+ASSERT LAST_N == 0 "neg crest"
+GETF poor atp
+ASSERT LAST_N == pa0 "poor atp held"
+GETF poor heat
+ASSERT LAST_N == ph0 "poor h held"
+GETF poor threshold
+ASSERT LAST_N == pt0 "poor thr held"
+
+SEND starved pulse 3
+GETF starved atp
+LET sa = LAST_N
+IF sa > 0 THEN
+  SEND starved crest sa
+END
+GETF starved atp
+ASSERT LAST_N == 0 "star atp0"
+GETF starved energy
+LET se = LAST_N
+GETF starved heat
+LET sh0 = LAST_N
+GETF starved threshold
+LET st0 = LAST_N
+GETF starved reserve
+LET sr0 = LAST_N
+SEND starved crest 2
+ASSERT LAST_N == 0 "star no atp"
+GETF starved energy
+ASSERT LAST_N == se "star e held"
+GETF starved heat
+ASSERT LAST_N == sh0 "star h held"
+GETF starved threshold
+ASSERT LAST_N == st0 "star thr held"
+GETF starved reserve
+ASSERT LAST_N == sr0 "star r held"
+
+SEND g0 pulse 5
+SEND g0 photosynth 8
+SEND g0 glycolyse 6
+SEND g0 pump 4
+SEND g0 photophos 4
+SEND g0 quiesce
+GETF g0 energy
+LET g0e = LAST_N
+GETF g0 heat
+LET g0h = LAST_N
+GETF g0 atp
+LET g0a = LAST_N
+GETF g0 threshold
+LET g0t = LAST_N
+ASSERT g0a >= 2 "g0 atp"
+SEND g0 crest 2
+ASSERT LAST_N == 2 "g0 crest"
+GETF g0 heat
+ASSERT LAST_N == g0h + 2 "g0 h+2"
+GETF g0 threshold
+ASSERT LAST_N == g0t "g0 thr held"
+GETF g0 energy
+ASSERT LAST_N == g0e + 2 "g0 e+2"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+
+SEND twin pulse 6
+SEND twin photosynth 10
+SEND twin glycolyse 8
+SEND twin pump 6
+SEND twin photophos 6
+SEND twin converge 2
+SEND twin extend 1
+SEND twin fold 1
+SEND twin zip 1
+GETF twin threshold
+LET tt0 = LAST_N
+GETF twin setpoint
+LET ts0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
+GETF twin pmf
+LET tp0 = LAST_N
+GETF twin pcr
+LET tc0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+GETF twin age
+LET ta0 = LAST_N
+GETF twin atp
+LET tat0 = LAST_N
+GETF twin heat
+LET th0 = LAST_N
+ASSERT tat0 >= 2 "twin atp"
+SEND twin crest 2
+ASSERT LAST_N == 2 "twin crest"
+GETF twin threshold
+ASSERT LAST_N == tt0 "twin thr"
+GETF twin setpoint
+ASSERT LAST_N == ts0 "twin sp"
+GETF twin reserve
+ASSERT LAST_N == tr0 "twin r"
+GETF twin pmf
+ASSERT LAST_N == tp0 "twin pmf"
+GETF twin pcr
+ASSERT LAST_N == tc0 "twin pcr"
+GETF twin energy
+ASSERT LAST_N == te0 + 2 "twin e+2"
+GETF twin age
+ASSERT LAST_N == ta0 "twin age"
+GETF twin heat
+ASSERT LAST_N == th0 + 2 "twin h+2"
+GETF twin atp
+ASSERT LAST_N == tat0 - 2 "twin atp-2"
+
+SEND ceil pulse 5
+SEND ceil photosynth 10
+SEND ceil glycolyse 8
+SEND ceil pump 5
+SEND ceil photophos 5
+SEND ceil set_threshold 100
+GETF ceil threshold
+ASSERT LAST_N == 100 "ceil thr100"
+GETF ceil atp
+LET ca = LAST_N
+ASSERT ca >= 4 "ceil atp"
+GETF ceil heat
+LET ch = LAST_N
+GETF ceil energy
+LET ce = LAST_N
+SEND ceil crest 4
+ASSERT LAST_N == 4 "ceil crest4"
+GETF ceil threshold
+ASSERT LAST_N == 100 "ceil thr100h"
+GETF ceil heat
+ASSERT LAST_N == ch + 4 "ceil h+4"
+GETF ceil energy
+ASSERT LAST_N == ce + 4 "ceil e+4"
+GETF ceil atp
+ASSERT LAST_N == ca - 4 "ceil atp-4"
+
+ENTITY low OF Cell 1 5 0
+SEND low set_threshold 10
+SEND low photosynth 6
+SEND low glycolyse 4
+SEND low photophos 4
+GETF low energy
+ASSERT LAST_N == 5 "low e5"
+GETF low atp
+ASSERT LAST_N >= 3 "low atp"
+SEND low crest 3
+ASSERT LAST_N == 3 "low crest3"
+GETF low threshold
+ASSERT LAST_N == 10 "low thr10"
+GETF low energy
+ASSERT LAST_N == 8 "low e8"
+GETF low ready
+ASSERT LAST_N == 0 "low ready0"
+
+ENTITY hot OF Cell 1 40 0
+SEND hot set_threshold 10
+SEND hot photosynth 6
+SEND hot glycolyse 4
+SEND hot photophos 4
+GETF hot atp
+ASSERT LAST_N >= 2 "hot atp"
+SEND hot crest 2
+ASSERT LAST_N == 2 "hot crest"
+GETF hot threshold
+ASSERT LAST_N == 10 "hot thr10"
+GETF hot energy
+ASSERT LAST_N == 42 "hot e42"
+GETF hot ready
+ASSERT LAST_N == 1 "hot ready1"
+
+PRINT "2115_life_cell_crest PASS"
+
