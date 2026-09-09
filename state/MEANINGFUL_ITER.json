@@ -2,27 +2,24 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2131,
   "MEANINGFUL_ITER": 2131,
-  "iter": 2131,
+  "iter": 2132,
   "n": 2131,
-  "version": "1.15.1618-usability",
+  "version": "1.15.1619-usability",
   "VERSION": "1.15.1618-usability",
   "feature": "life_cell_collapse",
   "FEATURE": "LIFE_CELL_COLLAPSE",
   "name": "LIFE_CELL_COLLAPSE",
-  "title": "life cell collapse",
+  "title": "life cell",
   "label": "LIFE_CELL_COLLAPSE",
   "ship": "2131_life_cell_collapse",
   "proof": "programs/proof/2131_life_cell_collapse.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2131_life_cell_collapse.cubalc",
-    "programs/science/integration/atomic_printer_life_collapse.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_collapse_life.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
-  "item": "life cell collapse",
-  "item_id": "mi_life_cell_collapse",
-  "summary": "Post-mix omega-figure full-collapse fusion / vesicle membrane flatten into PM for life_cell.",
-  "ts": "2026-09-09T19:41:32Z",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-09T19:51:54Z",
   "asserts_ok": 113,
   "asserts_fail": 0,
   "science_asserts_ok": 25,
@@ -37,5 +34,5 @@
   "feat_head": "4540ba8f1e302e21230abcb485ef670d3ef4b108",
   "HEAD": "4540ba8f1e302e21230abcb485ef670d3ef4b108",
   "FEAT_HEAD": "4540ba8f1e302e21230abcb485ef670d3ef4b108",
-  "commit": "4540ba8f1e302e21230abcb485ef670d3ef4b108"
+  "commit": "69adb4fe2"
 }
