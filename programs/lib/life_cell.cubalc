@@ -132,6 +132,7 @@
 #   condense n            post-stream mesenchymal condensation — ATP+energy→heat+n energy-n thr+n (N-cad/Sox9 pack); age/pmf/reserve/sp/pcr held
 #   fate n                NC fate commitment / lineage restriction after condense — pay min(n,atp,pmf) → heat +n + pmf -n (Sox9/Neurog GRN lock); age/energy/reserve/thr/sp/pcr held; ready recompute
 #   project n             post-fate axonal/process projection — pay min(n,atp,energy) → heat +n + energy -n + sp +n (growth-cone MT/actin path length); age/pmf/reserve/thr/pcr held; ready recompute
+#   synapse n             post-project target innervation / chemical synapse assembly — pay min(n,atp,energy) → heat +n + energy -n + thr +n (SNARE/neurexin–neuroligin/PSD contact competence); age/pmf/reserve/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5267,6 +5268,79 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # SYNAPSE: post-project target innervation / chemical synapse assembly after PROJECT.
+  # Spend take=min(n,atp,energy) — ATP + bulk metabolic fuel fund growth-cone
+  # target recognition and presynaptic active-zone / postsynaptic density build:
+  # SNARE-complex vesicle priming (Munc18/Syntaxin/SNAP-25), neurexin–neuroligin
+  # and cadherin trans-synaptic adhesion, PSD-95/SHANK scaffold clustering once
+  # the axon/process path-length homeostat has advanced (post-project synapse;
+  # not multipotent stream, not GRN fate lock, not growth-cone path sp+ alone).
+  # HEAT += take (each vesicle cycle / adhesion / scaffold assembly dissipates).
+  # ENERGY -= take (synaptogenesis burns active metabolic pool into contact
+  #   machinery; inverse of crest EMT energy+ spark; kin to project energy- but
+  #   thr+ contact competence instead of sp+ path length).
+  # THRESHOLD rises: thr = min(1000, thr + take) — synaptic contact competence
+  # bar rises as active zones lock onto target (kin to zip/condense thr+ hinge
+  # and pack contact; distinct from project sp+ path and migrate sp- lean).
+  # AGE/pmf/reserve/setpoint/pcr HELD — synapse is post-project innervation, not
+  # injury age+, not chemiosmotic fate pmf-, not CE bank, not path-length sp,
+  # not phosphagen pcr. Ready recomputed from energy vs new thr.
+  METHOD synapse n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 

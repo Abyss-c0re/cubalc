@@ -2,26 +2,24 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2120,
   "MEANINGFUL_ITER": 2120,
-  "iter": 2120,
+  "iter": 2121,
   "n": 2120,
-  "version": "1.15.1606-usability",
+  "version": "1.15.1607-usability",
   "VERSION": "1.15.1606-usability",
   "feature": "life_cell_project",
   "FEATURE": "LIFE_CELL_PROJECT",
   "name": "LIFE_CELL_PROJECT",
-  "title": "life cell project",
+  "title": "atomic printer life synapse",
   "label": "LIFE_CELL_PROJECT",
   "ship": "2120_life_cell_project",
   "proof": "programs/proof/2120_life_cell_project.cubalc",
   "proofs": [
-    "programs/proof/2120_life_cell_project.cubalc",
-    "programs/science/integration/atomic_printer_life_project.cubalc",
-    "programs/lib/life_cell.cubalc"
+    "programs/science/integration/atomic_printer_life_synapse.cubalc"
   ],
-  "item": "life cell project",
-  "item_id": "mi_life_cell_project",
-  "summary": "project n: post-fate NC axonal/process projection after fate lock \u2014 pay min(n,atp,energy) ATP+energy fund growth-cone MT/actin path \u2192 heat +n + energy -n + sp +n; age/pmf/reserve/thr/pcr held; ready recompute; continuum ...\u2192fate\u2192project; proof 2120 asserts_ok=79 + science 46.",
-  "ts": "2026-09-09T15:12:58Z",
+  "item": "atomic printer life synapse",
+  "item_id": "mi_atomic_printer_life_synapse",
+  "summary": "Host-finished MI ship after nanobot partial (atomic_printer_life_synapse).",
+  "ts": "2026-09-09T15:23:17Z",
   "asserts_ok": 79,
   "asserts_fail": 0,
   "science_asserts_ok": 46,
@@ -33,5 +31,6 @@
   "proof_status": "PASS",
   "note": "PROJECT burns ATP+energy into heat and extends setpoint path-length homeostat for post-fate NC-derivative outgrowth; free energy age/pmf/reserve/thr/pcr held \u2014 growth-cone projection after Sox9/Neurog identity lock.",
   "feat_head": "bb0ed5278ce976f8f510eb449f727618be3b25f2",
-  "HEAD": "bb0ed5278ce976f8f510eb449f727618be3b25f2"
+  "HEAD": "bb0ed5278ce976f8f510eb449f727618be3b25f2",
+  "commit": "b5b80cae0"
 }
