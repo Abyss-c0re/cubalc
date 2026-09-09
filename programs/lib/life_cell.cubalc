@@ -136,6 +136,8 @@
 #   release n             post-synapse quantal vesicle fusion / neurotransmitter cleft dump — pay min(n,atp,energy) → heat +n + energy -n + pcr +n (Ca2+-SNARE fusion + NSF recycling + CK phosphagen shuttle at active zone); age/pmf/reserve/thr/sp held; ready recompute
 #   reuptake n            post-release neurotransmitter cleft clearance / EAAT reload — pay min(n,atp,energy) → heat +n + energy -n + reserve +n (EAAT/GAT Na+-coupled clearance + vesicle-pool reload bank); age/pmf/thr/sp/pcr held; ready recompute
 #   refill n              post-reuptake vesicular transmitter reload / VGLUT-v-ATPase packing — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n (proton-ATPase vesicle acidification + VGLUT/VGAT quanta pack from recovered-transmitter bank); age/pmf/thr/sp/pcr held; ready recompute
+#   dock n               post-refill active-zone vesicle docking / Munc13-RIM-Rab3 tethering — pay min(n,atp,energy) → heat +n + energy -n + pmf +n; age/reserve/thr/sp/pcr held; ready recompute
+#   arm n                post-dock SNARE complex arming / Munc18-Syntaxin-SNAP25 zipper — pay min(n,atp,energy,pmf) → heat +n + energy -n + pmf -n; age/reserve/thr/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -5636,6 +5638,91 @@ CLASS Cell
       LET p = 1000
     END
     SETF THIS pmf p
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # ARM: post-dock SNARE complex arming / Munc18-Syntaxin-SNAP25 zipper priming.
+  # Spend take=min(n,atp,energy,pmf) — ATP + bulk metabolic fuel + bouton ΔΨm
+  # microdomain fusion-competence bank fund full SNARE zipper after Munc13/RIM/Rab3
+  # AZ docking has tethered VGLUT-filled quanta (post-dock arm; not multipotent
+  # stream, not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+
+  # contact, not release pcr+ dump, not EAAT reserve+ clearance, not VGLUT reserve-
+  # pack, not dock pmf+ tethering).
+  # HEAT += take (each Munc18 clamp / SNAP-25 zipper / synaptobrevin register step
+  #   dissipates as fusion-ready SNARE complex assembly work).
+  # ENERGY -= take (arming burns active metabolic pool into SNARE zipper work;
+  #   inverse of crest EMT energy+ spark; kin to dock energy- but pmf- consume of
+  #   the bouton microdomain bank dock raised, instead of pmf+ tethering).
+  # ATP -= take (NSF-adjacent AAA priming / Munc18 ATP-sensitive clamp cycle).
+  # PMF falls: pmf = pmf - take — consume dock-raised bouton mito ΔΨm / Ca2+
+  #   microdomain fusion-competence bank into zipper energy (distinct from fate
+  #   GRN pmf- lock, mcu/nclx mito Ca shuttle, and dock pmf+ raise).
+  # AGE/reserve/threshold/setpoint/pcr HELD — arm is SNARE zipper after dock,
+  # not injury age+, not CE bank, not contact thr, not path-length sp, not
+  # phosphagen pcr. Ready recomputed from post-burn energy vs threshold.
+  # Continuum: ...->project->synapse->release->reuptake->refill->dock->arm.
+  # Signature: heat+n energy-n pmf-n; age+reserve+thr+sp+pcr held — arm life-force.
+  # Usability: AGI models post-dock SNARE arming under ASSERT.
+  # Returns take armed; dead/n<1/empty atp|energy|pmf -> 0.
+  METHOD arm n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
     GETF THIS quiescent
     IF LAST_N == 1 THEN
       SETF THIS ready 0
