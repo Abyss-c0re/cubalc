@@ -1,2 +1,1 @@
-LIFE_CELL_PBP1A MI2186 PASS asserts_ok=301 (180+71+50) methods=180 FEAT_HEAD=8e4a6cb854bad2fa1a1cacc7c07a5a6dc0f31db9
-continuum ...->pbp2->lpoa->pbp1a
+LIFE_CELL_PBP1A MI2186 HEAD=cd8deae810efdfa8c5a82d43b71296587321951a FEAT=8e4a6cb854bad2fa1a1cacc7c07a5a6dc0f31db9 asserts_ok=301
