@@ -1,3 +1,10 @@
+## 1.15.1684-usability — LIFE_CELL_NAGB (MI 2197)
+
+- feat(life): NagB GlcN-6-P deaminase after NagA closes PG sugar recycle to F6P
+- method: `nagb n` continuum `…->anmk->murq->naga->nagb`
+- proof: programs/proof/2197_life_cell_nagb.cubalc (452 ok)
+- atomic/smx: atomic_printer_life_nagb + smx_mesh_vesicle_nagb_life
+
 ## 1.15.1682-usability — LIFE_CELL_MURQ (MI 2195)
 
 - feat(life): MurQ MurNAc-6-P etherase after AnmK for muropeptide recycle
