@@ -8164,3 +8164,9 @@ See 1.11.6-universal.
 - feat(life): harden n heat→raise mitosis threshold (thermal fortify); thr ceiling 1000
 - proofs: 2064_life_cell_harden 69/0; science 21/0; flagship 1620 12/0
 - yield unchanged; energy/atp/reserve/pmf/pcr untouched; ready recomputes
+
+## MI2188 LIFE_CELL_MEPH (2026-09-10)
+
+- METHOD meph n: periplasmic DD-endopeptidase space-making after MepS/Spr.
+- Continuum: ...->pbp1a->meps->meph. Proof asserts_ok=182+73+52=307 fail=0.
+- Feat HEAD c626ef37e94267ea0938516a6dd5cc4d6f5d1c83.
