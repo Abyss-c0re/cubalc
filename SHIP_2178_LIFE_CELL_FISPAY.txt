@@ -1,0 +1,10 @@
+SHIP LIFE_CELL_FISPAY MI2178
+feat: METHOD fispay n — cytokinesis endowment energy split after Scission PG cut
+continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
+proof: programs/proof/2178_life_cell_fispay.cubalc PASS asserts_ok=124
+smx: programs/science/integration/smx_mesh_vesicle_fispay_life.cubalc PASS asserts_ok=32
+atomic: programs/science/integration/atomic_printer_life_fispay.cubalc PASS asserts_ok=53
+total asserts: 209 PASS
+note: distinct from zero-arg METHOD fission (maternal endowment code) and scission n
+VERSION: 1.15.1663-usability
+Cube is SoT. Free energy must flow.

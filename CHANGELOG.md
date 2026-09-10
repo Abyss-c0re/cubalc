@@ -1,3 +1,10 @@
+## 1.15.1663-usability — 2178 LIFE_CELL_FISPAY
+- feat(life): fispay n cytokinesis endowment energy split after Scission
+- continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
+- proofs: 2178_life_cell_fispay 124/0; smx 32/0; atomic 53/0; total 209
+- signature: heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+- distinct from zero-arg fission maternal endowment code and scission PG cut
+
 ## 1.15.1662-usability — MI2177 LIFE_CELL_SCISSION (scission)
 
 - **life_cell.scission n**: terminal envelope PG scission after NlpD AmiC activation.
