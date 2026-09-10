@@ -1,1 +1,1 @@
-LIFE_CELL_MURA MI2196 VERSION=1.15.1683-usability HEAD=08783be1af79a03aeab47c6aab9f18b3dfddf4ec FEAT=612d7e0e438e21ac4624908cd5a9ec38e8945902 asserts_ok=181 (life=115 atomic=30 smx=24 flag=12) asserts_fail=0 continuum=...->anmk->murq->mura PASS
+LIFE_CELL_MURA MI2196 VERSION=1.15.1683-usability HEAD=cfdaba265fd7bbb1243cda426bb26abd4974e8f4 FEAT=612d7e0e438e21ac4624908cd5a9ec38e8945902 asserts_ok=181 (life=115 atomic=30 smx=24 flag=12) asserts_fail=0 continuum=...->anmk->murq->mura PASS
