@@ -1,4 +1,20 @@
+## 1.15.1653-usability — MI2168 LIFE_CELL_XERCD (xercd)
+
+- **life_cell.xercd n**: XerCD dif site-specific recombinase / chromosome dimer resolution after FtsK AAA+ clearance.
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: if3→if2→ftsz→ftsi→amic→envc→ftsn→ftsk→xercd→fission.
+- Proof `programs/proof/2168_life_cell_xercd.cubalc` PASS asserts_ok=90+37+18 (flagship 1620 ok); methods=162.
+
 ## 1.15.1652-usability — MI2167 LIFE_CELL_FTSK (ftsk)
+
+
+## 1.15.1653-usability — 2168 LIFE_CELL_XERCD
+
+- feat(life): `xercd n` — XerCD dif recombinase / chromosome dimer resolution after FtsK
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+- Continuum: if3→if2→ftsz→ftsi→amic→envc→ftsn→ftsk→xercd→fission
+- proofs: 2168_life_cell_xercd 91/0; smx 19/0; atomic_printer 38/0; flagship 1620 12/0
+- methods=162 (CUBALC_MAX_METHODS 192)
 
 - **life_cell.ftsk n**: FtsK AAA+ septal DNA translocase / chromosome clearance after FtsN go-signal.
 - Pay `min(n,atp,energy)` → heat+n atp−n energy−n; age/pcr/reserve/pmf/sp/thr held.
