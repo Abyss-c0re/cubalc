@@ -35,11 +35,11 @@
   "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
-  "note": "RodA SEDS rod PG polymerase elongation restart after FisPay: heat+n atp-n energy-n; pcr/reserve/age/pmf/sp/thr held. Continuum ...->scission->fispay->roda.",
+  "note": "RodA SEDS rod PG polymerase elongation restart after FisPay: heat+n atp-n energy-n; pcr/reserve/age/pmf/sp/thr held. Continuum ...->nlpd->scission->fispay->roda. methods=174.",
   "prior_feature": "LIFE_CELL_FISPAY",
   "sealed": true,
   "pass_": true,
-  "methods": 173,
+  "methods": 174,
   "hold_flash": 1,
   "proof_asserts": 131,
   "atomic_asserts": 57,
@@ -48,5 +48,10 @@
   "feat_head": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
   "FEAT_HEAD": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
   "HEAD": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
-  "head": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f"
+  "head": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
+  "tip": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
+  "pinned_head": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
+  "pin": "8bf9016df41d12c6a5d82c45b34a636dd5889c5f",
+  "commit": "8bf9016df",
+  "short": "8bf9016df"
 }
