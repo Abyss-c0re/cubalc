@@ -39,5 +39,12 @@
   "prior_feature": "LIFE_CELL_TOLPAL",
   "sealed": true,
   "pass_": true,
-  "methods": 164
+  "methods": 164,
+  "feat_head": "fa384f222acce1df3e76647585440929b95d6e53",
+  "FEAT_HEAD": "fa384f222acce1df3e76647585440929b95d6e53",
+  "HEAD": "fa384f222acce1df3e76647585440929b95d6e53",
+  "tip": "fa384f222acce1df3e76647585440929b95d6e53",
+  "pinned_head": "fa384f222acce1df3e76647585440929b95d6e53",
+  "commit": "fa384f222",
+  "short": "fa384f222"
 }
