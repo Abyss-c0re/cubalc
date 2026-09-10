@@ -1,33 +1,33 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2187,
-  "MEANINGFUL_ITER": 2187,
-  "iter": 2187,
-  "n": 2187,
-  "mi": 2187,
-  "version": "1.15.1673-usability",
-  "VERSION": "1.15.1673-usability",
-  "feature": "life_cell_meps",
-  "FEATURE": "LIFE_CELL_MEPS",
-  "name": "LIFE_CELL_MEPS",
-  "title": "life cell meps",
-  "label": "LIFE_CELL_MEPS",
-  "method": "meps n",
-  "ship": "2187_life_cell_meps",
-  "proof": "programs/proof/2187_life_cell_meps.cubalc",
+  "meaningful_iter": 2188,
+  "MEANINGFUL_ITER": 2188,
+  "iter": 2188,
+  "n": 2188,
+  "mi": 2188,
+  "version": "1.15.1674-usability",
+  "VERSION": "1.15.1674-usability",
+  "feature": "life_cell_mepm",
+  "FEATURE": "LIFE_CELL_MEPM",
+  "name": "LIFE_CELL_MEPM",
+  "title": "life cell mepm",
+  "label": "LIFE_CELL_MEPM",
+  "method": "mepm n",
+  "ship": "2188_life_cell_mepm",
+  "proof": "programs/proof/2188_life_cell_mepm.cubalc",
   "proofs": [
     "programs/lib/life_cell.cubalc",
-    "programs/proof/2187_life_cell_meps.cubalc",
-    "programs/science/integration/atomic_printer_life_meps.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_meps_life.cubalc"
+    "programs/proof/2188_life_cell_mepm.cubalc",
+    "programs/science/integration/atomic_printer_life_mepm.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_mepm_life.cubalc"
   ],
-  "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps",
+  "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm",
   "asserts_ok": {
-    "life": 212,
-    "atomic_printer": 71,
-    "smx": 48,
-    "sum": 331
+    "life": 244,
+    "atomic_printer": 16,
+    "smx": 15,
+    "sum": 275
   },
   "asserts_fail": 0,
-  "note": "MepS/Spr OM DD-endopeptidase after LpoA; CUBALC_MAX_SRC 384KiB for life_cell growth"
+  "note": "MepM IM DD-endopeptidase after MepS/Spr; sidewall PG cross-link trim for elongasome insert"
 }

@@ -1,0 +1,76 @@
+// smx_mesh_vesicle_mepm_life.cubalc
+// SMX mesh vesicle board: MepM IM DD-endopeptidase life-force after MepS.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+ENTITY mesh OF Cell 1 36 0
+ENTITY void OF Cell 0 12 0
+
+SEND vesicle set_threshold 6
+SEND mesh set_threshold 6
+SEND vesicle pulse 5
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle charge 36
+SEND vesicle feed 32
+SEND vesicle pbp1a 3
+ASSERT LAST_N == 3 "ves pbp1a"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle lpoa 3
+ASSERT LAST_N == 3 "ves lpoa"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle meps 3
+ASSERT LAST_N == 3 "ves meps"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle reserve
+LET vr = LAST_N
+SEND vesicle mepm 4
+ASSERT LAST_N == 4 "ves mepm"
+GETF vesicle heat
+ASSERT LAST_N == vh + 4 "ves h+4"
+GETF vesicle energy
+ASSERT LAST_N == ve - 4 "ves e-4"
+GETF vesicle atp
+ASSERT LAST_N == va - 4 "ves atp-4"
+GETF vesicle reserve
+ASSERT LAST_N == vr "ves r held"
+SEND mesh photosynth 28
+SEND mesh glycolyse 24
+SEND mesh charge 28
+SEND mesh feed 24
+SEND mesh meps 2
+ASSERT LAST_N == 2 "mesh meps"
+SEND mesh photosynth 16
+SEND mesh glycolyse 12
+SEND mesh charge 16
+SEND mesh feed 12
+GETF mesh energy
+LET me = LAST_N
+SEND mesh mepm 2
+ASSERT LAST_N == 2 "mesh mepm"
+GETF mesh energy
+ASSERT LAST_N == me - 2 "mesh e-2"
+SEND void mepm 4
+ASSERT LAST_N == 0 "void mepm0"
+SEND vesicle mepm 0
+ASSERT LAST_N == 0 "ves mepm0"
+GETF vesicle alive
+ASSERT LAST_N == 1 "ves alive"
