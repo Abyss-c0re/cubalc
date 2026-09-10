@@ -1,3 +1,12 @@
+## 1.15.1652-usability — MI2167 LIFE_CELL_FTSK (ftsk)
+
+- **life_cell.ftsk n**: FtsK AAA+ septal DNA translocase / chromosome clearance after FtsN go-signal.
+- Pay `min(n,atp,energy)` → heat+n atp−n energy−n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: `...->ftsi->amic->envc->ftsn->ftsk->fission` (constrict → clear DNA → split).
+- Proof 2167 asserts_ok=84; atomic_printer + smx_mesh_vesicle boards; fail=0.
+- Host: `CUBALC_MAX_METHODS` 160→192 so Cell continuum can grow past FtsN.
+- methods=161.
+
 ## 1.15.1650-usability — MI2165 LIFE_CELL_ENVC (envc)
 
 - **life_cell.envc n**: EnvC LytM/M23 activator of AmiC septal amidase after wall ingrowth.
