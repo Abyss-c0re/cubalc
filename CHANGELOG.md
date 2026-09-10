@@ -1,3 +1,21 @@
+## 2150 LIFE_CELL_PSM (1.15.1634-usability)
+
+- feat(life): post-vcp 26S proteasome degradation of VCP-extracted clients for life_cell continuum
+- METHOD psm n: pay min(n,atp,energy,reserve) -> heat+n energy-n atp-n reserve-n; age/pmf/sp/thr/pcr held
+- Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9->hrd->vcp->psm
+- proof: programs/proof/2150_life_cell_psm.cubalc (asserts_ok=61 fail=0)
+- science: atomic_printer_life_psm + smx_mesh_vesicle_psm_life (24+25)
+- methods=144
+
+## 2149 LIFE_CELL_VCP (1.15.1633-usability)
+
+- feat(life): post-hrd p97/VCP AAA+ retrotranslocation extractase for life_cell continuum
+- METHOD vcp n: pay min(n,atp,energy) -> heat+n energy-n atp-n reserve+n; age/pmf/sp/thr/pcr held
+- Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9->hrd->vcp
+- proof: programs/proof/2149_life_cell_vcp.cubalc
+- science: atomic_printer_life_vcp + smx_mesh_vesicle_vcp_life
+- methods=143
+
 ## 2148 LIFE_CELL_HRD (1.15.1632-usability)
 
 - feat(life): post-os9 SEL1L/HRD1 (SYVN1) ERAD E3 ubiquitin-ligase commit for life_cell continuum

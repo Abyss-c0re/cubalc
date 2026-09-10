@@ -1,0 +1,135 @@
+// atomic_printer_life_psm.cubalc
+// Science integration: atomic printer life-force 26S proteasome degradation after vcp.
+// Cube is SoT. Free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 48 0
+SEND printer set_threshold 8
+SEND printer pulse 5
+SEND printer photosynth 36
+SEND printer glycolyse 30
+SEND printer pump 20
+SEND printer photophos 18
+SEND printer charge 28
+SEND printer feed 28
+SEND printer retrieve 2
+SEND printer acidify 2
+SEND printer mature 2
+SEND printer recruit 2
+SEND printer activate 2
+SEND printer degrade 2
+SEND printer export 2
+SEND printer translate 2
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 12
+SEND printer feed 12
+SEND printer transloc 2
+SEND printer cleave 2
+SEND printer glycosyl 2
+SEND printer trim 2
+ASSERT LAST_N == 2 "sci pretr2"
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 12
+SEND printer feed 12
+SEND printer cnx 2
+ASSERT LAST_N == 2 "sci precx2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 18
+SEND printer feed 12
+SEND printer charge_pcr 14
+SEND printer uggt 2
+ASSERT LAST_N == 2 "sci preug2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 18
+SEND printer feed 12
+SEND printer mann 3
+ASSERT LAST_N == 3 "sci pre mann3"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer os9 2
+ASSERT LAST_N == 2 "sci pre os92"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer hrd 2
+ASSERT LAST_N == 2 "sci pre hrd2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer vcp 2
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer age
+LET a0 = LAST_N
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET at0 = LAST_N
+GETF printer pcr
+LET p0 = LAST_N
+GETF printer pmf
+LET pm0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+SEND printer psm 2
+ASSERT LAST_N == 2 "sci psm2"
+GETF printer heat
+ASSERT LAST_N == h0 + 2 "sci h+2"
+GETF printer energy
+ASSERT LAST_N == e0 - 2 "sci e-2"
+GETF printer atp
+ASSERT LAST_N == at0 - 2 "sci a-2"
+GETF printer reserve
+ASSERT LAST_N == r0 - 2 "sci res-2"
+GETF printer age
+ASSERT LAST_N == a0 "sci age"
+GETF printer pcr
+ASSERT LAST_N == p0 "sci pcr held"
+GETF printer pmf
+ASSERT LAST_N == pm0 "sci pmf"
+GETF printer setpoint
+ASSERT LAST_N == s0 "sci sp"
+GETF printer threshold
+ASSERT LAST_N == t0 "sci thr"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 14
+SEND printer feed 12
+SEND printer vcp 3
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET at1 = LAST_N
+GETF printer reserve
+LET r1 = LAST_N
+GETF printer pcr
+LET p1 = LAST_N
+SEND printer psm 3
+ASSERT LAST_N == 3 "sci psm3"
+GETF printer heat
+ASSERT LAST_N == h1 + 3 "sci h+3b"
+GETF printer energy
+ASSERT LAST_N == e1 - 3 "sci e-3b"
+GETF printer atp
+ASSERT LAST_N == at1 - 3 "sci a-3b"
+GETF printer reserve
+ASSERT LAST_N == r1 - 3 "sci res-3b"
+GETF printer pcr
+ASSERT LAST_N == p1 "sci pcr held2"
+ASSERT 1 == 1 "atomic_printer_life_psm_ok"
+PRINT "atomic_printer_life_psm PASS"
