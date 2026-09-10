@@ -167,6 +167,8 @@
 #   eftu n               post-aars EF-Tu·GTP·AA-tRNA ternary A-site delivery — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 #   ptc n                post-eftu ribosomal PTC peptide-bond formation — pay min(n,energy) → heat +n + energy -n; age/pmf/sp/thr/atp/pcr/reserve held; ready recompute
 #   efg n                post-ptc EF-G·GTP ribosomal translocation / hybrid-state tRNA + mRNA ratchet — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
+#   rf1 n                post-efg class-I release factor GGQ ester hydrolysis peptide release — pay min(n,energy) → heat +n + energy -n + reserve +n; age/pmf/sp/thr/atp/pcr held; ready recompute
+#   rf3 n                post-rf1 class-II RF3·GTP release-factor ejectase / termination recycle — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -8191,7 +8193,7 @@ CLASS Cell
   # ribosomal A site; codon–anticodon match triggers GTP hydrolysis and EF-Tu
   # release so peptidyl transfer can proceed. Closes the salvage→recharge→deliver
   # loop after ERAD/proteasome/peptidase/aaRS continuum.
-  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc->efg.
+  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
   # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
   # EF-Tu GTPase proofreading cycle; metabolic energy pays accommodation work;
   # reserve HELD (AA already esterified on tRNA by aars; distinct from aars
@@ -8275,7 +8277,7 @@ CLASS Cell
   # transferring the chain to the A-site tRNA (no NTP hydrolysis at the PTC
   # itself; GTPases already paid at eftu delivery). Extends nascent chain after
   # salvage->charge->deliver continuum.
-  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
   # Pay take=min(n,energy) — only metabolic reorganization / desolvation work
   # at the PTC active site; ATP HELD (no aaRS adenylate); PCR HELD (EF-Tu GTP
   # already burned at eftu); RESERVE HELD (AA still esterified on tRNA until
@@ -8338,7 +8340,7 @@ CLASS Cell
   # hydrolyzes GTP to drive hybrid-state tRNA resolution: deacylated tRNA from
   # P→E, peptidyl-tRNA from A→P, and mRNA advance by one codon. Unlocks the next
   # A-site for eftu delivery after ptc peptide-bond formation.
-  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
   # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
   # EF-G GTPase power stroke; metabolic energy pays ratchet/unlocked-domain work;
   # reserve HELD (nascent chain already elongated at ptc; AA bank untouched —
@@ -8422,7 +8424,7 @@ CLASS Cell
   # catalyzes hydrolytic cleavage of the ester bond linking the completed
   # nascent chain to P-site tRNA — releasing free polypeptide. No GTP is burned
   # by RF1 itself (RF3 GTPase ejects RF1 afterward; modeled separately).
-  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
   # Pay take=min(n,energy) — metabolic energy pays RF domain docking / GGQ
   # insertion conformational work; ATP/PCR HELD (not aaRS adenylate, not EF-G
   # or EF-Tu GTPase power stroke). RESERVE rises: reserve = min(1000, reserve+take)
@@ -8487,6 +8489,80 @@ CLASS Cell
   END
 
 
+  # RF3: post-rf1 class-II release factor RF3·GTP (eRF3) ejectase —
+  # after RF1/RF2 GGQ ester hydrolysis releases the completed chain, RF3·GTP
+  # binds the RF1·ribosome complex; GTP hydrolysis drives conformational
+  # rearrangement that ejects class-I RF from the A site and primes the
+  # post-termination complex for ribosome recycling (RRF/EF-G next).
+  # No peptide bond / no chain bank here — pure GTPase power stroke like efg/eftu.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Pay take=min(n,atp,energy,pcr) — ATP stands in for GTP·RF3 hydrolysis;
+  # PCR drawn as phosphagen/GTP-pool couple (same class as efg/eftu GTPase).
+  # RESERVE HELD (chain already banked by rf1). AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n atp-n pcr-n; age+reserve+pmf+sp+thr held — rf3 life-force.
+  # Usability: AGI models post-rf1 RF3 ejectase under ASSERT boards.
+  METHOD rf3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 
 END
