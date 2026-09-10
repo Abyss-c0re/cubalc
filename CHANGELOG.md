@@ -1,3 +1,11 @@
+## 1.15.1647-usability — MI2162 LIFE_CELL_IF1 (if1)
+
+- **life_cell.if1 n**: post-if2 initiation factor IF1 A-site block on 30S PIC.
+- Pay `min(n,energy)` → heat+n energy−n; age/atp/pcr/reserve/pmf/sp/thr held.
+- Continuum: `...->efg->rf1->rf3->rrf->if3->if2->if1` (before ftsz).
+- Proof `programs/proof/2162_life_cell_if1.cubalc` asserts_ok=63; science AP+SMX 23+23; 1620 PASS.
+- methods=156.
+
 ## 1.15.1642-usability — MI2157 LIFE_CELL_RF3 (rf3)
 
 - **life_cell.rf3 n**: post-rf1 class-II RF3·GTP release-factor ejectase / termination recycle.
