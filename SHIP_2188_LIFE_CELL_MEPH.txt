@@ -1,7 +1,1 @@
-SHIP LIFE_CELL_MEPH MI 2188
-feat=c626ef37e94267ea0938516a6dd5cc4d6f5d1c83
-METHOD meph n — MepH periplasmic DD-endopeptidase space-making after MepS
-proofs PASS asserts_fail=0 proof=182 atomic=73 smx=52 total=307
-version=1.15.1673-usability
-continuum=...->pbp1a->meps->meph
-cube_law=free_energy_must_flow_into_meph_pg_space_making
+LIFE_CELL_MEPH MI2188 PASS asserts_ok=311 feat=c626ef37e94267ea0938516a6dd5cc4d6f5d1c83 head=30a798b22cd07065725807f680c285064fdc9e33
