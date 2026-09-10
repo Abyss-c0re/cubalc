@@ -1,0 +1,14 @@
+FEATURE=LIFE_CELL_RF3
+MI=2157
+VERSION=1.15.1642-usability
+METHOD=rf3 n
+SIG=heat+n energy-n atp-n pcr-n; age/reserve/pmf/sp/thr held
+CONTINUUM=...->eftu->ptc->efg->rf1->rf3
+PROOF=programs/proof/2157_life_cell_rf3.cubalc
+SCIENCE=programs/science/integration/atomic_printer_life_rf3.cubalc
+SMX=programs/science/integration/smx_mesh_vesicle_rf3_life.cubalc
+ASSERTS=139
+PROOF_OK=97
+SCIENCE_OK=25
+SMX_OK=17
+METHODS=151

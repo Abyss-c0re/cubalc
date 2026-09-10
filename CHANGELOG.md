@@ -1,3 +1,11 @@
+## 1.15.1642-usability — MI2157 LIFE_CELL_RF3 (rf3)
+
+- **life_cell.rf3 n**: post-rf1 class-II RF3·GTP release-factor ejectase / termination recycle.
+- Pay `min(n,atp,energy,pcr)` → heat+n energy−n atp−n pcr−n; age/reserve/pmf/sp/thr held.
+- Continuum: `...->aars->eftu->ptc->efg->rf1->rf3`.
+- Proof `programs/proof/2157_life_cell_rf3.cubalc`; science atomic+SMX vesicle boards.
+- methods=151; asserts_ok≈136.
+
 ## 2156 LIFE_CELL_RF1 (1.15.1641-usability)
 
 - feat(life): post-efg class-I release factor peptide-chain release for life_cell continuum
