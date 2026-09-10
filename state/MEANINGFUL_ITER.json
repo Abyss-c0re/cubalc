@@ -38,5 +38,10 @@
   "prior_feature": "LIFE_CELL_AMIC",
   "sealed": true,
   "pass_": true,
-  "methods": 159
+  "methods": 159,
+  "feat_head": "52f4292485cc053cf1e59c32eed81c7e0bdf4771",
+  "FEAT_HEAD": "52f4292485cc053cf1e59c32eed81c7e0bdf4771",
+  "HEAD": "52f4292485cc053cf1e59c32eed81c7e0bdf4771",
+  "tip": "52f4292485cc053cf1e59c32eed81c7e0bdf4771",
+  "commit": "52f429248"
 }
