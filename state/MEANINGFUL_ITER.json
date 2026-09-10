@@ -39,5 +39,9 @@
   "prior_feature": "LIFE_CELL_MREB",
   "sealed": true,
   "methods": 175,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "feat_head": "954377c67363b38946dfa93a57a2f0e8f490fa46",
+  "FEAT_HEAD": "954377c67363b38946dfa93a57a2f0e8f490fa46",
+  "HEAD": "954377c67363b38946dfa93a57a2f0e8f490fa46",
+  "tip": "954377c67363b38946dfa93a57a2f0e8f490fa46"
 }
