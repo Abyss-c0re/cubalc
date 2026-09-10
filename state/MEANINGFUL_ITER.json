@@ -2,20 +2,23 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2189,
   "MEANINGFUL_ITER": 2189,
-  "iter": 2190,
+  "iter": 2189,
   "n": 2189,
   "mi": 2189,
   "version": "1.15.1676-usability",
-  "VERSION": "1.15.1675-usability",
+  "VERSION": "1.15.1676-usability",
   "feature": "life_cell_meph",
   "FEATURE": "LIFE_CELL_MEPH",
   "name": "LIFE_CELL_MEPH",
-  "title": "smx mesh vesicle meph life",
+  "title": "life cell meph",
   "label": "LIFE_CELL_MEPH",
   "method": "meph n",
   "ship": "2189_life_cell_meph",
   "proof": "programs/proof/2189_life_cell_meph.cubalc",
   "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2189_life_cell_meph.cubalc",
+    "programs/science/integration/atomic_printer_life_meph.cubalc",
     "programs/science/integration/smx_mesh_vesicle_meph_life.cubalc"
   ],
   "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph",
@@ -26,12 +29,5 @@
     "sum": 305
   },
   "asserts_fail": 0,
-  "note": "MepH soluble periplasmic DD-endopeptidase after MepM; triple-redundant sidewall PG cross-link trim for elongasome insert",
-  "item": "smx mesh vesicle meph life",
-  "item_id": "mi_smx_mesh_vesicle_meph_life",
-  "commit": "86ee12283",
-  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_meph_life).",
-  "ts": "2026-09-10T19:04:05Z",
-  "host_finish": true,
-  "anti_bloat": true
+  "note": "MepH soluble periplasmic DD-endopeptidase after MepM; triple-redundant sidewall PG cross-link trim for elongasome insert"
 }

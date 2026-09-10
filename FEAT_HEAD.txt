@@ -1,5 +1,4 @@
-LIFE_CELL_LPOA MI2186 OM lipoprotein activator of PBP1A (LpoA) after PBP1A
-method: lpoa n
-continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa
-asserts_ok=173+71+48=292
-HEAD 99d457f92
+LIFE_CELL_MEPH MI2189 soluble periplasmic DD-endopeptidase MepH after MepM
+method: meph n
+continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph
+asserts_ok=272+17+16=305
