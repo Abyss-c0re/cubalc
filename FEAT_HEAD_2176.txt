@@ -1,0 +1,5 @@
+LIFE_CELL_NLPD MI2176 NlpD OM LytM septal amidase activator after RlpA
+method: nlpd n
+continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->fission
+asserts_ok=123+52+31=206
+VERSION 1.15.1661-usability
