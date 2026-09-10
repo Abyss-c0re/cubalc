@@ -1,3 +1,11 @@
+## 1.15.1659-usability — MI2174 LIFE_CELL_DAMX (damx)
+
+- **life_cell.damx n**: DamX SPOR-domain septal PG binder after DedD sensor.
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: ...->tolpal->cpob->lpob->pbp1b->dedd->damx->fission.
+- Proof PASS asserts_ok=116+48+29; methods=168.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1653-usability — MI2168 LIFE_CELL_XERCD (xercd)
 
 - **life_cell.xercd n**: XerCD dif site-specific recombinase / chromosome dimer resolution after FtsK AAA+ clearance.
