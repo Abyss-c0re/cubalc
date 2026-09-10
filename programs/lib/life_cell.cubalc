@@ -8825,7 +8825,7 @@ CLASS Cell
   # drives treadmilling that recruits septal PG synthases (FtsI/PBP3) and
   # constricts the division plane. Domain: pre-fission Z-ring constriction
   # (not fission endowment split, not mito DRP1 fragment, not ribosome IF*).
-  # Continuum: ...->rrf->if3->if2->ftsz->ftsi->amic->envc->fission (PIC → ring → wall → amidase → EnvC → split).
+  # Continuum: ...->rrf->if3->if2->ftsz->ftsi->amic->envc->ftsn->fission (PIC → ring → wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — GTP/ATP stand-in for FtsZ GTPase cycles.
   # PCR/RESERVE HELD (not phosphagen recycling work). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsz life-force.
@@ -8889,7 +8889,7 @@ CLASS Cell
   # to the midcell ring; FtsI polymerizes septal PG that drives envelope invagination
   # toward fission. Domain: pre-fission septal PG synthase (not FtsZ GTPase ring,
   # not mito DRP1 fragment, not ribosome IF*, not fission endowment split).
-  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->fission (ring → wall → amidase → EnvC → split).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->fission (ring → wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — ATP/GTP stand-in for PG polymerization + flippase.
   # PCR/RESERVE HELD (lipid-II pool not spent here). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsi life-force.
@@ -8954,7 +8954,7 @@ CLASS Cell
   # PG polymerized by FtsI/PBP3; EnvC/NlpD activate AmiC at midcell so daughters
   # split without lysis. Domain: post-septal-PG wall cleavage (not FtsI synthase,
   # not FtsZ GTPase ring, not mito DRP1 fragment, not ribosome IF*, not fission endowment).
-  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->fission (ring → wall → amidase → EnvC activate → split).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->fission (ring → wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for amidase activation + remodel work.
   # PCR/RESERVE HELD (peptide fragments not banked here). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — amic life-force.
@@ -9020,12 +9020,78 @@ CLASS Cell
   # Domain: post-AmiC midcell amidase activation (not AmiC catalysis itself,
   # not FtsI synthase, not FtsZ GTPase ring, not mito DRP1, not ribosome IF*,
   # not fission endowment split).
-  # Continuum: ...->if2->ftsz->ftsi->amic->envc->fission (wall → amidase → activate → split).
+  # Continuum: ...->if2->ftsz->ftsi->amic->envc->ftsn->fission (wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for EnvC recruitment + activation work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — envc life-force.
   # Usability: AGI models EnvC activation energy gate under ASSERT boards before cytokinesis.
   METHOD envc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # FtsN: SPOR-domain late divisome trigger — constriction after EnvC activation.
+  # FtsN is the essential late recruit whose periplasmic SPOR domain binds denuded
+  # PG; it signals that amidase priming (EnvC/AmiC) is ready and flips the
+  # divisome into processive septal constriction before cytokinesis.
+  # Domain: post-EnvC constriction go-signal (not EnvC LytM activation itself,
+  # not AmiC catalysis, not FtsI synthase, not FtsZ GTPase ring, not mito DRP1,
+  # not ribosome IF*, not fission endowment split).
+  # Continuum: ...->ftsz->ftsi->amic->envc->ftsn->fission (amidase → EnvC → FtsN → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for FtsN SPOR docking + signal work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsn life-force.
+  # Usability: AGI models FtsN constriction-go energy gate under ASSERT before fission.
+  METHOD ftsn n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
