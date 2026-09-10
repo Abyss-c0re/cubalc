@@ -1,0 +1,6 @@
+LIFE_CELL_LPOA MI2185
+METHOD lpoa n — OM lipoprotein activator of PBP1A (MrcA) after PBP2/MrdA
+continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+proof: programs/proof/2185_life_cell_lpoa.cubalc PASS asserts_ok=165
+science: atomic_printer_life_lpoa=69 smx_mesh_vesicle_lpoa_life=46
+total_asserts_ok=280

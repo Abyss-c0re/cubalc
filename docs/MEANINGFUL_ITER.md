@@ -1058,3 +1058,9 @@ Doc: `docs/LIFE_FORCE.md`
 
 1702. **`SMX RESILIENCE|RS|GUARD|LIFE_ANCHOR|MESH_RESILIENCE|RAISE_RESILIENCE`** — life-force resilience mesh after autoheal: soft-OOB fail-closed complete mesh + guard ring + anchor hub. Proof 1702 PASS (exit 0, resilient latch, mitosis under free energy).
 - 1702 SMX RESILIENCE mesh life-force: guard ring + anchor hub; proof 1702 PASS
+
+### MI2185 LIFE_CELL_LPOA
+- **done** `lpoa n` — OM lipoprotein activator of PBP1A (MrcA) after PBP2/MrdA.
+- Continuum: `...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa`
+- Proof: `programs/proof/2185_life_cell_lpoa.cubalc` asserts_ok=165
+

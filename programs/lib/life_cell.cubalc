@@ -10347,14 +10347,85 @@ CLASS Cell
   # not MreD IM stabilizer, not MreC periplasmic partner, not MreB scaffold,
   # not RodA SEDS polymerase, not PBP1B bifunctional aPBP, not FtsI PBP3,
   # not LpoA/LpoB, not fispay, not scission, not NlpD, not RlpA, not DamX).
-  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
-  #   (RodZ bitopic MreB tether -> PBP2/MrdA monofunctional TP crosslink).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+  #   (RodZ bitopic MreB tether -> PBP2/MrdA monofunctional TP crosslink -> LpoA).
   # Pay take=min(n,atp,energy) - ATP stand-in for PBP2 TPase cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pbp2 life-force.
   # Usability: AGI models post-RodZ PBP2 TPase energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD pbp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LpoA: OM lipoprotein activator of PBP1A (MrcA) after PBP2/MrdA TPase.
+  # LpoA spans the periplasm from the outer membrane and docks PBP1A,
+  # stimulating GT and TP so sidewall PG is polymerized in phase with
+  # RodA-PBP2 elongasome insertion after RodZ tethers MreB.
+  # Without LpoA, PBP1A idles and sidewall aPBP lag leaves thin PG after
+  # PBP2 monofunctional crosslink — rod integrity fails under turgor.
+  # Domain: post-PBP2 PBP1A OM-lipoprotein activation (not PBP2/MrdA TP
+  # itself, not RodZ tether, not MreD/MreC/MreB, not RodA SEDS, not
+  # LpoB/PBP1B septal path, not FtsI PBP3, not fispay, not scission,
+  # not NlpD, not RlpA, not DamX/DedD).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+  #   (PBP2/MrdA monofunctional TP -> LpoA OM activator of PBP1A sidewall).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LpoA-PBP1A activation.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lpoa life-force.
+  # Usability: AGI models post-PBP2 LpoA PBP1A activation energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lpoa n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
