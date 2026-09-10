@@ -43,5 +43,11 @@
   "prior_feature": "LIFE_CELL_MURQ",
   "sealed": true,
   "methods": 186,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "HEAD": "b8b7a4027be8e4421eded657a623438e7b052e0a",
+  "tip": "b8b7a4027be8e4421eded657a623438e7b052e0a",
+  "head": "b8b7a4027be8e4421eded657a623438e7b052e0a",
+  "commit": "b8b7a4027be",
+  "feat_head": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
+  "FEAT_HEAD": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c"
 }
