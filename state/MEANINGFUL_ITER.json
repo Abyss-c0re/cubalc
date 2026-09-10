@@ -38,15 +38,15 @@
   "note": "CNX burns ATP+energy+setpoint into heat; discharges monoglucosylated CNX-client bank from GLS trim; age/reserve/thr/pmf/pcr held. Continuum after trim. methods=138.",
   "feat_head": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
   "FEAT_HEAD": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
-  "HEAD": "4b7e5264ee3a5e49f21f635932fb850442156964",
+  "HEAD": "1008d94b8895bef37d86e8e3ada1b4541175ac56",
   "commit": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
   "prior_feature": "LIFE_CELL_TRIM",
   "sealed": true,
   "pass_": true,
   "methods": 138,
-  "tip": "4b7e5264ee3a5e49f21f635932fb850442156964",
-  "pinned_head": "4b7e5264ee3a5e49f21f635932fb850442156964",
-  "pin": "4b7e5264ee3a5e49f21f635932fb850442156964",
-  "head": "4b7e5264ee3a5e49f21f635932fb850442156964",
-  "short": "4b7e5264ee"
+  "tip": "1008d94b8895bef37d86e8e3ada1b4541175ac56",
+  "pinned_head": "1008d94b8895bef37d86e8e3ada1b4541175ac56",
+  "pin": "1008d94b8895bef37d86e8e3ada1b4541175ac56",
+  "head": "1008d94b8895bef37d86e8e3ada1b4541175ac56",
+  "short": "1008d94b88"
 }
