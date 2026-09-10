@@ -1,0 +1,11 @@
+LIFE_CELL_MEPS MI2187 MepS/Spr OM lipoprotein DD-endopeptidase space-making after PBP1A
+METHOD meps n — pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+Proof programs/proof/2187_life_cell_meps.cubalc asserts_ok=180 PASS
+Integration atomic_printer_life_meps.cubalc asserts_ok=73 PASS
+SMX smx_mesh_vesicle_meps_life.cubalc asserts_ok=52 PASS
+asserts_ok=305 asserts_fail=0 split=180+73+52
+continuum ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps
+feat=b5273fda9d65c1f472f8b848bb3594cdc7218936
+version=1.15.1672-usability
+sealed=true
+Cube is SoT. Free energy must flow.
