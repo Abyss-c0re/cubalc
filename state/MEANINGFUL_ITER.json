@@ -43,5 +43,11 @@
   "prior_feature": "LIFE_CELL_ANMK",
   "sealed": true,
   "methods": 189,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "head": "e9165c7aa2f91b197f5457f2b8b23978f176d5c0",
+  "HEAD": "e9165c7aa2f91b197f5457f2b8b23978f176d5c0",
+  "tip": "e9165c7aa2f91b197f5457f2b8b23978f176d5c0",
+  "commit": "e9165c7aa",
+  "feat_head": "e9165c7aa2f91b197f5457f2b8b23978f176d5c0",
+  "FEAT_HEAD": "e9165c7aa2f91b197f5457f2b8b23978f176d5c0"
 }
