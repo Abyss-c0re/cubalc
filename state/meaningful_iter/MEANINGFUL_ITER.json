@@ -42,5 +42,11 @@
   "pass_": true,
   "methods": 184,
   "hold_flash": 1,
-  "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg"
+  "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg",
+  "feat_head": "8dd08841537b050c8282654960ecb0b3116a9dfb",
+  "FEAT_HEAD": "8dd08841537b050c8282654960ecb0b3116a9dfb",
+  "commit": "8dd088415",
+  "HEAD": "e86d2e8b56b743af0c7d237bc16fba989cf1e042",
+  "tip": "e86d2e8b56b743af0c7d237bc16fba989cf1e042",
+  "head": "e86d2e8b56b743af0c7d237bc16fba989cf1e042"
 }
