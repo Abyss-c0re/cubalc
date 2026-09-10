@@ -1,0 +1,199 @@
+// atomic_printer_life_eftu.cubalc
+// Science integration: atomic printer life-force post-aars EF-Tu ternary delivery.
+// Cube is SoT. Free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 48 0
+SEND printer set_threshold 8
+SEND printer pulse 5
+SEND printer photosynth 36
+SEND printer glycolyse 30
+SEND printer pump 20
+SEND printer photophos 18
+SEND printer charge 28
+SEND printer feed 28
+SEND printer retrieve 2
+SEND printer acidify 2
+SEND printer mature 2
+SEND printer recruit 2
+SEND printer activate 2
+SEND printer degrade 2
+SEND printer export 2
+SEND printer translate 2
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 12
+SEND printer feed 12
+SEND printer transloc 2
+SEND printer cleave 2
+SEND printer glycosyl 2
+SEND printer trim 2
+ASSERT LAST_N == 2 "sci pretr2"
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 12
+SEND printer feed 12
+SEND printer cnx 2
+ASSERT LAST_N == 2 "sci precx2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 18
+SEND printer feed 12
+SEND printer charge_pcr 14
+SEND printer uggt 2
+ASSERT LAST_N == 2 "sci preug2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 18
+SEND printer feed 12
+SEND printer mann 3
+ASSERT LAST_N == 3 "sci pre mann3"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer os9 2
+ASSERT LAST_N == 2 "sci pre os92"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer hrd 2
+ASSERT LAST_N == 2 "sci pre hrd2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer vcp 2
+ASSERT LAST_N == 2 "sci pre vcp2"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 16
+SEND printer feed 12
+SEND printer psm 2
+ASSERT LAST_N == 2 "sci pre psm2"
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer age
+LET a0 = LAST_N
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET at0 = LAST_N
+GETF printer pcr
+LET p0 = LAST_N
+GETF printer pmf
+LET pm0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 14
+SEND printer feed 10
+SEND printer pepr 2
+ASSERT LAST_N == 2 "pre pepr2"
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 14
+SEND printer feed 10
+SEND printer aars 2
+ASSERT LAST_N == 2 "pre aars2"
+GETF printer heat
+LET heb0 = LAST_N
+GETF printer energy
+LET enb1 = LAST_N
+GETF printer atp
+LET atb2 = LAST_N
+GETF printer reserve
+LET reb3 = LAST_N
+GETF printer age
+LET agb4 = LAST_N
+GETF printer pcr
+LET pcb5 = LAST_N
+GETF printer pmf
+LET pmb6 = LAST_N
+GETF printer setpoint
+LET seb7 = LAST_N
+GETF printer threshold
+LET thb8 = LAST_N
+SEND printer eftu 2
+ASSERT LAST_N == 2 "eftu2"
+GETF printer heat
+ASSERT LAST_N == heb0 + 2 "h+2"
+GETF printer energy
+ASSERT LAST_N == enb1 - 2 "ene-2"
+GETF printer atp
+ASSERT LAST_N == atb2 - 2 "atp-2"
+GETF printer reserve
+ASSERT LAST_N == reb3 "res held"
+GETF printer age
+ASSERT LAST_N == agb4 "age held"
+GETF printer pcr
+ASSERT LAST_N == pcb5 - 2 "pcr-2"
+GETF printer pmf
+ASSERT LAST_N == pmb6 "pmf held"
+GETF printer setpoint
+ASSERT LAST_N == seb7 "set held"
+GETF printer threshold
+ASSERT LAST_N == thb8 "thr held"
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 14
+SEND printer feed 12
+SEND printer vcp 2
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 14
+SEND printer feed 10
+SEND printer psm 2
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET at1 = LAST_N
+GETF printer reserve
+LET r1 = LAST_N
+GETF printer pcr
+LET p1 = LAST_N
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 14
+SEND printer feed 10
+SEND printer pepr 3
+ASSERT LAST_N == 3 "pre pepr3"
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 14
+SEND printer feed 10
+SEND printer aars 3
+ASSERT LAST_N == 3 "pre aars3"
+GETF printer heat
+LET heb0 = LAST_N
+GETF printer energy
+LET enb1 = LAST_N
+GETF printer atp
+LET atb2 = LAST_N
+GETF printer reserve
+LET reb3 = LAST_N
+GETF printer pcr
+LET pcb4 = LAST_N
+SEND printer eftu 3
+ASSERT LAST_N == 3 "eftu3"
+GETF printer heat
+ASSERT LAST_N == heb0 + 3 "h+3"
+GETF printer energy
+ASSERT LAST_N == enb1 - 3 "ene-3"
+GETF printer atp
+ASSERT LAST_N == atb2 - 3 "atp-3"
+GETF printer reserve
+ASSERT LAST_N == reb3 "res held"
+GETF printer pcr
+ASSERT LAST_N == pcb4 - 3 "pcr-3"
+ASSERT 1 == 1 "atomic_printer_life_eftu_ok"
+PRINT "atomic_printer_life_eftu PASS"
