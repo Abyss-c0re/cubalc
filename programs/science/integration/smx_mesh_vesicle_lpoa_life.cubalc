@@ -225,14 +225,20 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 30
 SEND vesicle feed 20
+SEND vesicle pbp2 3
+ASSERT LAST_N == 3 "vx pre_pbp2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
 GETF vesicle heat
 LET vh0 = LAST_N
 GETF vesicle energy
 LET ve0 = LAST_N
 GETF vesicle atp
 LET va0 = LAST_N
-SEND vesicle pbp2 3
-ASSERT LAST_N == 3 "vx pbp2"
+SEND vesicle lpoa 3
+ASSERT LAST_N == 3 "vx lpoa"
 GETF vesicle energy
 ASSERT LAST_N == ve0 - 3 "vx e-3"
 GETF vesicle heat
@@ -276,7 +282,13 @@ SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 18
 SEND vesicle pbp2 2
-ASSERT LAST_N == 2 "vx pbp22"
+ASSERT LAST_N == 2 "vx pre_pbp22"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle lpoa 2
+ASSERT LAST_N == 2 "vx lpoa2"
 GETF vesicle pcr
 ASSERT LAST_N == vp "vx pcr held"
 
