@@ -161,6 +161,12 @@
 #   os9 n                post-mann OS-9/XTP3-B MRH lectin ERAD recognition — pay min(n,atp,energy,threshold) → heat +n + energy -n + thr -n + pcr +n; age/reserve/pmf/sp held; ready recompute
 #   hrd n                post-os9 SEL1L/HRD1 E3 Ub-ligase commit — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 #   vcp n                post-hrd p97/VCP AAA+ retrotranslocation extractase — pay min(n,atp,energy) → heat +n + energy -n + atp -n + reserve +n; age/pmf/sp/thr/pcr held; ready recompute
+#   psm n                post-vcp 26S proteasome degradation of extracted clients — pay min(n,atp,energy,reserve) → heat +n + energy -n + atp -n + reserve -n; age/pmf/sp/thr/pcr held; ready recompute
+#   pepr n               post-psm cytosolic peptidase AA salvage — pay min(n,atp,energy) → heat +n + energy -n + reserve +n; age/pmf/sp/thr/pcr held; ready recompute
+#   aars n               post-pepr aminoacyl-tRNA synthetase charging — pay min(n,atp,energy,reserve) → heat +n + energy -n + atp -n + reserve -n + pcr +n; age/pmf/sp/thr held; ready recompute
+#   eftu n               post-aars EF-Tu·GTP·AA-tRNA ternary A-site delivery — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
+#   ptc n                post-eftu ribosomal PTC peptide-bond formation — pay min(n,energy) → heat +n + energy -n; age/pmf/sp/thr/atp/pcr/reserve held; ready recompute
+#   efg n                post-ptc EF-G·GTP ribosomal translocation / hybrid-state tRNA + mRNA ratchet — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -8185,7 +8191,7 @@ CLASS Cell
   # ribosomal A site; codon–anticodon match triggers GTP hydrolysis and EF-Tu
   # release so peptidyl transfer can proceed. Closes the salvage→recharge→deliver
   # loop after ERAD/proteasome/peptidase/aaRS continuum.
-  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
+  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc->efg.
   # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
   # EF-Tu GTPase proofreading cycle; metabolic energy pays accommodation work;
   # reserve HELD (AA already esterified on tRNA by aars; distinct from aars
@@ -8269,7 +8275,7 @@ CLASS Cell
   # transferring the chain to the A-site tRNA (no NTP hydrolysis at the PTC
   # itself; GTPases already paid at eftu delivery). Extends nascent chain after
   # salvage->charge->deliver continuum.
-  # Continuum: ...->psm->pepr->aars->eftu->ptc.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg.
   # Pay take=min(n,energy) — only metabolic reorganization / desolvation work
   # at the PTC active site; ATP HELD (no aaRS adenylate); PCR HELD (EF-Tu GTP
   # already burned at eftu); RESERVE HELD (AA still esterified on tRNA until
@@ -8324,6 +8330,89 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+
+  # EFG: post-ptc EF-G·GTP ribosomal translocation / mRNA–tRNA ratchet —
+  # elongation factor EF-G (EF2) binds the post-peptidyl-transfer ribosome and
+  # hydrolyzes GTP to drive hybrid-state tRNA resolution: deacylated tRNA from
+  # P→E, peptidyl-tRNA from A→P, and mRNA advance by one codon. Unlocks the next
+  # A-site for eftu delivery after ptc peptide-bond formation.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg.
+  # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
+  # EF-G GTPase power stroke; metabolic energy pays ratchet/unlocked-domain work;
+  # reserve HELD (nascent chain already elongated at ptc; AA bank untouched —
+  # distinct from aars reserve- charge, pepr reserve+ salvage, ptc energy-only
+  # bond forge, eftu pcr- delivery, translate reserve- age- rebuild).
+  # PCR falls: pcr = pcr - take — GTP→GDP+Pi echo of EF-G hydrolysis (same class
+  # as eftu pcr-; inverse of aars pcr+ adenylate; distinct from uggt pcr- UDP-Glc).
+  # AGE/PMF/SETPOINT/THRESHOLD/RESERVE HELD — efg ratchets the ribosome without
+  # aging the cell or retuning ERAD timers / division threshold / AA bank.
+  # Signature: heat+n energy-n atp-n pcr-n; age+pmf+sp+thr+reserve held — efg life-force.
+  # Usability: AGI models post-ptc EF-G translocation under ASSERT boards.
+  METHOD efg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
