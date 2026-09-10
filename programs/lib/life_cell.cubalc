@@ -7907,5 +7907,106 @@ CLASS Cell
     RET take
   END
 
+  # PSM: post-vcp 26S proteasome (AAA+ 19S RP + 20S CP) degradation of
+  # VCP-extracted Ub-marked clients — unfolds and cleaves the cytosolic
+  # substrate bank that p97 deposited after HRD1 ERAD (post-vcp psm; not
+  # multipotent stream, not GRN fate lock, not growth-cone path sp+, not
+  # synaptogenesis thr+ contact, not release quantal thr-, not reuptake
+  # clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not
+  # arm NSF priming, not clamp complexin clamp, not trigger Ca fusion, not
+  # pore SNARE zipper, not mix content dump, not collapse coat uncoat, not
+  # retrieve CME membrane bank, not acidify EE proton pump, not mature
+  # Rab5->Rab7 identity, not recruit M6PR hydrolase cargo, not activate
+  # cathepsin arming thr-, not degrade lysosomal substrate cut age- pcr+,
+  # not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave
+  # pcr+ SPC signal-peptide scission, not glycosyl thr+ OST N-glycan mark,
+  # not trim sp+ GLS monoglucosylation open, not cnx sp- lectin client
+  # discharge, not uggt pcr- UGGT1 reglucosylation, not mann thr+ ERManI
+  # demannosylation timer, not os9 thr- MRH lectin commit, not hrd pcr-
+  # SEL1L/HRD1 Ub mark, not vcp reserve+ AAA+ retrotranslocation extract).
+  # Spend take=min(n,atp,energy,reserve) — ATP + metabolic fuel + VCP-
+  # deposited cytosolic substrate bank fund 26S proteasome processive
+  # degradation after VCP has extracted the HRD1-Ub client (post-vcp psm;
+  # proteolytic commit clears the reserve bank into peptide products).
+  # HEAT += take (each 19S unfoldase / 20S proteolytic dwell dissipates as
+  #   proteasomal degradation work).
+  # ENERGY -= take (psm burns active metabolic pool into AAA+ unfoldase +
+  #   CP gate work; kin to vcp energy- but consumes the reserve substrate
+  #   bank instead of raising it).
+  # ATP -= take (26S is ATP-dependent; 19S RPT1-6 hexamer hydrolyzes ATP
+  #   per translocation stroke under physiological load).
+  # RESERVE falls: reserve = reserve - take — extracted polypeptide
+  #   substrate is consumed by the proteasome (distinct from vcp reserve+
+  #   extract deposit, export pcr- reserve+ AA efflux, retrieve membrane
+  #   bank, recruit hydrolase cargo, reuptake transmitter).
+  # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — psm is post-vcp proteolytic
+  #   clearance that neither ages the cell nor retunes ERAD timers /
+  #   phosphagen prep (distinct from degrade age- pcr+ lysosomal cut).
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm.
+  # Signature: heat+n energy-n atp-n reserve-n; age+pmf+sp+thr+pcr held — psm life-force.
+  METHOD psm n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
