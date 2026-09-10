@@ -1,5 +1,10 @@
 # MEANINGFUL_ITER 1702 — SMX RESILIENCE mesh life-force
 
+## Current tip
+
+**LIFE_CELL_LPOA MI2185** — METHOD `lpoa n` after pbp2. asserts_ok=280. Continuum ...->rodz->pbp2->lpoa.
+
+
 # Meaningful language iteration (10-minute loop)
 
 **Goal:** extend **language usability** — features people and agents *use* — not combinatorial duals of the same field op.

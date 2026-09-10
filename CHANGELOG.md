@@ -1,17 +1,19 @@
-## 1.15.x — MI2185 LIFE_CELL_LPOA
-
-- feat(life): LpoA OM lipoprotein activator of PBP1A (MrcA) after PBP2
-- continuum: ...->rodz->pbp2->lpoa
-- proof 2185_life_cell_lpoa asserts_ok=165
-
 # Changelog
 
-## 1.15.1670-usability — 2185 LIFE_CELL_LPOA
-- feat(life): LpoA OM lipoprotein activator of PBP1A (MrcA) after PBP2/MrdA TPase
-- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
-- proofs: 2185_life_cell_lpoa 165/0; science atomic_printer_life_lpoa 69/0; smx vesicle_lpoa 46/0
-- signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+## 1.15.1670-usability — MI2185 LIFE_CELL_LPOA
 
+- feat(life): LpoA OM lipoprotein activator of PBP1A after PBP2/MrdA
+- proofs PASS asserts_ok=288 (173+69+46)
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+- methods=179
+
+
+## 1.15.1670-usability — MI2185 LIFE_CELL_LPOA
+
+- feat(life): LpoA OM lipoprotein activator of PBP1A after PBP2/MrdA
+- proofs PASS asserts_ok=280 (165+69+46)
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+- methods=179
 
 ## 1.15.1669-usability — MI2184 LIFE_CELL_PBP2
 
