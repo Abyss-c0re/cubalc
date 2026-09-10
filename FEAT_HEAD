@@ -1,7 +1,1 @@
-LIFE_CELL_MRED MI2182 IM elongasome stabilizer after MreC
-method: mred n
-continuum: ...->fispay->roda->mreb->mrec->mred
-asserts_ok=143+63+40=246
-VERSION 1.15.1667-usability
-HEAD b94ed6955
-
+b746004729db171ec277acbc6afb0562e8650ee8

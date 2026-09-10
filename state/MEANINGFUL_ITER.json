@@ -41,8 +41,9 @@
   "methods": 178,
   "hold_flash": 1,
   "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2",
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "tip": "PENDING"
+  "feat_head": "b746004729db171ec277acbc6afb0562e8650ee8",
+  "FEAT_HEAD": "b746004729db171ec277acbc6afb0562e8650ee8",
+  "HEAD": "b746004729db171ec277acbc6afb0562e8650ee8",
+  "tip": "b746004729db171ec277acbc6afb0562e8650ee8",
+  "head": "b746004729db171ec277acbc6afb0562e8650ee8"
 }
