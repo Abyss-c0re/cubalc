@@ -1,3 +1,9 @@
+## 1.15.1681-usability — LIFE_CELL_ANMK (MI 2194)
+
+- feat(life): AnmK anhMurNAc kinase after AmpD for muropeptide recycle
+- METHOD anmk n on life_cell; proof 2194; atomic + SMX vesicle boards
+- Continuum ...->ampg->nagz->ampd->anmk
+
 ## 1.15.1680-usability — MI2193 LIFE_CELL_AMPD
 
 - feat(life): AmpD anhMurNAc-L-Ala amidase after NagZ for muropeptide recycle

@@ -1,0 +1,5 @@
+SHIP 2194 LIFE_CELL_ANMK
+METHOD anmk n — AnmK anhMurNAc kinase after AmpD amidase.
+Continuum: ...->ampg->nagz->ampd->anmk
+Proof 2194 PASS; atomic_printer_life_anmk; smx_mesh_vesicle_anmk_life.
+Cube is SoT. Free energy must flow.
