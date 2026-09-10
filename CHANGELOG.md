@@ -1,3 +1,11 @@
+# Changelog
+
+## 1.15.1683-usability — MI2196 LIFE_CELL_MURA (mura after murq)
+
+- feat(life): MurA UDP-GlcNAc enolpyruvyl transferase PG-precursor commit after MurQ
+- continuum: ...->anmk->murq->mura
+- proof 2196 + atomic_printer_life_mura + smx_mesh_vesicle_mura_life asserts_fail:0 sum=177
+
 ## 1.15.1683-usability — MI2196 LIFE_CELL_MURA (mura after murq)
 
 - feat(life): MurA UDP-GlcNAc enolpyruvyl transferase PG-precursor commit after MurQ

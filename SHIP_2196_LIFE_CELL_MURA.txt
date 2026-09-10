@@ -1,0 +1,5 @@
+LIFE_CELL_MURA MI2196
+METHOD mura on life_cell after murq
+Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
+Proof 2196 + atomic_printer_life_mura + smx_mesh_vesicle_mura_life
+asserts_ok life=115 atomic=22 smx=20 flagship_1620=12 sum=169 asserts_fail=0

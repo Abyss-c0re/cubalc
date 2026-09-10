@@ -568,7 +568,13 @@ SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
 SEND g0 murq 3
-ASSERT LAST_N == 3 "g0 murq"
+ASSERT LAST_N == 3 "g0 murq pre"
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 mura 3
+ASSERT LAST_N == 3 "g0 mura"
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 SEND starved pulse 4
