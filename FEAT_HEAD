@@ -2,3 +2,4 @@ LIFE_CELL_MEPH MI2189 soluble periplasmic DD-endopeptidase MepH after MepM
 method: meph n
 continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph
 asserts_ok=272+17+16=305
+HEAD b82285210
