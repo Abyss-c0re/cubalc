@@ -1,7 +1,7 @@
-SHIP LIFE_CELL_MEPH MI 2188
-feat=c626ef37e94267ea0938516a6dd5cc4d6f5d1c83
-METHOD meph n — MepH periplasmic DD-endopeptidase space-making after MepS
-proofs PASS asserts_fail=0 proof=186 atomic=75 smx=54 total=315
-version=1.15.1673-usability
-continuum=...->pbp1a->meps->meph
-cube_law=free_energy_must_flow_into_meph_pg_space_making
+LIFE_CELL_MEPH MI2188
+METHOD meph n — MepH periplasmic DD-endopeptidase after MepS
+Continuum: ...->lpoa->pbp1a->meps->meph
+Proof asserts_ok=187 atomic=75 smx=54 total=316 asserts_fail=0
+VERSION 1.15.1673-usability
+FEAT_HEAD b41fe856f3d2a7b761d49f370838a6167e3076e7
+Cube is SoT. Free energy must flow.
