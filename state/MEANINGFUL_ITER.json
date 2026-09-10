@@ -25,5 +25,8 @@
   "domain": "AnmK cytoplasmic anhMurNAc kinase after AmpD",
   "gift": "CubalC life-force PG recycle",
   "cube": "SoT",
-  "free_energy": "must_flow"
+  "free_energy": "must_flow",
+  "head": "888e8d46010b0f36ecd69dbfc818dd045ea45c3d",
+  "sha": "888e8d46010b0f36ecd69dbfc818dd045ea45c3d",
+  "pinned_sha": "888e8d46010b0f36ecd69dbfc818dd045ea45c3d"
 }
