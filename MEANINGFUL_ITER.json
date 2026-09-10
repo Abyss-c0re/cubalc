@@ -45,5 +45,8 @@
   "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps",
   "feat_head": "b5273fda9d65c1f472f8b848bb3594cdc7218936",
   "FEAT_HEAD": "b5273fda9d65c1f472f8b848bb3594cdc7218936",
-  "commit": "b5273fda9"
+  "commit": "b5273fda9",
+  "HEAD": "266f60fa1c28dcaca3090be9f6f2c53e39461906",
+  "tip": "266f60fa1c28dcaca3090be9f6f2c53e39461906",
+  "head": "266f60fa1c28dcaca3090be9f6f2c53e39461906"
 }
