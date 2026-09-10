@@ -1,0 +1,109 @@
+// smx_mesh_vesicle_rrf_life.cubalc
+// SMX mesh vesicle board: sealed exchange around Cell.rrf RRF recycling.
+// Free energy flows across mesh; RRF splits post-termination complex after rf3.
+// Cube is SoT. Matrix is key.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY ves OF Cell 1 44 0
+ENTITY dock OF Cell 1 40 0
+
+SEND ves set_threshold 10
+SEND dock set_threshold 10
+
+SEND ves pulse 5
+SEND ves photosynth 40
+SEND ves glycolyse 36
+SEND ves charge 40
+SEND ves feed 40
+SEND ves charge_pcr 20
+
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves aars 2
+ASSERT LAST_N == 2 "smx aars"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves eftu 2
+ASSERT LAST_N == 2 "smx eftu"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves ptc 2
+ASSERT LAST_N == 2 "smx ptc"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves efg 2
+ASSERT LAST_N == 2 "smx pre efg"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves rf1 2
+ASSERT LAST_N == 2 "smx pre rf1"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves rf3 2
+ASSERT LAST_N == 2 "smx pre rf3"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+
+GETF ves heat
+LET vh = LAST_N
+GETF ves energy
+LET ve = LAST_N
+GETF ves atp
+LET va = LAST_N
+GETF ves pcr
+LET vc = LAST_N
+GETF ves reserve
+LET vr = LAST_N
+GETF ves age
+LET vage = LAST_N
+
+SEND ves rrf 3
+ASSERT LAST_N == 3 "smx rrf"
+
+GETF ves heat
+ASSERT LAST_N == vh + 3 "smx h+3"
+GETF ves energy
+ASSERT LAST_N == ve - 3 "smx e-3"
+GETF ves atp
+ASSERT LAST_N == va - 3 "smx a-3"
+GETF ves pcr
+ASSERT LAST_N == vc - 3 "smx c-3"
+GETF ves reserve
+ASSERT LAST_N == vr + 3 "smx r+3"
+GETF ves age
+ASSERT LAST_N == vage "smx age held"
+GETF ves alive
+ASSERT LAST_N == 1 "smx ves alive"
+
+SEND dock pulse 3
+SEND dock photosynth 30
+SEND dock glycolyse 20
+SEND dock charge 24
+SEND dock feed 16
+SEND dock charge_pcr 12
+SEND dock rrf 2
+ASSERT LAST_N == 2 "dock rrf"
+GETF dock alive
+ASSERT LAST_N == 1 "dock alive"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_rrf_life sealed"

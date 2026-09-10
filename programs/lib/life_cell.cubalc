@@ -169,6 +169,7 @@
 #   efg n                post-ptc EF-G·GTP ribosomal translocation / hybrid-state tRNA + mRNA ratchet — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 #   rf1 n                post-efg class-I release factor GGQ ester hydrolysis peptide release — pay min(n,energy) → heat +n + energy -n + reserve +n; age/pmf/sp/thr/atp/pcr held; ready recompute
 #   rf3 n                post-rf1 class-II RF3·GTP release-factor ejectase / termination recycle — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
+#   rrf n                post-rf3 ribosome recycling factor RRF·EF-G·GTP 70S split / IF3 mRNA release — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n + reserve +n; age/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -8277,7 +8278,7 @@ CLASS Cell
   # transferring the chain to the A-site tRNA (no NTP hydrolysis at the PTC
   # itself; GTPases already paid at eftu delivery). Extends nascent chain after
   # salvage->charge->deliver continuum.
-  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3->rrf.
   # Pay take=min(n,energy) — only metabolic reorganization / desolvation work
   # at the PTC active site; ATP HELD (no aaRS adenylate); PCR HELD (EF-Tu GTP
   # already burned at eftu); RESERVE HELD (AA still esterified on tRNA until
@@ -8543,6 +8544,93 @@ CLASS Cell
     SETF THIS energy e
     LET c = c - take
     SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # RRF: post-rf3 ribosome recycling factor RRF + EF-G·GTP —
+  # after RF3 ejects class-I RF from the A site, RRF binds the empty A site of
+  # the post-termination complex; EF-G·GTP then drives 70S → 50S + 30S split.
+  # IF3 binds 30S, releasing mRNA and deacylated tRNA so subunits re-enter
+  # initiation. Domain: ribosome recycling (not peptide bond, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf.
+  # Pay take=min(n,atp,energy,pcr) — ATP stands in for EF-G·GTP hydrolysis on
+  # the RRF·ribosome complex; PCR is the phosphagen/GTP couple (efg/rf3 class).
+  # RESERVE +take: salvaged mRNA/tRNA/AA capacity re-enters the metabolic bank
+  # (unique vs rf3 which holds reserve — chain already released by rf1).
+  # AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n atp-n pcr-n reserve+n; age+pmf+sp+thr held — rrf life-force.
+  # Usability: AGI models post-rf3 RRF subunit split under ASSERT boards.
+  METHOD rrf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
     GETF THIS heat
     LET h = LAST_N + take
     SETF THIS heat h
