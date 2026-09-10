@@ -1,1 +1,4 @@
-6358c7f51dc0698017bba7593a8b5ed253317103
+LIFE_CELL_LPOA MI2186 OM lipoprotein activator of PBP1A (LpoA) after PBP1A
+method: lpoa n
+continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa
+asserts_ok=173+71+48=292
