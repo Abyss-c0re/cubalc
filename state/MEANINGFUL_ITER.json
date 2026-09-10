@@ -39,9 +39,9 @@
   "sealed": true,
   "pass_": true,
   "methods": 160,
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "tip": "PENDING",
-  "commit": "PENDING"
+  "feat_head": "1499ce1f43003afb95c877c785a2f81922047b00",
+  "FEAT_HEAD": "1499ce1f43003afb95c877c785a2f81922047b00",
+  "HEAD": "1499ce1f43003afb95c877c785a2f81922047b00",
+  "tip": "1499ce1f43003afb95c877c785a2f81922047b00",
+  "commit": "1499ce1f4"
 }
