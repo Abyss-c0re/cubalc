@@ -1,0 +1,447 @@
+// atomic_printer_life_pbp1a.cubalc
+// Atomic printer board: Cell.pbp1a bifunctional aPBP elongasome partner (MrcA) after PBP2.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 48 0
+ENTITY bud OF Cell 1 36 0
+
+SEND printer set_threshold 10
+SEND bud set_threshold 10
+
+SEND printer pulse 6
+SEND printer photosynth 44
+SEND printer glycolyse 36
+SEND printer charge 40
+SEND printer feed 36
+SEND printer charge_pcr 22
+
+SEND printer aars 3
+ASSERT LAST_N == 3 "ap aars"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 14
+SEND printer eftu 3
+ASSERT LAST_N == 3 "ap eftu"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer ptc 3
+ASSERT LAST_N == 3 "ap ptc"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 14
+SEND printer efg 3
+ASSERT LAST_N == 3 "ap efg"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer rf1 3
+ASSERT LAST_N == 3 "ap rf1"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 14
+SEND printer rf3 3
+ASSERT LAST_N == 3 "ap rf3"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 16
+SEND printer rrf 3
+ASSERT LAST_N == 3 "ap rrf"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer if3 3
+ASSERT LAST_N == 3 "ap if3"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer if2 3
+ASSERT LAST_N == 3 "ap if2"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 12
+SEND printer ftsz 3
+ASSERT LAST_N == 3 "ap ftsz"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 14
+
+SEND printer ftsi 4
+ASSERT LAST_N == 4 "printer ftsi"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer amic 4
+ASSERT LAST_N == 4 "ap amic"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer envc 4
+ASSERT LAST_N == 4 "ap envc"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer ftsn 3
+ASSERT LAST_N == 3 "printer ftsn"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer ftsk 3
+ASSERT LAST_N == 3 "ap ftsk"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer xercd 3
+ASSERT LAST_N == 3 "printer xercd"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer cpob 3
+ASSERT LAST_N == 3 "printer cpob"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer lpob 3
+ASSERT LAST_N == 3 "printer lpob"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer pbp1b 4
+ASSERT LAST_N == 4 "printer pre_pbp1b"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer dedd 4
+ASSERT LAST_N == 4 "printer pre_dedd"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer damx 4
+ASSERT LAST_N == 4 "pre_damx"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer rlpa 3
+ASSERT LAST_N == 3 "printer pre_rlpa"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer nlpd 3
+ASSERT LAST_N == 3 "ap nlpd"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer scission 4
+ASSERT LAST_N == 4 "printer pre_scission"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer fispay 4
+ASSERT LAST_N == 4 "printer pre_fispay"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer roda 4
+ASSERT LAST_N == 4 "printer pre_roda"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer mreb 4
+ASSERT LAST_N == 4 "printer pre_mreb"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer mrec 4
+ASSERT LAST_N == 4 "ap pre_mrec"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
+SEND printer mred 4
+ASSERT LAST_N == 4 "ap pre_mred"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer rodz 4
+ASSERT LAST_N == 4 "printer pre_rodz"
+SEND printer pbp2 4
+ASSERT LAST_N == 4 "printer pre_pbp2"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+GETF printer heat
+LET ph = LAST_N
+GETF printer energy
+LET pe = LAST_N
+GETF printer atp
+LET pa = LAST_N
+GETF printer pcr
+LET pc = LAST_N
+GETF printer reserve
+LET pr = LAST_N
+GETF printer age
+LET page = LAST_N
+SEND printer pbp1a 4
+ASSERT LAST_N == 4 "printer pbp1a"
+
+GETF printer heat
+ASSERT LAST_N == ph + 4 "ap h+4"
+GETF printer energy
+ASSERT LAST_N == pe - 4 "ap e-4"
+GETF printer atp
+ASSERT LAST_N == pa - 4 "ap a-4"
+GETF printer pcr
+ASSERT LAST_N == pc "ap c held"
+GETF printer reserve
+ASSERT LAST_N == pr "ap r held"
+GETF printer age
+ASSERT LAST_N == page "ap age held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive"
+
+SEND bud pulse 5
+SEND bud photosynth 40
+SEND bud glycolyse 32
+SEND bud charge 36
+SEND bud feed 28
+SEND bud charge_pcr 18
+SEND bud if3 2
+ASSERT LAST_N == 2 "bud if3"
+SEND bud photosynth 20
+SEND bud glycolyse 16
+SEND bud charge 24
+SEND bud feed 16
+SEND bud if2 2
+ASSERT LAST_N == 2 "bud if2"
+SEND bud photosynth 16
+SEND bud glycolyse 12
+SEND bud charge 20
+SEND bud feed 12
+SEND bud ftsz 2
+ASSERT LAST_N == 2 "bud ftsz"
+SEND bud photosynth 16
+SEND bud glycolyse 12
+SEND bud charge 20
+SEND bud feed 12
+SEND bud ftsi 3
+ASSERT LAST_N == 3 "bud ftsi"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud amic 3
+ASSERT LAST_N == 3 "bud amic"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud envc 3
+ASSERT LAST_N == 3 "bud envc"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud ftsn 3
+ASSERT LAST_N == 3 "bud ftsn"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud ftsk 3
+ASSERT LAST_N == 3 "bud ftsk"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud xercd 3
+ASSERT LAST_N == 3 "bud xercd"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud cpob 3
+ASSERT LAST_N == 3 "bud cpob"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud lpob 3
+ASSERT LAST_N == 3 "bud lpob"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud pbp1b 3
+ASSERT LAST_N == 3 "bud pre_pbp1b"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud dedd 3
+ASSERT LAST_N == 3 "bud pre_dedd"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud damx 3
+ASSERT LAST_N == 3 "pre_damx"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud rlpa 3
+ASSERT LAST_N == 3 "bud pre_rlpa"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+
+SEND bud scission 3
+ASSERT LAST_N == 3 "bud pre_scission"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud fispay 3
+ASSERT LAST_N == 3 "bud pre_fispay"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud roda 3
+ASSERT LAST_N == 3 "bud pre_roda"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud mreb 3
+ASSERT LAST_N == 3 "bud pre_mreb"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud mrec 3
+ASSERT LAST_N == 3 "bud pre_mrec"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud mred 3
+ASSERT LAST_N == 3 "bud pre_mred"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+SEND bud rodz 3
+ASSERT LAST_N == 3 "bud pre_rodz"
+SEND bud pbp2 3
+ASSERT LAST_N == 3 "bud pre_pbp2"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+GETF bud heat
+LET bh = LAST_N
+GETF bud energy
+LET be = LAST_N
+GETF bud atp
+LET ba = LAST_N
+SEND bud pbp1a 3
+ASSERT LAST_N == 3 "bud pbp1a"
+GETF bud heat
+ASSERT LAST_N == bh + 3 "bud h+3"
+GETF bud energy
+ASSERT LAST_N == be - 3 "bud e-3"
+GETF bud atp
+ASSERT LAST_N == ba - 3 "bud a-3"
+GETF bud alive
+ASSERT LAST_N == 1 "bud alive"
+
+ASSERT 1 == 1 "atomic_printer_life_pbp1a sealed"

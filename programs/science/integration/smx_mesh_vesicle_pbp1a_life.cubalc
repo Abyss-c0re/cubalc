@@ -1,0 +1,288 @@
+// smx_mesh_vesicle_pbp1a_life.cubalc
+// SMX mesh vesicle: Cell.pbp1a bifunctional aPBP elongasome partner (MrcA) after PBP2.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 40 0
+ENTITY peer OF Cell 1 28 0
+
+SEND vesicle set_threshold 10
+SEND peer set_threshold 10
+
+SEND vesicle pulse 6
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 36
+SEND vesicle charge 36
+SEND vesicle feed 30
+SEND vesicle charge_pcr 18
+
+SEND vesicle aars 3
+ASSERT LAST_N == 3 "vx aars"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle eftu 3
+ASSERT LAST_N == 3 "vx eftu"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ptc 3
+ASSERT LAST_N == 3 "vx ptc"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle efg 3
+ASSERT LAST_N == 3 "vx efg"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle rf1 3
+ASSERT LAST_N == 3 "vx rf1"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle rf3 3
+ASSERT LAST_N == 3 "vx rf3"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle rrf 3
+ASSERT LAST_N == 3 "vx rrf"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle if3 3
+ASSERT LAST_N == 3 "vx if3"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle if2 3
+ASSERT LAST_N == 3 "vx if2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ftsz 3
+ASSERT LAST_N == 3 "vx ftsz"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ftsi 3
+ASSERT LAST_N == 3 "vx ftsi"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle amic 3
+ASSERT LAST_N == 3 "vx amic"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle envc 3
+ASSERT LAST_N == 3 "vx envc"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ftsn 3
+ASSERT LAST_N == 3 "vx ftsn"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
+SEND vesicle ftsk 3
+ASSERT LAST_N == 3 "vx ftsk"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle xercd 3
+ASSERT LAST_N == 3 "vx xercd"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle tolpal 3
+ASSERT LAST_N == 3 "vesicle tolpal"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle cpob 3
+ASSERT LAST_N == 3 "vesicle cpob"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle lpob 3
+ASSERT LAST_N == 3 "vesicle lpob"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+SEND vesicle pbp1b 3
+ASSERT LAST_N == 3 "vx pre_pbp1b"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
+SEND vesicle dedd 3
+ASSERT LAST_N == 3 "vx pre_dedd"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
+SEND vesicle damx 3
+ASSERT LAST_N == 3 "vesicle pre_damx"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+SEND vesicle rlpa 3
+ASSERT LAST_N == 3 "vesicle pre_rlpa"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle nlpd 3
+ASSERT LAST_N == 3 "vx nlpd"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
+SEND vesicle scission 3
+ASSERT LAST_N == 3 "vesicle pre_scission"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
+SEND vesicle fispay 3
+ASSERT LAST_N == 3 "vesicle pre_fispay"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle roda 3
+ASSERT LAST_N == 3 "vx pre_roda"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+SEND vesicle mreb 3
+ASSERT LAST_N == 3 "vesicle pre_mreb"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+SEND vesicle mrec 3
+ASSERT LAST_N == 3 "vx pre_mrec"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+
+SEND vesicle mred 3
+ASSERT LAST_N == 3 "vesicle pre_mred"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle rodz 3
+ASSERT LAST_N == 3 "vesicle pre_rodz"
+SEND vesicle pbp2 3
+ASSERT LAST_N == 3 "vesicle pre_pbp2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+GETF vesicle heat
+LET vh0 = LAST_N
+GETF vesicle energy
+LET ve0 = LAST_N
+GETF vesicle atp
+LET va0 = LAST_N
+SEND vesicle pbp1a 3
+ASSERT LAST_N == 3 "vx pbp1a"
+GETF vesicle energy
+ASSERT LAST_N == ve0 - 3 "vx e-3"
+GETF vesicle heat
+ASSERT LAST_N == vh0 + 3 "vx h+3"
+GETF vesicle atp
+ASSERT LAST_N == va0 - 3 "vx atp-3"
+GETF vesicle pcr
+LET vp = LAST_N
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle roda 2
+ASSERT LAST_N == 2 "vx pre_roda2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle mreb 2
+ASSERT LAST_N == 2 "vx pre_mreb2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle mrec 2
+ASSERT LAST_N == 2 "vx pre_mrec2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle mred 2
+ASSERT LAST_N == 2 "vesicle pre_mred"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle rodz 2
+ASSERT LAST_N == 2 "vx pre_rodz2"
+SEND vesicle pbp2 2
+ASSERT LAST_N == 2 "vesicle pre_pbp2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle pbp1a 2
+ASSERT LAST_N == 2 "vx pbp1a2"
+GETF vesicle pcr
+ASSERT LAST_N == vp "vx pcr held"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_pbp1a_life sealed"
+
