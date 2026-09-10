@@ -7603,4 +7603,112 @@ CLASS Cell
 
 
 
+
+
+  # OS9: post-mann OS-9 / XTP3-B (ERLEC1) MRH-domain lectin recognition of Man8-trimmed
+  # glycoprotein clients for ERAD handoff — binds demannosylated N-glycans after ERManI
+  # has raised the thr ERAD-susceptibility timer and commits the client toward
+  # SEL1L/HRD1 ubiquitination (post-mann os9; not multipotent stream, not GRN fate lock,
+  # not growth-cone path sp+, not synaptogenesis thr+ contact, not release quantal thr-,
+  # not reuptake clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not
+  # arm NSF priming, not clamp complexin clamp, not trigger Ca fusion, not pore SNARE
+  # zipper, not mix content dump, not collapse coat uncoat, not retrieve CME membrane
+  # bank, not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS
+  # monoglucosylation open, not cnx sp- lectin client discharge, not uggt pcr-
+  # UGGT1 reglucosylation, not mann thr+ ERManI demannosylation timer).
+  # Spend take=min(n,atp,energy,threshold) — ATP + metabolic fuel + mann-raised thr
+  # ERAD-susceptibility bank fund OS-9/XTP3-B MRH lectin engagement after MANN has
+  # produced the Man8GlcNAc2 glycoform (post-mann os9; recognition commits the timer
+  # into bound ERAD-client state and charges local phosphagen for downstream HRD1).
+  # HEAT += take (each OS-9/XTP3-B lectin-binding / ERAD-commit step dissipates as
+  #   quality-control recognition work).
+  # ENERGY -= take (os9 burns active metabolic pool into lectin recognition work; kin
+  #   to mann energy- but consumes thr ERAD timer instead of raising it).
+  # ATP -= take (OS-9 / ERQC ATP-coupled lectin dwell and SEL1L scaffold contact).
+  # THRESHOLD falls: thr = thr - take — mannose-timer bank is spent into committed
+  #   OS-9-bound ERAD recognition (distinct from mann thr+ timer raise, glycosyl thr+
+  #   OST mark, activate thr- cathepsin arming, synapse thr+ contact).
+  # PCR rises: pcr = pcr + take — recognition charges local ~P / Ub-prep phosphagen
+  #   bank for downstream HRD1 E3 work (distinct from uggt pcr- spend, cleave pcr+,
+  #   degrade age- pcr+, export pcr-).
+  # AGE/RESERVE/PMF/SETPOINT HELD — os9 is post-mann ERAD lectin commit that spends
+  #   thr timer and charges pcr without anabolic age rebuild, reserve draw, pmf drain,
+  #   or CNX-client sp bank motion.
+  # Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9.
+  # Signature: heat+n energy-n atp-n thr-n pcr+n; age+reserve+pmf+sp held — os9 life-force.
+  # Usability: AGI models post-mann OS-9/XTP3-B ERAD lectin recognition under ASSERT.
+  # Returns take recognized; dead/n<1/empty atp|energy|thr -> 0.
+  METHOD os9 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > thr THEN
+      LET take = thr
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET thr = thr - take
+    SETF THIS threshold thr
+    GETF THIS pcr
+    LET pc = LAST_N
+    IF pc < 0 THEN
+      LET pc = 0
+    END
+    LET pc = pc + take
+    IF pc > 1000 THEN
+      LET pc = 1000
+    END
+    SETF THIS pcr pc
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
