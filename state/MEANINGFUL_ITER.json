@@ -2,24 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2190,
   "MEANINGFUL_ITER": 2190,
-  "iter": 2190,
+  "iter": 2191,
   "n": 2190,
   "mi": 2190,
-  "version": "1.15.1677-usability",
+  "version": "1.15.1678-usability",
   "VERSION": "1.15.1677-usability",
   "feature": "life_cell_slt",
   "FEATURE": "LIFE_CELL_SLT",
   "name": "LIFE_CELL_SLT",
-  "title": "life cell slt",
+  "title": "life cell",
   "label": "LIFE_CELL_SLT",
   "method": "slt n",
   "ship": "2190_life_cell_slt",
   "proof": "programs/proof/2190_life_cell_slt.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2190_life_cell_slt.cubalc",
-    "programs/science/integration/atomic_printer_life_slt.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_slt_life.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
   "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt",
   "asserts_ok": {
@@ -30,5 +27,12 @@
   },
   "asserts_fail": 0,
   "head": "a6a5565d177b6c326ab2f2c1da74b6fd4a7e125a",
-  "note": "Slt soluble lytic TG after MepH; cleaves glycan for AmpG recycle and elongasome insert"
+  "note": "Slt soluble lytic TG after MepH; cleaves glycan for AmpG recycle and elongasome insert",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "commit": "bc7907c5c",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-10T19:54:14Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
