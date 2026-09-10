@@ -1,5 +1,1 @@
-LIFE_CELL_MURA MI2196
-METHOD mura on life_cell after murq
-Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
-Proof 2196 + atomic_printer_life_mura + smx_mesh_vesicle_mura_life
-asserts_ok life=115 atomic=22 smx=20 flagship_1620=12 sum=169 asserts_fail=0
+LIFE_CELL_MURA MI2196 VERSION=1.15.1683-usability HEAD=4490a45522f87f92b0ef52943e0719c1905d08c4 FEAT=eeb8aacfc51a4574a81de8b045d17c432f5355ef asserts_ok=169 (life=115 atomic=22 smx=20 flag=12) asserts_fail=0 continuum=...->anmk->murq->mura PASS
