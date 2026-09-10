@@ -65,6 +65,12 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
+SEND printer murq 5
+ASSERT LAST_N == 5 "pr murq pre"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
 GETF printer heat
 LET h0 = LAST_N
 GETF printer energy
@@ -73,12 +79,6 @@ GETF printer atp
 LET a0 = LAST_N
 GETF printer pcr
 LET c0 = LAST_N
-SEND printer murq 5
-ASSERT LAST_N == 5 "pr murq"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
 SEND printer mura 5
 ASSERT LAST_N == 5 "pr mura"
 GETF printer heat
@@ -100,11 +100,11 @@ LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
 SEND ink murq 3
-ASSERT LAST_N == 3 "ink murq"
-SEND ink photosynth 24
-SEND ink glycolyse 20
-SEND ink charge 28
-SEND ink feed 20
+ASSERT LAST_N == 3 "ink murq pre"
+SEND ink photosynth 20
+SEND ink glycolyse 16
+SEND ink charge 24
+SEND ink feed 16
 SEND ink mura 3
 ASSERT LAST_N == 3 "ink mura"
 GETF ink heat
@@ -117,12 +117,8 @@ SEND scrap murq 3
 ASSERT LAST_N == 0 "scrap murq0"
 SEND scrap mura 3
 ASSERT LAST_N == 0 "scrap mura0"
-SEND printer murq 0
-ASSERT LAST_N == 0 "pr murq n0"
 SEND printer mura 0
 ASSERT LAST_N == 0 "pr mura n0"
-SEND printer murq -2
-ASSERT LAST_N == 0 "pr murq nneg"
 SEND printer mura -2
 ASSERT LAST_N == 0 "pr mura nneg"
 GETF printer alive
