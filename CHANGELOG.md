@@ -1,3 +1,11 @@
+## 1.15.1650-usability — MI2165 LIFE_CELL_ENVC (envc)
+
+- **life_cell.envc n**: EnvC LytM/M23 activator of AmiC septal amidase after wall ingrowth.
+- Pay `min(n,atp,energy)` → heat+n atp−n energy−n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: `...->if3->if2->ftsz->ftsi->amic->envc->fission` (amidase → activate → split).
+- Proof 2165 asserts_ok=76; atomic_printer=32; smx_mesh_vesicle=16; fail=0.
+- methods=159.
+
 ## 1.15.1647-usability — MI2162 LIFE_CELL_IF1 (if1)
 
 - **life_cell.if1 n**: post-if2 initiation factor IF1 A-site block on 30S PIC.
