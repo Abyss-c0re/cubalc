@@ -1,0 +1,7 @@
+LIFE_CELL_MURC MI2201
+METHOD murc n — UDP-MurNAc:L-alanine ligase after MurB
+Continuum ...->pfka->mura->murb->murc
+Proof programs/proof/2201_life_cell_murc.cubalc asserts_ok=99 fail=0
+AP programs/science/integration/atomic_printer_life_murc.cubalc asserts_ok=29
+SMX programs/science/integration/smx_mesh_vesicle_murc_life.cubalc asserts_ok=20
+Cube is SoT. Free energy must flow.

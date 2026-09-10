@@ -1,3 +1,10 @@
+## 1.15.1688-usability — 2201 LIFE_CELL_MURC
+
+- feat(life): MurC UDP-MurNAc:L-alanine ligase after MurB PG backbone
+- Continuum ...->nagb->pfka->mura->murb->murc
+- proof 2201 PASS 99/0; atomic_printer 29/0; smx vesicle 20/0 (sum 148)
+- METHOD murc n — ATP stand-in ligase energy gate; age/pcr/reserve/pmf held
+
 ## 1.15.1684-usability — LIFE_CELL_NAGB (MI 2197)
 
 - feat(life): NagB GlcN-6-P deaminase after NagA closes PG sugar recycle to F6P
