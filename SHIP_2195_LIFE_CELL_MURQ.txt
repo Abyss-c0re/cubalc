@@ -1,0 +1,5 @@
+SHIP 2195 LIFE_CELL_MURQ
+METHOD murq n — MurQ MurNAc-6-P etherase after AnmK kinase.
+Continuum: ...->ampg->nagz->ampd->anmk->murq
+Proof 2195 PASS; atomic_printer_life_murq; smx_mesh_vesicle_murq_life.
+Cube is SoT. Free energy must flow.

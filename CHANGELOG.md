@@ -1,3 +1,10 @@
+## 1.15.1682-usability — LIFE_CELL_MURQ (MI 2195)
+
+- feat(life): MurQ MurNAc-6-P etherase after AnmK for muropeptide recycle
+- METHOD murq n on life_cell after anmk; atomic+SMX boards
+- proof 2195 PASS asserts_ok continuum ...->anmk->murq
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1681-usability — LIFE_CELL_ANMK (MI 2194)
 
 - feat(life): AnmK anhMurNAc kinase after AmpD for muropeptide recycle
