@@ -1,3 +1,12 @@
+# Changelog
+
+## 1.15.1667-usability — MI2182 LIFE_CELL_MRED (2026-09-10)
+
+- **feat(life):** MreD IM elongasome stabilizer after MreC
+- Continuum: `...->fispay->roda->mreb->mrec->mred`
+- Proofs PASS: 143 + 63 + 40 = **246** asserts
+- methods=176 on life_cell
+
 
 ## 1.15.1666-usability — MI2181 LIFE_CELL_MREC
 
