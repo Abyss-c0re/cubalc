@@ -30,12 +30,12 @@
   "flagship_asserts_ok": 12,
   "host_finish": true,
   "anti_bloat": true,
-  "status": "pending_commit",
+  "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
   "note": "CNX burns ATP+energy+setpoint into heat, discharges CNX client bank from GLS I/II trim; age/reserve/thr/pmf/pcr held. Continuum after trim. methods=138.",
-  "feat_head": "",
-  "HEAD": "",
-  "FEAT_HEAD": "",
-  "commit": ""
+  "feat_head": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
+  "HEAD": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
+  "FEAT_HEAD": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
+  "commit": "6a3f6a9db5b2e8539456495a1066eef63b04996f"
 }
