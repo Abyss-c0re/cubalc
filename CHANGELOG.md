@@ -1,3 +1,5 @@
+# Changelog
+
 ## 1.15.1669-usability — MI2184 LIFE_CELL_PBP2
 
 - feat(life): PBP2/MrdA monofunctional TPase elongasome partner after RodZ
@@ -5,7 +7,13 @@
 - continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
 - methods=178
 
-# Changelog
+## 1.15.1668-usability — MI2183 LIFE_CELL_RODZ
+
+- feat(life): RodZ bitopic MreB membrane tether after MreD
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz
+- proofs PASS asserts_ok=254 (147+65+42)
+- methods=177
+
 
 ## 1.15.1667-usability — MI2182 LIFE_CELL_MRED (2026-09-10)
 

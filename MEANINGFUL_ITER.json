@@ -24,7 +24,7 @@
   "item": "life cell pbp2",
   "item_id": "mi_life_cell_pbp2",
   "summary": "LIFE_CELL_PBP2 MI2184 monofunctional TPase elongasome partner (MrdA) after RodZ PASS asserts_ok=156+67+44",
-  "ts": "2026-09-10T16:49:30Z",
+  "ts": "2026-09-10T16:49:46Z",
   "asserts_ok": 267,
   "asserts_fail": 0,
   "proof_asserts_ok": 156,
@@ -40,10 +40,9 @@
   "sealed": true,
   "methods": 178,
   "hold_flash": 1,
-  "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2",
   "feat_head": "b746004729db171ec277acbc6afb0562e8650ee8",
   "FEAT_HEAD": "b746004729db171ec277acbc6afb0562e8650ee8",
   "HEAD": "b746004729db171ec277acbc6afb0562e8650ee8",
   "tip": "b746004729db171ec277acbc6afb0562e8650ee8",
-  "head": "b746004729db171ec277acbc6afb0562e8650ee8"
+  "pin_head": "7e8d56517bd4a41aba9377e05e0fcfcf9865b61b"
 }

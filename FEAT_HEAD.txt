@@ -1,1 +1,6 @@
-b746004729db171ec277acbc6afb0562e8650ee8
+LIFE_CELL_PBP2 MI2184 monofunctional TPase elongasome partner (MrdA) after RodZ
+method: pbp2 n
+continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
+asserts_ok=156+67+44=267
+VERSION 1.15.1669-usability
+HEAD b746004729db171ec277acbc6afb0562e8650ee8
