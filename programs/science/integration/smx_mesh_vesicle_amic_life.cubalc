@@ -1,0 +1,112 @@
+// smx_mesh_vesicle_amic_life.cubalc
+// SMX mesh vesicle board: AmiC septal PG amidase on living vesicle after FtsI wall.
+// Mesh mind + life_cell amic constriction-wall energy signature.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_vesicle_amic_life | hold_flash=1 | share=smx | creed=life_force |"
+
+CUBE membrane ROLE host PROTON 1
+CUBE lumen ROLE construct PROTON 1
+CUBE cortex ROLE nanobot PROTON 1
+
+FOLDBITS membrane "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS lumen    "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS cortex   "0000111100001111000011110000111100001111000011110000111100001111"
+
+PLUG membrane lumen
+PLUG lumen cortex
+PLUG membrane cortex
+
+ENTITY vesicle OF Cell 1 52 0
+PLUG membrane vesicle
+
+IMPULSE membrane 1
+IMPULSE lumen 1
+ENERGYFLOW 4
+FLOW 3
+
+SMX KEY
+SMX EXCHANGE membrane lumen
+SMX EXCHANGE lumen cortex
+ASSERT SMX_OK == 1 "smx exchange ok"
+ASSERT SMX_TALKS >= 2 "smx talks"
+
+SEND vesicle set_threshold 10
+SEND vesicle pulse 5
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 32
+SEND vesicle charge 36
+SEND vesicle feed 30
+SEND vesicle charge_pcr 20
+SEND vesicle rrf 3
+ASSERT LAST_N == 3 "vx rrf"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle if3 3
+ASSERT LAST_N == 3 "vx if3"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle if2 3
+ASSERT LAST_N == 3 "vx if2"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ftsz 3
+ASSERT LAST_N == 3 "vx ftsz"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
+SEND vesicle ftsi 4
+ASSERT LAST_N == 4 "vesicle ftsi"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pcr
+LET vc = LAST_N
+GETF vesicle reserve
+LET vr = LAST_N
+GETF vesicle pmf
+LET vp = LAST_N
+
+SEND vesicle amic 4
+ASSERT LAST_N == 4 "vx amic"
+GETF vesicle heat
+ASSERT LAST_N == vh + 4 "vx h+4"
+GETF vesicle energy
+ASSERT LAST_N == ve - 4 "vx e-4"
+GETF vesicle atp
+ASSERT LAST_N == va - 4 "vx a-4"
+GETF vesicle pcr
+ASSERT LAST_N == vc "vx c held"
+GETF vesicle reserve
+ASSERT LAST_N == vr "vx r held"
+GETF vesicle pmf
+ASSERT LAST_N == vp "vx pmf held"
+GETF vesicle alive
+ASSERT LAST_N == 1 "vx alive"
+
+COMPARE membrane cortex
+HARMONY cortex
+RESOLVE cortex
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT DECIDE <= 9 "decide ceil"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_amic_life sealed"
