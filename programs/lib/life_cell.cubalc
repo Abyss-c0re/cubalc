@@ -148,6 +148,10 @@
 #   mature n             post-acidify EE->LE maturation / Rab5->Rab7 + ESCRT-ILV commit — pay min(n,atp,energy,pmf) -> heat +n + energy -n + pmf -n + thr +n; age/reserve/sp/pcr held (consume EE delta-pH bank into late-endosome identity)
 #   recruit n            post-mature M6PR/sortilin hydrolase cargo recruit into LE lumen — pay min(n,atp,energy) → heat +n + energy -n + reserve +n; age/pmf/thr/sp/pcr held; ready recompute
 #   activate n           post-recruit LE lumen zymogen activation / cathepsin pro-peptide cleavage — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n + thr -n; age/pmf/sp/pcr held; ready recompute
+#   degrade n            post-activate lysosomal substrate proteolysis / cathepsin processive cut — pay min(n,atp,energy) → heat +n + energy -n + age -n + pcr +n; reserve/thr/sp/pmf held; ready recompute
+#   export n             post-degrade lysosomal AA export / LAAT-1+SLC38A9 efflux — pay min(n,atp,energy,pcr) → heat +n + energy -n + pcr -n + reserve +n; age/thr/pmf/sp held; ready recompute
+#   translate n          post-export cytosolic ribosome polypeptide synthesis / mTOR-Rag AA sensing — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n + age -n; thr/pmf/sp/pcr held; ready recompute
+#   transloc n           post-translate SRP–Sec61 co-translational ER translocation / nascent-chain targeting — pay min(n,atp,energy) → heat +n + energy -n + sp +n; age/reserve/thr/pmf/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -6945,6 +6949,93 @@ CLASS Cell
       LET ag = 0
     END
     SETF THIS age ag
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # TRANSLOC: post-translate SRP–Sec61 co-translational ER translocation / nascent-chain targeting.
+  # Spend take=min(n,atp,energy) — ATP/GTP + metabolic fuel fund SRP GTPase cycle + Sec61
+  # channel gating once TRANSLATE has elongated the nascent polypeptide (post-translate
+  # transloc; not multipotent stream, not GRN fate lock, not growth-cone path sp+, not
+  # synaptogenesis thr+ contact, not release quantal thr-, not reuptake clearance
+  # energy+, not refill VGLUT pack, not dock HOPS tethering, not arm NSF priming, not
+  # clamp complexin clamp, not trigger Ca fusion, not pore SNARE zipper, not mix content
+  # dump, not collapse coat uncoat, not retrieve CME membrane bank, not acidify EE
+  # proton pump, not mature Rab5->Rab7 identity, not recruit M6PR hydrolase cargo, not
+  # activate cathepsin arming thr-, not degrade substrate cut age- pcr+, not export
+  # lumen->cytosol pcr- reserve+, not translate reserve- age- ribosome rebuild).
+  # HEAT += take (each SRP–ribosome handoff / Sec61 lateral-gate open / signal-peptide
+  #   insert step dissipates as translocation work).
+  # ENERGY -= take (transloc burns active metabolic pool into ER targeting work; kin to
+  #   translate energy- but holds reserve/age and raises secretory sp bank instead of
+  #   spending cytosolic AA into proteome age-).
+  # ATP -= take (SRP54/SRα GTPase cycle / BiP/Sec63 ATP-dependent luminal ratcheting).
+  # SETPOINT rises: sp = min(1000, sp + take) — ER lumen / secretory-pathway load bank
+  #   credits nascent-chain entry (distinct from clamp sp+ SNARE hold, translate age-
+  #   proteome rebuild, export reserve+ AA bank, and dock pmf+ AZ tether).
+  # AGE/RESERVE/THRESHOLD/PMF/PCR HELD — transloc is post-translate channel work after
+  #   ribosome filled nascent chain, not anabolic age repair, not free-AA reserve spend,
+  #   not hydrolase-latency thr, not EE proton bank, not phosphagen pcr bank.
+  # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
+  # Returns take. Dead/zero/empty ATP|energy → 0.
+  METHOD transloc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 0 THEN
+      LET sp = 0
+    END
+    LET sp = sp + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
     GETF THIS heat
     LET h = LAST_N + take
     SETF THIS heat h

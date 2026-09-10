@@ -1,0 +1,6 @@
+LIFE_CELL_TRANSLOC MI 2140
+post-translate SRP-Sec61 co-translational ER translocation
+pay min(n,atp,energy) -> heat+n energy-n atp-n sp+n
+age/reserve/thr/pmf/pcr held
+methods=134
+proof asserts_ok=159

@@ -1,3 +1,10 @@
+## 1.15.1623-usability — LIFE_CELL_TRANSLOC (MI 2140)
+
+- feat(life): post-translate SRP-Sec61 ER transloc — heat+ energy- atp- sp+; continuum after translate
+- proof programs/proof/2140_life_cell_transloc.cubalc (asserts_ok=159 fail=0)
+- science programs/science/integration/atomic_printer_life_transloc.cubalc
+- smx programs/science/integration/smx_mesh_vesicle_transloc_life.cubalc
+
 ## 1.15.1620-usability — LIFE_CELL_ACTIVATE (MI 2136)
 
 - feat(life): post-recruit LE zymogen activate — heat+ energy- atp- reserve- thr-; continuum after recruit

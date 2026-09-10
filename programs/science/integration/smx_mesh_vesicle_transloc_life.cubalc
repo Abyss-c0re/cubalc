@@ -1,0 +1,68 @@
+// smx_mesh_vesicle_transloc_life.cubalc
+// SMX mesh: post-translate transloc life-force under sealed exchange.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mesh OF Cell 1 44 0
+SEND mesh set_threshold 10
+SEND mesh pulse 4
+SEND mesh photosynth 30
+SEND mesh glycolyse 26
+SEND mesh pump 18
+SEND mesh photophos 18
+SEND mesh charge 24
+SEND mesh feed 24
+SEND mesh release 2
+SEND mesh reuptake 2
+SEND mesh refill 1
+SEND mesh dock 2
+SEND mesh arm 2
+SEND mesh clamp 2
+SEND mesh trigger 2
+SEND mesh pore 2
+SEND mesh mix 2
+SEND mesh collapse 2
+SEND mesh retrieve 2
+SEND mesh photosynth 12
+SEND mesh glycolyse 10
+SEND mesh charge 12
+SEND mesh feed 12
+SEND mesh acidify 2
+SEND mesh mature 2
+SEND mesh recruit 2
+SEND mesh activate 2
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh degrade 2
+ASSERT LAST_N == 2 "smx deg2"
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh export 2
+ASSERT LAST_N == 2 "smx exp2"
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh translate 2
+ASSERT LAST_N == 2 "smx tr2"
+GETF mesh setpoint
+LET s0 = LAST_N
+GETF mesh heat
+LET h0 = LAST_N
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+SEND mesh transloc 2
+ASSERT LAST_N == 2 "smx tl2"
+GETF mesh setpoint
+ASSERT LAST_N == s0 + 2 "smx sp"
+GETF mesh heat
+ASSERT LAST_N == h0 + 2 "smx heat"
+GETF mesh alive
+ASSERT LAST_N == 1 "smx alive"
+ASSERT 1 == 1 "smx mesh vesicle transloc life ok"
