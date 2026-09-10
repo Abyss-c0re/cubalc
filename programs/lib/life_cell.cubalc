@@ -8653,4 +8653,59 @@ CLASS Cell
   END
 
 
+
+  # IF3: post-rrf initiation factor IF3 (anti-association) —
+  # after RRF·EF-G·GTP splits 70S → 50S + 30S, IF3 binds the 30S platform
+  # and blocks premature 50S re-joining; this stabilizes free 30S so mRNA and
+  # deacylated tRNA fully leave and the subunit re-enters the initiation pool.
+  # Domain: ribosome initiation anti-association (not GTPase split, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3.
+  # Pay take=min(n,energy) — pure binding/steric work; no EF-G·GTP stand-in
+  # (that was rrf). ATP/PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n; age+atp+pcr+reserve+pmf+sp+thr held — if3 life-force.
+  # Usability: AGI models post-rrf IF3 30S gate under ASSERT boards.
+  METHOD if3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
