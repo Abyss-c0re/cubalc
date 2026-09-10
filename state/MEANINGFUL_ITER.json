@@ -22,7 +22,7 @@
   ],
   "item": "life cell psm",
   "item_id": "mi_life_cell_psm",
-  "summary": "LIFE_CELL_PSM MI2150 post-vcp 26S proteasome PASS asserts_ok=110",
+  "summary": "LIFE_CELL_PSM MI2150 tip==pin sealed PASS asserts_ok=110",
   "ts": "2026-09-10T04:56:59Z",
   "asserts_ok": 110,
   "asserts_fail": 0,
@@ -39,5 +39,11 @@
   "prior_feature": "LIFE_CELL_VCP",
   "sealed": true,
   "pass_": true,
-  "methods": 144
+  "methods": 144,
+  "feat_head": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5",
+  "FEAT_HEAD": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5",
+  "HEAD": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5",
+  "commit": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5",
+  "tip": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5",
+  "pinned_head": "41ad5362098bd98c4c7a5b5a07a2120d6b36a8e5"
 }
