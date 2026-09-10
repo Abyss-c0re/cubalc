@@ -44,5 +44,16 @@
   "proof_asserts": 143,
   "atomic_asserts": 63,
   "smx_asserts": 40,
-  "continuum": "...->fispay->roda->mreb->mrec->mred"
+  "continuum": "...->fispay->roda->mreb->mrec->mred",
+  "head": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "HEAD": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "feat_head": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "FEAT_HEAD": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "tip": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "pinned_head": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "pin": "b94ed6955f0a87fba0f1e5a8105364961582cfd0",
+  "head_short": "b94ed6955",
+  "commit": "b94ed6955",
+  "short": "b94ed6955",
+  "feat": "LIFE_CELL_MRED"
 }

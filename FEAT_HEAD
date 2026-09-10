@@ -3,3 +3,5 @@ method: mred n
 continuum: ...->fispay->roda->mreb->mrec->mred
 asserts_ok=143+63+40=246
 VERSION 1.15.1667-usability
+HEAD b94ed6955
+
