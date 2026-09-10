@@ -35,7 +35,7 @@
   },
   "asserts_fail": 0,
   "note": "MurB reduces EP-UDP-GlcNAc to UDP-MurNAc with NADPH stand-in; locks first sugar-acid of PG stem after MurA; MAX_METHODS 256",
-  "head": "51c73a118e9753476a48094ee6f27311264badad",
-  "sha": "51c73a118e9753476a48094ee6f27311264badad",
-  "pinned_sha": "51c73a118e9753476a48094ee6f27311264badad"
+  "head": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27",
+  "sha": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27",
+  "pinned_sha": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27"
 }
