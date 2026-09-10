@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2177,
+  "meaningful_iter": 2178,
   "MEANINGFUL_ITER": 2177,
   "iter": 2177,
   "n": 2177,
-  "mi": 2177,
-  "version": "1.15.1662-usability",
+  "mi": 2178,
+  "version": "1.15.1663-usability",
   "VERSION": "1.15.1662-usability",
   "feature": "life_cell_scission",
   "FEATURE": "LIFE_CELL_SCISSION",
-  "name": "LIFE_CELL_SCISSION",
+  "name": "LIFE_CELL_FISPAY",
   "title": "life cell scission",
-  "label": "LIFE_CELL_SCISSION",
-  "method": "scission n",
+  "label": "LIFE_CELL_FISPAY",
+  "method": "fispay n",
   "ship": "2177_life_cell_scission",
   "proof": "programs/proof/2177_life_cell_scission.cubalc",
   "proofs": [
@@ -52,6 +52,8 @@
   "proof_asserts": 124,
   "atomic_asserts": 53,
   "smx_asserts": 32,
-  "continuum": "...->damx->rlpa->nlpd->scission->fission",
-  "head": "deeeac9c5051c89413922c7ba71933d14189701f"
+  "continuum": "...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay",
+  "head": "4f8d4318b6010c951418473b92f5de7a61c2b823",
+  "feat": "LIFE_CELL_FISPAY",
+  "head_short": "4f8d4318b"
 }

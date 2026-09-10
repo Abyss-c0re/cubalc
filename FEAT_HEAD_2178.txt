@@ -3,3 +3,4 @@ method: fispay n
 continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
 asserts_ok=124+53+32=209
 VERSION 1.15.1663-usability
+HEAD 4f8d4318b6010c951418473b92f5de7a61c2b823
