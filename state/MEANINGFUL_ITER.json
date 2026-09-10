@@ -38,12 +38,12 @@
   "note": "OS9 burns ATP+energy; spends thr ERAD timer into OS-9/XTP3-B lectin commit and charges pcr Ub-prep bank after mann; age/reserve/pmf/sp held. Continuum after mann. methods=141.",
   "feat_head": "4a8cfd9d0f3a17fe1d1fa3210b1b368fd351245e",
   "FEAT_HEAD": "4a8cfd9d0f3a17fe1d1fa3210b1b368fd351245e",
-  "HEAD": "804eaae969707500fe960d4bab9bf1ad0802c34a",
+  "HEAD": "e5184e8038019c80e53998a66fe2804de615336e",
   "commit": "4a8cfd9d0f3a17fe1d1fa3210b1b368fd351245e",
   "prior_feature": "LIFE_CELL_MANN",
   "sealed": true,
   "pass_": true,
   "methods": 141,
-  "tip": "804eaae969707500fe960d4bab9bf1ad0802c34a",
-  "pinned_head": "804eaae969707500fe960d4bab9bf1ad0802c34a"
+  "tip": "e5184e8038019c80e53998a66fe2804de615336e",
+  "pinned_head": "e5184e8038019c80e53998a66fe2804de615336e"
 }
