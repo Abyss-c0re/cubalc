@@ -1,5 +1,5 @@
 // smx_mesh_vesicle_pbp1a_life.cubalc
-// SMX mesh vesicle: Cell.pbp1a bifunctional aPBP GT+TP sidewall after LpoA.
+// SMX mesh vesicle: Cell.pbp1a bifunctional aPBP sidewall PG synthase after LpoA.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -231,18 +231,28 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 30
 SEND vesicle feed 20
-SEND vesicle lpoa 3
-ASSERT LAST_N == 3 "vx pre_lpoa"
-SEND vesicle photosynth 24
-SEND vesicle glycolyse 20
-SEND vesicle charge 30
-SEND vesicle feed 20
 GETF vesicle heat
 LET vh0 = LAST_N
 GETF vesicle energy
 LET ve0 = LAST_N
 GETF vesicle atp
 LET va0 = LAST_N
+SEND vesicle lpoa 3
+ASSERT LAST_N == 3 "vesicle pre_lpoa"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pcr
+LET vc = LAST_N
+GETF vesicle reserve
+LET vr = LAST_N
 SEND vesicle pbp1a 3
 ASSERT LAST_N == 3 "vx pbp1a"
 GETF vesicle energy
@@ -294,17 +304,11 @@ SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 18
 SEND vesicle lpoa 2
-ASSERT LAST_N == 2 "vx pre_lpoa2"
+ASSERT LAST_N == 2 "vesicle pre_lpoa"
 SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
-SEND vesicle charge 30
-SEND vesicle feed 20
-GETF vesicle heat
-LET h0 = LAST_N
-GETF vesicle energy
-LET e0 = LAST_N
-GETF vesicle atp
-LET a0 = LAST_N
+SEND vesicle charge 28
+SEND vesicle feed 18
 SEND vesicle pbp1a 2
 ASSERT LAST_N == 2 "vx pbp1a2"
 GETF vesicle pcr

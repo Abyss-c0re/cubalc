@@ -1,5 +1,5 @@
 // 2186_life_cell_pbp1a.cubalc
-// Proof 2186: life_cell pbp1a - PBP1A (MrcA) bifunctional aPBP GT+TP sidewall polymerase after LpoA.
+// Proof 2186: life_cell pbp1a - bifunctional aPBP sidewall PG synthase after LpoA.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
 // Continuum after lpoa. Free energy must flow.
 
@@ -328,6 +328,24 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
+GETF gate heat
+LET h0 = LAST_N
+GETF gate energy
+LET e0 = LAST_N
+GETF gate atp
+LET a0 = LAST_N
+GETF gate pcr
+LET c0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET age0 = LAST_N
+GETF gate pmf
+LET pmf0 = LAST_N
+GETF gate setpoint
+LET sp0 = LAST_N
+GETF gate threshold
+LET thr0 = LAST_N
 SEND gate lpoa 5
 ASSERT LAST_N == 5 "gate pre_lpoa"
 SEND gate photosynth 24
@@ -384,12 +402,6 @@ SEND dead pbp2 3
 ASSERT LAST_N == 0 "dead pre_pbp20"
 SEND dead lpoa 3
 ASSERT LAST_N == 0 "dead pre_lpoa0"
-GETF dead heat
-LET h0 = LAST_N
-GETF dead energy
-LET e0 = LAST_N
-GETF dead atp
-LET a0 = LAST_N
 SEND dead pbp1a 3
 ASSERT LAST_N == 0 "dead pbp1a0"
 SEND poor ftsk 3
@@ -400,12 +412,6 @@ SEND poor pbp2 3
 ASSERT LAST_N == 0 "poor pre_pbp20"
 SEND poor lpoa 3
 ASSERT LAST_N == 0 "poor pre_lpoa0"
-GETF poor heat
-LET h0 = LAST_N
-GETF poor energy
-LET e0 = LAST_N
-GETF poor atp
-LET a0 = LAST_N
 SEND poor pbp1a 3
 ASSERT LAST_N == 0 "poor pbp1a0"
 SEND gate photosynth 24
@@ -430,6 +436,7 @@ ASSERT LAST_N == 0 "n0_pre"
 SEND gate pbp2 0
 ASSERT LAST_N == 0 "n0_pre_pbp2"
 SEND gate lpoa 0
+ASSERT LAST_N == 0 "n0_pre_lpoa"
 SEND gate pbp1a 0
 ASSERT LAST_N == 0 "n0"
 SEND gate lpob 3
@@ -728,6 +735,16 @@ SEND twin photosynth 24
 SEND twin glycolyse 20
 SEND twin charge 30
 SEND twin feed 20
+GETF twin heat
+LET th0 = LAST_N
+GETF twin energy
+LET te0 = LAST_N
+GETF twin atp
+LET ta0 = LAST_N
+GETF twin pcr
+LET tc0 = LAST_N
+GETF twin reserve
+LET tr0 = LAST_N
 SEND twin lpoa 3
 ASSERT LAST_N == 3 "twin pre_lpoa"
 SEND twin photosynth 24
@@ -988,6 +1005,24 @@ SEND ceil photosynth 24
 SEND ceil glycolyse 20
 SEND ceil charge 30
 SEND ceil feed 20
+GETF ceil heat
+LET ch0 = LAST_N
+GETF ceil energy
+LET ce0 = LAST_N
+GETF ceil atp
+LET ca0 = LAST_N
+GETF ceil pcr
+LET cc0 = LAST_N
+GETF ceil reserve
+LET cr0 = LAST_N
+GETF ceil age
+LET cage0 = LAST_N
+GETF ceil pmf
+LET cpmf0 = LAST_N
+GETF ceil setpoint
+LET csp0 = LAST_N
+GETF ceil threshold
+LET cthr0 = LAST_N
 SEND ceil lpoa 4
 ASSERT LAST_N == 4 "ceil pre_lpoa"
 SEND ceil photosynth 24
@@ -1141,12 +1176,6 @@ SEND g0 photosynth 24
 SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
-GETF g0 heat
-LET h0 = LAST_N
-GETF g0 energy
-LET e0 = LAST_N
-GETF g0 atp
-LET a0 = LAST_N
 SEND g0 pbp1a 2
 ASSERT LAST_N == 2 "g0 pbp1a"
 GETF g0 ready

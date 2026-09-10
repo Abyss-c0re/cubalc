@@ -1,5 +1,5 @@
 // atomic_printer_life_pbp1a.cubalc
-// Atomic printer board: Cell.pbp1a bifunctional aPBP GT+TP sidewall polymerase after LpoA.
+// Atomic printer board: Cell.pbp1a bifunctional aPBP sidewall PG synthase after LpoA.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -238,6 +238,18 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 30
 SEND printer feed 20
+GETF printer heat
+LET ph = LAST_N
+GETF printer energy
+LET pe = LAST_N
+GETF printer atp
+LET pa = LAST_N
+GETF printer pcr
+LET pc = LAST_N
+GETF printer reserve
+LET pr = LAST_N
+GETF printer age
+LET page = LAST_N
 SEND printer lpoa 4
 ASSERT LAST_N == 4 "printer pre_lpoa"
 SEND printer photosynth 24
@@ -441,6 +453,12 @@ SEND bud photosynth 24
 SEND bud glycolyse 20
 SEND bud charge 30
 SEND bud feed 20
+GETF bud heat
+LET bh = LAST_N
+GETF bud energy
+LET be = LAST_N
+GETF bud atp
+LET ba = LAST_N
 SEND bud lpoa 3
 ASSERT LAST_N == 3 "bud pre_lpoa"
 SEND bud photosynth 24

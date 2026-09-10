@@ -32,7 +32,7 @@
   "smx_asserts_ok": 48,
   "host_finish": true,
   "anti_bloat": true,
-  "status": "sealed",
+  "status": "PASS",
   "pass": true,
   "proof_status": "PASS",
   "note": "PBP1A bifunctional aPBP GT+TP sidewall after LpoA: heat+n atp-n energy-n; pcr/reserve/age/pmf/sp/thr held. Continuum ...->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a.",
@@ -41,8 +41,8 @@
   "methods": 180,
   "hold_flash": 1,
   "pass_": true,
-  "head": "490453247e51e69d3090c34b927e245837209674",
-  "HEAD": "490453247e51e69d3090c34b927e245837209674",
-  "feat_head": "LIFE_CELL_PBP1A\nMI2186\n1.15.1671-usability\npbp1a n\ncontinuum ...->pbp2->lpoa->pbp1a",
-  "FEAT_HEAD": "LIFE_CELL_PBP1A\nMI2186\n1.15.1671-usability\npbp1a n\ncontinuum ...->pbp2->lpoa->pbp1a"
+  "head": "6e223c86db8b12fa343b40346533a84adc33f9e0",
+  "HEAD": "6e223c86db8b12fa343b40346533a84adc33f9e0",
+  "feat_head": "8e4a6cb854bad2fa1a1cacc7c07a5a6dc0f31db9",
+  "FEAT_HEAD": "8e4a6cb854bad2fa1a1cacc7c07a5a6dc0f31db9"
 }
