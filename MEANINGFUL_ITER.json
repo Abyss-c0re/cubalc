@@ -40,11 +40,11 @@
   "sealed": true,
   "pass_": true,
   "methods": 166,
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "tip": "PENDING",
-  "pinned_head": "PENDING",
-  "commit": "PENDING",
-  "short": "PENDING"
+  "feat_head": "b8fc672e2723e14a2d35c2e08937a16804979b4c",
+  "FEAT_HEAD": "b8fc672e2723e14a2d35c2e08937a16804979b4c",
+  "HEAD": "b8fc672e2723e14a2d35c2e08937a16804979b4c",
+  "tip": "b8fc672e2723e14a2d35c2e08937a16804979b4c",
+  "pinned_head": "b8fc672e2723e14a2d35c2e08937a16804979b4c",
+  "commit": "b8fc672e2",
+  "short": "b8fc672e2"
 }
