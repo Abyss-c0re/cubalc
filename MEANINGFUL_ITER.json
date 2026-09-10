@@ -43,10 +43,10 @@
   "sealed": true,
   "methods": 186,
   "hold_flash": 1,
-  "feat_head": "cb35b29ce90baf9e25c844e4e0230b257c4f35a2",
-  "FEAT_HEAD": "cb35b29ce90baf9e25c844e4e0230b257c4f35a2",
-  "commit": "cb35b29ce",
-  "HEAD": "cb35b29ce90baf9e25c844e4e0230b257c4f35a2",
-  "tip": "cb35b29ce90baf9e25c844e4e0230b257c4f35a2",
-  "head": "cb35b29ce90baf9e25c844e4e0230b257c4f35a2"
+  "feat_head": "0b7a89971691b112c06fd8b44500d93ae66a9fde",
+  "FEAT_HEAD": "0b7a89971691b112c06fd8b44500d93ae66a9fde",
+  "commit": "0b7a89971",
+  "HEAD": "0b7a89971691b112c06fd8b44500d93ae66a9fde",
+  "tip": "0b7a89971691b112c06fd8b44500d93ae66a9fde",
+  "head": "0b7a89971691b112c06fd8b44500d93ae66a9fde"
 }
