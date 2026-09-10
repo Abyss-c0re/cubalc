@@ -1,0 +1,5 @@
+LIFE_CELL_AMPG MI2191
+LIFE_CELL_AMPG MI2191 AmpG IM anhydro-muropeptide permease after Slt PASS asserts_ok=308+26+25
+PASS asserts_ok=359 fail=0
+Continuum: ...->pbp1a->lpoa->meps->mepm->meph->slt->ampg
+Cube is SoT. Free energy must flow.
