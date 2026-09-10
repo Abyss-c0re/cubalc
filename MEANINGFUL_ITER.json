@@ -30,11 +30,11 @@
     "sum": 169
   },
   "asserts_fail": 0,
-  "note": "MurQ cytoplasmic anhMurNAc-6-P etherase after AnmK; opens 1,6-anhydro ring for PG recycle re-entry into UDP-MurNAc precursor path",
+  "note": "MurQ cytoplasmic anhMurNAc-6-P etherase after AnmK; opens anhydro ring for UDP-MurNAc precursor recycle",
   "item": "life cell murq",
   "item_id": "mi_life_cell_murq",
-  "summary": "LIFE_CELL_MURQ MI2195 \u2014 METHOD murq after anmk; atomic+SMX boards; proof 2195 PASS asserts_fail:0 sum=169.",
-  "ts": "2026-09-10T21:56:23Z",
+  "summary": "LIFE_CELL_MURQ MI2195 \u2014 METHOD murq after anmk; atomic+SMX boards; proof 2195 PASS.",
+  "ts": "2026-09-10T21:56:26Z",
   "host_finish": true,
   "anti_bloat": true,
   "status": "sealed",
@@ -42,12 +42,6 @@
   "proof_status": "PASS",
   "prior_feature": "LIFE_CELL_ANMK",
   "sealed": true,
-  "methods": 185,
-  "hold_flash": 1,
-  "feat_head": "6c3e7fe96164a405532a4c22e63d19f6dff713a0",
-  "FEAT_HEAD": "6c3e7fe96164a405532a4c22e63d19f6dff713a0",
-  "commit": "6c3e7fe96",
-  "HEAD": "6c3e7fe96164a405532a4c22e63d19f6dff713a0",
-  "tip": "6c3e7fe96164a405532a4c22e63d19f6dff713a0",
-  "head": "6c3e7fe96164a405532a4c22e63d19f6dff713a0"
+  "methods": 189,
+  "hold_flash": 1
 }
