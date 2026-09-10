@@ -1,3 +1,21 @@
+## MI2197 LIFE_CELL_MURB
+
+- METHOD murb (MurB UDP-GlcNAc-EP reductase) after mura on life_cell
+- Continuum ...->anmk->murq->mura->murb
+- Proofs PASS asserts_fail:0 sum=191 (life=121 atomic=32 smx=26 flag=12)
+- VERSION=1.15.1685-usability
+
+## MI2197 LIFE_CELL_MURB
+
+- METHOD murb (MurB UDP-GlcNAc-EP reductase) after mura on life_cell
+- Continuum ...->murq->mura->murb
+- Proofs PASS asserts_fail:0 sum=191 (life=121 atomic=32 smx=26 flag=12)
+
+## 1.15.1684-usability — MI2197 LIFE_CELL_MURB (murb after mura)
+
+- proof 2197 + atomic_printer_life_murb + smx_mesh_vesicle_murb_life asserts_fail:0 sum=191
+- free energy must flow; cube is SoT
+
 ## MI2196 LIFE_CELL_MURA
 
 - METHOD mura (MurA UDP-GlcNAc enolpyruvyl transferase) after murq on life_cell

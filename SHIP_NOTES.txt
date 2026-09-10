@@ -1,3 +1,8 @@
+SHIP LIFE_CELL_MURB MI2197 1.15.1685-usability
+MurB reductase PG-precursor after MurA
+Continuum: ...->murq->mura->murb
+asserts_fail:0 sum=191
+
 SHIP LIFE_CELL_AMPG MI2190 1.15.1674-usability
 AmpG permease PG-recycling import after Slt
 Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg

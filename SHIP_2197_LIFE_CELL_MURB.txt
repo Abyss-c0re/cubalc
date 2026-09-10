@@ -1,0 +1,7 @@
+LIFE_CELL_MURB MI2197
+METHOD murb on life_cell after mura
+Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb
+Proof 2197 + atomic_printer_life_murb + smx_mesh_vesicle_murb_life
+asserts_ok life=121 atomic=32 smx=26 flagship_1620=12 sum=191 asserts_fail=0
+VERSION=1.15.1685-usability
+HEAD=PENDING
