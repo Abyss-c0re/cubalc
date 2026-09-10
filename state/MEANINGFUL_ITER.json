@@ -35,7 +35,7 @@
   },
   "asserts_fail": 0,
   "note": "MurC ligates L-Ala onto UDP-MurNAc with ATP stand-in; starts PG stem peptide after MurB so MurD can attach D-Glu; MAX_METHODS 256",
-  "head": "",
-  "sha": "",
-  "pinned_sha": ""
+  "head": "8474e5a08a10b3c5c8e65da57cf4bfb9e9129148",
+  "sha": "8474e5a08a10b3c5c8e65da57cf4bfb9e9129148",
+  "pinned_sha": "8474e5a08a10b3c5c8e65da57cf4bfb9e9129148"
 }
