@@ -4,5 +4,5 @@ Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
 Proof 2196 + atomic_printer_life_mura + smx_mesh_vesicle_mura_life
 asserts_ok life=115 atomic=30 smx=24 flagship_1620=12 sum=181 asserts_fail=0
 VERSION=1.15.1683-usability
-HEAD=41ae139c967b036279e100cdcee740e2ca86ed49
+HEAD=d9e778013004ddf4939ed8ee3ee3ada37bb12d8a
 FEAT=d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c
