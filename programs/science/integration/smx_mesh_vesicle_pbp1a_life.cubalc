@@ -231,36 +231,34 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 30
 SEND vesicle feed 20
-GETF vesicle heat
-LET vh0 = LAST_N
-GETF vesicle energy
-LET ve0 = LAST_N
-GETF vesicle atp
-LET va0 = LAST_N
 SEND vesicle lpoa 3
 ASSERT LAST_N == 3 "vesicle pre_lpoa"
-SEND vesicle photosynth 24
-SEND vesicle glycolyse 20
-SEND vesicle charge 28
-SEND vesicle feed 18
+SEND vesicle photosynth 30
+SEND vesicle glycolyse 24
+SEND vesicle charge 36
+SEND vesicle feed 24
 GETF vesicle heat
-LET vh = LAST_N
+LET vxh = LAST_N
 GETF vesicle energy
-LET ve = LAST_N
+LET vxe = LAST_N
 GETF vesicle atp
-LET va = LAST_N
+LET vxa = LAST_N
 GETF vesicle pcr
-LET vc = LAST_N
+LET vxc = LAST_N
 GETF vesicle reserve
-LET vr = LAST_N
+LET vxr = LAST_N
 SEND vesicle pbp1a 3
 ASSERT LAST_N == 3 "vx pbp1a"
-GETF vesicle energy
-ASSERT LAST_N == ve - 3 "vx e-3"
 GETF vesicle heat
-ASSERT LAST_N == vh + 3 "vx h+3"
+ASSERT LAST_N == vxh + 3 "vx h+3"
+GETF vesicle energy
+ASSERT LAST_N == vxe - 3 "vx e-3"
 GETF vesicle atp
-ASSERT LAST_N == va - 3 "vx atp-3"
+ASSERT LAST_N == vxa - 3 "vx atp-3"
+GETF vesicle pcr
+ASSERT LAST_N == vxc "vx c held"
+GETF vesicle reserve
+ASSERT LAST_N == vxr "vx r held"
 GETF vesicle pcr
 LET vp = LAST_N
 SEND vesicle photosynth 24
