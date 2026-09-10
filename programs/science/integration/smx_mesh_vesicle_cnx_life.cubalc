@@ -1,0 +1,124 @@
+// smx_mesh_vesicle_cnx_life.cubalc
+// SMX mesh: post-trim CNX/CRT lectin folding-cycle life-force under sealed exchange.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY mesh OF Cell 1 44 0
+SEND mesh set_threshold 10
+SEND mesh pulse 4
+SEND mesh photosynth 30
+SEND mesh glycolyse 26
+SEND mesh pump 18
+SEND mesh photophos 18
+SEND mesh charge 24
+SEND mesh feed 24
+SEND mesh release 2
+SEND mesh reuptake 2
+SEND mesh refill 1
+SEND mesh dock 2
+SEND mesh arm 2
+SEND mesh clamp 2
+SEND mesh trigger 2
+SEND mesh pore 2
+SEND mesh mix 2
+SEND mesh collapse 2
+SEND mesh retrieve 2
+SEND mesh photosynth 12
+SEND mesh glycolyse 10
+SEND mesh charge 12
+SEND mesh feed 12
+SEND mesh acidify 2
+SEND mesh mature 2
+SEND mesh recruit 2
+SEND mesh activate 2
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh degrade 2
+ASSERT LAST_N == 2 "smx deg2"
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh export 2
+ASSERT LAST_N == 2 "smx exp2"
+SEND mesh photosynth 10
+SEND mesh glycolyse 8
+SEND mesh charge 10
+SEND mesh feed 10
+SEND mesh translate 2
+ASSERT LAST_N == 2 "smx tr2"
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+SEND mesh transloc 2
+ASSERT LAST_N == 2 "smx tl2"
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+SEND mesh cleave 2
+ASSERT LAST_N == 2 "smx precv2"
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+SEND mesh glycosyl 2
+ASSERT LAST_N == 2 "smx pregy2"
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+GETF mesh pcr
+LET c0 = LAST_N
+GETF mesh heat
+LET h0 = LAST_N
+GETF mesh threshold
+LET t0 = LAST_N
+GETF mesh setpoint
+LET s0 = LAST_N
+SEND mesh trim 2
+ASSERT LAST_N == 2 "smx tm2"
+GETF mesh pcr
+ASSERT LAST_N == c0 "smx pcr held"
+GETF mesh heat
+ASSERT LAST_N == h0 + 2 "smx heat"
+GETF mesh threshold
+ASSERT LAST_N == t0 "smx thr held"
+GETF mesh setpoint
+ASSERT LAST_N == s0 + 2 "smx sp+"
+SEND mesh photosynth 8
+SEND mesh glycolyse 6
+SEND mesh charge 8
+SEND mesh feed 8
+GETF mesh setpoint
+LET s1 = LAST_N
+GETF mesh heat
+LET h1 = LAST_N
+GETF mesh energy
+LET e1 = LAST_N
+GETF mesh atp
+LET a1 = LAST_N
+GETF mesh pcr
+LET c1 = LAST_N
+GETF mesh threshold
+LET t1 = LAST_N
+SEND mesh cnx 2
+ASSERT LAST_N == 2 "smx cnx2"
+GETF mesh heat
+ASSERT LAST_N == h1 + 2 "smx cnx heat"
+GETF mesh energy
+ASSERT LAST_N == e1 - 2 "smx cnx e"
+GETF mesh atp
+ASSERT LAST_N == a1 - 2 "smx cnx a"
+GETF mesh setpoint
+ASSERT LAST_N == s1 - 2 "smx cnx sp-"
+GETF mesh pcr
+ASSERT LAST_N == c1 "smx cnx pcr held"
+GETF mesh threshold
+ASSERT LAST_N == t1 "smx cnx thr held"
+GETF mesh alive
+ASSERT LAST_N == 1 "smx alive"
+ASSERT 1 == 1 "smx mesh vesicle cnx life ok"
