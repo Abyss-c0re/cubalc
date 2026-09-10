@@ -8825,7 +8825,7 @@ CLASS Cell
   # drives treadmilling that recruits septal PG synthases (FtsI/PBP3) and
   # constricts the division plane. Domain: pre-fission Z-ring constriction
   # (not fission endowment split, not mito DRP1 fragment, not ribosome IF*).
-  # Continuum: ...->rrf->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (PIC → ring → wall → amidase → EnvC → FtsN → split).
+  # Continuum: ...->rrf->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (PIC → ring → wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — GTP/ATP stand-in for FtsZ GTPase cycles.
   # PCR/RESERVE HELD (not phosphagen recycling work). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsz life-force.
@@ -8889,7 +8889,7 @@ CLASS Cell
   # to the midcell ring; FtsI polymerizes septal PG that drives envelope invagination
   # toward fission. Domain: pre-fission septal PG synthase (not FtsZ GTPase ring,
   # not mito DRP1 fragment, not ribosome IF*, not fission endowment split).
-  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
   # Pay take=min(n,atp,energy) — ATP/GTP stand-in for PG polymerization + flippase.
   # PCR/RESERVE HELD (lipid-II pool not spent here). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsi life-force.
@@ -8954,7 +8954,7 @@ CLASS Cell
   # PG polymerized by FtsI/PBP3; EnvC/NlpD activate AmiC at midcell so daughters
   # split without lysis. Domain: post-septal-PG wall cleavage (not FtsI synthase,
   # not FtsZ GTPase ring, not mito DRP1 fragment, not ribosome IF*, not fission endowment).
-  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for amidase activation + remodel work.
   # PCR/RESERVE HELD (peptide fragments not banked here). AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — amic life-force.
@@ -9020,7 +9020,7 @@ CLASS Cell
   # Domain: post-AmiC midcell amidase activation (not AmiC catalysis itself,
   # not FtsI synthase, not FtsZ GTPase ring, not mito DRP1, not ribosome IF*,
   # not fission endowment split).
-  # Continuum: ...->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (wall → amidase → EnvC → FtsN → split).
+  # Continuum: ...->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (wall → amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for EnvC recruitment + activation work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — envc life-force.
@@ -9086,7 +9086,7 @@ CLASS Cell
   # Domain: post-EnvC constriction go-signal (not EnvC LytM activation itself,
   # not AmiC catalysis, not FtsI synthase, not FtsZ GTPase ring, not mito DRP1,
   # not ribosome IF*, not fission endowment split).
-  # Continuum: ...->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (amidase → EnvC → FtsN → split).
+  # Continuum: ...->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (amidase → EnvC → FtsN → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for FtsN SPOR docking + signal work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsn life-force.
@@ -9152,7 +9152,7 @@ CLASS Cell
   # can close without bisecting the nucleoid; XerCD dif recombination partner.
   # Domain: septal DNA translocation (not FtsN SPOR trigger, not FtsZ ring,
   # not AmiC amidase, not EnvC activator, not fission endowment split).
-  # Continuum: ...->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (go → clear DNA → resolve dimers → split).
+  # Continuum: ...->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (go → clear DNA → resolve dimers → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for FtsK motor translocation cycles.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsk life-force.
@@ -9218,7 +9218,7 @@ CLASS Cell
   # strand exchange so dimeric chromosomes unknot into monomers before septum closure.
   # Domain: post-FtsK dif recombination (not FtsK AAA+ translocation itself, not FtsN
   # SPOR go-signal, not AmiC amidase, not EnvC activator, not fission endowment split).
-  # Continuum: ...->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->fission (clear DNA → resolve dimers → split).
+  # Continuum: ...->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (clear DNA → resolve dimers → split).
   # Pay take=min(n,atp,energy) — ATP stand-in for XerCD synaptic complex + ligation work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — xercd life-force.
@@ -9284,7 +9284,7 @@ CLASS Cell
   # Domain: post-XerCD OM cytokinetic coupling (not XerCD dif recombination,
   # not FtsK AAA+ DNA pump, not FtsN SPOR go-signal, not AmiC amidase, not
   # fission endowment energy split itself).
-  # Continuum: ...->ftsn->ftsk->xercd->tolpal->cpob->fission
+  # Continuum: ...->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission
   #   (clear DNA -> resolve dimers -> pull OM -> couple PG/OM -> split).
   # Pay take=min(n,atp,energy) - ATP/PMF stand-in for TolQ rotor + TolA-Pal tug.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
@@ -9351,7 +9351,7 @@ CLASS Cell
   # Domain: post-Tol-Pal PG-OM coupling (not Tol-Pal motor itself, not XerCD
   # dif recombination, not FtsK DNA pump, not FtsN SPOR go-signal, not AmiC
   # amidase, not fission endowment energy split).
-  # Continuum: ...->ftsk->xercd->tolpal->cpob->fission
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->fission
   #   (resolve dimers -> pull OM -> couple PG/OM -> split).
   # Pay take=min(n,atp,energy) - ATP stand-in for CpoB-TolA-PBP1B coordination.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
@@ -9410,6 +9410,76 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # LpoB: OM lipoprotein activator of PBP1B - stimulates septal PG after CpoB.
+  # LpoB (YraM) spans the periplasm from the outer membrane and docks PBP1B (MrcB),
+  # activating both GT (glycosyltransferase) and TP (transpeptidase) so septal
+  # PG is polymerized in phase with CpoB-TolA OM invagination.
+  # Without LpoB, PBP1B idles and the PG wall lags OM pull — envelope tears.
+  # Domain: post-CpoB PBP1B activation (not CpoB TolA couple itself, not Tol-Pal
+  # motor, not XerCD dif, not FtsK DNA pump, not FtsN SPOR, not AmiC amidase,
+  # not fission endowment energy split).
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->fission
+  #   (resolve dimers -> pull OM -> couple PG/OM -> activate PBP1B -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LpoB-PBP1B GT/TP activation.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lpob life-force.
+  # Usability: AGI models LpoB PBP1B activator energy gate under ASSERT after CpoB.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lpob n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
