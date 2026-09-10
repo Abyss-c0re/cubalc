@@ -1,3 +1,11 @@
+## 1.15.1662-usability — MI2177 LIFE_CELL_SCISSION (scission)
+
+- **life_cell.scission n**: terminal envelope PG scission after NlpD AmiC activation.
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: ...->damx->rlpa->nlpd->scission->fission.
+- Proof PASS asserts_ok=124+53+32=209; methods=172.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1659-usability — MI2174 LIFE_CELL_DAMX (damx)
 
 - **life_cell.damx n**: DamX SPOR-domain septal PG binder after DedD sensor.
