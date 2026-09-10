@@ -2,6 +2,16 @@
 
 ## 1.15.1671-usability — MI2186 LIFE_CELL_PBP1A
 
+
+## 1.15.1672-usability — MI2187 LIFE_CELL_MEPS
+
+- feat(life): MepS (Spr) OM lipoprotein DD-endopeptidase space-making after PBP1A
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps
+- proofs PASS asserts_ok=305 (180+73+52)
+- methods=181
+- signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+- build: CUBALC_MAX_SRC 320k→512k so life_cell INCLUDE loads
+
 - feat(life): PBP1A (MrcA) bifunctional aPBP GT+TP sidewall polymerase after LpoA
 - continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a
 - proofs PASS asserts_ok=301 (180+71+50)

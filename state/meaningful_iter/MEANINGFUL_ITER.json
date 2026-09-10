@@ -24,7 +24,7 @@
   "item": "life cell meps",
   "item_id": "mi_life_cell_meps",
   "summary": "LIFE_CELL_MEPS MI2187 MepS/Spr DD-endopeptidase space-making after PBP1A PASS asserts_ok=180+73+52",
-  "ts": "2026-09-10T18:56:48Z",
+  "ts": "2026-09-10T19:19:23Z",
   "asserts_ok": 305,
   "asserts_fail": 0,
   "asserts_ok_split": "180+73+52",
@@ -45,8 +45,5 @@
   "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps",
   "feat_head": "b5273fda9d65c1f472f8b848bb3594cdc7218936",
   "FEAT_HEAD": "b5273fda9d65c1f472f8b848bb3594cdc7218936",
-  "commit": "b5273fda9",
-  "HEAD": "575ccb8afdbefc8549dcd222af31f980bda9238e",
-  "tip": "575ccb8afdbefc8549dcd222af31f980bda9238e",
-  "head": "575ccb8afdbefc8549dcd222af31f980bda9238e"
+  "commit": "b5273fda9"
 }
