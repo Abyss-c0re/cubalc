@@ -46,11 +46,11 @@
   "hold_flash": 1,
   "feat_head": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
   "FEAT_HEAD": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
-  "HEAD": "cc9cafac9a528a1f7e5c2cc02b2f7ec1c064d37c",
-  "tip": "cc9cafac9a528a1f7e5c2cc02b2f7ec1c064d37c",
-  "head": "cc9cafac9a528a1f7e5c2cc02b2f7ec1c064d37c",
-  "commit": "cc9cafac9a5",
-  "pin": "cc9cafac9a528a1f7e5c2cc02b2f7ec1c064d37c",
-  "pinned_head": "cc9cafac9a528a1f7e5c2cc02b2f7ec1c064d37c",
-  "short": "cc9cafac9a5"
+  "HEAD": "a85fd105854e02b597c3d8ee63541175cd4f6e85",
+  "tip": "a85fd105854e02b597c3d8ee63541175cd4f6e85",
+  "head": "a85fd105854e02b597c3d8ee63541175cd4f6e85",
+  "commit": "a85fd105854",
+  "pin": "a85fd105854e02b597c3d8ee63541175cd4f6e85",
+  "pinned_head": "a85fd105854e02b597c3d8ee63541175cd4f6e85",
+  "short": "a85fd105854"
 }
