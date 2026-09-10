@@ -1,0 +1,92 @@
+// atomic_printer_life_translate.cubalc
+// Science integration: post-export cytosolic ribosome translate for life_cell.
+// Continuum: degrade -> export -> translate. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 48 0
+SEND printer set_threshold 10
+SEND printer pulse 5
+SEND printer photosynth 36
+SEND printer glycolyse 32
+SEND printer pump 22
+SEND printer photophos 22
+SEND printer charge 28
+SEND printer feed 28
+SEND printer release 3
+SEND printer reuptake 2
+SEND printer refill 2
+SEND printer dock 2
+SEND printer arm 2
+SEND printer clamp 2
+SEND printer trigger 2
+SEND printer pore 2
+SEND printer mix 2
+SEND printer collapse 2
+SEND printer retrieve 2
+SEND printer photosynth 14
+SEND printer glycolyse 12
+SEND printer charge 14
+SEND printer feed 14
+SEND printer acidify 2
+SEND printer mature 2
+SEND printer photosynth 12
+SEND printer glycolyse 10
+SEND printer charge 12
+SEND printer feed 12
+SEND printer recruit 2
+SEND printer activate 2
+SEND printer photosynth 10
+SEND printer glycolyse 8
+SEND printer charge 10
+SEND printer feed 10
+SEND printer degrade 3
+ASSERT LAST_N == 3 "sci deg3"
+SEND printer photosynth 10
+SEND printer glycolyse 8
+SEND printer charge 10
+SEND printer feed 10
+SEND printer export 2
+ASSERT LAST_N == 2 "sci exp2"
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer age
+LET a0 = LAST_N
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET at0 = LAST_N
+GETF printer pcr
+LET p0 = LAST_N
+GETF printer pmf
+LET pm0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+SEND printer translate 2
+ASSERT LAST_N == 2 "sci tr2"
+GETF printer heat
+ASSERT LAST_N == h0 + 2 "sci heat"
+GETF printer energy
+ASSERT LAST_N == e0 - 2 "sci e"
+GETF printer atp
+ASSERT LAST_N == at0 - 2 "sci a"
+GETF printer reserve
+ASSERT LAST_N == r0 - 2 "sci r"
+GETF printer age
+ASSERT LAST_N == a0 - 2 "sci age"
+GETF printer pcr
+ASSERT LAST_N == p0 "sci pcr held"
+GETF printer pmf
+ASSERT LAST_N == pm0 "sci pmf held"
+GETF printer threshold
+ASSERT LAST_N == t0 "sci thr held"
+GETF printer setpoint
+ASSERT LAST_N == s0 "sci sp held"
+GETF printer alive
+ASSERT LAST_N == 1 "sci alive"
+ASSERT 1 == 1 "atomic printer life translate ok"
