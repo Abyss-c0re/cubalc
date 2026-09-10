@@ -3,3 +3,4 @@ method: lpoa n
 continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
 asserts_ok=165+69+46=280
 VERSION 1.15.1670-usability
+HEAD 62991d95254f62a7e965798f6cb0db60eb718872
