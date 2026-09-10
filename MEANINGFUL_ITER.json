@@ -42,12 +42,12 @@
   "hold_flash": 1,
   "pass_": true,
   "head": "1f68e8f127edc99b8fb4a9c95a2247695e3c547f",
-  "HEAD": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "feat_head": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "FEAT_HEAD": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "tip": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "pin_head": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "pinned_head": "1de25c6eb2217f4c902ba515d083e80d6d9993ac",
-  "commit": "1de25c6eb",
-  "short": "1de25c6eb"
+  "HEAD": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "feat_head": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "FEAT_HEAD": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "tip": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "pin_head": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "pinned_head": "b1964f8bbd98a3e243df2fdefca943c677a8d381",
+  "commit": "b1964f8bb",
+  "short": "b1964f8bb"
 }
