@@ -1,5 +1,5 @@
 // atomic_printer_life_lpoa.cubalc
-// Atomic printer board: Cell.pbp2 monofunctional TPase elongasome partner (MrdA) after LpoA/MrdA.
+// Atomic printer board: Cell.lpoa OM lipoprotein activator of PBP1A after PBP2/MrdA.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -232,6 +232,12 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 30
 SEND printer feed 20
+SEND printer pbp2 4
+ASSERT LAST_N == 4 "printer pre_pbp2"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
@@ -244,14 +250,8 @@ GETF printer reserve
 LET pr = LAST_N
 GETF printer age
 LET page = LAST_N
-SEND printer pbp2 4
-ASSERT LAST_N == 4 "printer pre_pbp2"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 30
-SEND printer feed 20
 SEND printer lpoa 4
-ASSERT LAST_N == 4 "printer pbp2"
+ASSERT LAST_N == 4 "printer lpoa"
 
 GETF printer heat
 ASSERT LAST_N == ph + 4 "ap h+4"
@@ -429,18 +429,20 @@ SEND bud photosynth 24
 SEND bud glycolyse 20
 SEND bud charge 30
 SEND bud feed 20
+SEND bud pbp2 3
+ASSERT LAST_N == 3 "bud pre_pbp2"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
 GETF bud heat
 LET bh = LAST_N
 GETF bud energy
 LET be = LAST_N
 GETF bud atp
 LET ba = LAST_N
-SEND bud pbp2 3
-ASSERT LAST_N == 3 "bud pre_pbp2"
-SEND bud photosynth 20
-SEND bud charge 20
 SEND bud lpoa 3
-ASSERT LAST_N == 3 "bud pbp2"
+ASSERT LAST_N == 3 "bud lpoa"
 GETF bud heat
 ASSERT LAST_N == bh + 3 "bud h+3"
 GETF bud energy

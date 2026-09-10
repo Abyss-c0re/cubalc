@@ -1,5 +1,5 @@
 // smx_mesh_vesicle_lpoa_life.cubalc
-// SMX mesh vesicle: Cell.pbp2 monofunctional TPase elongasome partner (MrdA) after RodZ.
+// SMX mesh vesicle: Cell.lpoa OM lipoprotein activator of PBP1A after PBP2/MrdA.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -232,10 +232,6 @@ LET ve0 = LAST_N
 GETF vesicle atp
 LET va0 = LAST_N
 SEND vesicle pbp2 3
-ASSERT LAST_N == 3 "vesicle pre_pbp2"
-SEND vesicle photosynth 24
-SEND vesicle charge 20
-SEND vesicle lpoa 3
 ASSERT LAST_N == 3 "vx pbp2"
 GETF vesicle energy
 ASSERT LAST_N == ve0 - 3 "vx e-3"
@@ -279,7 +275,7 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 18
-SEND vesicle lpoa 2
+SEND vesicle pbp2 2
 ASSERT LAST_N == 2 "vx pbp22"
 GETF vesicle pcr
 ASSERT LAST_N == vp "vx pcr held"

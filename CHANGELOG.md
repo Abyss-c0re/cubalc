@@ -7,6 +7,11 @@
 - continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
 - methods=179
 
+- feat(life): LpoA OM lipoprotein activator of PBP1A after PBP2/MrdA
+- proofs PASS asserts_ok=288 (173+69+46)
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
+- methods=179
+
 
 ## 1.15.1669-usability — MI2184 LIFE_CELL_PBP2
 
