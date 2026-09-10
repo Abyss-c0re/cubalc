@@ -256,11 +256,11 @@ LET vr = LAST_N
 SEND vesicle pbp1a 3
 ASSERT LAST_N == 3 "vx pbp1a"
 GETF vesicle energy
-ASSERT LAST_N == ve0 - 3 "vx e-3"
+ASSERT LAST_N == ve - 3 "vx e-3"
 GETF vesicle heat
-ASSERT LAST_N == vh0 + 3 "vx h+3"
+ASSERT LAST_N == vh + 3 "vx h+3"
 GETF vesicle atp
-ASSERT LAST_N == va0 - 3 "vx atp-3"
+ASSERT LAST_N == va - 3 "vx atp-3"
 GETF vesicle pcr
 LET vp = LAST_N
 SEND vesicle photosynth 24

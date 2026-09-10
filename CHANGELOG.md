@@ -4,7 +4,7 @@
 
 - feat(life): PBP1A (MrcA) bifunctional aPBP GT+TP sidewall polymerase after LpoA
 - continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a
-- proofs PASS asserts_ok=298 (179+71+48)
+- proofs PASS asserts_ok=299 (180+71+48)
 - methods=180
 - signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
 
