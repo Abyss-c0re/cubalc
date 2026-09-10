@@ -348,6 +348,8 @@ GETF gate threshold
 LET thr0 = LAST_N
 SEND gate pbp1a 5
 ASSERT LAST_N == 5 "gate pre_pbp1a"
+SEND gate meps 5
+ASSERT LAST_N == 5 "gate pre_meps"
 SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
@@ -441,6 +443,8 @@ SEND gate pbp2 0
 ASSERT LAST_N == 0 "n0_pre_pbp2"
 SEND gate pbp1a 0
 ASSERT LAST_N == 0 "n0_pre_pbp1a"
+SEND gate meps 0
+ASSERT LAST_N == 0 "n0_pre_meps"
 SEND gate meph 0
 ASSERT LAST_N == 0 "n0"
 SEND gate lpob 3
@@ -751,6 +755,8 @@ GETF twin reserve
 LET tr0 = LAST_N
 SEND twin pbp1a 3
 ASSERT LAST_N == 3 "twin pre_pbp1a"
+SEND twin meps 3
+ASSERT LAST_N == 3 "twin pre_meps"
 SEND twin photosynth 24
 SEND twin glycolyse 20
 SEND twin charge 30
@@ -765,12 +771,6 @@ GETF twin pcr
 LET tc0 = LAST_N
 GETF twin reserve
 LET tr0 = LAST_N
-SEND twin meps 3
-ASSERT LAST_N == 3 "twin pre_meps"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 30
-SEND twin feed 20
 SEND twin meph 3
 ASSERT LAST_N == 3 "twin meph"
 GETF twin heat
@@ -1035,6 +1035,8 @@ GETF ceil threshold
 LET cthr0 = LAST_N
 SEND ceil pbp1a 4
 ASSERT LAST_N == 4 "ceil pre_pbp1a"
+SEND ceil meps 4
+ASSERT LAST_N == 4 "ceil pre_meps"
 SEND ceil photosynth 24
 SEND ceil glycolyse 20
 SEND ceil charge 30
@@ -1057,12 +1059,6 @@ GETF ceil setpoint
 LET csp0 = LAST_N
 GETF ceil threshold
 LET cthr0 = LAST_N
-SEND ceil meps 4
-ASSERT LAST_N == 4 "ceil pre_meps"
-SEND ceil photosynth 24
-SEND ceil glycolyse 20
-SEND ceil charge 30
-SEND ceil feed 20
 SEND ceil meph 4
 ASSERT LAST_N == 4 "ceil meph"
 GETF ceil heat
@@ -1188,10 +1184,30 @@ SEND g0 photosynth 10
 SEND g0 charge 10
 SEND g0 pbp1a 2
 ASSERT LAST_N == 2 "g0 pre_pbp1a"
+SEND g0 meps 2
+ASSERT LAST_N == 2 "g0 pre_meps"
 SEND g0 photosynth 24
 SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
+GETF g0 heat
+LET h0 = LAST_N
+GETF g0 energy
+LET e0 = LAST_N
+GETF g0 atp
+LET a0 = LAST_N
+GETF g0 pcr
+LET c0 = LAST_N
+GETF g0 reserve
+LET r0 = LAST_N
+GETF g0 age
+LET age0 = LAST_N
+GETF g0 pmf
+LET pmf0 = LAST_N
+GETF g0 setpoint
+LET sp0 = LAST_N
+GETF g0 threshold
+LET thr0 = LAST_N
 SEND g0 meph 2
 ASSERT LAST_N == 2 "g0 meph"
 GETF g0 ready

@@ -270,6 +270,8 @@ GETF printer age
 LET page = LAST_N
 SEND printer pbp1a 4
 ASSERT LAST_N == 4 "printer pre_pbp1a"
+SEND printer meps 4
+ASSERT LAST_N == 4 "printer pre_meps"
 SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 30
@@ -491,10 +493,12 @@ GETF bud atp
 LET ba = LAST_N
 SEND bud pbp1a 3
 ASSERT LAST_N == 3 "bud pre_pbp1a"
-SEND bud photosynth 20
-SEND bud glycolyse 16
-SEND bud charge 24
-SEND bud feed 16
+SEND bud meps 3
+ASSERT LAST_N == 3 "bud pre_meps"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
 GETF bud heat
 LET bh = LAST_N
 GETF bud energy
@@ -507,11 +511,6 @@ GETF bud reserve
 LET br = LAST_N
 GETF bud age
 LET bage = LAST_N
-SEND bud meps 3
-ASSERT LAST_N == 3 "bu pre_meps"
-SEND bud photosynth 20
-SEND bud charge 24
-SEND bud feed 16
 SEND bud meph 3
 ASSERT LAST_N == 3 "bud meph"
 GETF bud heat
