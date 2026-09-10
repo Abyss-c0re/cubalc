@@ -1,4 +1,4 @@
-LIFE_CELL_LPOA MI2185 OM lipoprotein activator of PBP1A (MrcA) after PBP2
+LIFE_CELL_LPOA MI2185 OM lipoprotein activator of PBP1A (MrcA) after PBP2/MrdA
 method: lpoa n
 continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa
 asserts_ok=173+69+46=288
