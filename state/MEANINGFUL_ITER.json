@@ -41,8 +41,16 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURB MI2197 PASS asserts_ok=191",
-  "head": "c71e7e00fa2d0a0ef3dd9079cc2fb5fe0a90c789",
-  "HEAD": "c71e7e00fa2d0a0ef3dd9079cc2fb5fe0a90c789",
-  "feat_commit": "f24af2fb7d425710c118274ffe6f1662425cd3c4"
+  "summary": "LIFE_CELL_MURB MI2197 tip==pin sealed PASS asserts_ok=191",
+  "head": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "HEAD": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "feat_commit": "f24af2fb7d425710c118274ffe6f1662425cd3c4",
+  "feat_head": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "FEAT_HEAD": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "tip": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "pin": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "pinned_head": "2162913638a3975639feaba941ef06d7fdf874d4",
+  "commit": "216291363",
+  "short": "2162913638a",
+  "host_finish": true
 }
