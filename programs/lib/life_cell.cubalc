@@ -158,6 +158,9 @@
 #   cnx n                post-trim calnexin/calreticulin lectin folding-cycle / monoglucosylated client engagement — pay min(n,atp,energy,setpoint) → heat +n + energy -n + sp -n; age/reserve/thr/pmf/pcr held; ready recompute
 #   uggt n               post-cnx UGGT1 QC reglucosylation of misfolded clients — pay min(n,atp,energy,pcr) → heat +n + energy -n + pcr -n; age/reserve/thr/pmf/sp held; ready recompute
 #   mann n               post-uggt ERManI slow Man9→Man8 demannosylation / ERAD timer — pay min(n,atp,energy) → heat +n + energy -n + thr +n; age/reserve/pmf/sp/pcr held; ready recompute
+#   os9 n                post-mann OS-9/XTP3-B MRH lectin ERAD recognition — pay min(n,atp,energy,threshold) → heat +n + energy -n + thr -n + pcr +n; age/reserve/pmf/sp held; ready recompute
+#   hrd n                post-os9 SEL1L/HRD1 E3 Ub-ligase commit — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
+#   vcp n                post-hrd p97/VCP AAA+ retrotranslocation extractase — pay min(n,atp,energy) → heat +n + energy -n + atp -n + reserve +n; age/pmf/sp/thr/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -7807,6 +7810,102 @@ CLASS Cell
     RET take
   END
 
+
+  # VCP: post-hrd p97/VCP (valosin-containing protein / Cdc48) AAA+ ATPase
+  # retrotranslocation extractase — hexameric unfoldase pulls HRD1-ubiquitinated
+  # Man8 clients from the ER membrane into the cytosol with Ufd1-Npl4 cofactors
+  # after SEL1L/HRD1 has conjugated the Ub mark (post-hrd vcp; not multipotent
+  # stream, not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+
+  # contact, not release quantal thr-, not reuptake clearance energy+, not refill
+  # VGLUT pack, not dock HOPS tethering, not arm NSF priming, not clamp complexin
+  # clamp, not trigger Ca fusion, not pore SNARE zipper, not mix content dump, not
+  # collapse coat uncoat, not retrieve CME membrane bank, not acidify EE proton
+  # pump, not mature Rab5->Rab7 identity, not recruit M6PR hydrolase cargo, not
+  # activate cathepsin arming thr-, not degrade substrate cut age- pcr+, not export
+  # lumen->cytosol pcr- reserve+, not translate reserve- age- ribosome rebuild, not
+  # transloc sp+ Sec61 channel gating, not cleave pcr+ SPC signal-peptide scission,
+  # not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS monoglucosylation open,
+  # not cnx sp- lectin client discharge, not uggt pcr- UGGT1 reglucosylation, not
+  # mann thr+ ERManI demannosylation timer, not os9 thr- pcr+ OS-9/XTP3-B lectin
+  # commit, not hrd pcr- SEL1L/HRD1 E3 Ub transfer).
+  # Spend take=min(n,atp,energy) — ATP + metabolic fuel fund p97 AAA+ unfoldase
+  # cycles after HRD has Ub-marked the OS-9-bound client (post-hrd vcp; extraction
+  # returns the polypeptide as cytosolic cargo bank for proteasome handoff).
+  # HEAT += take (each p97 ATP-hydrolysis / unfoldase dwell dissipates as
+  #   retrotranslocation mechanical work).
+  # ENERGY -= take (vcp burns active metabolic pool into AAA+ extraction work;
+  #   kin to hrd energy- but does not spend the pcr Ub-prep bank).
+  # ATP -= take (p97 hexamer is a dedicated AAA+ ATPase; ~6 ATP per extraction
+  #   stroke under physiological load).
+  # RESERVE rises: reserve = min(1000, reserve + take) — extracted polypeptide
+  #   joins the cytosolic substrate bank (distinct from export pcr- reserve+ AA
+  #   efflux, retrieve membrane bank, recruit hydrolase cargo, reuptake transmitter).
+  # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — vcp is post-hrd mechanical extraction
+  #   that neither ages the cell nor retunes ERAD timers / phosphagen prep.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp.
+  # Signature: heat+n energy-n atp-n reserve+n; age+pmf+sp+thr+pcr held — vcp life-force.
+  METHOD vcp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 
 END
