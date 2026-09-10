@@ -1,0 +1,114 @@
+// atomic_printer_life_rf1.cubalc
+// Atomic printer life-force board: Cell.rf1 stop-codon peptide-chain release.
+// Post-efg continuum. RF1 GGQ ester hydrolysis banks reserve without NTP burn.
+// Cube is SoT. Free energy must flow. AGI INCLUDE wonder.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY printer OF Cell 1 48 0
+ENTITY mesh OF Cell 1 36 0
+
+SEND printer set_threshold 8
+SEND mesh set_threshold 8
+
+SEND printer pulse 4
+SEND printer photosynth 40
+SEND printer glycolyse 36
+SEND printer pump 24
+SEND printer photophos 24
+SEND printer charge 40
+SEND printer feed 40
+SEND printer charge_pcr 24
+
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer aars 3
+ASSERT LAST_N == 3 "ap aars"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 16
+SEND printer eftu 3
+ASSERT LAST_N == 3 "ap eftu"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer ptc 3
+ASSERT LAST_N == 3 "ap ptc"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+SEND printer charge_pcr 16
+SEND printer efg 3
+ASSERT LAST_N == 3 "ap efg"
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+GETF printer pcr
+LET c0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer age
+LET age0 = LAST_N
+GETF printer pmf
+LET p0 = LAST_N
+GETF printer threshold
+LET t0 = LAST_N
+GETF printer setpoint
+LET s0 = LAST_N
+
+SEND printer rf1 4
+ASSERT LAST_N == 4 "ap rf1"
+
+GETF printer heat
+ASSERT LAST_N == h0 + 4 "ap heat+4"
+GETF printer energy
+ASSERT LAST_N == e0 - 4 "ap energy-4"
+GETF printer atp
+ASSERT LAST_N == a0 "ap atp held"
+GETF printer pcr
+ASSERT LAST_N == c0 "ap pcr held"
+GETF printer reserve
+ASSERT LAST_N == r0 + 4 "ap reserve+4"
+GETF printer age
+ASSERT LAST_N == age0 "ap age held"
+GETF printer pmf
+ASSERT LAST_N == p0 "ap pmf held"
+GETF printer threshold
+ASSERT LAST_N == t0 "ap thr held"
+GETF printer setpoint
+ASSERT LAST_N == s0 "ap sp held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive"
+
+// Mesh: rf1 drains only energy
+SEND mesh pulse 2
+SEND mesh photosynth 30
+SEND mesh glycolyse 20
+SEND mesh charge 20
+GETF mesh energy
+LET me0 = LAST_N
+ASSERT me0 > 0 "mesh has energy"
+SEND mesh rf1 100
+LET mg = LAST_N
+ASSERT mg == me0 "mesh took all energy"
+GETF mesh energy
+ASSERT LAST_N == 0 "mesh energy zero"
+GETF mesh alive
+ASSERT LAST_N == 1 "mesh alive"
+
+ENTITY dead OF Cell 0 30 0
+SEND dead rf1 5
+ASSERT LAST_N == 0 "dead rf1 0"
+
+ASSERT 1 == 1 "atomic_printer_life_rf1 sealed"

@@ -1,3 +1,10 @@
+## 2156 LIFE_CELL_RF1 (1.15.1641-usability)
+
+- feat(life): post-efg class-I release factor peptide-chain release for life_cell continuum
+- METHOD rf1 n: pay min(n,energy) -> heat+n energy-n reserve+n; atp/pcr/age/pmf/sp/thr held
+- Continuum: ...->aars->eftu->ptc->efg->rf1
+- Proof 2156 asserts_ok=93; science rf1=22; smx rf1=16; flagship 1620 regression PASS
+
 ## 2150 LIFE_CELL_PSM (1.15.1634-usability)
 
 - feat(life): post-vcp 26S proteasome degradation of VCP-extracted clients for life_cell continuum

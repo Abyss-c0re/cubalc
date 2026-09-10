@@ -8415,4 +8415,78 @@ CLASS Cell
 
 
 
+
+  # RF1: post-efg class-I release factor (RF1/RF2/eRF1) peptide-chain release —
+  # stop codon in the A site (placed by efg mRNA ratchet) is decoded by RF1/RF2
+  # (or eRF1). The universally conserved GGQ motif inserts into the PTC and
+  # catalyzes hydrolytic cleavage of the ester bond linking the completed
+  # nascent chain to P-site tRNA — releasing free polypeptide. No GTP is burned
+  # by RF1 itself (RF3 GTPase ejects RF1 afterward; modeled separately).
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1.
+  # Pay take=min(n,energy) — metabolic energy pays RF domain docking / GGQ
+  # insertion conformational work; ATP/PCR HELD (not aaRS adenylate, not EF-G
+  # or EF-Tu GTPase power stroke). RESERVE rises: reserve = min(1000, reserve+take)
+  # — released completed chain banks into the product/AA-adjacent pool (inverse
+  # of aars reserve- charge and translate reserve- rebuild; same class as pepr
+  # reserve+ salvage but WITHOUT atp- — pure catalytic ester hydrolysis).
+  # AGE/PMF/SETPOINT/THRESHOLD/ATP/PCR HELD — rf1 releases chain without aging
+  # the cell, retuning division threshold, or drawing phosphagen.
+  # Signature: heat+n energy-n reserve+n; atp+pcr+age+pmf+sp+thr held — rf1 life-force.
+  # Usability: AGI models post-efg stop-codon peptide release under ASSERT boards.
+  METHOD rf1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
 END
