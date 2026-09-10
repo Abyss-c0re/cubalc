@@ -33,5 +33,8 @@
     "sum": 454
   },
   "asserts_fail": 0,
-  "note": "MurQ MurNAc-6-P etherase after AnmK; yields GlcNAc-6-P + lactate for glycolysis/PG reuse"
+  "note": "MurQ MurNAc-6-P etherase after AnmK; yields GlcNAc-6-P + lactate for glycolysis/PG reuse",
+  "head": "70a71d3d58ebc26098b28cf01b77287a8f8292f6",
+  "sha": "70a71d3d58ebc26098b28cf01b77287a8f8292f6",
+  "pinned_sha": "70a71d3d58ebc26098b28cf01b77287a8f8292f6"
 }
