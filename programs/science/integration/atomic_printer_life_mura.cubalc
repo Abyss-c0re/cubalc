@@ -1,5 +1,5 @@
-// atomic_printer_life_murq.cubalc
-// Atomic printer board: Cell.murq MurQ anhMurNAc-6-P etherase after AnmK.
+// atomic_printer_life_mura.cubalc
+// Atomic printer board: Cell.mura MurA UDP-GlcNAc enolpyruvyl transferase after MurQ.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -59,8 +59,8 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer anmk 4
-ASSERT LAST_N == 4 "pr anmk"
+SEND printer murq 4
+ASSERT LAST_N == 4 "pr murq"
 SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
@@ -73,8 +73,8 @@ GETF printer atp
 LET a0 = LAST_N
 GETF printer pcr
 LET c0 = LAST_N
-SEND printer murq 5
-ASSERT LAST_N == 5 "pr murq"
+SEND printer mura 5
+ASSERT LAST_N == 5 "pr mura"
 GETF printer heat
 ASSERT LAST_N == h0 + 5 "pr h+5"
 GETF printer energy
@@ -93,19 +93,19 @@ GETF ink energy
 LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
-SEND ink murq 3
-ASSERT LAST_N == 3 "ink murq"
+SEND ink mura 3
+ASSERT LAST_N == 3 "ink mura"
 GETF ink heat
 ASSERT LAST_N == ih + 3 "ink h+3"
 GETF ink energy
 ASSERT LAST_N == ie - 3 "ink e-3"
 GETF ink atp
 ASSERT LAST_N == ia - 3 "ink atp-3"
-SEND scrap murq 3
-ASSERT LAST_N == 0 "scrap murq0"
-SEND printer murq 0
-ASSERT LAST_N == 0 "pr murq n0"
-SEND printer murq -2
-ASSERT LAST_N == 0 "pr murq nneg"
+SEND scrap mura 3
+ASSERT LAST_N == 0 "scrap mura0"
+SEND printer mura 0
+ASSERT LAST_N == 0 "pr mura n0"
+SEND printer mura -2
+ASSERT LAST_N == 0 "pr mura nneg"
 GETF printer alive
 ASSERT LAST_N == 1 "pr alive"
