@@ -286,6 +286,12 @@ GETF printer reserve
 LET pr = LAST_N
 GETF printer age
 LET page = LAST_N
+SEND printer meps 2
+ASSERT LAST_N == 2 "pr pre_meps"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
 SEND printer meph 4
 ASSERT LAST_N == 4 "printer meph"
 
