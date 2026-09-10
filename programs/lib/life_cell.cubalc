@@ -9481,5 +9481,74 @@ CLASS Cell
   END
 
 
+  # Pbp1B: bifunctional aPBP septal PG synthase after LpoB GT/TP activation.
+  # PBP1B (MrcB) polymerizes septal peptidoglycan: GT extends glycan strands from
+  # lipid II and TP cross-links peptides so the wall thickens in register with
+  # LpoB-docked activation and CpoB-TolA OM invagination.
+  # Without PBP1B catalytic burn, activated enzyme still yields no septal PG —
+  # envelope cannot close before fission.
+  # Domain: post-LpoB PBP1B catalysis (not LpoB docking itself, not CpoB TolA couple,
+  # not Tol-Pal motor, not XerCD dif, not FtsK DNA pump, not FtsN SPOR, not AmiC
+  # amidase, not fission endowment energy split).
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->pbp1b->fission
+  #   (resolve dimers -> pull OM -> couple PG/OM -> activate PBP1B -> synth PG -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PBP1B GT/TP catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pbp1b life-force.
+  # Usability: AGI models PBP1B septal PG synthase energy gate under ASSERT after LpoB.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pbp1b n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
