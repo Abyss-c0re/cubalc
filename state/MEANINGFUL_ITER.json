@@ -38,5 +38,10 @@
   "prior_feature": "LIFE_CELL_FTSZ",
   "sealed": true,
   "pass_": true,
-  "methods": 156
+  "methods": 156,
+  "feat_head": "aabdd2c38dda7154515ada347fd0b3496a31107b",
+  "FEAT_HEAD": "aabdd2c38dda7154515ada347fd0b3496a31107b",
+  "HEAD": "aabdd2c38dda7154515ada347fd0b3496a31107b",
+  "tip": "aabdd2c38dda7154515ada347fd0b3496a31107b",
+  "commit": "aabdd2c38"
 }
