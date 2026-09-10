@@ -1,0 +1,15 @@
+SHIP 2155_life_cell_efg
+FEATURE LIFE_CELL_EFG
+MI 2155
+VERSION 1.15.1640-usability
+HEAD dd92ad07aebf8954680c4c0a8aec6dad5989fdd8
+FEAT_HEAD dd92ad07aebf8954680c4c0a8aec6dad5989fdd8
+METHOD efg n
+proof programs/proof/2155_life_cell_efg.cubalc asserts_ok=91
+science atomic_printer_life_efg asserts_ok=34
+smx smx_mesh_vesicle_efg_life asserts_ok=37
+methods 149
+continuum ...->aars->eftu->ptc->efg
+signature heat+n energy-n atp-n pcr-n; age/reserve/pmf/sp/thr held
+MAX_SRC 512K
+PASS

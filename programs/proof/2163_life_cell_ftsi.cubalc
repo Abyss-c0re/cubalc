@@ -1,5 +1,5 @@
-// 2162_life_cell_ftsi.cubalc
-// Proof 2162: life_cell ftsi - FtsI/PBP3 septal PG synthase after FtsZ Z-ring.
+// 2163_life_cell_ftsi.cubalc
+// Proof 2163: life_cell ftsi - FtsI/PBP3 septal PG synthase after FtsZ Z-ring.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
 // Continuum after ftsz. Cube is SoT. Free energy must flow.
 
@@ -421,4 +421,4 @@ ASSERT LAST_N == 2 "g0 ftsi"
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 
-ASSERT 1 == 1 "2162_life_cell_ftsi sealed"
+ASSERT 1 == 1 "2163_life_cell_ftsi sealed"
