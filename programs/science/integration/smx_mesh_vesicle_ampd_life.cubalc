@@ -1,0 +1,106 @@
+// smx_mesh_vesicle_ampd_life.cubalc
+// SMX mesh vesicle board: AmpD after NagZ recycle amidase under sealed exchange.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+ENTITY dock OF Cell 1 36 0
+ENTITY ghost OF Cell 0 12 0
+
+SEND vesicle set_threshold 8
+SEND dock set_threshold 8
+SEND vesicle pulse 5
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle pump 22
+SEND vesicle charge 36
+SEND vesicle feed 32
+SEND vesicle slt 3
+ASSERT LAST_N == 3 "ves slt"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 18
+SEND vesicle charge 24
+SEND vesicle feed 18
+SEND vesicle ampg 3
+ASSERT LAST_N == 3 "ves ampg"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 18
+SEND vesicle charge 24
+SEND vesicle feed 18
+SEND vesicle nagz 3
+ASSERT LAST_N == 3 "ves nagz"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 18
+SEND vesicle charge 24
+SEND vesicle feed 18
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pmf
+LET vp = LAST_N
+SEND vesicle ampd 4
+ASSERT LAST_N == 4 "ves ampd"
+GETF vesicle heat
+ASSERT LAST_N == vh + 4 "ves h+4"
+GETF vesicle energy
+ASSERT LAST_N == ve - 4 "ves e-4"
+GETF vesicle atp
+ASSERT LAST_N == va - 4 "ves atp-4"
+GETF vesicle pmf
+ASSERT LAST_N == vp "ves pmf held"
+SEND dock photosynth 24
+SEND dock glycolyse 20
+SEND dock charge 28
+SEND dock feed 20
+SEND dock ampg 2
+ASSERT LAST_N == 2 "dock ampg"
+SEND dock nagz 2
+ASSERT LAST_N == 2 "dock nagz"
+GETF dock heat
+LET dh = LAST_N
+GETF dock energy
+LET de = LAST_N
+GETF dock atp
+LET da = LAST_N
+SEND dock ampd 3
+ASSERT LAST_N == 3 "dock ampd"
+GETF dock heat
+ASSERT LAST_N == dh + 3 "dock h+3"
+GETF dock energy
+ASSERT LAST_N == de - 3 "dock e-3"
+GETF dock atp
+ASSERT LAST_N == da - 3 "dock atp-3"
+SEND ghost ampd 5
+ASSERT LAST_N == 0 "ghost ampd 0"
+SEND vesicle ampd 0
+ASSERT LAST_N == 0 "ves ampd n0"
+SEND vesicle photosynth 28
+SEND vesicle glycolyse 24
+SEND vesicle charge 32
+SEND vesicle feed 24
+GETF vesicle heat
+LET hx = LAST_N
+GETF vesicle energy
+LET ex = LAST_N
+GETF vesicle atp
+LET ax = LAST_N
+SEND vesicle slt 2
+ASSERT LAST_N == 2 "seal slt"
+SEND vesicle ampg 2
+ASSERT LAST_N == 2 "seal ampg"
+SEND vesicle nagz 2
+ASSERT LAST_N == 2 "seal nagz"
+SEND vesicle ampd 2
+ASSERT LAST_N == 2 "seal ampd"
+GETF vesicle heat
+ASSERT LAST_N == hx + 8 "seal h+8"
+GETF vesicle energy
+ASSERT LAST_N == ex - 8 "seal e-8"
+GETF vesicle atp
+ASSERT LAST_N == ax - 8 "seal atp-8"
+ASSERT 1 == 1 "smx_mesh_vesicle_ampd_life ok"

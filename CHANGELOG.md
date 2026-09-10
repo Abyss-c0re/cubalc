@@ -1,3 +1,9 @@
+## 1.15.1680-usability — MI2193 LIFE_CELL_AMPD
+
+- feat(life): AmpD anhMurNAc-L-Ala amidase after NagZ for muropeptide recycle
+- proofs PASS (life_cell ampd + atomic + SMX vesicle)
+- continuum: ...->slt->ampg->nagz->ampd
+
 ## 1.15.1669-usability — MI2184 LIFE_CELL_PBP2
 
 - feat(life): PBP2/MrdA monofunctional TPase elongasome partner after RodZ

@@ -1,0 +1,8 @@
+SHIP LIFE_CELL_AMPD MI2193
+METHOD ampd n on life_cell after nagz
+Continuum: ...->meph->slt->ampg->nagz->ampd
+Proof: programs/proof/2193_life_cell_ampd.cubalc
+Atomic: programs/science/integration/atomic_printer_life_ampd.cubalc
+SMX: programs/science/integration/smx_mesh_vesicle_ampd_life.cubalc
+Domain: AmpD cytoplasmic anhMurNAc-L-Ala amidase (PG recycle after NagZ)
+Cube is SoT. Free energy must flow.
