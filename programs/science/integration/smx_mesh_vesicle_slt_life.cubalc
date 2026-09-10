@@ -1,0 +1,102 @@
+// smx_mesh_vesicle_slt_life.cubalc
+// SMX mesh vesicle board: Cell.slt after MepH on living vesicle gate.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+ENTITY cargo OF Cell 1 28 0
+ENTITY ghost OF Cell 0 12 0
+
+SEND vesicle set_threshold 6
+SEND cargo set_threshold 6
+SEND vesicle pulse 3
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle pump 20
+SEND vesicle charge 36
+SEND vesicle feed 32
+SEND vesicle meps 3
+ASSERT LAST_N == 3 "v meps"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mepm 3
+ASSERT LAST_N == 3 "v mepm"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle meph 3
+ASSERT LAST_N == 3 "v meph"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+GETF vesicle heat
+LET h0 = LAST_N
+GETF vesicle energy
+LET e0 = LAST_N
+GETF vesicle atp
+LET a0 = LAST_N
+GETF vesicle age
+LET age0 = LAST_N
+SEND vesicle slt 4
+ASSERT LAST_N == 4 "v slt"
+GETF vesicle heat
+ASSERT LAST_N == h0 + 4 "v h+4"
+GETF vesicle energy
+ASSERT LAST_N == e0 - 4 "v e-4"
+GETF vesicle atp
+ASSERT LAST_N == a0 - 4 "v atp-4"
+GETF vesicle age
+ASSERT LAST_N == age0 "v age held"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+GETF cargo heat
+LET ch = LAST_N
+GETF cargo energy
+LET ce = LAST_N
+GETF cargo atp
+LET ca = LAST_N
+SEND cargo slt 3
+ASSERT LAST_N == 3 "c slt"
+GETF cargo heat
+ASSERT LAST_N == ch + 3 "c h+3"
+GETF cargo energy
+ASSERT LAST_N == ce - 3 "c e-3"
+GETF cargo atp
+ASSERT LAST_N == ca - 3 "c atp-3"
+SEND ghost slt 3
+ASSERT LAST_N == 0 "ghost slt 0"
+SEND vesicle slt 0
+ASSERT LAST_N == 0 "v slt n0"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
+GETF vesicle heat
+LET hx = LAST_N
+GETF vesicle energy
+LET ex = LAST_N
+GETF vesicle atp
+LET ax = LAST_N
+SEND vesicle meps 1
+ASSERT LAST_N == 1 "seal meps"
+SEND vesicle mepm 1
+ASSERT LAST_N == 1 "seal mepm"
+SEND vesicle meph 1
+ASSERT LAST_N == 1 "seal meph"
+SEND vesicle slt 1
+ASSERT LAST_N == 1 "seal slt"
+GETF vesicle heat
+ASSERT LAST_N == hx + 4 "seal h+4"
+GETF vesicle energy
+ASSERT LAST_N == ex - 4 "seal e-4"
+GETF vesicle atp
+ASSERT LAST_N == ax - 4 "seal atp-4"
+ASSERT 1 == 1 "smx_mesh_vesicle_slt_life ok"
