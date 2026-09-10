@@ -40,5 +40,13 @@
   "sealed": true,
   "pass_": true,
   "methods": 162,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "feat_head": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "FEAT_HEAD": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "HEAD": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "tip": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "commit": "5f5da8e84",
+  "pin": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "pinned_head": "5f5da8e849cd4ecf7ba773f9db6340f9aa845c29",
+  "short": "5f5da8e84"
 }
