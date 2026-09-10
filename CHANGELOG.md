@@ -1,3 +1,11 @@
+## 1.15.1665-usability — MI2180 LIFE_CELL_MREB (mreb)
+
+- **life_cell.mreb n**: actin-like elongasome cytoskeletal scaffold after RodA SEDS.
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: ...->damx->rlpa->nlpd->scission->fispay->roda->mreb.
+- Proofs PASS: 136+59+36 = 231 asserts (2180 + atomic_printer + smx vesicle).
+- methods=174. Cube is SoT. Free energy must flow.
+
 ## 1.15.1664-usability — MI2179 LIFE_CELL_RODA
 
 - feat(life): RodA SEDS rod PG polymerase elongation restart after FisPay
