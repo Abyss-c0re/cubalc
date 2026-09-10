@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2174,
+  "meaningful_iter": 2178,
   "MEANINGFUL_ITER": 2174,
   "iter": 2174,
   "n": 2174,
-  "mi": 2174,
-  "version": "1.15.1659-usability",
+  "mi": 2178,
+  "version": "1.15.1663-usability",
   "VERSION": "1.15.1659-usability",
   "feature": "life_cell_damx",
   "FEATURE": "LIFE_CELL_DAMX",
   "name": "LIFE_CELL_DAMX",
   "title": "life cell damx",
   "label": "LIFE_CELL_DAMX",
-  "method": "damx n",
+  "method": "fispay n",
   "ship": "2174_life_cell_damx",
   "proof": "programs/proof/2174_life_cell_damx.cubalc",
   "proofs": [
@@ -48,5 +48,6 @@
   "pinned_head": "e3f940336db12aed00df3b638ca2381e095daaa2",
   "commit": "e3f940336",
   "short": "e3f940336",
-  "pin": "e3f940336db12aed00df3b638ca2381e095daaa2"
+  "pin": "e3f940336db12aed00df3b638ca2381e095daaa2",
+  "feat": "LIFE_CELL_FISPAY"
 }

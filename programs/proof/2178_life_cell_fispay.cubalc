@@ -1,7 +1,7 @@
 // 2178_life_cell_fispay.cubalc
-// Proof 2178: life_cell fispay - cytokinesis endowment energy split after Scission.
+// Proof 2177: life_cell fispay - cytokinesis endowment energy split after Scission.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
-// Continuum after fispay. Cube is SoT. Free energy must flow.
+// Continuum after scission. Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -253,6 +253,13 @@ SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
 
+SEND gate scission 5
+ASSERT LAST_N == 5 "gate pre_scission"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -272,7 +279,7 @@ LET sp0 = LAST_N
 GETF gate threshold
 LET thr0 = LAST_N
 SEND gate fispay 5
-ASSERT LAST_N == 5 "gate fispay"
+ASSERT LAST_N == 5 "gate "
 
 GETF gate heat
 ASSERT LAST_N == h0 + 5 "h+5"
@@ -381,7 +388,7 @@ ASSERT st >= 1 "starved take>=1"
 ASSERT st <= se "starved <=e"
 ASSERT st <= sa "starved <=atp"
 
-# twin continuum if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
+# twin continuum if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->pbp1b->dedd->damx->rlpa->scission
 SEND twin pulse 4
 SEND twin photosynth 36
 SEND twin glycolyse 30
@@ -539,6 +546,13 @@ SEND twin glycolyse 20
 SEND twin charge 30
 SEND twin feed 20
 
+SEND twin scission 3
+ASSERT LAST_N == 3 "twin pre_scission"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+
 GETF twin heat
 LET th0 = LAST_N
 GETF twin energy
@@ -550,7 +564,7 @@ LET tr0 = LAST_N
 GETF twin pcr
 LET tc0 = LAST_N
 SEND twin fispay 3
-ASSERT LAST_N == 3 "twin fispay"
+ASSERT LAST_N == 3 "twin "
 GETF twin heat
 ASSERT LAST_N == th0 + 3 "twin h+3"
 GETF twin energy
@@ -716,6 +730,13 @@ SEND ceil glycolyse 20
 SEND ceil charge 30
 SEND ceil feed 20
 
+SEND ceil scission 4
+ASSERT LAST_N == 4 "ceil pre_scission"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+
 GETF ceil heat
 LET ch0 = LAST_N
 GETF ceil atp
@@ -725,7 +746,7 @@ LET cc0 = LAST_N
 GETF ceil reserve
 LET cr0 = LAST_N
 SEND ceil fispay 4
-ASSERT LAST_N == 4 "ceil fispay"
+ASSERT LAST_N == 4 "ceil "
 GETF ceil energy
 ASSERT LAST_N == ce0 - 4 "ceil e-4"
 GETF ceil heat
@@ -803,9 +824,15 @@ SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
 
+SEND g0 scission 2
+ASSERT LAST_N == 2 "g0 pre_scission"
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
 SEND g0 fispay 2
-ASSERT LAST_N == 2 "g0 fispay"
+ASSERT LAST_N == 2 "g0 "
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 
-ASSERT 1 == 1 "2178_life_cell_fispay sealed"
+ASSERT 1 == 1 "2176_life_cell_scission sealed"

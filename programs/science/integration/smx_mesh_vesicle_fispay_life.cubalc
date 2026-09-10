@@ -1,6 +1,6 @@
 // smx_mesh_vesicle_fispay_life.cubalc
 // SMX mesh vesicle: Cell.fispay cytokinesis endowment energy split after Scission.
-// Continuum after fispay. Cube is SoT. Free energy must flow.
+// Continuum after scission. Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -173,6 +173,13 @@ SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 18
 
+SEND vesicle scission 3
+ASSERT LAST_N == 3 "vesicle pre_scission"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+
 GETF vesicle energy
 LET ve0 = LAST_N
 GETF vesicle heat
@@ -190,7 +197,7 @@ ASSERT LAST_N == va0 - 3 "vx atp-3"
 GETF vesicle pcr
 LET vp = LAST_N
 SEND vesicle fispay 2
-ASSERT LAST_N == 2 "vx scission2"
+ASSERT LAST_N == 2 "vx fispay2"
 GETF vesicle pcr
 ASSERT LAST_N == vp "vx pcr held"
 

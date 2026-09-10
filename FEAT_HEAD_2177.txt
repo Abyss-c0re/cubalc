@@ -1,2 +1,4 @@
-deeeac9c5051c89413922c7ba71933d14189701f
-LIFE_CELL_SCISSION MI2177 deeeac9c5051c89413922c7ba71933d14189701f
+LIFE_CELL_SCISSION MI2177 terminal envelope PG cut after NlpD
+method: scission n
+continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission
+VERSION 1.15.1662-usability
