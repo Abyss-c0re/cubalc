@@ -30,16 +30,18 @@
     "sum": 181
   },
   "asserts_fail": 0,
-  "item": "life_cell mura post-murq UDP-GlcNAc enolpyruvyl transferase continuum free-energy MurA ENOP commit spark-safe",
+  "note": "MurA UDP-GlcNAc enolpyruvyl transferase after MurQ; commits recycled flux into UDP-MurNAc precursor path",
+  "item": "life cell mura",
   "item_id": "mi_life_cell_mura",
-  "note": "METHOD mura n after murq; heat+n atp-n energy-n; held age/pcr/reserve/pmf/sp/thr; PASS life=115 atomic=30 smx=24 flag=12 sum=181",
-  "ts": "2026-09-10T23:00:14Z",
-  "status": "open",
-  "hold_flash": 1,
+  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=181.",
+  "ts": "2026-09-10T23:01:53Z",
+  "host_finish": true,
+  "anti_bloat": true,
+  "status": "sealed",
   "pass": true,
   "proof_status": "PASS",
   "prior_feature": "LIFE_CELL_MURQ",
-  "sealed": false,
-  "anti_bloat": true,
-  "summary": "LIFE_CELL_MURA MI2196 proofs PASS asserts_ok=181"
+  "sealed": true,
+  "methods": 186,
+  "hold_flash": 1
 }

@@ -1,3 +1,9 @@
+## MI2196 LIFE_CELL_MURA
+
+- METHOD mura (MurA UDP-GlcNAc enolpyruvyl transferase) after murq on life_cell
+- Continuum ...->anmk->murq->mura
+- Proofs PASS asserts_fail:0 sum=181 (life=115 atomic=30 smx=24 flag=12)
+
 # Changelog
 
 ## 1.15.1683-usability — MI2196 LIFE_CELL_MURA (mura after murq)
