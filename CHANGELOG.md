@@ -1,12 +1,22 @@
-## 1.15.1675-usability — LIFE_CELL_AMPG (MI 2190)
-
-- feat(life_cell): METHOD slt (Slt70 LTG after MepH) + METHOD ampg (AmpG permease after Slt)
-- proof: 2189_life_cell_slt PASS asserts_ok=190; 2190_life_cell_ampg PASS asserts_ok=193
-- science: atomic_printer_life_slt/ampg + smx_mesh_vesicle_slt/ampg_life PASS
-- continuum: ...->pbp1a->meps->meph->slt->ampg
-- free energy flows; cube is SoT
-
 # Changelog
+
+## 1.15.1674-usability — MI2190 LIFE_CELL_AMPG (ampg after slt)
+
+- feat(life): AmpG IM muropeptide permease PG-recycling import after Slt70
+- also ships METHOD slt n (Slt70 lytic TG glycan cleavage after MepH) as MI2189 continuum prior
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg
+- proofs PASS asserts_ok=330 (193+79+58) ampg; slt 327 (194+77+56)
+- methods=184 (meph->slt->ampg)
+- signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+- Cube is SoT. Free energy must flow.
+
+## 1.15.1673-usability — MI2189 LIFE_CELL_SLT (slt)
+
+- feat(life): Slt70 lytic transglycosylase glycan cleavage after MepH
+- continuum: ...->pbp1a->meps->meph->slt
+- proofs PASS asserts_ok=327 (194+77+56)
+- methods=183
+- signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
 
 ## 1.15.1672-usability — MI2187 LIFE_CELL_MEPS
 
@@ -47,14 +57,12 @@
 - proofs PASS asserts_ok=254 (147+65+42)
 - methods=177
 
-
 ## 1.15.1667-usability — MI2182 LIFE_CELL_MRED (2026-09-10)
 
 - **feat(life):** MreD IM elongasome stabilizer after MreC
 - Continuum: `...->fispay->roda->mreb->mrec->mred`
 - Proofs PASS: 143 + 63 + 40 = **246** asserts
 - methods=176 on life_cell
-
 
 ## 1.15.1666-usability — MI2181 LIFE_CELL_MREC
 
@@ -120,7 +128,6 @@
 - Proof `programs/proof/2168_life_cell_xercd.cubalc` PASS asserts_ok=90+37+18 (flagship 1620 ok); methods=162.
 
 ## 1.15.1652-usability — MI2167 LIFE_CELL_FTSK (ftsk)
-
 
 ## 1.15.1653-usability — 2168 LIFE_CELL_XERCD
 
@@ -347,7 +354,6 @@
 - proofs: 2087_life_cell_exocyte 61/0; science atomic_printer_life_exocyte 26/0
 - VERSION 1.15.1573-usability
 
-
 ## 1.15.1571-usability — 2026-09-08
 
 ### Direction
@@ -484,7 +490,6 @@ See 1.15.1570-usability.
 - proof 73_smx_cisterna_chyli + 1809_smx_mesh_cisterna_chyli_life PASS 60/0
 - flagship 1620 PASS 12/0; pure-C src/cubalc_smx_cisterna_chyli.c
 - ENERGYFLOW mesenteric trunks→cisterna confluence→chyle reservoir→thoracic duct origin
-
 
 ## 1.15.1282-usability — MEANINGFUL_ITER 1807 MESH_APPENDIX
 
@@ -5335,7 +5340,6 @@ See 1.12.230-universal.
 ### Prior
 See 1.12.229-universal.
 
-
 ## 1.12.229-universal — 2026-08-03
 
 ### Direction
@@ -5349,7 +5353,6 @@ See 1.12.229-universal.
 
 ### Prior
 See 1.12.228-universal.
-
 
 ## 1.12.228-universal — 2026-08-03
 
@@ -5365,7 +5368,6 @@ See 1.12.228-universal.
 ### Prior
 See 1.12.227-universal.
 
-
 ## 1.12.227-universal — 2026-08-03
 
 ### Direction
@@ -5378,7 +5380,6 @@ See 1.12.227-universal.
 
 ### Prior
 See 1.12.226-universal.
-
 
 ## 1.12.226-universal — 2026-08-03
 
@@ -5394,7 +5395,6 @@ See 1.12.226-universal.
 ### Prior
 See 1.12.225-universal.
 
-
 ## 1.12.225-universal — 2026-08-03
 
 ### Direction
@@ -5408,7 +5408,6 @@ See 1.12.225-universal.
 
 ### Prior
 See 1.12.224-universal.
-
 
 ## 1.12.224-universal — 2026-08-03
 
@@ -5424,7 +5423,6 @@ See 1.12.224-universal.
 ### Prior
 See 1.12.223-universal.
 
-
 ## 1.12.223-universal — 2026-08-03
 
 ### Direction
@@ -5438,7 +5436,6 @@ See 1.12.223-universal.
 
 ### Prior
 See 1.12.222-universal.
-
 
 ## 1.12.222-universal — 2026-08-03
 
@@ -5454,7 +5451,6 @@ See 1.12.222-universal.
 ### Prior
 See 1.12.221-universal.
 
-
 ## 1.12.221-universal — 2026-08-03
 
 ### Direction
@@ -5468,7 +5464,6 @@ See 1.12.221-universal.
 
 ### Prior
 See 1.12.220-universal.
-
 
 # Changelog
 
@@ -5486,7 +5481,6 @@ See 1.12.220-universal.
 ### Prior
 See 1.12.219-universal.
 
-
 ## 1.12.219-universal — 2026-08-03
 
 ### Direction
@@ -5500,7 +5494,6 @@ See 1.12.219-universal.
 
 ### Prior
 See 1.12.218-universal.
-
 
 ## 1.12.218-universal — 2026-08-03
 
@@ -5516,7 +5509,6 @@ See 1.12.218-universal.
 ### Prior
 See 1.12.217-universal.
 
-
 ## 1.12.217-universal — 2026-08-03
 
 ### Direction
@@ -5530,7 +5522,6 @@ See 1.12.217-universal.
 
 ### Prior
 See 1.12.216-universal.
-
 
 ## 1.12.216-universal — 2026-08-03
 
@@ -5546,7 +5537,6 @@ See 1.12.216-universal.
 ### Prior
 See 1.12.215-universal.
 
-
 ## 1.12.215-universal — 2026-08-03
 
 ### Direction
@@ -5560,7 +5550,6 @@ See 1.12.215-universal.
 
 ### Prior
 See 1.12.214-universal.
-
 
 ## 1.12.214-universal — 2026-08-03
 
@@ -5576,7 +5565,6 @@ See 1.12.214-universal.
 ### Prior
 See 1.12.213-universal.
 
-
 ## 1.12.213-universal — 2026-08-03
 
 ### Direction
@@ -5590,7 +5578,6 @@ See 1.12.213-universal.
 
 ### Prior
 See 1.12.212-universal.
-
 
 ## 1.12.212-universal — 2026-08-03
 
@@ -5607,7 +5594,6 @@ See 1.12.212-universal.
 ### Prior
 See 1.12.211-universal.
 
-
 ## 1.12.211-universal — 2026-08-03
 
 ### Direction
@@ -5621,7 +5607,6 @@ See 1.12.211-universal.
 
 ### Prior
 See 1.12.210-universal.
-
 
 ## 1.12.210-universal — 2026-08-03
 
@@ -5637,8 +5622,6 @@ See 1.12.210-universal.
 ### Prior
 See 1.12.209-universal.
 
-
-
 ## 1.12.209-universal — 2026-08-03
 
 ### Direction
@@ -5650,8 +5633,6 @@ See 1.12.209-universal.
 
 ### Prior
 See 1.12.208-universal.
-
-
 
 ## 1.12.208-universal — 2026-08-03
 
@@ -5667,8 +5648,6 @@ See 1.12.208-universal.
 ### Prior
 See 1.12.207-universal.
 
-
-
 ## 1.12.207-universal — 2026-08-03
 
 ### Direction
@@ -5680,8 +5659,6 @@ See 1.12.207-universal.
 
 ### Prior
 See 1.12.206-universal.
-
-
 
 ## 1.12.206-universal — 2026-08-03
 
@@ -5697,8 +5674,6 @@ See 1.12.206-universal.
 ### Prior
 See 1.12.205-universal.
 
-
-
 ## 1.12.205-universal — 2026-08-03
 
 ### Direction
@@ -5712,8 +5687,6 @@ See 1.12.205-universal.
 
 ### Prior
 See 1.12.204-universal.
-
-
 
 ## 1.12.204-universal — 2026-08-03
 
@@ -5729,8 +5702,6 @@ See 1.12.204-universal.
 ### Prior
 See 1.12.203-universal.
 
-
-
 ## 1.12.203-universal — 2026-08-03
 
 ### Direction
@@ -5745,7 +5716,6 @@ See 1.12.203-universal.
 ### Prior
 See 1.12.202-universal.
 
-
 ## 1.12.202-universal — 2026-08-03
 
 ### Direction
@@ -5758,7 +5728,6 @@ See 1.12.202-universal.
 
 ### Prior
 See 1.12.201-universal.
-
 
 ## 1.12.201-universal — 2026-08-03
 
@@ -5774,7 +5743,6 @@ See 1.12.201-universal.
 ### Prior
 See 1.12.200-universal.
 
-
 ## 1.12.200-universal — 2026-08-03
 
 ### Direction
@@ -5789,7 +5757,6 @@ See 1.12.200-universal.
 ### Prior
 See 1.12.199-universal.
 
-
 ## 1.12.199-universal — 2026-08-03
 
 ### Direction
@@ -5802,7 +5769,6 @@ See 1.12.199-universal.
 
 ### Prior
 See 1.12.198-universal.
-
 
 ## 1.12.198-universal — 2026-08-03
 
@@ -5818,7 +5784,6 @@ See 1.12.198-universal.
 ### Prior
 See 1.12.197-universal.
 
-
 ## 1.12.197-universal — 2026-08-03
 
 ### Direction
@@ -5831,7 +5796,6 @@ See 1.12.197-universal.
 
 ### Prior
 See 1.12.196-universal.
-
 
 ## 1.12.196-universal — 2026-08-03
 
@@ -5847,7 +5811,6 @@ See 1.12.196-universal.
 ### Prior
 See 1.12.195-universal.
 
-
 ## 1.12.195-universal — 2026-08-03
 
 ### Direction
@@ -5860,7 +5823,6 @@ See 1.12.195-universal.
 
 ### Prior
 See 1.12.194-universal.
-
 
 ## 1.12.194-universal — 2026-08-03
 
@@ -5875,7 +5837,6 @@ See 1.12.194-universal.
 ### Prior
 See 1.12.193-universal.
 
-
 ## 1.12.193-universal — 2026-08-03
 
 ### Direction
@@ -5888,7 +5849,6 @@ See 1.12.193-universal.
 
 ### Prior
 See 1.12.192-universal.
-
 
 ## 1.12.192-universal — 2026-08-03
 
@@ -5903,7 +5863,6 @@ See 1.12.192-universal.
 ### Prior
 See 1.12.191-universal.
 
-
 ## 1.12.191-universal — 2026-08-03
 
 ### Direction
@@ -5917,7 +5876,6 @@ See 1.12.191-universal.
 ### Prior
 See 1.12.190-universal.
 
-
 ## 1.12.190-universal — 2026-08-03
 
 ### Direction
@@ -5930,7 +5888,6 @@ See 1.12.190-universal.
 
 ### Prior
 See 1.12.189-universal.
-
 
 ## 1.12.189-universal — 2026-08-03
 
@@ -5946,7 +5903,6 @@ See 1.12.189-universal.
 ### Prior
 See 1.12.188-universal.
 
-
 ## 1.12.188-universal — 2026-08-03
 
 ### Direction
@@ -5961,7 +5917,6 @@ See 1.12.188-universal.
 ### Prior
 See 1.12.187-universal.
 
-
 ## 1.12.187-universal — 2026-08-03
 
 ### Direction
@@ -5974,7 +5929,6 @@ See 1.12.187-universal.
 
 ### Prior
 See 1.12.186-universal.
-
 
 ## 1.12.186-universal — 2026-08-03
 
@@ -5990,7 +5944,6 @@ See 1.12.186-universal.
 ### Prior
 See 1.12.185-universal.
 
-
 ## 1.12.185-universal — 2026-08-03
 
 ### Direction
@@ -6004,7 +5957,6 @@ See 1.12.185-universal.
 
 ### Prior
 See 1.12.184-universal.
-
 
 ## 1.12.184-universal — 2026-08-03
 
@@ -6021,7 +5973,6 @@ See 1.12.184-universal.
 ### Prior
 See 1.12.183-universal.
 
-
 ## 1.12.183-universal — 2026-08-03
 
 ### Direction
@@ -6035,7 +5986,6 @@ See 1.12.183-universal.
 
 ### Prior
 See 1.12.182-universal.
-
 
 ## 1.12.182-universal — 2026-08-03
 
@@ -6052,7 +6002,6 @@ See 1.12.182-universal.
 ### Prior
 See 1.12.181-universal.
 
-
 ## 1.12.181-universal — 2026-08-03
 
 ### Direction
@@ -6068,7 +6017,6 @@ See 1.12.181-universal.
 ### Prior
 See 1.12.180-universal.
 
-
 ## 1.12.180-universal — 2026-08-03
 
 ### Direction
@@ -6083,7 +6031,6 @@ See 1.12.180-universal.
 ### Prior
 See 1.12.179-universal.
 
-
 ## 1.12.179-universal — 2026-08-03
 
 ### Direction
@@ -6097,7 +6044,6 @@ See 1.12.179-universal.
 ### Prior
 See 1.12.178-universal.
 
-
 ## 1.12.178-universal — 2026-08-03
 
 ### Direction
@@ -6110,7 +6056,6 @@ See 1.12.178-universal.
 
 ### Prior
 See 1.12.177-universal.
-
 
 ## 1.12.177-universal — 2026-08-03
 
@@ -6126,7 +6071,6 @@ See 1.12.177-universal.
 ### Prior
 See 1.12.176-universal.
 
-
 ## 1.12.176-universal — 2026-08-03
 
 ### Direction
@@ -6139,7 +6083,6 @@ See 1.12.176-universal.
 
 ### Prior
 See 1.12.175-universal.
-
 
 ## 1.12.175-universal — 2026-08-03
 
@@ -6154,7 +6097,6 @@ See 1.12.175-universal.
 ### Prior
 See 1.12.174-universal.
 
-
 ## 1.12.174-universal — 2026-08-03
 
 ### Direction
@@ -6167,7 +6109,6 @@ See 1.12.174-universal.
 
 ### Prior
 See 1.12.173-universal.
-
 
 ## 1.12.173-universal — 2026-08-03
 
@@ -6183,7 +6124,6 @@ See 1.12.173-universal.
 ### Prior
 See 1.12.172-universal.
 
-
 ## 1.12.172-universal — 2026-08-03
 
 ### Direction
@@ -6197,7 +6137,6 @@ See 1.12.172-universal.
 ### Prior
 See 1.12.171-universal.
 
-
 ## 1.12.171-universal — 2026-08-03
 
 ### Direction
@@ -6210,7 +6149,6 @@ See 1.12.171-universal.
 
 ### Prior
 See 1.12.170-universal.
-
 
 ## 1.12.170-universal — 2026-08-03
 
@@ -6226,7 +6164,6 @@ See 1.12.170-universal.
 ### Prior
 See 1.12.169-universal.
 
-
 ## 1.12.169-universal — 2026-08-03
 
 ### Direction
@@ -6240,7 +6177,6 @@ See 1.12.169-universal.
 ### Prior
 See 1.12.168-universal.
 
-
 ## 1.12.168-universal — 2026-08-03
 
 ### Direction
@@ -6253,7 +6189,6 @@ See 1.12.168-universal.
 
 ### Prior
 See 1.12.167-universal.
-
 
 ## 1.12.167-universal — 2026-08-03
 
@@ -6269,7 +6204,6 @@ See 1.12.167-universal.
 ### Prior
 See 1.12.166-universal.
 
-
 ## 1.12.166-universal — 2026-08-03
 
 ### Direction
@@ -6283,7 +6217,6 @@ See 1.12.166-universal.
 ### Prior
 See 1.12.165-universal.
 
-
 ## 1.12.165-universal — 2026-08-03
 
 ### Direction
@@ -6296,7 +6229,6 @@ See 1.12.165-universal.
 
 ### Prior
 See 1.12.164-universal.
-
 
 ## 1.12.164-universal — 2026-08-03
 
@@ -6313,7 +6245,6 @@ See 1.12.164-universal.
 ### Prior
 See 1.12.163-universal.
 
-
 ## 1.12.163-universal — 2026-08-03
 
 ### Direction
@@ -6328,7 +6259,6 @@ See 1.12.163-universal.
 ### Prior
 See 1.12.162-universal.
 
-
 ## 1.12.162-universal — 2026-08-03
 
 ### Direction
@@ -6342,7 +6272,6 @@ See 1.12.162-universal.
 ### Prior
 See 1.12.161-universal.
 
-
 ## 1.12.161-universal — 2026-08-03
 
 ### Direction
@@ -6355,7 +6284,6 @@ See 1.12.161-universal.
 
 ### Prior
 See 1.12.160-universal.
-
 
 ## 1.12.160-universal — 2026-08-03
 
@@ -7364,8 +7292,6 @@ See 1.12.90-universal.
 ### Prior
 See 1.12.89-universal.
 
-
-
 ## 1.12.89-universal — 2026-08-03
 
 ### Direction
@@ -7706,7 +7632,6 @@ See 1.12.66-universal.
 ### Prior
 See 1.12.65-universal.
 
-
 ## 1.12.65-universal — 2026-08-02
 
 ### Direction
@@ -7723,8 +7648,6 @@ See 1.12.65-universal.
 ### Prior
 See 1.12.64-universal.
 
-
-
 ## 1.12.64-universal — 2026-08-02
 
 ### Direction
@@ -7739,7 +7662,6 @@ See 1.12.64-universal.
 ### Prior
 See 1.12.63-universal.
 
-
 ## 1.12.63-universal — 2026-08-02
 
 ### Direction
@@ -7752,7 +7674,6 @@ See 1.12.63-universal.
 
 ### Prior
 See 1.12.62-universal.
-
 
 ## 1.12.62-universal — 2026-08-02
 
@@ -7770,7 +7691,6 @@ See 1.12.62-universal.
 ### Prior
 See 1.12.61-universal.
 
-
 ## 1.12.61-universal — 2026-08-02
 
 ### Direction
@@ -7784,7 +7704,6 @@ See 1.12.61-universal.
 
 ### Prior
 See 1.12.60-universal.
-
 
 ## 1.12.60-universal — 2026-08-02
 
@@ -7801,7 +7720,6 @@ See 1.12.60-universal.
 ### Prior
 See 1.12.59-universal.
 
-
 ## 1.12.59-universal — 2026-08-02
 
 ### Direction
@@ -7816,7 +7734,6 @@ See 1.12.59-universal.
 
 ### Prior
 See 1.12.58-universal.
-
 
 ## 1.12.58-universal — 2026-08-02
 
@@ -7833,7 +7750,6 @@ See 1.12.58-universal.
 ### Prior
 See 1.12.57-universal.
 
-
 ## 1.12.57-universal — 2026-08-02
 
 ### Direction
@@ -7846,7 +7762,6 @@ See 1.12.57-universal.
 
 ### Prior
 See 1.12.56-universal.
-
 
 ## 1.12.56-universal — 2026-08-02
 
@@ -7863,7 +7778,6 @@ See 1.12.56-universal.
 ### Prior
 See 1.12.55-universal.
 
-
 ## 1.12.55-universal — 2026-08-02
 
 ### Direction
@@ -7878,7 +7792,6 @@ See 1.12.55-universal.
 
 ### Prior
 See 1.12.54-universal.
-
 
 ## 1.12.14-universal — 2026-08-02
 
@@ -7995,7 +7908,6 @@ See 1.12.7-universal.
 ### Prior
 See 1.12.6-universal.
 
-
 ## 1.12.6-universal — 2026-08-02
 
 ### Direction
@@ -8087,7 +7999,6 @@ See 1.12.1-universal.
 
 ### Prior
 See 1.12.0-universal.
-
 
 ## 1.12.0-universal — 2026-08-02
 

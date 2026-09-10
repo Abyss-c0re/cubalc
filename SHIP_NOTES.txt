@@ -1,4 +1,4 @@
-SHIP LIFE_CELL_AMPG MI2190 1.15.1675-usability
+SHIP LIFE_CELL_AMPG MI2190 1.15.1674-usability
 AmpG permease PG-recycling import after Slt
 Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg
 Proofs:
@@ -8,5 +8,6 @@ Proofs:
   total=330 fail=0
 Prior Slt MI2189:
   programs/proof/2189_life_cell_slt.cubalc asserts_ok=194
+  science slt total=327 fail=0
 methods slt+ampg on life_cell after meph
 Cube is SoT. Free energy must flow.
