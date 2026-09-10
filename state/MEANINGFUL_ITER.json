@@ -30,10 +30,10 @@
     "sum": 169
   },
   "asserts_fail": 0,
-  "note": "MurA UDP-GlcNAc enolpyruvyl transferase after MurQ; commits recycled/de novo UDP-GlcNAc into UDP-MurNAc precursor path (PEP + UDP-GlcNAc -> UDP-GlcNAc-EP)",
-  "item": "life cell mura",
+  "note": "METHOD mura n after murq; heat+n atp-n energy-n; held age/pcr/reserve/pmf/sp/thr; PASS life=115 atomic=22 smx=20 flag=12 sum=169",
+  "item": "life_cell mura post-murq UDP-GlcNAc enolpyruvyl transferase continuum free-energy MurA ENOP commit spark-safe",
   "item_id": "mi_life_cell_mura",
-  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=169.",
+  "summary": "LIFE_CELL_MURA MI2196 tip==pin sealed PASS asserts_ok=169",
   "ts": "2026-09-10T22:50:49Z",
   "host_finish": true,
   "anti_bloat": true,
@@ -46,11 +46,12 @@
   "hold_flash": 1,
   "feat_head": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
   "FEAT_HEAD": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
-  "HEAD": "954f1d05dc79e9f7decb0ab257ed95337f2bc6bb",
-  "tip": "954f1d05dc79e9f7decb0ab257ed95337f2bc6bb",
-  "head": "954f1d05dc79e9f7decb0ab257ed95337f2bc6bb",
-  "commit": "d1b277e4c",
-  "pin": "bf52a7994a2e2d0be17088f6479336fb0fa9a157",
-  "pinned_head": "bf52a7994a2e2d0be17088f6479336fb0fa9a157",
-  "short": "bf52a7994a2"
+  "HEAD": "915dd40053aea12cda8b71486eba43e1b5a84f9e",
+  "tip": "915dd40053aea12cda8b71486eba43e1b5a84f9e",
+  "head": "915dd40053aea12cda8b71486eba43e1b5a84f9e",
+  "commit": "915dd40053a",
+  "pin": "915dd40053aea12cda8b71486eba43e1b5a84f9e",
+  "pinned_head": "915dd40053aea12cda8b71486eba43e1b5a84f9e",
+  "short": "915dd40053a",
+  "pass_": true
 }

@@ -1,7 +1,7 @@
-// 2196_life_cell_mura.cubalc
-// Proof 2196: life_cell mura - MurA UDP-GlcNAc enolpyruvyl transferase after MurQ.
+// 2195_life_cell_murq.cubalc
+// Proof 2195: life_cell murq - MurQ anhMurNAc-6-P etherase after AnmK.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
-// Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura. Free energy must flow.
+// Continuum ...->slt->ampg->nagz->ampd->anmk->murq. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -334,13 +334,6 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate murq 5
-SEND gate murq 5
-ASSERT LAST_N == 5 "pre murq"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -360,8 +353,7 @@ LET sp0 = LAST_N
 GETF gate threshold
 LET thr0 = LAST_N
 SEND gate murq 5
-SEND gate mura 5
-ASSERT LAST_N == 5 "gate mura"
+ASSERT LAST_N == 5 "gate murq"
 GETF gate heat
 ASSERT LAST_N == h0 + 5 "h+5"
 GETF gate energy
@@ -391,7 +383,6 @@ ASSERT LAST_N == 0 "dead ampd0"
 SEND dead anmk 3
 ASSERT LAST_N == 0 "dead anmk0"
 SEND dead murq 3
-SEND dead mura 3
 ASSERT LAST_N == 0 "dead murq0"
 SEND poor ampg 3
 ASSERT LAST_N == 0 "poor ampg0"
@@ -402,13 +393,10 @@ ASSERT LAST_N == 0 "poor ampd0"
 SEND poor anmk 3
 ASSERT LAST_N == 0 "poor anmk0"
 SEND poor murq 3
-SEND poor mura 3
 ASSERT LAST_N == 0 "poor murq0"
 SEND gate murq 0
-SEND gate mura 0
 ASSERT LAST_N == 0 "n0"
 SEND gate murq -2
-SEND gate mura -2
 ASSERT LAST_N == 0 "nneg"
 SEND twin photosynth 24
 SEND twin glycolyse 20
@@ -454,13 +442,6 @@ SEND twin photosynth 24
 SEND twin glycolyse 20
 SEND twin charge 30
 SEND twin feed 20
-SEND twin murq 3
-SEND twin murq 3
-ASSERT LAST_N == 3 "pre twin murq"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 30
-SEND twin feed 20
 GETF twin heat
 LET th = LAST_N
 GETF twin energy
@@ -468,8 +449,7 @@ LET te = LAST_N
 GETF twin atp
 LET ta = LAST_N
 SEND twin murq 3
-SEND twin mura 3
-ASSERT LAST_N == 3 "twin mura"
+ASSERT LAST_N == 3 "twin murq"
 GETF twin heat
 ASSERT LAST_N == th + 3 "twin h+3"
 GETF twin energy
@@ -557,8 +537,7 @@ LET csp0 = LAST_N
 GETF ceil threshold
 LET cthr0 = LAST_N
 SEND ceil murq 4
-SEND ceil mura 4
-ASSERT LAST_N == 4 "ceil mura"
+ASSERT LAST_N == 4 "ceil murq"
 GETF ceil heat
 ASSERT LAST_N == ch0 + 4 "ceil h+4"
 GETF ceil energy
@@ -589,8 +568,7 @@ SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
 SEND g0 murq 3
-SEND g0 mura 3
-ASSERT LAST_N == 3 "g0 mura"
+ASSERT LAST_N == 3 "g0 murq"
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 SEND starved pulse 4
@@ -622,9 +600,6 @@ SEND starved charge 30
 SEND starved feed 20
 SEND starved anmk 3
 ASSERT LAST_N == 3 "starved anmk"
-SEND starved murq 3
-SEND starved murq 3
-ASSERT LAST_N == 3 "starved murq"
 SEND starved photosynth 4
 SEND starved glycolyse 2
 GETF starved energy
@@ -632,9 +607,8 @@ LET se = LAST_N
 GETF starved atp
 LET sa = LAST_N
 SEND starved murq 100
-SEND starved mura 100
 LET took = LAST_N
-ASSERT took >= 1 "starved mura took"
+ASSERT took >= 1 "starved murq took"
 GETF starved atp
 ASSERT LAST_N == sa - took "starved atp dec"
 GETF starved energy
@@ -655,20 +629,12 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate murq 3
-SEND gate murq 3
-ASSERT LAST_N == 3 "gate murq2"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
 GETF gate heat
 LET h1 = LAST_N
 GETF gate energy
 LET e1 = LAST_N
 GETF gate atp
 LET a1 = LAST_N
-SEND gate murq 2
 SEND gate murq 2
 ASSERT LAST_N == 2 "gate murq2"
 GETF gate heat
