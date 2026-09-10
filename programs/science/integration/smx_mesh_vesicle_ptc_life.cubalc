@@ -1,0 +1,201 @@
+// smx_mesh_vesicle_ptc_life.cubalc
+// SMX mesh vesicle life-force: post-eftu PTC peptide-bond formation.
+// Cube is SoT. Free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+SEND vesicle set_threshold 8
+SEND vesicle pulse 4
+SEND vesicle photosynth 32
+SEND vesicle glycolyse 28
+SEND vesicle pump 18
+SEND vesicle photophos 18
+SEND vesicle charge 26
+SEND vesicle feed 26
+SEND vesicle retrieve 2
+SEND vesicle acidify 2
+SEND vesicle mature 2
+SEND vesicle recruit 2
+SEND vesicle activate 2
+SEND vesicle degrade 2
+SEND vesicle export 2
+SEND vesicle translate 2
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 14
+SEND vesicle feed 12
+SEND vesicle transloc 2
+SEND vesicle cleave 2
+SEND vesicle glycosyl 2
+SEND vesicle trim 3
+ASSERT LAST_N == 3 "smx trim3"
+SEND vesicle cnx 2
+ASSERT LAST_N == 2 "smx cnx2"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+SEND vesicle charge_pcr 14
+SEND vesicle uggt 2
+ASSERT LAST_N == 2 "smx uggt2"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+SEND vesicle mann 3
+ASSERT LAST_N == 3 "smx pre mann3"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle os9 2
+ASSERT LAST_N == 2 "smx pre os92"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle hrd 2
+ASSERT LAST_N == 2 "smx pre hrd2"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle vcp 2
+ASSERT LAST_N == 2 "smx pre vcp2"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle psm 2
+ASSERT LAST_N == 2 "smx pre psm2"
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle pepr 2
+ASSERT LAST_N == 2 "pre pepr2"
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle aars 2
+ASSERT LAST_N == 2 "pre aars2"
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle charge_pcr 10
+SEND vesicle eftu 2
+ASSERT LAST_N == 2 "pre eftu2"
+GETF vesicle heat
+LET heb0 = LAST_N
+GETF vesicle energy
+LET enb1 = LAST_N
+GETF vesicle atp
+LET atb2 = LAST_N
+GETF vesicle reserve
+LET reb3 = LAST_N
+GETF vesicle age
+LET agb4 = LAST_N
+GETF vesicle pcr
+LET pcb5 = LAST_N
+GETF vesicle pmf
+LET pmb6 = LAST_N
+GETF vesicle setpoint
+LET seb7 = LAST_N
+GETF vesicle threshold
+LET thb8 = LAST_N
+SEND vesicle ptc 2
+ASSERT LAST_N == 2 "ptc2"
+GETF vesicle heat
+ASSERT LAST_N == heb0 + 2 "h+2"
+GETF vesicle energy
+ASSERT LAST_N == enb1 - 2 "ene-2"
+GETF vesicle atp
+ASSERT LAST_N == atb2 "atp held"
+GETF vesicle reserve
+ASSERT LAST_N == reb3 "res held"
+GETF vesicle age
+ASSERT LAST_N == agb4 "age held"
+GETF vesicle pcr
+ASSERT LAST_N == pcb5 "pcr held"
+GETF vesicle pmf
+ASSERT LAST_N == pmb6 "pmf held"
+GETF vesicle setpoint
+ASSERT LAST_N == seb7 "set held"
+GETF vesicle threshold
+ASSERT LAST_N == thb8 "thr held"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 14
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle charge_pcr 8
+SEND vesicle mann 3
+ASSERT LAST_N == 3 "smx pre2 mann3"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle os9 3
+ASSERT LAST_N == 3 "smx pre2 os93"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle hrd 2
+ASSERT LAST_N == 2 "smx pre2 hrd2"
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 16
+SEND vesicle feed 12
+SEND vesicle vcp 2
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle psm 2
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle pepr 3
+ASSERT LAST_N == 3 "pre pepr3"
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle aars 3
+ASSERT LAST_N == 3 "pre aars3"
+SEND vesicle photosynth 12
+SEND vesicle glycolyse 10
+SEND vesicle charge 14
+SEND vesicle feed 10
+SEND vesicle charge_pcr 10
+SEND vesicle eftu 3
+ASSERT LAST_N == 3 "pre eftu3"
+GETF vesicle heat
+LET heb0 = LAST_N
+GETF vesicle energy
+LET enb1 = LAST_N
+GETF vesicle atp
+LET atb2 = LAST_N
+GETF vesicle reserve
+LET reb3 = LAST_N
+GETF vesicle pcr
+LET pcb4 = LAST_N
+SEND vesicle ptc 3
+ASSERT LAST_N == 3 "ptc3"
+GETF vesicle heat
+ASSERT LAST_N == heb0 + 3 "h+3"
+GETF vesicle energy
+ASSERT LAST_N == enb1 - 3 "ene-3"
+GETF vesicle atp
+ASSERT LAST_N == atb2 "atp held"
+GETF vesicle reserve
+ASSERT LAST_N == reb3 "res held"
+GETF vesicle pcr
+ASSERT LAST_N == pcb4 "pcr held"
+ASSERT 1 == 1 "smx_mesh_vesicle_ptc_life_ok"
+
+PRINT "smx_mesh_vesicle_ptc_life PASS"

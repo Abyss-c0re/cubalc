@@ -7944,7 +7944,7 @@ CLASS Cell
   # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — psm is post-vcp proteolytic
   #   clearance that neither ages the cell nor retunes ERAD timers /
   #   phosphagen prep (distinct from degrade age- pcr+ lysosomal cut).
-  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
   # Signature: heat+n energy-n atp-n reserve-n; age+pmf+sp+thr+pcr held — psm life-force.
   METHOD psm n
     GETF THIS alive
@@ -8014,7 +8014,7 @@ CLASS Cell
   # thimet oligopeptidase (THOP1), TPPII, and puromycin-sensitive aminopeptidase
   # cleave 26S-released oligopeptides to free amino acids that re-enter the
   # reserve anabolic bank after PSM has consumed the Ub-client substrate.
-  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
   # Pay take=min(n,atp,energy) — ATP fuels AAA-adjacent peptidase processivity
   # and metabolic energy pays hydrolysis work; reserve RISES by take as free AA
   # salvage (distinct from psm reserve- substrate burn, export pcr- reserve+
@@ -8093,7 +8093,7 @@ CLASS Cell
   # oligopeptide hydrolysis) onto cognate tRNA: AA + tRNA + ATP ->
   # AA-tRNA + AMP + PPi. Restores ternary-complex substrate for ribosomes
   # after ERAD/proteasome/peptidase salvage continuum.
-  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
   # Pay take=min(n,atp,energy,reserve) — ATP drives aminoacyl-adenylate
   # formation; metabolic energy pays editing-domain proofreading; reserve
   # FALLS as free AA are esterified onto tRNA (inverse of pepr reserve+
@@ -8185,7 +8185,7 @@ CLASS Cell
   # ribosomal A site; codon–anticodon match triggers GTP hydrolysis and EF-Tu
   # release so peptidyl transfer can proceed. Closes the salvage→recharge→deliver
   # loop after ERAD/proteasome/peptidase/aaRS continuum.
-  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu.
+  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
   # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
   # EF-Tu GTPase proofreading cycle; metabolic energy pays accommodation work;
   # reserve HELD (AA already esterified on tRNA by aars; distinct from aars
@@ -8239,6 +8239,71 @@ CLASS Cell
     SETF THIS energy e
     LET c = c - take
     SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # PTC: post-eftu peptidyl-transferase center peptide-bond formation —
+  # ribosomal 23S/28S PTC catalyzes nucleophilic attack of A-site AA-tRNA
+  # alpha-amine on P-site peptidyl-tRNA carbonyl, forging the peptide bond and
+  # transferring the chain to the A-site tRNA (no NTP hydrolysis at the PTC
+  # itself; GTPases already paid at eftu delivery). Extends nascent chain after
+  # salvage->charge->deliver continuum.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc.
+  # Pay take=min(n,energy) — only metabolic reorganization / desolvation work
+  # at the PTC active site; ATP HELD (no aaRS adenylate); PCR HELD (EF-Tu GTP
+  # already burned at eftu); RESERVE HELD (AA still esterified on tRNA until
+  # bond forms; chain stays ribosome-tethered — distinct from aars reserve-
+  # charge, pepr reserve+ salvage, eftu pcr- delivery, translate reserve- age-
+  # rebuild, psm reserve- substrate burn).
+  # HEAT += take (each aminolysis / peptide-bond condensation dissipates).
+  # AGE/PMF/SETPOINT/THRESHOLD/ATP/PCR/RESERVE HELD — ptc forges bonds without
+  # aging the cell, retuning ERAD timers / division threshold, or spending
+  # NTP / AA bank beyond prior eftu delivery.
+  # Signature: heat+n energy-n; age+pmf+sp+thr+atp+pcr+reserve held — ptc life-force.
+  # Usability: AGI models post-eftu PTC peptide-bond formation under ASSERT boards.
+  METHOD ptc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
     GETF THIS heat
     LET h = LAST_N + take
     SETF THIS heat h
