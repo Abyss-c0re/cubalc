@@ -11035,5 +11035,74 @@ CLASS Cell
     RET take
   END
 
+  # MurQ: cytoplasmic anhMurNAc-6-P etherase after AnmK.
+  # MurQ opens the 1,6-anhydro ring of AnmK-produced anhMurNAc-6-P to yield
+  # MurNAc-6-P for re-entry into UDP-MurNAc precursor metabolism (PG recycle).
+  # Without MurQ after AnmK, phosphorylated anhydro-sugar stalls and the
+  # cytoplasmic recycle branch cannot feed de novo wall precursor synthesis.
+  # Domain: post-AnmK MurQ etherase (not AnmK kinase, not AmpD amidase,
+  # not NagZ GlcNAc hydrolase, not AmpG IM permease, not Slt lytic TG,
+  # not MepH/MepM/MepS DD-endopeptidases, not LpoA/PBP1A, not NlpD/EnvC).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq
+  #   (AnmK anhMurNAc kinase -> MurQ anhMurNAc-6-P etherase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurQ etherase catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - murq life-force.
+  # Usability: AGI models post-AnmK MurQ recycle etherase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD murq n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 END
