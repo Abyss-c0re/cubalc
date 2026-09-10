@@ -8708,4 +8708,57 @@ CLASS Cell
   END
 
 
+  # IF2: post-if3 IF2·GTP + fMet-tRNA 30S PIC assembly gate (NCIF2).
+  # Continuum after if3 (IF3 keeps free 30S -> IF2·GTP escorts fMet-tRNAfMet into
+  # P-site of 30S preinitiation complex with mRNA start codon; IF1 assists A-site block).
+  # Domain: initiation ternary docking (not 30S anti-association, not RRF split, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3->if2.
+  # Pay take=min(n,energy) — pure binding/GTPase-poise work; ATP/PCR/RESERVE HELD.
+  # AGE/PMF/SETPOINT/THRESHOLD HELD. heat+n energy-n signature (if2 life-force).
+  # Usability: AGI models post-if3 IF2 30S PIC under ASSERT boards. Cube is SoT.
+  # Free energy must flow. Returns take; else 0.
+  METHOD if2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
