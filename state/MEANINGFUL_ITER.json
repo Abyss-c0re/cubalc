@@ -2,25 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2200,
   "MEANINGFUL_ITER": 2200,
-  "iter": 2200,
+  "iter": 2201,
   "n": 2200,
   "mi": 2200,
-  "version": "1.15.1687-usability",
+  "version": "1.15.1688-usability",
   "VERSION": "1.15.1687-usability",
   "feature": "life_cell_murb",
   "FEATURE": "LIFE_CELL_MURB",
   "name": "LIFE_CELL_MURB",
-  "title": "life cell murb",
+  "title": "smx mesh vesicle murc life",
   "label": "LIFE_CELL_MURB",
   "method": "murb n",
   "ship": "2200_life_cell_murb",
   "proof": "programs/proof/2200_life_cell_murb.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2200_life_cell_murb.cubalc",
-    "programs/science/integration/atomic_printer_life_murb.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_murb_life.cubalc",
-    "include/lang/cubalc_lang_internal.h"
+    "programs/science/integration/smx_mesh_vesicle_murc_life.cubalc"
   ],
   "continuum": "...->ampg->nagz->ampd->anmk->murq->naga->nagb->pfka->mura->murb",
   "domain": "MurB cytoplasmic UDP-MurNAc enolpyruvyl reductase after MurA",
@@ -37,5 +33,12 @@
   "note": "MurB reduces EP-UDP-GlcNAc to UDP-MurNAc with NADPH stand-in; locks first sugar-acid of PG stem after MurA; MAX_METHODS 256",
   "head": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27",
   "sha": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27",
-  "pinned_sha": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27"
+  "pinned_sha": "234b6e3aa58f8fcd63a2b73cbd82341bfbe84e27",
+  "item": "smx mesh vesicle murc life",
+  "item_id": "mi_smx_mesh_vesicle_murc_life",
+  "commit": "f5db44d53",
+  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_murc_life).",
+  "ts": "2026-09-10T23:37:50Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
