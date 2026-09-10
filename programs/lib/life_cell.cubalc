@@ -7944,7 +7944,7 @@ CLASS Cell
   # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — psm is post-vcp proteolytic
   #   clearance that neither ages the cell nor retunes ERAD timers /
   #   phosphagen prep (distinct from degrade age- pcr+ lysosomal cut).
-  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars.
   # Signature: heat+n energy-n atp-n reserve-n; age+pmf+sp+thr+pcr held — psm life-force.
   METHOD psm n
     GETF THIS alive
@@ -8014,7 +8014,7 @@ CLASS Cell
   # thimet oligopeptidase (THOP1), TPPII, and puromycin-sensitive aminopeptidase
   # cleave 26S-released oligopeptides to free amino acids that re-enter the
   # reserve anabolic bank after PSM has consumed the Ub-client substrate.
-  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars.
   # Pay take=min(n,atp,energy) — ATP fuels AAA-adjacent peptidase processivity
   # and metabolic energy pays hydrolysis work; reserve RISES by take as free AA
   # salvage (distinct from psm reserve- substrate burn, export pcr- reserve+
@@ -8065,6 +8065,99 @@ CLASS Cell
       LET r = 1000
     END
     SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # AARS: post-pepr aminoacyl-tRNA synthetase (aaRS) charging —
+  # class I/II synthetases condense free AA (salvaged by PEPR after 26S
+  # oligopeptide hydrolysis) onto cognate tRNA: AA + tRNA + ATP ->
+  # AA-tRNA + AMP + PPi. Restores ternary-complex substrate for ribosomes
+  # after ERAD/proteasome/peptidase salvage continuum.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars.
+  # Pay take=min(n,atp,energy,reserve) — ATP drives aminoacyl-adenylate
+  # formation; metabolic energy pays editing-domain proofreading; reserve
+  # FALLS as free AA are esterified onto tRNA (inverse of pepr reserve+
+  # salvage; distinct from psm reserve- substrate burn without tRNA, from
+  # translate reserve- ribosome rebuild age-, from export pcr- reserve+).
+  # PCR rises: pcr = min(1000, pcr + take) — AMP/PPi phosphagen-adjacent
+  # echo of aaRS adenylate chemistry (distinct from cleave pcr+ SPC scission,
+  # degrade age- pcr+, uggt pcr- UDP-Glc draw).
+  # AGE/PMF/SETPOINT/THRESHOLD HELD — aars charges tRNA without aging the
+  # cell or retuning ERAD timers / division threshold.
+  # Signature: heat+n energy-n atp-n reserve-n pcr+n; age+pmf+sp+thr held — aars life-force.
+  # Usability: AGI models post-pepr aaRS tRNA charging under ASSERT boards.
+  METHOD aars n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET c = c + take
+    IF c > 1000 THEN
+      LET c = 1000
+    END
+    SETF THIS pcr c
     GETF THIS heat
     LET h = LAST_N + take
     SETF THIS heat h
