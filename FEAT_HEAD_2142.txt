@@ -1,0 +1,6 @@
+LIFE_CELL_GLYCOSYL MI 2142
+post-cleave OST N-linked glycosylation / dolichol-PP Glc3Man9GlcNAc2 transfer
+pay min(n,atp,energy) -> heat+n energy-n atp-n thr+n
+age/reserve/sp/pmf/pcr held
+methods=136
+proof asserts_ok=167

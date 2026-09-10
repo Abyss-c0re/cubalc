@@ -1,3 +1,12 @@
+## 2142 LIFE_CELL_GLYCOSYL (1.15.1626-usability)
+
+- feat(life): post-cleave OST N-linked glycosylation for life_cell continuum
+- METHOD glycosyl n: pay min(n,atp,energy) -> heat+n energy-n atp-n thr+n; age/reserve/sp/pmf/pcr held
+- Continuum: export->translate->transloc->cleave->glycosyl
+- proof: programs/proof/2142_life_cell_glycosyl.cubalc
+- science: atomic_printer_life_glycosyl + smx_mesh_vesicle_glycosyl_life
+- methods=136
+
 ## 1.15.1623-usability — LIFE_CELL_TRANSLOC (MI 2140)
 
 - feat(life): post-translate SRP-Sec61 ER transloc — heat+ energy- atp- sp+; continuum after translate
