@@ -29,11 +29,11 @@
     "sum": 387
   },
   "asserts_fail": 0,
-  "head": "a6a5565d177b6c326ab2f2c1da74b6fd4a7e125a",
+  "head": "27f9aacc77e3fc615d3efad57efd47b51847263f",
   "note": "NagZ cytoplasmic beta-N-acetylglucosaminidase after AmpG; cleaves GlcNAc from anhydro-muropeptides for AmpD recycle",
   "item": "life cell",
   "item_id": "mi_life_cell",
-  "commit": "bc7907c5c",
+  "commit": "27f9aacc7",
   "summary": "LIFE_CELL_NAGZ MI2192 \u2014 METHOD nagz after ampg; atomic+SMX boards; proof 2192 PASS.",
   "ts": "2026-09-10T20:24:01Z",
   "host_finish": true,
