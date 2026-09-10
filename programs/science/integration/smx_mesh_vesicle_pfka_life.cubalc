@@ -1,0 +1,97 @@
+// smx_mesh_vesicle_pfka_life.cubalc
+// SMX vesicle: PfkA committed glycolysis after NagB recycle.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+ENTITY dock OF Cell 1 28 0
+ENTITY void OF Cell 0 12 0
+
+SEND vesicle set_threshold 8
+SEND dock set_threshold 8
+SEND vesicle pulse 3
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle pump 20
+SEND vesicle charge 36
+SEND vesicle feed 32
+
+SEND vesicle ampg 3
+ASSERT LAST_N == 3 "ves ampg"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle nagz 3
+ASSERT LAST_N == 3 "ves nagz"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle ampd 3
+ASSERT LAST_N == 3 "ves ampd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle anmk 3
+ASSERT LAST_N == 3 "ves anmk"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murq 3
+ASSERT LAST_N == 3 "ves murq"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle naga 3
+ASSERT LAST_N == 3 "ves naga"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle nagb 3
+ASSERT LAST_N == 3 "ves nagb"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pcr
+LET vc = LAST_N
+SEND vesicle pfka 3
+ASSERT LAST_N == 3 "ves pfka"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "ves pfka h+3"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "ves pfka e-3"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "ves pfka atp-3"
+GETF vesicle pcr
+ASSERT LAST_N == vc "ves pfka pcr held"
+
+SEND dock photosynth 24
+SEND dock glycolyse 18
+SEND dock charge 20
+SEND dock feed 16
+GETF dock heat
+LET dh = LAST_N
+SEND dock pfka 2
+ASSERT LAST_N == 2 "dock pfka"
+GETF dock heat
+ASSERT LAST_N == dh + 2 "dock pfka h+2"
+
+SEND void pfka 3
+ASSERT LAST_N == 0 "void pfka 0"
+GETF vesicle alive
+ASSERT LAST_N == 1 "vesicle alive"
+
