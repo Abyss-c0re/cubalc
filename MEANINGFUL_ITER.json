@@ -34,7 +34,7 @@
   "item": "life cell murq",
   "item_id": "mi_life_cell_murq",
   "summary": "LIFE_CELL_MURQ MI2195 \u2014 METHOD murq after anmk; atomic+SMX boards; proof 2195 PASS asserts_fail:0 sum=169.",
-  "ts": "2026-09-10T21:56:04Z",
+  "ts": "2026-09-10T21:56:23Z",
   "host_finish": true,
   "anti_bloat": true,
   "status": "sealed",
@@ -44,10 +44,10 @@
   "sealed": true,
   "methods": 185,
   "hold_flash": 1,
-  "feat_head": "71bdf5f7ab16a46511721c776d084ffaaa5704df",
-  "FEAT_HEAD": "71bdf5f7ab16a46511721c776d084ffaaa5704df",
-  "commit": "71bdf5f7a",
-  "HEAD": "71bdf5f7ab16a46511721c776d084ffaaa5704df",
-  "tip": "71bdf5f7ab16a46511721c776d084ffaaa5704df",
-  "head": "71bdf5f7ab16a46511721c776d084ffaaa5704df"
+  "feat_head": "679cf6faf24d88ed305b7981751948c37d4c9dc0",
+  "FEAT_HEAD": "679cf6faf24d88ed305b7981751948c37d4c9dc0",
+  "commit": "679cf6faf",
+  "HEAD": "679cf6faf24d88ed305b7981751948c37d4c9dc0",
+  "tip": "679cf6faf24d88ed305b7981751948c37d4c9dc0",
+  "head": "679cf6faf24d88ed305b7981751948c37d4c9dc0"
 }
