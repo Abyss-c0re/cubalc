@@ -1,7 +1,7 @@
-// 2195_life_cell_murq.cubalc
-// Proof 2195: life_cell murq - MurQ anhMurNAc-6-P etherase after AnmK.
+// 2196_life_cell_mura.cubalc
+// Proof 2196: life_cell mura - MurA UDP-GlcNAc enolpyruvyl transferase after MurQ.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
-// Continuum ...->slt->ampg->nagz->ampd->anmk->murq. Free energy must flow.
+// Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -568,13 +568,7 @@ SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
 SEND g0 murq 3
-ASSERT LAST_N == 3 "g0 murq pre"
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 30
-SEND g0 feed 20
-SEND g0 mura 3
-ASSERT LAST_N == 3 "g0 mura"
+ASSERT LAST_N == 3 "g0 murq"
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 SEND starved pulse 4

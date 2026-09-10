@@ -1,5 +1,5 @@
-// smx_mesh_vesicle_murq_life.cubalc
-// SMX mesh vesicle board: life_cell murq MurQ after AnmK.
+// smx_mesh_vesicle_mura_life.cubalc
+// SMX mesh vesicle board: life_cell mura MurA after MurQ.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
