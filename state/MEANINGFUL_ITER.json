@@ -1,33 +1,34 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2189,
-  "MEANINGFUL_ITER": 2189,
-  "iter": 2189,
-  "n": 2189,
-  "mi": 2189,
-  "version": "1.15.1676-usability",
-  "VERSION": "1.15.1676-usability",
-  "feature": "life_cell_meph",
-  "FEATURE": "LIFE_CELL_MEPH",
-  "name": "LIFE_CELL_MEPH",
-  "title": "life cell meph",
-  "label": "LIFE_CELL_MEPH",
-  "method": "meph n",
-  "ship": "2189_life_cell_meph",
-  "proof": "programs/proof/2189_life_cell_meph.cubalc",
+  "meaningful_iter": 2190,
+  "MEANINGFUL_ITER": 2190,
+  "iter": 2190,
+  "n": 2190,
+  "mi": 2190,
+  "version": "1.15.1677-usability",
+  "VERSION": "1.15.1677-usability",
+  "feature": "life_cell_slt",
+  "FEATURE": "LIFE_CELL_SLT",
+  "name": "LIFE_CELL_SLT",
+  "title": "life cell slt",
+  "label": "LIFE_CELL_SLT",
+  "method": "slt n",
+  "ship": "2190_life_cell_slt",
+  "proof": "programs/proof/2190_life_cell_slt.cubalc",
   "proofs": [
     "programs/lib/life_cell.cubalc",
-    "programs/proof/2189_life_cell_meph.cubalc",
-    "programs/science/integration/atomic_printer_life_meph.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_meph_life.cubalc"
+    "programs/proof/2190_life_cell_slt.cubalc",
+    "programs/science/integration/atomic_printer_life_slt.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_slt_life.cubalc"
   ],
-  "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph",
+  "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt",
   "asserts_ok": {
-    "life": 272,
-    "atomic_printer": 17,
-    "smx": 16,
-    "sum": 305
+    "life": 306,
+    "atomic_printer": 24,
+    "smx": 23,
+    "sum": 353
   },
   "asserts_fail": 0,
-  "note": "MepH soluble periplasmic DD-endopeptidase after MepM; triple-redundant sidewall PG cross-link trim for elongasome insert"
+  "head": "a6a5565d177b6c326ab2f2c1da74b6fd4a7e125a",
+  "note": "Slt soluble lytic TG after MepH; cleaves glycan for AmpG recycle and elongasome insert"
 }
