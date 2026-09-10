@@ -53,6 +53,13 @@ SEND vesicle photosynth 20
 SEND vesicle glycolyse 16
 SEND vesicle charge 24
 SEND vesicle feed 16
+SEND vesicle murq 3
+SEND vesicle murq 3
+ASSERT LAST_N == 3 "ves murq"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
@@ -61,6 +68,7 @@ GETF vesicle atp
 LET va = LAST_N
 GETF vesicle pcr
 LET vc = LAST_N
+SEND vesicle murq 4
 SEND vesicle murq 4
 ASSERT LAST_N == 4 "ves murq"
 GETF vesicle heat
@@ -82,7 +90,8 @@ LET ce = LAST_N
 GETF cargo atp
 LET ca = LAST_N
 SEND cargo murq 2
-ASSERT LAST_N == 2 "cargo murq"
+SEND cargo mura 2
+ASSERT LAST_N == 2 "cargo mura"
 GETF cargo heat
 ASSERT LAST_N == ch + 2 "cargo h+2"
 GETF cargo energy
@@ -90,10 +99,13 @@ ASSERT LAST_N == ce - 2 "cargo e-2"
 GETF cargo atp
 ASSERT LAST_N == ca - 2 "cargo atp-2"
 SEND ghost murq 3
-ASSERT LAST_N == 0 "ghost murq 0"
+SEND ghost mura 3
+ASSERT LAST_N == 0 "ghost mura 0"
 SEND vesicle murq 0
-ASSERT LAST_N == 0 "ves murq n0"
+SEND vesicle mura 0
+ASSERT LAST_N == 0 "ves mura n0"
 SEND vesicle murq -3
-ASSERT LAST_N == 0 "ves murq nneg"
+SEND vesicle mura -3
+ASSERT LAST_N == 0 "ves mura nneg"
 GETF vesicle alive
 ASSERT LAST_N == 1 "ves alive"
