@@ -10203,8 +10203,8 @@ CLASS Cell
   # not MreB cytoskeletal scaffold, not RodA SEDS polymerase, not PBP2 TPase,
   # not fispay endowment, not scission PG cut, not FtsI septal PBP3, not
   # PBP1B, not LpoB, not RodZ, not NlpD, not RlpA, not DamX/DedD).
-  # Continuum: ...->fispay->roda->mreb->mrec->mred
-  #   (MreC periplasmic dock -> MreD IM stabilizer lock).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz
+  #    (MreC periplasmic dock -> MreD IM stabilizer lock -> RodZ tether).
   # Pay take=min(n,atp,energy) — ATP stand-in for MreD stabilizer cycles.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — mred life-force.
@@ -10263,5 +10263,77 @@ CLASS Cell
     RET take
   END
 
+
+
+  # RodZ: bitopic MreB–membrane tether after MreD stabilizer lock.
+  # RodZ is a bitopic IM protein whose cytoplasmic helix binds MreB
+  # filaments while the periplasmic domain couples to PBP2, tethering
+  # the elongasome scaffold to the inner membrane so rod geometry
+  # holds after MreD locks the complex. Without RodZ tether burn,
+  # MreB filaments detach and sidewall PG insertion loses polarity.
+  # Domain: post-mred bitopic MreB membrane tether (not MreD IM
+  # stabilizer, not MreC periplasmic partner, not MreB actin scaffold,
+  # not RodA SEDS polymerase, not PBP2 TPase, not fispay endowment,
+  # not scission PG cut, not FtsZ, not FtsI septal PBP3, not PBP1B,
+  # not LpoB, not NlpD, not RlpA, not DamX/DedD).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz
+  #   (MreD IM stabilizer lock -> RodZ bitopic MreB membrane tether).
+  # Pay take=min(n,atp,energy) — ATP stand-in for RodZ tether cycles.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — rodz life-force.
+  # Usability: AGI models post-MreD RodZ tether energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD rodz n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END
