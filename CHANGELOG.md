@@ -1,3 +1,12 @@
+## 2148 LIFE_CELL_HRD (1.15.1632-usability)
+
+- feat(life): post-os9 SEL1L/HRD1 (SYVN1) ERAD E3 ubiquitin-ligase commit for life_cell continuum
+- METHOD hrd n: pay min(n,atp,energy,pcr) -> heat+n energy-n atp-n pcr-n; age/reserve/pmf/sp/thr held
+- Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9->hrd
+- proof: programs/proof/2148_life_cell_hrd.cubalc
+- science: atomic_printer_life_hrd + smx_mesh_vesicle_hrd_life
+- methods=142
+
 ## 2142 LIFE_CELL_GLYCOSYL (1.15.1626-usability)
 
 - feat(life): post-cleave OST N-linked glycosylation for life_cell continuum
