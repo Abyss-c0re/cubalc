@@ -23,17 +23,17 @@
   ],
   "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->meph->slt->ampg->nagz->ampd->anmk->murq->mura",
   "asserts_ok": {
-    "life": 116,
+    "life": 115,
     "atomic_printer": 22,
     "smx": 20,
     "flagship_1620": 12,
-    "sum": 170
+    "sum": 169
   },
   "asserts_fail": 0,
   "note": "MurA UDP-GlcNAc enolpyruvyl transferase after MurQ; commits recycled flux into UDP-MurNAc precursor path (PEP + UDP-GlcNAc \u2192 UDP-GlcNAc-EP)",
   "item": "life cell mura",
   "item_id": "mi_life_cell_mura",
-  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=170.",
+  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=169.",
   "ts": "2026-09-10T22:50:49Z",
   "host_finish": true,
   "anti_bloat": true,
@@ -49,7 +49,7 @@
   "HEAD": "05d795e387e02ff0348ae8fa640d372ac1b4ce06",
   "tip": "05d795e387e02ff0348ae8fa640d372ac1b4ce06",
   "head": "05d795e387e02ff0348ae8fa640d372ac1b4ce06",
-  "commit": "05d795e387e",
+  "commit": "d1b277e4c",
   "pin": "05d795e387e02ff0348ae8fa640d372ac1b4ce06",
   "pinned_head": "05d795e387e02ff0348ae8fa640d372ac1b4ce06",
   "short": "05d795e387e"
