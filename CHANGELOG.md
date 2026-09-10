@@ -1,3 +1,9 @@
+## 1.15.1664-usability — MI2179 LIFE_CELL_RODA
+
+- feat(life): RodA SEDS rod PG polymerase elongation restart after FisPay
+- Continuum: ...->damx->rlpa->nlpd->scission->fispay->roda
+- Proofs: 2179_life_cell_roda + atomic_printer_life_roda + smx_mesh_vesicle_roda_life
+
 ## 1.15.1663-usability — MI2178 LIFE_CELL_FISPAY (fispay)
 
 - **life_cell.fispay n**: cytokinesis endowment energy split after Scission terminal envelope PG cut.
