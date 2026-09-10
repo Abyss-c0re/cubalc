@@ -1,3 +1,9 @@
+
+## 1.15.1666-usability — MI2181 LIFE_CELL_MREC
+
+- feat(life): MreC periplasmic elongasome scaffold partner after MreB
+- proofs PASS asserts_ok=237 (139+61+37)
+- continuum: ...->fispay->roda->mreb->mrec
 ## 1.15.1665-usability — MI2180 LIFE_CELL_MREB (mreb)
 
 - **life_cell.mreb n**: actin-like elongasome cytoskeletal scaffold after RodA SEDS.

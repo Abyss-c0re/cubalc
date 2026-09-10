@@ -1,1 +1,5 @@
-f33bd0cb50a0c447258f9e93c7a19bb5f149cbad
+LIFE_CELL_MREC MI2181 periplasmic elongasome scaffold partner after MreB
+method: mrec n
+continuum: ...->fispay->roda->mreb->mrec
+asserts_ok=139+61+37=237
+VERSION 1.15.1666-usability
