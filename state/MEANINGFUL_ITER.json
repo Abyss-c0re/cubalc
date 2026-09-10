@@ -38,12 +38,12 @@
   "note": "UGGT burns ATP+energy+pcr into heat; re-glucosylates misfolded clients after CNX discharge for lectin re-entry; age/reserve/thr/pmf/sp held. Continuum after cnx. methods=139.",
   "feat_head": "d50a7434208e7df84c5827f9e63f6a07e0679cc4",
   "FEAT_HEAD": "d50a7434208e7df84c5827f9e63f6a07e0679cc4",
-  "HEAD": "d50a7434208e7df84c5827f9e63f6a07e0679cc4",
+  "HEAD": "48a1f63e7bcc4c8b2d287a2c7c93c31e927c2058",
   "commit": "d50a7434208e7df84c5827f9e63f6a07e0679cc4",
   "prior_feature": "LIFE_CELL_CNX",
   "sealed": true,
   "pass_": true,
   "methods": 139,
-  "tip": "d50a7434208e7df84c5827f9e63f6a07e0679cc4",
-  "pinned_head": "d50a7434208e7df84c5827f9e63f6a07e0679cc4"
+  "tip": "48a1f63e7bcc4c8b2d287a2c7c93c31e927c2058",
+  "pinned_head": "48a1f63e7bcc4c8b2d287a2c7c93c31e927c2058"
 }
