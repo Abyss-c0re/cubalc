@@ -1,3 +1,12 @@
+## 1.15.1683-usability — MI2196 LIFE_CELL_MURA (mura after murq)
+
+- feat(life): MurA UDP-GlcNAc enolpyruvyl transferase PG-precursor commit after MurQ
+- continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
+- proofs PASS asserts_ok=177 (123+22+20+12 flagship) asserts_fail:0
+- methods=186 (murq->mura)
+- signature heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1674-usability — MI2190 LIFE_CELL_AMPG (ampg after slt)

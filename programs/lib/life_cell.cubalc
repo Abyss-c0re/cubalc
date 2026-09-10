@@ -11043,7 +11043,7 @@ CLASS Cell
   # Domain: post-AnmK MurQ etherase (not AnmK kinase, not AmpD amidase,
   # not NagZ GlcNAc hydrolase, not AmpG IM permease, not Slt lytic TG,
   # not MepH/MepM/MepS DD-endopeptidases, not LpoA/PBP1A, not NlpD/EnvC).
-  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
   #   (AnmK anhMurNAc kinase -> MurQ anhMurNAc-6-P etherase).
   # Pay take=min(n,atp,energy) - ATP stand-in for MurQ etherase catalytic cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
@@ -11051,6 +11051,74 @@ CLASS Cell
   # Usability: AGI models post-AnmK MurQ recycle etherase energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD murq n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # MurA: UDP-GlcNAc enolpyruvyl transferase after MurQ.
+  # MurA commits recycled / de novo UDP-GlcNAc into the UDP-MurNAc precursor
+  # path (PEP + UDP-GlcNAc → UDP-GlcNAc-EP). Without MurA after MurQ opens
+  # MurNAc-6-P re-entry, wall precursor synthesis cannot restart from the
+  # cytoplasmic recycle branch into murein assembly.
+  # Domain: post-MurQ MurA ENOP transferase (not MurQ etherase, not AnmK kinase,
+  # not AmpD amidase, not NagZ GlcNAc hydrolase, not AmpG IM permease,
+  # not Slt lytic TG, not MepH/MepM/MepS DD-endopeptidases, not LpoA/PBP1A).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura
+  #   (MurQ anhMurNAc-6-P etherase -> MurA UDP-GlcNAc enolpyruvyl transferase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurA catalytic ENOP cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mura life-force.
+  # Usability: AGI models post-MurQ MurA precursor commit energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mura n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
