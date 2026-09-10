@@ -40,9 +40,9 @@
   "sealed": true,
   "methods": 179,
   "hold_flash": 1,
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "tip": "PENDING",
+  "feat_head": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "FEAT_HEAD": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "HEAD": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
   "pin_head": "PENDING"
 }
