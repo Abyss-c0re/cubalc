@@ -44,13 +44,13 @@
   "sealed": true,
   "methods": 186,
   "hold_flash": 1,
-  "HEAD": "a779b672ea2bc705d7fb07832a3c2c043aac6de4",
-  "tip": "a779b672ea2bc705d7fb07832a3c2c043aac6de4",
-  "head": "a779b672ea2bc705d7fb07832a3c2c043aac6de4",
-  "commit": "a779b672ea2",
+  "HEAD": "311cd7f11a4e22cbce48a009209b9307c7e55ddb",
+  "tip": "311cd7f11a4e22cbce48a009209b9307c7e55ddb",
+  "head": "311cd7f11a4e22cbce48a009209b9307c7e55ddb",
+  "commit": "311cd7f11a4",
   "feat_head": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
   "FEAT_HEAD": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
-  "pin": "a779b672ea2bc705d7fb07832a3c2c043aac6de4",
-  "pinned_head": "a779b672ea2bc705d7fb07832a3c2c043aac6de4",
-  "short": "a779b672ea2"
+  "pin": "311cd7f11a4e22cbce48a009209b9307c7e55ddb",
+  "pinned_head": "311cd7f11a4e22cbce48a009209b9307c7e55ddb",
+  "short": "311cd7f11a4"
 }
