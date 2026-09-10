@@ -1,6 +1,6 @@
 // atomic_printer_life_pbp1b.cubalc
-// Atomic printer board: Cell.pbp1b Pbp1B septal PG synthase after Pbp1B.
-// Place/bond/energize life-force; Pbp1B septal PG synthase after IF3/IF2/FtsZ/FtsI/AmiC/EnvC/FtsN/FtsK/XerCD/Tol-Pal/CpoB/Pbp1B gates.
+// Atomic printer board: Cell.pbp1b Pbp1B septal PG synthase after LpoB.
+// Place/bond/energize life-force; Pbp1B septal PG synthase after IF3/IF2/FtsZ/FtsI/AmiC/EnvC/FtsN/FtsK/XerCD/Tol-Pal/CpoB/LpoB gates.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -137,6 +137,13 @@ SEND printer glycolyse 20
 SEND printer charge 30
 SEND printer feed 20
 
+SEND printer lpob 3
+ASSERT LAST_N == 3 "printer lpob"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 30
+SEND printer feed 20
+
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
@@ -237,6 +244,13 @@ SEND bud charge 30
 SEND bud feed 20
 SEND bud cpob 3
 ASSERT LAST_N == 3 "bud cpob"
+SEND bud photosynth 24
+SEND bud glycolyse 20
+SEND bud charge 30
+SEND bud feed 20
+
+SEND bud lpob 3
+ASSERT LAST_N == 3 "bud lpob"
 SEND bud photosynth 24
 SEND bud glycolyse 20
 SEND bud charge 30

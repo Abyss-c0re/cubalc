@@ -1,47 +1,59 @@
 // smx_mesh_vesicle_pbp1b_life.cubalc
-// SMX mesh vesicle board: Pbp1B septal PG synthase on living vesicle after Pbp1B.
-// Mesh mind + life_cell pbp1b PBP1B-activator energy signature.
-// Cube is SoT. Free energy must flow.
+// SMX mesh vesicle: Cell.pbp1b Pbp1B septal PG synthase after LpoB.
+// Continuum after lpob. Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
-SCIENCE LOAD
 
-GENESIS "NEXUS_COORD v1 | from=gift | type=smx_mesh_vesicle_pbp1b_life | hold_flash=1 | share=smx | creed=life_force |"
-
-CUBE membrane ROLE host PROTON 1
-CUBE lumen ROLE construct PROTON 1
-CUBE cortex ROLE nanobot PROTON 1
-
-FOLDBITS membrane "1111111100000000111111110000000011111111000000001111111100000000"
-FOLDBITS lumen    "1111000011110000111100001111000011110000111100001111000011110000"
-FOLDBITS cortex   "0000111100001111000011110000111100001111000011110000111100001111"
-
-PLUG membrane lumen
-PLUG lumen cortex
-PLUG membrane cortex
-
-ENTITY vesicle OF Cell 1 52 0
-PLUG membrane vesicle
-
-IMPULSE membrane 1
-IMPULSE lumen 1
-ENERGYFLOW 4
-FLOW 3
-
-SMX KEY
-SMX EXCHANGE membrane lumen
-SMX EXCHANGE lumen cortex
-ASSERT SMX_OK == 1 "smx exchange ok"
-ASSERT SMX_TALKS >= 2 "smx talks"
+ENTITY vesicle OF Cell 1 40 0
+ENTITY peer OF Cell 1 28 0
 
 SEND vesicle set_threshold 10
-SEND vesicle pulse 5
+SEND peer set_threshold 10
+
+SEND vesicle pulse 6
 SEND vesicle photosynth 40
-SEND vesicle glycolyse 32
+SEND vesicle glycolyse 36
 SEND vesicle charge 36
 SEND vesicle feed 30
-SEND vesicle charge_pcr 20
+SEND vesicle charge_pcr 18
+
+SEND vesicle aars 3
+ASSERT LAST_N == 3 "vx aars"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle eftu 3
+ASSERT LAST_N == 3 "vx eftu"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle ptc 3
+ASSERT LAST_N == 3 "vx ptc"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle efg 3
+ASSERT LAST_N == 3 "vx efg"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle rf1 3
+ASSERT LAST_N == 3 "vx rf1"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
+SEND vesicle rf3 3
+ASSERT LAST_N == 3 "vx rf3"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 18
 SEND vesicle rrf 3
 ASSERT LAST_N == 3 "vx rrf"
 SEND vesicle photosynth 24
@@ -85,14 +97,10 @@ SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 18
 SEND vesicle ftsn 3
-ASSERT LAST_N == 3 "vesicle ftsn"
+ASSERT LAST_N == 3 "vx ftsn"
 SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
-SEND vesicle charge 30
-SEND vesicle feed 20
-SEND vesicle photosynth 24
-SEND vesicle glycolyse 20
-SEND vesicle charge 30
+SEND vesicle charge 28
 SEND vesicle feed 20
 SEND vesicle ftsk 3
 ASSERT LAST_N == 3 "vx ftsk"
@@ -101,13 +109,7 @@ SEND vesicle glycolyse 20
 SEND vesicle charge 30
 SEND vesicle feed 20
 SEND vesicle xercd 3
-ASSERT LAST_N == 3 "vesicle xercd"
-SEND vesicle photosynth 24
-SEND vesicle glycolyse 20
-SEND vesicle charge 30
-SEND vesicle feed 20
-GETF vesicle energy
-LET ve0 = LAST_N
+ASSERT LAST_N == 3 "vx xercd"
 SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 30
@@ -118,7 +120,21 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 30
 SEND vesicle feed 20
+SEND vesicle cpob 3
+ASSERT LAST_N == 3 "vesicle cpob"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
+SEND vesicle lpob 3
+ASSERT LAST_N == 3 "vesicle lpob"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 30
+SEND vesicle feed 20
 
+GETF vesicle energy
+LET ve0 = LAST_N
 GETF vesicle heat
 LET vh0 = LAST_N
 GETF vesicle atp
@@ -134,7 +150,7 @@ ASSERT LAST_N == va0 - 3 "vx atp-3"
 GETF vesicle pcr
 LET vp = LAST_N
 SEND vesicle pbp1b 2
-ASSERT LAST_N == 2 "vx lpob2"
+ASSERT LAST_N == 2 "vx pbp1b2"
 GETF vesicle pcr
 ASSERT LAST_N == vp "vx pcr held"
 
