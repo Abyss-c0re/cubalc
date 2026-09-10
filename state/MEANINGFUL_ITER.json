@@ -44,5 +44,14 @@
   "proof_asserts": 136,
   "atomic_asserts": 59,
   "smx_asserts": 36,
-  "continuum": "...->damx->rlpa->nlpd->scission->fispay->roda->mreb"
+  "continuum": "...->damx->rlpa->nlpd->scission->fispay->roda->mreb",
+  "feat_head": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "FEAT_HEAD": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "HEAD": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "head": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "tip": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "pinned_head": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad",
+  "commit": "f33bd0cb5",
+  "short": "f33bd0cb5",
+  "pin": "f33bd0cb50a0c447258f9e93c7a19bb5f149cbad"
 }
