@@ -1,0 +1,9 @@
+SHIP LIFE_CELL_SLT MI2189
+feature=LIFE_CELL_SLT
+version=1.15.1675-usability
+proof=programs/proof/2189_life_cell_slt.cubalc
+asserts_ok=190+75+56
+prior=LIFE_CELL_MEPH
+continuum=...->meph->slt
+status=PASS (prerequisite of AMPG)
+ts=2026-09-10T20:30:16Z

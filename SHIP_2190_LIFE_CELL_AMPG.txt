@@ -1,0 +1,13 @@
+SHIP LIFE_CELL_AMPG MI2190
+feature=LIFE_CELL_AMPG
+version=1.15.1675-usability
+proof=programs/proof/2190_life_cell_ampg.cubalc
+atomic=programs/science/integration/atomic_printer_life_ampg.cubalc
+smx=programs/science/integration/smx_mesh_vesicle_ampg_life.cubalc
+asserts_ok=193+75+58=326
+asserts_fail=0
+prior=LIFE_CELL_SLT (MI2189 method slt)
+continuum=...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg
+signature=heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held
+status=PASS
+ts=2026-09-10T20:30:16Z

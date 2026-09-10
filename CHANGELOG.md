@@ -1,3 +1,11 @@
+## 1.15.1675-usability — LIFE_CELL_AMPG (MI 2190)
+
+- feat(life_cell): METHOD slt (Slt70 LTG after MepH) + METHOD ampg (AmpG permease after Slt)
+- proof: 2189_life_cell_slt PASS asserts_ok=190; 2190_life_cell_ampg PASS asserts_ok=193
+- science: atomic_printer_life_slt/ampg + smx_mesh_vesicle_slt/ampg_life PASS
+- continuum: ...->pbp1a->meps->meph->slt->ampg
+- free energy flows; cube is SoT
+
 # Changelog
 
 ## 1.15.1672-usability — MI2187 LIFE_CELL_MEPS

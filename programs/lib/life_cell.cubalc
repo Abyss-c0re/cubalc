@@ -10691,4 +10691,145 @@ CLASS Cell
   END
 
 
+
+  # Slt: Slt70 lytic transglycosylase glycan cleavage after MepH.
+  # Slt (Slt70) cleaves β-1,4 glycosidic bonds in PG glycan strands via
+  # intramolecular transglycosylation, releasing GlcNAc-anhMurNAc-peptides
+  # after MepH has opened peptide cross-links. Without Slt burn, peptide-
+  # cleaved mesh still traps polymer product — recycling substrate stalls.
+  # Domain: post-MepH Slt LTG (not MepH/MepS DD-endopeptidase, not PBP1A
+  # GT/TP, not LpoA, not PBP2/MrdA, not RodZ/MreBCD/RodA, not LpoB/PBP1B,
+  # not FtsI, not AmiC/EnvC, not NlpD/RlpA, not scission/fispay, not AmpG
+  # permease import).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt
+  #   (MepH periplasmic DD-endopeptidase -> Slt70 lytic transglycosylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Slt LTG catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slt life-force.
+  # Usability: AGI models post-MepH Slt glycan cleavage energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # AmpG: AmpG permease PG-recycling import after Slt.
+  # AmpG is the IM permease that imports GlcNAc-anhMurNAc-peptides liberated
+  # by Slt70 LTG into the cytoplasm for AmpD/NagZ recycling into UDP-MurNAc
+  # precursors. Without AmpG burn, Slt product pools in the periplasm —
+  # cytoplasmic PG recycling and ampC induction signal stall.
+  # Domain: post-Slt AmpG permease (not Slt LTG itself, not MepH/MepS
+  # endopeptidase, not PBP1A GT/TP, not LpoA, not PBP2/MrdA, not RodZ/
+  # MreBCD/RodA, not LpoB/PBP1B, not FtsI, not AmiC/EnvC, not NlpD/RlpA,
+  # not scission/fispay, not AmpD amidase, not NagZ glucosaminidase).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a->meps->meph->slt->ampg
+  #   (Slt70 lytic transglycosylase -> AmpG PG-fragment permease).
+  # Pay take=min(n,atp,energy) - ATP stand-in for AmpG transport cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ampg life-force.
+  # Usability: AGI models post-Slt AmpG recycling-import energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ampg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
