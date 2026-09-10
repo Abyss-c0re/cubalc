@@ -1,0 +1,153 @@
+// smx_mesh_vesicle_if1_life.cubalc
+// SMX mesh vesicle board: sealed exchange around Cell.if1 IF1 A-site block on 30S PIC.
+// Free energy flows across mesh; IF1 after if2 gates A-site fidelity.
+// Cube is SoT. Matrix is key.
+
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY ves OF Cell 1 44 0
+ENTITY dock OF Cell 1 40 0
+
+SEND ves set_threshold 10
+SEND dock set_threshold 10
+
+SEND ves pulse 5
+SEND ves photosynth 40
+SEND ves glycolyse 36
+SEND ves charge 40
+SEND ves feed 40
+SEND ves charge_pcr 20
+
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves aars 2
+ASSERT LAST_N == 2 "smx aars"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves eftu 2
+ASSERT LAST_N == 2 "smx eftu"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves ptc 2
+ASSERT LAST_N == 2 "smx ptc"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves efg 2
+ASSERT LAST_N == 2 "smx pre efg"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves rf1 2
+ASSERT LAST_N == 2 "smx pre rf1"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves rf3 2
+ASSERT LAST_N == 2 "smx pre rf3"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+SEND ves charge_pcr 14
+SEND ves rrf 2
+ASSERT LAST_N == 2 "smx pre rrf"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+
+SEND ves if3 3
+ASSERT LAST_N == 3 "smx if3"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+
+SEND ves if2 3
+ASSERT LAST_N == 3 "ves pre if2"
+SEND ves photosynth 24
+SEND ves glycolyse 20
+SEND ves charge 30
+SEND ves feed 20
+GETF ves heat
+LET vh = LAST_N
+GETF ves energy
+LET ve = LAST_N
+GETF ves atp
+LET va = LAST_N
+GETF ves pcr
+LET vc = LAST_N
+GETF ves reserve
+LET vr = LAST_N
+GETF ves age
+LET vage = LAST_N
+
+SEND ves if1 3
+ASSERT LAST_N == 3 "smx if1"
+
+GETF ves heat
+ASSERT LAST_N == vh + 3 "smx h+3"
+GETF ves energy
+ASSERT LAST_N == ve - 3 "smx e-3"
+GETF ves atp
+ASSERT LAST_N == va "smx a held"
+GETF ves pcr
+ASSERT LAST_N == vc "smx c held"
+GETF ves reserve
+ASSERT LAST_N == vr "smx r held"
+GETF ves age
+ASSERT LAST_N == vage "smx age held"
+GETF ves alive
+ASSERT LAST_N == 1 "smx ves alive"
+
+SEND dock pulse 3
+SEND dock photosynth 30
+SEND dock glycolyse 20
+SEND dock charge 24
+SEND dock feed 16
+SEND dock charge_pcr 12
+SEND dock aars 2
+SEND dock eftu 2
+SEND dock ptc 2
+SEND dock efg 2
+SEND dock rf1 2
+SEND dock rf3 2
+SEND dock rrf 2
+SEND dock photosynth 20
+SEND dock glycolyse 16
+SEND dock charge 24
+SEND dock feed 16
+SEND dock if3 2
+ASSERT LAST_N == 2 "dock if3"
+SEND dock photosynth 20
+SEND dock glycolyse 16
+SEND dock charge 24
+SEND dock feed 16
+SEND dock if2 2
+ASSERT LAST_N == 2 "dock pre if2"
+SEND dock photosynth 20
+SEND dock glycolyse 16
+SEND dock charge 24
+SEND dock feed 16
+SEND dock if1 2
+ASSERT LAST_N == 2 "dock if1"
+GETF dock alive
+ASSERT LAST_N == 1 "dock alive"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_if1_life sealed"
+PRINT "smx_mesh_vesicle_if1_life PASS"

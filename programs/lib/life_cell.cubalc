@@ -8762,6 +8762,64 @@ CLASS Cell
 
 
 
+
+
+  # IF1: post-if2 initiation factor IF1 (A-site block on 30S PIC) —
+  # after IF2·GTP escorts fMet-tRNAfMet into the 30S P-site, IF1 occupies the
+  # 30S A site and blocks premature aminoacyl-tRNA entry while assisting IF2
+  # in 30S preinitiation complex fidelity until 50S joining.
+  # Domain: initiation A-site occlusion (not IF2 ternary docking, not IF3
+  # anti-association, not FtsZ Z-ring, not RRF split).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3->if2->if1.
+  # Pay take=min(n,energy) — pure binding/steric work; ATP/PCR/RESERVE HELD.
+  # AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n; age+atp+pcr+reserve+pmf+sp+thr held — if1 life-force.
+  # Usability: AGI models post-if2 IF1 A-site gate under ASSERT boards. Cube is SoT.
+  # Free energy must flow. Returns take; else 0.
+  METHOD if1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
   # FtsZ: bacterial Z-ring GTPase — midcell cytokinetic scaffold before fission.
   # FtsZ·GTP polymers form the contractile Z-ring at midcell; GTP hydrolysis
   # drives treadmilling that recruits septal PG synthases (FtsI/PBP3) and
