@@ -1,1 +1,7 @@
-8bf9016df41d12c6a5d82c45b34a636dd5889c5f
+LIFE_CELL_RODA MI2179 SEDS rod PG polymerase elongation restart after FisPay
+method: roda n
+continuum: ...->damx->rlpa->nlpd->scission->fispay->roda
+asserts_ok=131+57+35=223
+VERSION 1.15.1664-usability
+feat: 8bf9016df
+pin: d7aaa7bfb
