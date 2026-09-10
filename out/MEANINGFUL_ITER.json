@@ -43,5 +43,14 @@
   "prior_feature": "LIFE_CELL_MURQ",
   "sealed": true,
   "methods": 186,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "HEAD": "9dc04642f8d982665fb86fd8bf0a1d0f4049c3ea",
+  "head": "9dc04642f8d982665fb86fd8bf0a1d0f4049c3ea",
+  "tip": "9dc04642f8d982665fb86fd8bf0a1d0f4049c3ea",
+  "pin": "9dc04642f8d982665fb86fd8bf0a1d0f4049c3ea",
+  "pinned_head": "9dc04642f8d982665fb86fd8bf0a1d0f4049c3ea",
+  "commit": "9dc04642f8d",
+  "short": "9dc04642f8d",
+  "feat_head": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c",
+  "FEAT_HEAD": "d1b277e4c9cba8f3f96bc0a1580cab6266d69d9c"
 }
