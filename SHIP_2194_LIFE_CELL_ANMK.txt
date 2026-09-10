@@ -1,0 +1,4 @@
+LIFE_CELL_ANMK MI2194
+METHOD anmk on life_cell after ampd
+Continuum ...->meph->slt->ampg->nagz->ampd->anmk
+Proof 2194 + atomic_printer_life_anmk + smx_mesh_vesicle_anmk_life
