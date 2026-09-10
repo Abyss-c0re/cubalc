@@ -1069,3 +1069,4 @@ Doc: `docs/LIFE_FORCE.md`
 - Continuum: `...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa`
 - Proof: `programs/proof/2185_life_cell_lpoa.cubalc` asserts_ok=165
 
+- **MI2186 LIFE_CELL_PBP1A**: METHOD `pbp1a n` bifunctional aPBP sidewall after LpoA. Continuum ...->lpoa->pbp1a. asserts_ok=302. VERSION 1.15.1671-usability.

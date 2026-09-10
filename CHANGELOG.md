@@ -1,3 +1,10 @@
+## 1.15.1671-usability — LIFE_CELL_PBP1A MI2186
+
+- feat(life): PBP1A/MrcA bifunctional GT+TP sidewall PG synthase after LpoA
+- METHOD pbp1a n on Cell; continuum ...->pbp2->lpoa->pbp1a
+- Proofs PASS asserts_ok=183+71+48=302
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1670-usability — MI2185 LIFE_CELL_LPOA

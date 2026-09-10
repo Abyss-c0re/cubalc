@@ -1,0 +1,5 @@
+LIFE_CELL_PBP1A MI2186 monofunctional? NO bifunctional GT+TP sidewall aPBP (MrcA) after LpoA
+method: pbp1a n
+continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a
+asserts_ok=183+71+48=302
+VERSION 1.15.1671-usability
