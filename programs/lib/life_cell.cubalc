@@ -10781,8 +10781,8 @@ CLASS Cell
   # Domain: post-MepH soluble lytic TG Slt (not MepH/MepM/MepS DD-endopeptidases,
   # not MltG synthase-associated TG, not AmpG permease, not LpoA/PBP1A,
   # not NlpD AmiC activator, not EnvC LytM septal path, not scission).
-  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt->ampg
-  #   (MepH soluble DD-endopeptidase -> Slt soluble lytic TG -> AmpG permease).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt->ampg->nagz
+  #   (MepH soluble DD-endopeptidase -> Slt soluble lytic TG -> AmpG permease -> NagZ).
   # Pay take=min(n,atp,energy) - ATP stand-in for Slt glycan cleavage cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slt life-force.
@@ -10851,14 +10851,82 @@ CLASS Cell
   # not MltG synthase-associated TG, not NagZ beta-N-acetylglucosaminidase,
   # not AmpD amidase, not MepH/MepM/MepS DD-endopeptidases, not LpoA/PBP1A,
   # not NlpD/EnvC septal path, not scission).
-  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt->ampg
-  #   (Slt soluble lytic TG -> AmpG IM anhydro-muropeptide permease).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt->ampg->nagz
+  #   (Slt soluble lytic TG -> AmpG IM permease -> NagZ GlcNAc hydrolase).
   # Pay take=min(n,atp,energy) - ATP stand-in for AmpG import/PMF-coupled cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ampg life-force.
   # Usability: AGI models post-Slt AmpG permease energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD ampg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # NagZ: cytoplasmic beta-N-acetylglucosaminidase after AmpG import.
+  # NagZ cleaves GlcNAc from AmpG-imported 1,6-anhydro-MurNAc peptides so AmpD
+  # amidase can free anhMurNAc and stem peptides for de novo PG precursor reuse.
+  # Without NagZ after AmpG, anhydro-muropeptides stall in the cytoplasm and the
+  # recycle branch cannot release monosaccharide + peptide building blocks.
+  # Domain: post-AmpG NagZ beta-N-acetylglucosaminidase (not AmpG IM permease,
+  # not AmpD anhMurNAc-L-Ala amidase, not Slt lytic TG, not MltG TG,
+  # not MepH/MepM/MepS DD-endopeptidases, not LpoA/PBP1A, not NlpD/EnvC).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph->slt->ampg->nagz
+  #   (AmpG IM anhydro-muropeptide permease -> NagZ cytoplasmic GlcNAc hydrolase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for NagZ glycosidase cleavage cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nagz life-force.
+  # Usability: AGI models post-AmpG NagZ recycle hydrolase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nagz n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0

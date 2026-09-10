@@ -1,0 +1,4 @@
+LIFE_CELL_NAGZ MI2192
+METHOD nagz on life_cell after ampg
+Continuum ...->meph->slt->ampg->nagz
+Proof 2192 + atomic_printer_life_nagz + smx_mesh_vesicle_nagz_life
