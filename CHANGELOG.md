@@ -1,3 +1,11 @@
+## 1.15.1663-usability — MI2178 LIFE_CELL_FISPAY (fispay)
+
+- **life_cell.fispay n**: cytokinesis endowment energy split after Scission terminal envelope PG cut.
+- Pay min(n,atp,energy) → heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+- Continuum: ...->damx->rlpa->nlpd->scission->fispay.
+- Proof PASS asserts_ok=127+55+34=216; methods=173.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1663-usability — LIFE_CELL_FISPAY (MI 2178)
 - feat(life): METHOD fispay n cytokinesis endowment energy split after Scission/NlpD continuum
 - continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay

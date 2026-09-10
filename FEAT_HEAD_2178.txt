@@ -1,5 +1,6 @@
 LIFE_CELL_FISPAY MI2178 cytokinesis endowment energy split after Scission
 method: fispay n
-continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
-asserts_ok=128+33+55=216
+continuum: ...->damx->rlpa->nlpd->scission->fispay
+asserts_ok=127+55+34=216
 VERSION 1.15.1663-usability
+8bf9016df41d12c6a5d82c45b34a636dd5889c5f
