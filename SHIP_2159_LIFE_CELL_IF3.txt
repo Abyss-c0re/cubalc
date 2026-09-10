@@ -1,0 +1,14 @@
+SHIP LIFE_CELL_IF3 MI2159 1.15.1644-usability
+FEATURE LIFE_CELL_IF3
+MI 2159
+VERSION 1.15.1644-usability
+HEAD 8627f5506415d8df084a89c463db24f496ea9c1a
+FEAT_HEAD 8627f5506415d8df084a89c463db24f496ea9c1a
+METHOD if3 n
+proof programs/proof/2159_life_cell_if3.cubalc asserts_ok=56
+science atomic_printer_life_if3 asserts_ok=19
+smx smx_mesh_vesicle_if3_life asserts_ok=19
+methods 153
+continuum ...->rf1->rf3->rrf->if3
+signature heat+n energy-n; age/atp/pcr/reserve/pmf/sp/thr held
+PASS

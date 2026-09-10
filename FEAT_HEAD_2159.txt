@@ -1,0 +1,14 @@
+FEATURE=LIFE_CELL_IF3
+MI=2159
+VERSION=1.15.1644-usability
+METHOD=if3 n
+SIG=heat+n energy-n; age/atp/pcr/reserve/pmf/sp/thr held
+CONTINUUM=...->efg->rf1->rf3->rrf->if3
+PROOF=programs/proof/2159_life_cell_if3.cubalc
+SCIENCE=programs/science/integration/atomic_printer_life_if3.cubalc
+SMX=programs/science/integration/smx_mesh_vesicle_if3_life.cubalc
+ASSERTS=94
+PROOF_OK=56
+SCIENCE_OK=19
+SMX_OK=19
+METHODS=153
