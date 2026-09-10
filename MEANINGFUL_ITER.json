@@ -23,12 +23,12 @@
   ],
   "item": "life cell meph",
   "item_id": "mi_life_cell_meph",
-  "summary": "LIFE_CELL_MEPH MI2188 MepH periplasmic DD-endopeptidase space-making after MepS PASS asserts_ok=187+75+54",
+  "summary": "LIFE_CELL_MEPH MI2188 MepH DD-endopeptidase space-making after MepS PASS asserts_ok=186+75+54",
   "ts": "2026-09-10T19:45:45Z",
-  "asserts_ok": 316,
+  "asserts_ok": 315,
   "asserts_fail": 0,
-  "asserts_ok_split": "187+75+54",
-  "proof_asserts_ok": 187,
+  "asserts_ok_split": "186+75+54",
+  "proof_asserts_ok": 186,
   "science_asserts_ok": 75,
   "smx_asserts_ok": 54,
   "host_finish": true,
@@ -45,7 +45,7 @@
   "feat_head": "c626ef37e94267ea0938516a6dd5cc4d6f5d1c83",
   "FEAT_HEAD": "c626ef37e94267ea0938516a6dd5cc4d6f5d1c83",
   "commit": "c626ef37e",
-  "HEAD": "442d3ab556632e393bf02ec105ed49a04b5805e8",
-  "tip": "442d3ab556632e393bf02ec105ed49a04b5805e8",
-  "head": "442d3ab556632e393bf02ec105ed49a04b5805e8"
+  "HEAD": "471d80cb6523135a178b81cfaadcb81cfa6144cd",
+  "tip": "471d80cb6523135a178b81cfaadcb81cfa6144cd",
+  "head": "471d80cb6523135a178b81cfaadcb81cfa6144cd"
 }
