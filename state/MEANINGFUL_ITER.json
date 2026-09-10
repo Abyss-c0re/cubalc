@@ -2,27 +2,24 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2141,
   "MEANINGFUL_ITER": 2141,
-  "iter": 2141,
+  "iter": 2142,
   "n": 2141,
-  "version": "1.15.1624-usability",
+  "version": "1.15.1625-usability",
   "VERSION": "1.15.1624-usability",
   "feature": "life_cell_cleave",
   "FEATURE": "LIFE_CELL_CLEAVE",
   "name": "LIFE_CELL_CLEAVE",
-  "title": "life cell cleave",
+  "title": "life cell",
   "label": "LIFE_CELL_CLEAVE",
   "ship": "2141_life_cell_cleave",
   "proof": "programs/proof/2141_life_cell_cleave.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2141_life_cell_cleave.cubalc",
-    "programs/science/integration/atomic_printer_life_cleave.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_cleave_life.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
-  "item": "life cell cleave",
-  "item_id": "mi_life_cell_cleave",
-  "summary": "Post-transloc SPC signal-peptidase cleavage / N-terminal signal-peptide scission for life_cell continuum.",
-  "ts": "2026-09-10T02:00:00Z",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-10T01:05:10Z",
   "asserts_ok": 161,
   "asserts_fail": 0,
   "science_asserts_ok": 16,
@@ -37,5 +34,5 @@
   "feat_head": "caedf34970efa18938a5eeee42e97e35a9eba02c",
   "HEAD": "caedf34970efa18938a5eeee42e97e35a9eba02c",
   "FEAT_HEAD": "caedf34970efa18938a5eeee42e97e35a9eba02c",
-  "commit": "caedf34970efa18938a5eeee42e97e35a9eba02c"
+  "commit": "2dd878c2c"
 }

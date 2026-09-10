@@ -152,6 +152,8 @@
 #   export n             post-degrade lysosomal AA export / LAAT-1+SLC38A9 efflux — pay min(n,atp,energy,pcr) → heat +n + energy -n + pcr -n + reserve +n; age/thr/pmf/sp held; ready recompute
 #   translate n          post-export cytosolic ribosome polypeptide synthesis / mTOR-Rag AA sensing — pay min(n,atp,energy,reserve) → heat +n + energy -n + reserve -n + age -n; thr/pmf/sp/pcr held; ready recompute
 #   transloc n           post-translate SRP–Sec61 co-translational ER translocation / nascent-chain targeting — pay min(n,atp,energy) → heat +n + energy -n + sp +n; age/reserve/thr/pmf/pcr held; ready recompute
+#   cleave n             post-transloc SPC signal-peptidase cleavage / N-terminal signal-peptide scission — pay min(n,atp,energy) → heat +n + energy -n + pcr +n; age/reserve/thr/pmf/sp held; ready recompute
+#   glycosyl n           post-cleave OST N-linked glycosylation / dolichol-PP Glc3Man9GlcNAc2 transfer — pay min(n,atp,energy) → heat +n + energy -n + thr +n; age/reserve/sp/pmf/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -7082,7 +7084,7 @@ CLASS Cell
   #   spend, not hydrolase-latency thr, not EE proton bank, not secretory sp bank
   #   (already raised by transloc).
   # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
-  # Continuum: ...->export->translate->transloc->cleave.
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl.
   # Signature: heat+n energy-n atp-n pcr+n; age+reserve+thr+pmf+sp held — cleave life-force.
   # Usability: AGI models post-transloc ER signal-peptidase maturation under ASSERT.
   # Returns take cleaved; dead/n<1/empty atp|energy -> 0.
@@ -7138,6 +7140,95 @@ CLASS Cell
     END
     GETF THIS threshold
     LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # GLYCOSYL: post-cleave oligosaccharyltransferase (OST) N-linked glycosylation /
+  # en bloc Glc3Man9GlcNAc2 transfer from dolichol-PP to Asn-X-Ser/Thr on the cleaved
+  # luminal chain (post-cleave glycosyl; not multipotent stream, not GRN fate lock,
+  # not growth-cone path sp+, not synaptogenesis thr+ contact alone, not release
+  # quantal thr-, not reuptake clearance energy+, not refill VGLUT pack, not dock
+  # HOPS tethering, not arm NSF priming, not clamp complexin clamp, not trigger Ca
+  # fusion, not pore SNARE zipper, not mix content dump, not collapse coat uncoat,
+  # not retrieve CME membrane bank, not acidify EE proton pump, not mature Rab5->Rab7
+  # identity, not recruit M6PR hydrolase cargo, not activate cathepsin arming thr-,
+  # not degrade substrate cut age- pcr+, not export lumen->cytosol pcr- reserve+,
+  # not translate reserve- age- ribosome rebuild, not transloc sp+ Sec61 channel
+  # gating, not cleave pcr+ SPC signal-peptide scission).
+  # HEAT += take (each OST en-bloc glycan transfer / dolichol cycle step dissipates
+  #   as glycosyltransferase work).
+  # ENERGY -= take (glycosyl burns active metabolic pool into N-glycan transfer;
+  #   kin to cleave energy- but raises QC threshold competence instead of pcr bank).
+  # ATP -= take (OST STT3 catalytic cycle / dolichol-linked donor presentation).
+  # THRESHOLD rises: thr = min(1000, thr + take) — N-glycan marks commit cargo into
+  #   calnexin/calreticulin QC competence gate (distinct from synapse thr+ contact,
+  #   condense thr+ pack, mature thr+ LE identity, activate thr- zymogen arming).
+  # AGE/RESERVE/SETPOINT/PMF/PCR HELD — glycosyl is post-cleave glycan transfer after
+  #   SPC freed the luminal N-terminus, not anabolic age repair, not free-AA reserve
+  #   spend, not secretory sp bank (transloc), not EE proton bank, not phosphagen pcr
+  #   (cleave fragments).
+  # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl.
+  # Signature: heat+n energy-n atp-n thr+n; age+reserve+sp+pmf+pcr held — glycosyl life-force.
+  # Usability: AGI models post-cleave OST N-glycosylation under ASSERT.
+  # Returns take glycosylated; dead/n<1/empty atp|energy -> 0.
+  METHOD glycosyl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET thr = thr + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
     LET rd = 0
     IF e >= thr THEN
       LET rd = 1
