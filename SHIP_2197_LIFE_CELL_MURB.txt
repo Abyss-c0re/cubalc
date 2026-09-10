@@ -3,6 +3,5 @@ METHOD murb on life_cell after mura
 Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb
 Proof 2197 + atomic_printer_life_murb + smx_mesh_vesicle_murb_life
 asserts_ok life=121 atomic=32 smx=26 flagship_1620=12 sum=191 asserts_fail=0
-VERSION=1.15.1684-usability
-FEAT=f24af2fb7d425710c118274ffe6f1662425cd3c4
-HEAD=c842fbbfb01ce0aa051adc7cb21ad0316eda0de1
+VERSION=1.15.1685-usability
+HEAD=f24af2fb7d425710c118274ffe6f1662425cd3c4
