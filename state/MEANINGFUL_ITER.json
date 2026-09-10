@@ -39,5 +39,10 @@
   "prior_feature": "LIFE_CELL_DEDD",
   "sealed": true,
   "pass_": true,
-  "methods": 168
+  "methods": 168,
+  "feat_head": "e3f940336db12aed00df3b638ca2381e095daaa2",
+  "FEAT_HEAD": "e3f940336db12aed00df3b638ca2381e095daaa2",
+  "HEAD": "e3f940336db12aed00df3b638ca2381e095daaa2",
+  "tip": "e3f940336db12aed00df3b638ca2381e095daaa2",
+  "pinned_head": "e3f940336db12aed00df3b638ca2381e095daaa2"
 }
