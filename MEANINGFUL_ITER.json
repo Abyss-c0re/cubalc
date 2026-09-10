@@ -38,15 +38,15 @@
   "note": "MANN burns ATP+energy into heat; ERManI Man9->Man8 demannosylation raises thr ERAD timer after UGGT loop; age/reserve/pmf/sp/pcr held. Continuum after uggt. methods=140.",
   "feat_head": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
   "FEAT_HEAD": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
-  "HEAD": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
+  "HEAD": "5ad7e1115166c3e2211ea5a9da43a836058bf48e",
   "commit": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
   "prior_feature": "LIFE_CELL_UGGT",
   "sealed": true,
   "pass_": true,
   "methods": 140,
-  "tip": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
-  "pinned_head": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
-  "pin": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
-  "head": "411612e9ec2f624dba60245c7612bbcbd1e411c9",
-  "short": "411612e9ec"
+  "tip": "5ad7e1115166c3e2211ea5a9da43a836058bf48e",
+  "pinned_head": "5ad7e1115166c3e2211ea5a9da43a836058bf48e",
+  "pin": "5ad7e1115166c3e2211ea5a9da43a836058bf48e",
+  "head": "5ad7e1115166c3e2211ea5a9da43a836058bf48e",
+  "short": "5ad7e11151"
 }
