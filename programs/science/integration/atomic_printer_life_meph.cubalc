@@ -286,12 +286,6 @@ GETF printer reserve
 LET pr = LAST_N
 GETF printer age
 LET page = LAST_N
-SEND printer meps 2
-ASSERT LAST_N == 2 "pr pre_meps"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 30
-SEND printer feed 20
 SEND printer meph 4
 ASSERT LAST_N == 4 "printer meph"
 
@@ -513,6 +507,11 @@ GETF bud reserve
 LET br = LAST_N
 GETF bud age
 LET bage = LAST_N
+SEND bud meps 3
+ASSERT LAST_N == 3 "bu pre_meps"
+SEND bud photosynth 20
+SEND bud charge 24
+SEND bud feed 16
 SEND bud meph 3
 ASSERT LAST_N == 3 "bud meph"
 GETF bud heat

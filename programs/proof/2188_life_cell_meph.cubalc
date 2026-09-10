@@ -1,7 +1,7 @@
 // 2188_life_cell_meph.cubalc
 // Proof 2188: life_cell meph - periplasmic DD-endopeptidase space-making after MepS.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
-// Continuum after meps. Free energy must flow.
+// Continuum after meph. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -765,6 +765,12 @@ GETF twin pcr
 LET tc0 = LAST_N
 GETF twin reserve
 LET tr0 = LAST_N
+SEND twin meps 3
+ASSERT LAST_N == 3 "twin pre_meps"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
 SEND twin meph 3
 ASSERT LAST_N == 3 "twin meph"
 GETF twin heat
@@ -1051,6 +1057,12 @@ GETF ceil setpoint
 LET csp0 = LAST_N
 GETF ceil threshold
 LET cthr0 = LAST_N
+SEND ceil meps 4
+ASSERT LAST_N == 4 "ceil pre_meps"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
 SEND ceil meph 4
 ASSERT LAST_N == 4 "ceil meph"
 GETF ceil heat
