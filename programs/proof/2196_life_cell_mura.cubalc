@@ -328,18 +328,6 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate anmk 5
-ASSERT LAST_N == 5 "pre anmk"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate murq 5
-ASSERT LAST_N == 5 "pre murq"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
 SEND gate murq 5
 ASSERT LAST_N == 5 "pre murq"
 SEND gate photosynth 24
@@ -392,8 +380,6 @@ SEND dead nagz 3
 ASSERT LAST_N == 0 "dead nagz0"
 SEND dead ampd 3
 ASSERT LAST_N == 0 "dead ampd0"
-SEND dead anmk 3
-ASSERT LAST_N == 0 "dead anmk0"
 SEND dead murq 3
 ASSERT LAST_N == 0 "dead murq0"
 SEND dead mura 3
@@ -404,8 +390,6 @@ SEND poor nagz 3
 ASSERT LAST_N == 0 "poor nagz0"
 SEND poor ampd 3
 ASSERT LAST_N == 0 "poor ampd0"
-SEND poor anmk 3
-ASSERT LAST_N == 0 "poor anmk0"
 SEND poor murq 3
 ASSERT LAST_N == 0 "poor murq0"
 SEND poor mura 3
@@ -452,18 +436,6 @@ GETF twin energy
 LET te = LAST_N
 GETF twin atp
 LET ta = LAST_N
-SEND twin anmk 3
-ASSERT LAST_N == 3 "pre twin anmk"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 30
-SEND twin feed 20
-SEND twin murq 3
-ASSERT LAST_N == 3 "pre twin murq"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 30
-SEND twin feed 20
 SEND twin murq 3
 ASSERT LAST_N == 3 "pre twin murq"
 SEND twin photosynth 24
@@ -540,13 +512,7 @@ GETF ceil setpoint
 LET csp0 = LAST_N
 GETF ceil threshold
 LET cthr0 = LAST_N
-SEND ceil anmk 4
-ASSERT LAST_N == 4 "pre ceil anmk"
-SEND ceil photosynth 24
-SEND ceil glycolyse 20
-SEND ceil charge 30
-SEND ceil feed 20
-SEND ceil mura 4
+SEND ceil murq 4
 ASSERT LAST_N == 4 "pre ceil murq"
 SEND ceil photosynth 24
 SEND ceil glycolyse 20
@@ -632,14 +598,8 @@ SEND starved photosynth 24
 SEND starved glycolyse 20
 SEND starved charge 30
 SEND starved feed 20
-SEND starved anmk 3
-ASSERT LAST_N == 3 "starved anmk"
-SEND starved photosynth 4
-SEND starved glycolyse 2
 SEND starved murq 3
 ASSERT LAST_N == 3 "starved murq"
-SEND starved mura 2
-ASSERT LAST_N >= 0 "starved murq pre"
 SEND starved photosynth 4
 SEND starved glycolyse 2
 GETF starved energy
@@ -663,20 +623,8 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate anmk 3
-ASSERT LAST_N == 3 "gate anmk2"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
 SEND gate murq 3
 ASSERT LAST_N == 3 "gate murq2"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate mura 3
-ASSERT LAST_N == 3 "gate murq2pre"
 SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30

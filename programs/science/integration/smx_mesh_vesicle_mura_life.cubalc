@@ -5,24 +5,18 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-ENTITY vesicle OF Cell 1 44 0
-ENTITY cargo OF Cell 1 30 0
+ENTITY vesicle OF Cell 1 40 0
+ENTITY cargo OF Cell 1 28 0
 ENTITY ghost OF Cell 0 12 0
 
 SEND vesicle set_threshold 8
 SEND cargo set_threshold 8
-SEND vesicle pulse 5
+SEND vesicle pulse 3
 SEND vesicle photosynth 36
-SEND vesicle glycolyse 30
+SEND vesicle glycolyse 32
 SEND vesicle pump 20
 SEND vesicle charge 36
-SEND vesicle feed 30
-SEND vesicle meph 3
-ASSERT LAST_N == 3 "ves meph"
-SEND vesicle photosynth 20
-SEND vesicle glycolyse 16
-SEND vesicle charge 24
-SEND vesicle feed 16
+SEND vesicle feed 28
 SEND vesicle slt 3
 ASSERT LAST_N == 3 "ves slt"
 SEND vesicle photosynth 20
@@ -53,8 +47,8 @@ SEND vesicle photosynth 20
 SEND vesicle glycolyse 16
 SEND vesicle charge 24
 SEND vesicle feed 16
-SEND vesicle murq 4
-ASSERT LAST_N == 4 "ves murq pre"
+SEND vesicle murq 3
+ASSERT LAST_N == 3 "ves murq"
 SEND vesicle photosynth 20
 SEND vesicle glycolyse 16
 SEND vesicle charge 24
@@ -67,6 +61,12 @@ GETF vesicle atp
 LET va = LAST_N
 GETF vesicle pcr
 LET vc = LAST_N
+GETF vesicle reserve
+LET vr = LAST_N
+GETF vesicle age
+LET vage = LAST_N
+GETF vesicle pmf
+LET vpmf = LAST_N
 SEND vesicle mura 4
 ASSERT LAST_N == 4 "ves mura"
 GETF vesicle heat
@@ -77,12 +77,18 @@ GETF vesicle atp
 ASSERT LAST_N == va - 4 "ves atp-4"
 GETF vesicle pcr
 ASSERT LAST_N == vc "ves pcr held"
+GETF vesicle reserve
+ASSERT LAST_N == vr "ves reserve held"
+GETF vesicle age
+ASSERT LAST_N == vage "ves age held"
+GETF vesicle pmf
+ASSERT LAST_N == vpmf "ves pmf held"
 SEND cargo photosynth 20
 SEND cargo glycolyse 16
 SEND cargo charge 24
 SEND cargo feed 16
 SEND cargo murq 2
-ASSERT LAST_N == 2 "cargo murq pre"
+ASSERT LAST_N == 2 "cargo murq"
 SEND cargo photosynth 20
 SEND cargo glycolyse 16
 SEND cargo charge 24
@@ -101,8 +107,6 @@ GETF cargo energy
 ASSERT LAST_N == ce - 2 "cargo e-2"
 GETF cargo atp
 ASSERT LAST_N == ca - 2 "cargo atp-2"
-SEND ghost murq 3
-ASSERT LAST_N == 0 "ghost murq 0"
 SEND ghost mura 3
 ASSERT LAST_N == 0 "ghost mura 0"
 SEND vesicle mura 0

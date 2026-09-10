@@ -65,8 +65,8 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer murq 5
-ASSERT LAST_N == 5 "pr murq pre"
+SEND printer murq 4
+ASSERT LAST_N == 4 "pr murq"
 SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
@@ -79,6 +79,16 @@ GETF printer atp
 LET a0 = LAST_N
 GETF printer pcr
 LET c0 = LAST_N
+GETF printer reserve
+LET r0 = LAST_N
+GETF printer age
+LET age0 = LAST_N
+GETF printer pmf
+LET pmf0 = LAST_N
+GETF printer setpoint
+LET sp0 = LAST_N
+GETF printer threshold
+LET thr0 = LAST_N
 SEND printer mura 5
 ASSERT LAST_N == 5 "pr mura"
 GETF printer heat
@@ -89,6 +99,28 @@ GETF printer atp
 ASSERT LAST_N == a0 - 5 "pr atp-5"
 GETF printer pcr
 ASSERT LAST_N == c0 "pr pcr held"
+GETF printer reserve
+ASSERT LAST_N == r0 "pr reserve held"
+GETF printer age
+ASSERT LAST_N == age0 "pr age held"
+GETF printer pmf
+ASSERT LAST_N == pmf0 "pr pmf held"
+GETF printer setpoint
+ASSERT LAST_N == sp0 "pr sp held"
+GETF printer threshold
+ASSERT LAST_N == thr0 "pr thr held"
+SEND ink photosynth 24
+SEND ink glycolyse 20
+SEND ink charge 28
+SEND ink feed 20
+SEND ink anmk 3
+ASSERT LAST_N == 3 "ink anmk"
+SEND ink photosynth 24
+SEND ink glycolyse 20
+SEND ink charge 28
+SEND ink feed 20
+SEND ink murq 3
+ASSERT LAST_N == 3 "ink murq"
 SEND ink photosynth 24
 SEND ink glycolyse 20
 SEND ink charge 28
@@ -99,12 +131,6 @@ GETF ink energy
 LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
-SEND ink murq 3
-ASSERT LAST_N == 3 "ink murq pre"
-SEND ink photosynth 20
-SEND ink glycolyse 16
-SEND ink charge 24
-SEND ink feed 16
 SEND ink mura 3
 ASSERT LAST_N == 3 "ink mura"
 GETF ink heat
@@ -113,8 +139,6 @@ GETF ink energy
 ASSERT LAST_N == ie - 3 "ink e-3"
 GETF ink atp
 ASSERT LAST_N == ia - 3 "ink atp-3"
-SEND scrap murq 3
-ASSERT LAST_N == 0 "scrap murq0"
 SEND scrap mura 3
 ASSERT LAST_N == 0 "scrap mura0"
 SEND printer mura 0
