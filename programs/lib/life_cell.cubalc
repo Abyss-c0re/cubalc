@@ -10551,4 +10551,76 @@ CLASS Cell
   END
 
 
+
+
+  # MepS: OM DD-endopeptidase (Spr) after LpoA PBP1A activation.
+  # MepS/Spr is the outer-membrane DD-endopeptidase that cleaves peptide
+  # cross-links in existing sidewall PG so new strands polymerized by the
+  # LpoA-stimulated PBP1A elongasome can insert without stress fracture.
+  # Without MepS cleavage burn, LpoA-activated PG synthesis packs against
+  # uncleaved sacculus and rod expansion stalls despite activator presence.
+  # Domain: post-LpoA MepS/Spr OM DD-endopeptidase (not LpoA activator itself,
+  # not PBP1A catalysis, not MepM/MepH redundant endopeptidases, not Slt lytic
+  # TG, not LpoB/PBP1B septal path, not NlpD amidase activator, not scission).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps
+  #   (LpoA OM lipoprotein activator -> MepS/Spr OM DD-endopeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MepS cross-link cleavage cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - meps life-force.
+  # Usability: AGI models post-LpoA MepS endopeptidase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD meps n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
