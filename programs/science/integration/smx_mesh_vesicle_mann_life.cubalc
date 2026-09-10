@@ -1,0 +1,98 @@
+// smx_mesh_vesicle_mann_life.cubalc
+// SMX mesh vesicle life-force: ERManI demannosylation / ERAD timer after UGGT.
+// Cube is SoT. Free energy must flow.
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+SEND vesicle set_threshold 8
+SEND vesicle pulse 4
+SEND vesicle photosynth 32
+SEND vesicle glycolyse 28
+SEND vesicle pump 18
+SEND vesicle photophos 18
+SEND vesicle charge 26
+SEND vesicle feed 26
+SEND vesicle retrieve 2
+SEND vesicle acidify 2
+SEND vesicle mature 2
+SEND vesicle recruit 2
+SEND vesicle activate 2
+SEND vesicle degrade 2
+SEND vesicle export 2
+SEND vesicle translate 2
+SEND vesicle photosynth 14
+SEND vesicle glycolyse 12
+SEND vesicle charge 14
+SEND vesicle feed 12
+SEND vesicle transloc 2
+SEND vesicle cleave 2
+SEND vesicle glycosyl 2
+SEND vesicle trim 3
+ASSERT LAST_N == 3 "smx trim3"
+SEND vesicle cnx 2
+ASSERT LAST_N == 2 "smx cnx2"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+SEND vesicle charge_pcr 10
+SEND vesicle uggt 2
+ASSERT LAST_N == 2 "smx uggt2"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+GETF vesicle heat
+LET h0 = LAST_N
+GETF vesicle energy
+LET e0 = LAST_N
+GETF vesicle atp
+LET a0 = LAST_N
+GETF vesicle pcr
+LET c0 = LAST_N
+GETF vesicle age
+LET age0 = LAST_N
+GETF vesicle reserve
+LET r0 = LAST_N
+GETF vesicle pmf
+LET pm0 = LAST_N
+GETF vesicle threshold
+LET t0 = LAST_N
+GETF vesicle setpoint
+LET s0 = LAST_N
+SEND vesicle mann 2
+ASSERT LAST_N == 2 "smx mann2"
+GETF vesicle heat
+ASSERT LAST_N == h0 + 2 "smx h+2"
+GETF vesicle energy
+ASSERT LAST_N == e0 - 2 "smx e-2"
+GETF vesicle atp
+ASSERT LAST_N == a0 - 2 "smx a-2"
+GETF vesicle threshold
+ASSERT LAST_N == t0 + 2 "smx thr+2"
+GETF vesicle age
+ASSERT LAST_N == age0 "smx age"
+GETF vesicle reserve
+ASSERT LAST_N == r0 "smx res"
+GETF vesicle pmf
+ASSERT LAST_N == pm0 "smx pmf"
+GETF vesicle setpoint
+ASSERT LAST_N == s0 "smx sp"
+GETF vesicle pcr
+ASSERT LAST_N == c0 "smx pcr"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 14
+SEND vesicle charge 18
+SEND vesicle feed 14
+GETF vesicle heat
+LET h1 = LAST_N
+GETF vesicle threshold
+LET t1 = LAST_N
+SEND vesicle mann 3
+ASSERT LAST_N == 3 "smx mann3"
+GETF vesicle heat
+ASSERT LAST_N == h1 + 3 "smx h+3"
+GETF vesicle threshold
+ASSERT LAST_N == t1 + 3 "smx thr+3"
+ASSERT 1 == 1 "smx_mesh_vesicle_mann_life_ok"

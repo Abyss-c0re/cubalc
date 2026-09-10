@@ -156,6 +156,8 @@
 #   glycosyl n           post-cleave OST N-linked glycosylation / dolichol-PP Glc3Man9GlcNAc2 transfer — pay min(n,atp,energy) → heat +n + energy -n + thr +n; age/reserve/sp/pmf/pcr held; ready recompute
 #   trim n               post-glycosyl ER GLS I/II Glc trim / monoglucosylated CNX-CRT entry — pay min(n,atp,energy) → heat +n + energy -n + sp +n; age/reserve/thr/pmf/pcr held; ready recompute
 #   cnx n                post-trim calnexin/calreticulin lectin folding-cycle / monoglucosylated client engagement — pay min(n,atp,energy,setpoint) → heat +n + energy -n + sp -n; age/reserve/thr/pmf/pcr held; ready recompute
+#   uggt n               post-cnx UGGT1 QC reglucosylation of misfolded clients — pay min(n,atp,energy,pcr) → heat +n + energy -n + pcr -n; age/reserve/thr/pmf/sp held; ready recompute
+#   mann n               post-uggt ERManI slow Man9→Man8 demannosylation / ERAD timer — pay min(n,atp,energy) → heat +n + energy -n + thr +n; age/reserve/pmf/sp/pcr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -7452,7 +7454,7 @@ CLASS Cell
   #   re-opens the CNX cycle without raising secretory sp, thr latency, or age repair.
   # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
   # Fail-closed before mutation if atp/energy/pcr cannot fund take>=1.
-  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx->uggt.
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx->uggt->mann.
   # Signature: heat+n energy-n atp-n pcr-n; age+reserve+thr+pmf+sp held — uggt life-force.
   # Usability: AGI models ER glycoprotein QC reglucosylation under ASSERT boards.
   # Returns take reglucosylated; dead/n<1/empty atp|energy|pcr → 0.
@@ -7508,6 +7510,89 @@ CLASS Cell
     END
     GETF THIS threshold
     LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MANN: post-uggt ER α-mannosidase I (ERManI / MAN1B1) slow Man9→Man8 demannosylation
+  # that times out persistent CNX/UGGT cycles and primes OS-9/XTP3-B ERAD recognition
+  # (post-uggt mann; not multipotent stream, not GRN fate lock, not growth-cone path
+  # sp+, not synaptogenesis thr+ contact, not release quantal thr-, not reuptake
+  # clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not arm NSF
+  # priming, not clamp complexin clamp, not trigger Ca fusion, not pore SNARE zipper,
+  # not mix content dump, not collapse coat uncoat, not retrieve CME membrane bank,
+  # not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS
+  # monoglucosylation open, not cnx sp- lectin client discharge, not uggt pcr-
+  # UGGT1 reglucosylation).
+  # Spend take=min(n,atp,energy) — ATP + metabolic fuel fund ERManI catalytic
+  # demannosylation after UGGT has looped a still-misfolded client (post-uggt mann;
+  # slow timer distinct from GLS glucose trim).
+  # HEAT += take (each ERManI mannose-hydrolysis / timer tick dissipates as
+  #   glycoside-hydrolase work).
+  # ENERGY -= take (mann burns active metabolic pool into demannosylation work; kin to
+  #   glycosyl/trim energy- but raises thr ERAD-susceptibility timer instead of thr
+  #   OST mark or sp CNX-entry bank).
+  # ATP -= take (ERManI / ER QC ATP-coupled catalytic dwell).
+  # THRESHOLD rises: thr = thr + take — mannose-trimmed glycan raises ERAD
+  #   susceptibility / OS-9 recognition timer (distinct from glycosyl thr+ OST mark,
+  #   activate thr- cathepsin arming, synapse thr+ contact, release thr- quantal dump).
+  # AGE/RESERVE/PMF/SETPOINT/PCR HELD — mann is post-uggt slow demannosylation that
+  #   advances the ERAD timer without spending CNX-client sp or phosphagen pcr banks,
+  #   and without anabolic age rebuild or reserve draw.
+  # Continuum: ...->glycosyl->trim->cnx->uggt->mann.
+  # Signature: heat+n energy-n atp-n thr+n; age+reserve+pmf+sp+pcr held — mann life-force.
+  METHOD mann n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N + take
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
     LET rd = 0
     IF e >= thr THEN
       LET rd = 1
