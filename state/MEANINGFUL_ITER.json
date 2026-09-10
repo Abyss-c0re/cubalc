@@ -22,7 +22,7 @@
   ],
   "item": "life cell cnx",
   "item_id": "mi_life_cell_cnx",
-  "summary": "Post-trim CNX/CRT lectin folding-cycle / monoglucosylated client engagement for life_cell continuum.",
+  "summary": "LIFE_CELL_CNX MI2144 tip==pin sealed PASS asserts_ok=102",
   "ts": "2026-09-10T02:34:33Z",
   "asserts_ok": 102,
   "asserts_fail": 0,
@@ -38,10 +38,15 @@
   "note": "CNX burns ATP+energy+setpoint into heat; discharges monoglucosylated CNX-client bank from GLS trim; age/reserve/thr/pmf/pcr held. Continuum after trim. methods=138.",
   "feat_head": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
   "FEAT_HEAD": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
-  "HEAD": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
+  "HEAD": "4b7e5264ee3a5e49f21f635932fb850442156964",
   "commit": "6a3f6a9db5b2e8539456495a1066eef63b04996f",
   "prior_feature": "LIFE_CELL_TRIM",
   "sealed": true,
   "pass_": true,
-  "methods": 138
+  "methods": 138,
+  "tip": "4b7e5264ee3a5e49f21f635932fb850442156964",
+  "pinned_head": "4b7e5264ee3a5e49f21f635932fb850442156964",
+  "pin": "4b7e5264ee3a5e49f21f635932fb850442156964",
+  "head": "4b7e5264ee3a5e49f21f635932fb850442156964",
+  "short": "4b7e5264ee"
 }
