@@ -1,3 +1,10 @@
+## 1.15.1669-usability — MI2184 LIFE_CELL_PBP2
+
+- feat(life): PBP2/MrdA monofunctional TPase elongasome partner after RodZ
+- proofs PASS asserts_ok=267 (156+67+44)
+- continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
+- methods=178
+
 # Changelog
 
 ## 1.15.1667-usability — MI2182 LIFE_CELL_MRED (2026-09-10)
