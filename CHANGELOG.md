@@ -8168,5 +8168,5 @@ See 1.11.6-universal.
 ## MI2188 LIFE_CELL_MEPH (2026-09-10)
 
 - METHOD meph n: periplasmic DD-endopeptidase space-making after MepS/Spr.
-- Continuum: ...->pbp1a->meps->meph. Proof asserts_ok=182+73+52=307 fail=0.
+- Continuum: ...->pbp1a->meps->meph. Proof asserts_ok=184+74+53=311 fail=0.
 - Feat HEAD c626ef37e94267ea0938516a6dd5cc4d6f5d1c83.
