@@ -9693,4 +9693,77 @@ CLASS Cell
   END
 
 
+
+  # RlpA: SPOR-guided septal PG lytic TG after DamX binder.
+  # RlpA (rare lipoprotein A) is a periplasmic SPOR-associated lytic
+  # transglycosylase that cleaves glycan strands in denuded septal PG after
+  # DamX/DedD SPOR tethers mark the late septum. Cleavage thins the wall so
+  # daughters can separate without lysis once amidases have opened stem peptides.
+  # Without RlpA lytic-TG burn, DamX-bound septum still lacks glycan strand
+  # cleavage that finishes envelope scission before fission endowment.
+  # Domain: post-DamX RlpA septal lytic TG (not DamX SPOR binder itself, not
+  # DedD sensor, not PBP1B catalysis, not LpoB docking, not FtsN SPOR recruit,
+  # not AmiC amidase, not EnvC LytM, not CpoB-TolA couple, not Tol-Pal motor,
+  # not XerCD dif, not FtsK DNA pump, not fission endowment energy split).
+  # Continuum: ...->lpob->pbp1b->dedd->damx->rlpa->fission
+  #   (sense PG -> DamX SPOR bind -> RlpA glycan cleave -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for RlpA lytic-TG catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - rlpa life-force.
+  # Usability: AGI models RlpA septal lytic-TG energy gate under ASSERT after DamX.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD rlpa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
