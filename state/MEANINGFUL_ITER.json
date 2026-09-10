@@ -23,18 +23,17 @@
   ],
   "continuum": "...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->meph->slt->ampg->nagz->ampd->anmk->murq->mura",
   "asserts_ok": {
-    "life": 123,
+    "life": 115,
     "atomic_printer": 22,
     "smx": 20,
     "flagship_1620": 12,
-    "sum": 177
+    "sum": 169
   },
   "asserts_fail": 0,
-  "note": "MurA UDP-GlcNAc enolpyruvyl transferase after MurQ; commits recycled/de novo UDP-GlcNAc into UDP-MurNAc precursor path (PEP + UDP-GlcNAc -> UDP-GlcNAc-EP)",
+  "note": "MurA UDP-GlcNAc enolpyruvyl transferase after MurQ; commits recycled flux into UDP-MurNAc precursor path",
   "item": "life cell mura",
   "item_id": "mi_life_cell_mura",
-  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=177.",
-  "ts": "2026-09-10T22:51:09Z",
+  "summary": "LIFE_CELL_MURA MI2196 \u2014 METHOD mura after murq; atomic+SMX boards; proof 2196 PASS asserts_fail:0 sum=169.",
   "host_finish": true,
   "anti_bloat": true,
   "status": "sealed",
@@ -44,10 +43,10 @@
   "sealed": true,
   "methods": 186,
   "hold_flash": 1,
-  "feat_head": "b2c5f3baf9c3645a2ffe0490a204124ea81b41c6",
-  "FEAT_HEAD": "b2c5f3baf9c3645a2ffe0490a204124ea81b41c6",
-  "HEAD": "b2c5f3baf9c3645a2ffe0490a204124ea81b41c6",
-  "tip": "b2c5f3baf9c3645a2ffe0490a204124ea81b41c6",
-  "head": "b2c5f3baf9c3645a2ffe0490a204124ea81b41c6",
-  "commit": "b2c5f3baf"
+  "feat_head": "16f3bb61abf8907bfb1e78840843f96e39e823ed",
+  "FEAT_HEAD": "16f3bb61abf8907bfb1e78840843f96e39e823ed",
+  "commit": "16f3bb61a",
+  "HEAD": "16f3bb61abf8907bfb1e78840843f96e39e823ed",
+  "tip": "16f3bb61abf8907bfb1e78840843f96e39e823ed",
+  "head": "16f3bb61abf8907bfb1e78840843f96e39e823ed"
 }
