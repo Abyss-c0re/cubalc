@@ -40,5 +40,10 @@
   "sealed": true,
   "pass_": true,
   "methods": 161,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "feat_head": "8d91a631fc7b623ee08201b6d6b78bc80af4a00a",
+  "FEAT_HEAD": "8d91a631fc7b623ee08201b6d6b78bc80af4a00a",
+  "HEAD": "8d91a631fc7b623ee08201b6d6b78bc80af4a00a",
+  "tip": "8d91a631fc7b623ee08201b6d6b78bc80af4a00a",
+  "commit": "8d91a631f"
 }
