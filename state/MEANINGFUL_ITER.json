@@ -26,8 +26,8 @@
   "continuum": "...->fispay->roda->mreb->mrec->mred->rodz->pbp2->lpoa->pbp1a",
   "status": "PASS",
   "cube_law": "cube_is_sot; free_energy_must_flow",
-  "head": "16334d339519ecca1643f722f14476211ba048bc",
-  "HEAD": "16334d339519ecca1643f722f14476211ba048bc",
+  "head": "fb068bbead5113cf7b75f5b69d4dd5f78538d0d1",
+  "HEAD": "fb068bbead5113cf7b75f5b69d4dd5f78538d0d1",
   "feat_head": "LIFE_CELL_PBP1A\nMI2186\n1.15.1671-usability\npbp1a n\ncontinuum ...->pbp2->lpoa->pbp1a",
   "FEAT_HEAD": "LIFE_CELL_PBP1A\nMI2186\n1.15.1671-usability\npbp1a n\ncontinuum ...->pbp2->lpoa->pbp1a"
 }
