@@ -42,12 +42,12 @@
   "hold_flash": 1,
   "pass_": true,
   "head": "ee1529324bd9e6958f81d28ad1a616e30a3b9790",
-  "HEAD": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "feat_head": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "FEAT_HEAD": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "tip": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "pin_head": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "pinned_head": "e7c0ed1ef31e02c354896d9729c26596ed776c87",
-  "commit": "e7c0ed1ef",
-  "short": "e7c0ed1ef"
+  "HEAD": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "feat_head": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "FEAT_HEAD": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "tip": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "pin_head": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "pinned_head": "d0582d75b88c6252a07bc27aa28fcdb14e7bd1c2",
+  "commit": "d0582d75b",
+  "short": "d0582d75b"
 }
