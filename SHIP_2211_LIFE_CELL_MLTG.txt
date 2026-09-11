@@ -1,0 +1,13 @@
+LIFE_CELL_MLTG MI2211
+method: mltg n
+continuum: ...->mray->murg->murj->mtga->uppp->ldtd->mltg
+domain: MltG endolytic LT glycan terminate after LdtD 3-3 crosslink
+gift: 1,6-anhydro-MurNAc ends after LdtD so strand length holds on sacculus
+proof: programs/proof/2211_life_cell_mltg.cubalc
+atomic: programs/science/integration/atomic_printer_life_mltg.cubalc
+smx: programs/science/integration/smx_mesh_vesicle_mltg_life.cubalc
+asserts_ok: 123+40+31=194
+asserts_fail: 0
+version: 1.15.1700-usability
+cube: SoT
+free_energy: must_flow

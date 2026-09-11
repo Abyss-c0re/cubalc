@@ -1,5 +1,13 @@
 # Changelog
 
+## MI 2211 — LIFE_CELL_MLTG (1.15.1700-usability)
+
+- feat(life): MltG endolytic lytic transglycosylase glycan terminate after LdtD
+- Continuum ...->mray->murg->murj->mtga->uppp->ldtd->mltg (strand terminate after 3-3 LDT)
+- Proof 2211 + atomic_printer + smx_mesh_vesicle; asserts_ok=123+40+31=194 fail=0
+- methods: 205; life-force/science/SMX only (no IF*P duals)
+- gift: 1,6-anhydro-MurNAc ends after LdtD so PG strand length holds
+
 ## MI 2209 — LIFE_CELL_UPPP (1.15.1698-usability)
 
 - feat(life): UppP undecaprenyl-PP phosphatase after MtgA glycan polymerase
