@@ -24,10 +24,10 @@
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj",
   "asserts_ok": {
     "life": 171,
-    "atomic_printer": 50,
+    "atomic_printer": 48,
     "smx": 44,
     "flagship_1620": 12,
-    "sum": 277
+    "sum": 275
   },
   "asserts_fail": 0,
   "item": "life cell murj lipid-II flippase after murg continuum free-energy spark-safe",
@@ -41,7 +41,7 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=277",
+  "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=275",
   "ts": "2026-09-11T02:27:37Z",
   "HEAD": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
   "head": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
