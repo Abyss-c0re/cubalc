@@ -717,6 +717,10 @@ SEND gate charge 30
 SEND gate feed 20
 SEND gate mltd 2
 ASSERT LAST_N == 2 "seal mltd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 SEND gate mlte 2
 ASSERT LAST_N == 2 "seal mlte"
 

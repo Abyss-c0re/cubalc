@@ -233,12 +233,8 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
-SEND printer mltd 2
-ASSERT LAST_N == 2 "pre mltd"
+SEND printer mltd 4
+ASSERT LAST_N == 4 "pre mltd"
 SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28

@@ -201,12 +201,8 @@ SEND vesicle photosynth 20
 SEND vesicle glycolyse 16
 SEND vesicle charge 24
 SEND vesicle feed 16
-SEND vesicle photosynth 20
-SEND vesicle glycolyse 16
-SEND vesicle charge 24
-SEND vesicle feed 16
-SEND vesicle mltd 2
-ASSERT LAST_N == 2 "ves pre mltd"
+SEND vesicle mltd 3
+ASSERT LAST_N == 3 "ves pre mltd"
 SEND vesicle photosynth 20
 SEND vesicle glycolyse 16
 SEND vesicle charge 24
