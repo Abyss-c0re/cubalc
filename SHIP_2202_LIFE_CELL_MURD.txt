@@ -4,4 +4,4 @@ Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd
 Proof 2202 + atomic_printer_life_murd + smx_mesh_vesicle_murd_life
 asserts_ok life=133 atomic=36 smx=30 flagship_1620=12 sum=211 asserts_fail=0
 VERSION=1.15.1690-usability
-HEAD=c09f7d3eac8eeff14e4c372d2ae54b89bb854165
+HEAD=cf7acbdb2b8a649d562eee739c4438fb656d4eca

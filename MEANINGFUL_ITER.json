@@ -19,10 +19,7 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2202_life_cell_murd.cubalc",
     "programs/science/integration/atomic_printer_life_murd.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc",
-    "programs/proof/2201_life_cell_murc.cubalc",
-    "programs/science/integration/atomic_printer_life_murc.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_murc_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc"
   ],
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd",
   "asserts_ok": {
@@ -33,9 +30,9 @@
     "sum": 211
   },
   "asserts_fail": 0,
-  "item": "life_cell murd post-murc UDP-MurNAc-L-Ala:D-Glu ligase continuum free-energy MurD stem ligation spark-safe",
+  "item": "life cell murd D-Glu ligase after murc continuum free-energy spark-safe",
   "item_id": "mi_life_cell_murd",
-  "note": "METHOD murd n after murc; PASS life=133 atomic=36 smx=30 flag=12 sum=211",
+  "note": "MurD D-Glu ligation on PG stem after MurC; MurC included after MurB",
   "status": "sealed",
   "hold_flash": 1,
   "pass": true,
@@ -45,15 +42,16 @@
   "anti_bloat": true,
   "pass_": true,
   "summary": "LIFE_CELL_MURD MI2202 tip==pin sealed PASS asserts_ok=211",
-  "HEAD": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "head": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "tip": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "pin": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "pinned_head": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "feat_head": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "FEAT_HEAD": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165",
-  "commit": "c09f7d3ea",
-  "short": "c09f7d3ea",
+  "HEAD": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "tip": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "pin": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "pinned_head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "feat_head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "FEAT_HEAD": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "commit": "4fb436331",
+  "short": "4fb43633106",
   "host_finish": true,
-  "feat_commit": "c09f7d3eac8eeff14e4c372d2ae54b89bb854165"
+  "feat_commit": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "ts": "2026-09-11T00:00:00Z"
 }
