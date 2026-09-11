@@ -41,12 +41,12 @@
   "host_finish": true,
   "FEAT_HEAD": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
   "feat_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
-  "HEAD": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "head": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "tip": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "pin": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "pinned_head": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "git_head": "e9aa235f3c7f41c69b40f6739d16139a1efc2f81",
-  "commit": "e9aa235f3c7f",
-  "short": "e9aa235f3c7f"
+  "HEAD": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "head": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "tip": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "pin": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "pinned_head": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "git_head": "6b6d9f5fbb330fa5eb319a6f940a5587631d3a9c",
+  "commit": "6b6d9f5fbb33",
+  "short": "6b6d9f5fbb33"
 }
