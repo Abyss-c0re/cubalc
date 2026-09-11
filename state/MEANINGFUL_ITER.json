@@ -33,8 +33,8 @@
     "sum": 79,
     "asserts_fail": 0
   },
-  "HEAD": "PENDING",
-  "head": "PENDING",
-  "feat": "PENDING",
-  "FEAT_HEAD": "PENDING"
+  "HEAD": "79e2c5ee8a0632f9a9034fd19f15218420377bcc",
+  "head": "79e2c5ee8a0632f9a9034fd19f15218420377bcc",
+  "feat": "79e2c5ee8a0632f9a9034fd19f15218420377bcc",
+  "FEAT_HEAD": "79e2c5ee8a0632f9a9034fd19f15218420377bcc"
 }
