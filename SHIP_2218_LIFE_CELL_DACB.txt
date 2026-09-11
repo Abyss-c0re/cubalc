@@ -1,3 +1,6 @@
-LIFE_CELL_DACB MI2218 PASS sum=235 fail=0 head=441a377beb75da5fc1cb51bd130698b3b6823f32
-continuum ...->daca->dacb
-Cell.dacb n DD-endopeptidase PBP4 after DacA
+SHIP LIFE_CELL_DACB MI2218
+feat(life): DacB PBP4 DD-endopeptidase 4-3 cleave after DacA
+continuum: ...->ldtf->daca->dacb
+proofs PASS sum=235 asserts_fail:0
+MEANINGFUL_ITER=2218 VERSION=1.15.1707-usability HEAD=5f1a03d79f8dbd0c5be0be3045e86f8b19f3a559
+Cube is SoT. Free energy must flow.
