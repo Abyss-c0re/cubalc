@@ -1,3 +1,10 @@
+## 2231 — LIFE_CELL_YCJG (1.15.1728-usability)
+
+- feat(life): LIFE_CELL_YCJG MI2231 YcjG cytoplasmic L-Ala-D/L-Glu epimerase after MpaA
+- METHOD ycjg n: post-MpaA dipeptide epimerase; continuum ...->emta->mpl->ldca->mpaa->ycjg
+- Proof 2231_life_cell_ycjg + atomic_printer_life_ycjg + smx_mesh_vesicle_ycjg_life
+- asserts_ok life=179 atomic=64 smx=52 flagship=12 sum=307 asserts_fail:0
+
 ## 2230 — LIFE_CELL_MPAA (1.15.1727-usability)
 
 - feat(life): LIFE_CELL_MPAA MI2230 MpaA cytoplasmic murein peptide amidase after LdcA
