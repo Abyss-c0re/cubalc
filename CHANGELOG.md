@@ -1,3 +1,10 @@
+## 1.15.1705-usability — LIFE_CELL_LDTF MI2218
+
+- Cell.ldtf LdtF/YafK L,D-carboxypeptidase/endopeptidase after LdtE on continuum
+  ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte->ldtf
+- Proof 2218 + atomic_printer_life_ldtf + smx_mesh_vesicle_ldtf_life + flagship 1620
+- asserts_fail:0 sum=303 (184+58+49+12)
+
 ## 1.15.1702-usability — LIFE_CELL_LDTE MI2217
 
 - Cell.ldte LdtE/YcfS Lpp–PG L,D-transpeptidase after LdtC
