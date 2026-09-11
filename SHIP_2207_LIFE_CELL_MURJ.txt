@@ -1,0 +1,11 @@
+LIFE_CELL_MURJ MI2207
+method: murj n
+domain: MurJ lipid-II flippase (MviN) after MurG
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj
+proof: programs/proof/2207_life_cell_murj.cubalc
+science: smx_mesh_vesicle_murj_life + atomic_printer_life_murj
+asserts_ok: life=115 atomic_printer=41 smx=32 sum=188 fail=0
+gift: PG lipid-II flip after MurG delivers periplasm-ready wall unit
+cube: SoT — free energy must flow
+VERSION 1.15.1696-usability
+LIB programs/lib/life_cell.cubalc METHOD murj n methods=201

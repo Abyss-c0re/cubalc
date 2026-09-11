@@ -1,3 +1,10 @@
+## 1.15.1696-usability — LIFE_CELL_MURJ (MI 2207)
+- feat(life): MurJ lipid-II flippase after MurG for atomic printer
+- METHOD murj n on life_cell (methods=201); continuum ...->murf->mray->murg->murj
+- proof 2207_life_cell_murj asserts_ok=115; smx=32; atomic_printer=41; fail=0
+- gift: PG lipid-II flip after MurG delivers periplasm-ready disaccharide-peptide unit
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1695-usability — LIFE_CELL_MURG (MI 2206)
 
 - feat(life): MurG lipid-II GlcNAc transferase after MraY for atomic printer
