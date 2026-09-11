@@ -1,0 +1,6 @@
+LIFE_CELL_AHCY MI2250
+method: ahcy n
+continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy
+proof: programs/proof/2250_life_cell_ahcy.cubalc
+asserts_ok=411 asserts_fail=0 (life=241 atomic=85 smx=73 flagship=12)
+Cube is SoT. Free energy must flow.

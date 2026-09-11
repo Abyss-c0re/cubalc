@@ -120,6 +120,7 @@
 #   luxs n              LuxS SRH lyase / AI-2 synthase — pay n ATP/energy → heat+n (post-MtnN methionine-salvage / quorum AI-2 gate); pcr/reserve/age/pmf held; after mtnn
 #   mete n              MetE cobalamin-independent methionine synthase — pay n ATP/energy → heat+n (post-LuxS Met return / B12-independent methyl gate); pcr/reserve/age/pmf held; after luxs
 #   metf n              MetF methylenetetrahydrofolate reductase — pay n ATP/energy → heat+n (post-MetE CH3-H4folate / one-carbon methyl supply gate); pcr/reserve/age/pmf held; after mete
+#   ahcy n              Ahcy / SahH adenosylhomocysteinase — pay n ATP/energy → heat+n (post-MetF SAH → homocysteine + adenosine Met-cycle gate); pcr/reserve/age/pmf held; after metf
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
 #   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
@@ -15074,6 +15075,84 @@ CLASS Cell
   # Usability: AGI models post-MetE MetF methyl-THF supply gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD metf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # AHCY: adenosylhomocysteinase / SAH hydrolase after MetF methylene-THF reductase.
+  # Ahcy (S-adenosylhomocysteine hydrolase / SahH) hydrolyzes SAH to homocysteine +
+  # adenosine once MetF has charged the CH3-H4folate methyl pool that MetE/MetK use.
+  # After MetF keeps one-carbon methyl supply open, Ahcy clears SAH product inhibition
+  # so the Met cycle can return homocysteine to MetE and free adenosine for salvage,
+  # preventing methyl-transfer stall under high-transmethylation load.
+  # Distinct from MetF (methylene-THF reductase), MetE (B12-independent Met synthase),
+  # MetK (SAM synthase), MtnN (MTA/SAH nucleosidase), LuxS, SpeD, SahH aliases —
+  # Ahcy is the post-MetF SAH hydrolase / Met-cycle recycle gate on the methionine
+  # one-carbon continuum.
+  # Without Ahcy after MetF, SAH accumulates and the continuum loses its
+  # homocysteine-return free-energy release branch.
+  # Domain: post-MetF Ahcy/SahH adenosylhomocysteinase / SAH hydrolase
+  # (not MetF, not MetE, not MetK, not MtnN, not LuxS, not SpeD).
+  # Continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy
+  #   (MetF methylene-THF reductase -> Ahcy SAH hydrolase).
+  # Pay take=min(n,atp,energy) - catalytic stand-in for Ahcy NAD-dependent SAH cleavage.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ahcy life-force.
+  # Usability: AGI models post-MetF Ahcy SAH hydrolase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ahcy n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
