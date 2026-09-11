@@ -1,7 +1,7 @@
 // smx_mesh_vesicle_pepb_life.cubalc
-// SMX vesicle: PepB aminopeptidase B recycling after PepB.
+// SMX vesicle: PepB aminopeptidase B recycling after PepA.
 // Cube is SoT. Free energy must flow.
-// Continuum ...->mlte->emta->mpl->ldca->mpaa->ycjg->pepd->pepn->pepb->pepb->pepb->pepb
+// Continuum ...->mlte->emta->mpl->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa->pepb
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell

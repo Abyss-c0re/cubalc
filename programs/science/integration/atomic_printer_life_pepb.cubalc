@@ -1,7 +1,7 @@
 // atomic_printer_life_pepb.cubalc
-// Atomic printer: PepB aminopeptidase B after PepB.
+// Atomic printer: PepB aminopeptidase B after PepA.
 // Cube is SoT. Free energy must flow.
-// Continuum ...->mlte->emta->mpl->ldca->mpaa->ycjg->pepd->pepn->pepb->pepb->pepb->pepb
+// Continuum ...->mlte->emta->mpl->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa->pepb
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
