@@ -1,3 +1,10 @@
+## 1.15.1707-usability — LIFE_CELL_DACB MI2218
+
+- Cell.dacb DacB/PBP4 DD-endopeptidase/carboxypeptidase after DacA on continuum
+  ...->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb
+- Proof 2218 + atomic_printer_life_dacb + smx_mesh_vesicle_dacb_life + flagship 1620
+- asserts_fail:0 sum=235 (132+50+41+12)
+
 ## 2218 LIFE_CELL_DACB (1.15.1706-usability)
 
 - Cell.dacb n — DacB/PBP4 D,D-endopeptidase 4-3 cut after DacA/PBP5

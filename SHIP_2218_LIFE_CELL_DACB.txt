@@ -1,0 +1,11 @@
+SHIP LIFE_CELL_DACB MI2218
+feat(life): DacB PBP4 DD-endopeptidase 4-3 cleave after DacA
+continuum: ...->ldtf->daca->dacb
+proofs:
+  programs/proof/2218_life_cell_dacb.cubalc asserts_ok=132 asserts_fail=0
+  programs/science/integration/atomic_printer_life_dacb.cubalc asserts_ok=50 asserts_fail=0
+  programs/science/integration/smx_mesh_vesicle_dacb_life.cubalc asserts_ok=41 asserts_fail=0
+  programs/proof/1620_atomic_printer_life_force.cubalc asserts_ok=12 asserts_fail=0
+sum=235 PASS
+MEANINGFUL_ITER=2218 VERSION=1.15.1707-usability HEAD=581ef25a02147ecbc1afd6e86a4f872783ad7c37
+Cube is SoT. Free energy must flow. CT101 forever.
