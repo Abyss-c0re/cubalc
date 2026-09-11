@@ -1,6 +1,5 @@
-SHIP LIFE_CELL_MAP MI2242
-VERSION 1.15.1740-usability
-METHOD map n
+LIFE_CELL_MAP MI2242 PASS
+METHOD map n after pdf
+proof programs/proof/2242_life_cell_map.cubalc asserts_fail:0
 continuum ...->pepf->pdf->map
-proof asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
 Cube is SoT. Free energy must flow.

@@ -1,40 +1,19 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2242,
-  "MEANINGFUL_ITER": 2242,
-  "iter": 2242,
-  "n": 2242,
-  "mi": 2242,
-  "version": "1.15.1740-usability",
-  "VERSION": "1.15.1740-usability",
-  "feature": "life_cell_map",
-  "FEATURE": "LIFE_CELL_MAP",
-  "name": "LIFE_CELL_MAP",
-  "title": "MAP methionine aminopeptidase after PDF on life_cell",
-  "label": "LIFE_CELL_MAP",
+  "feature": "LIFE_CELL_MAP",
   "method": "map n",
-  "ship": "2242_life_cell_map",
-  "proof": "programs/proof/2242_life_cell_map.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2242_life_cell_map.cubalc",
-    "programs/science/integration/atomic_printer_life_map.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_map_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
-  "continuum": "...->pepe->pept->pepf->pdf->map",
-  "domain": "MAP methionine aminopeptidase after PDF peptide deformylase",
-  "gift": "MAP cleaves initiator Met after PDF deformylation",
-  "proof_sum": {
+  "version": "1.15.1740-usability",
+  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map",
+  "asserts_fail": 0,
+  "asserts_ok": {
     "life": 240,
     "atomic": 84,
     "smx": 72,
     "flagship": 12,
-    "sum": 408,
-    "asserts_fail": 0
+    "sum": 408
   },
-  "HEAD": "62d2bec5b4d16f855eb4f62a307089652c7d3fbe",
-  "head": "62d2bec5b4d16f855eb4f62a307089652c7d3fbe",
-  "feat": "3cb82817cfb14b63379c484347b84b2b8aa885c3",
-  "FEAT_HEAD": "3cb82817cfb14b63379c484347b84b2b8aa885c3"
+  "proof": "programs/proof/2242_life_cell_map.cubalc",
+  "head": "9db82e392aa811cb7ef81ffeb2dc12800664c316",
+  "status": "PASS",
+  "ts": 1789150766.2468321
 }

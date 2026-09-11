@@ -1,3 +1,13 @@
+# Changelog
+
+## 1.15.1740-usability — MI2242 LIFE_CELL_MAP (map n)
+
+- feat(life): MAP methionine aminopeptidase after PDF on life_cell
+- Continuum ...->pepe->pept->pepf->pdf->map
+- Proof programs/proof/2242_life_cell_map.cubalc asserts_ok=240 fail=0
+- Science atomic_printer_life_map + smx_mesh_vesicle_map_life (84+72)
+- Flagship continuum free energy must flow; Cube is SoT
+
 ## 2242 — LIFE_CELL_MAP (1.15.1740-usability)
 
 - feat(life): LIFE_CELL_MAP MI2242 MAP methionine aminopeptidase after PDF
