@@ -3,7 +3,7 @@
 - **MI**: 2244
 - **FEATURE**: LIFE_CELL_METK
 - **method**: metk n
-- **version**: 1.15.1740-usability
+- **version**: 1.15.1741-usability
 - **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk
 - **asserts_fail**: 0
 - **asserts_ok sum**: 408 (life=240 atomic_printer=84 smx=72 flagship_1620=12)
