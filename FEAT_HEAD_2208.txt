@@ -1,1 +1,1 @@
-$(git rev-parse HEAD)
+52e8dfc74c0d8d16cbabf03a4b1ca81e2bad340f
