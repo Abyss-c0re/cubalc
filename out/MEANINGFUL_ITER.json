@@ -10,7 +10,7 @@
   "feature": "life_cell_pept",
   "FEATURE": "LIFE_CELL_PEPT",
   "name": "LIFE_CELL_PEPT",
-  "title": "PepT tripeptidase after PepE on life_cell",
+  "title": "life cell pept",
   "label": "LIFE_CELL_PEPT",
   "method": "pept n",
   "ship": "2239_life_cell_pept",
@@ -19,11 +19,10 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2239_life_cell_pept.cubalc",
     "programs/science/integration/atomic_printer_life_pept.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_pept_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_pept_life.cubalc"
   ],
-  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept",
-  "domain": "PepT tripeptidase after PepE alpha-aspartyl dipeptidase",
+  "continuum": "...->mpaa->ycjg->pepd->pepn->pepp->pepq->pepa->pepb->pepe->pept",
+  "domain": "PepT tripeptidase (tripeptide hydrolase) after PepE",
   "gift": "PepT hydrolyzes residual tripeptides after PepE clears Asp-Xaa dipeptides so dipeptide + free AA re-enter PepA/B/D/E/N routes and nitrogen pools under murein turnover stress",
   "cube": "SoT",
   "free_energy": "must_flow",
@@ -40,7 +39,7 @@
   "prev_feature": "LIFE_CELL_PEPE",
   "prev_mi": 2238,
   "head_before": "07b06ebcd",
-  "ts": 1789147341.5074105,
+  "ts": 1789147361.83453,
   "methods": 226,
   "status": "PASS",
   "asserts_ok_sum": 407,
@@ -49,5 +48,6 @@
     "programs/science/integration/atomic_printer_life_pept.cubalc",
     "programs/science/integration/smx_mesh_vesicle_pept_life.cubalc"
   ],
-  "feat": "7dd34393d6c31de870d13af79e40d3ced597d5dd"
+  "feat": "7dd34393d6c31de870d13af79e40d3ced597d5dd",
+  "feat_commit": "7dd34393d6c31de870d13af79e40d3ced597d5dd"
 }
