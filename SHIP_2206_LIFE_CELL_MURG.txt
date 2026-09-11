@@ -1,0 +1,9 @@
+LIFE_CELL_MURG MI2206
+method: murg n
+domain: MurG UDP-GlcNAc:lipid-I N-acetylglucosaminyltransferase (lipid-II) after MraY
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg
+proof: programs/proof/2206_life_cell_murg.cubalc
+science: smx_mesh_vesicle_murg_life + atomic_printer_life_murg
+asserts_ok: life=113 atomic_printer=39 smx=30 sum=182 fail=0
+gift: PG lipid-II GlcNAc-transfer after MraY completes flip-ready membrane unit
+cube: SoT — free energy must flow

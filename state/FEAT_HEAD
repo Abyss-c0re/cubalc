@@ -1,6 +1,6 @@
-LIFE_CELL_MEPH
-method: meph n
-continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps->mepm->meph
-asserts_ok=272+17+16=305
-MI 2189
-HEAD b82285210
+LIFE_CELL_MURG
+method: murg n
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg
+asserts_ok=113+39+30=182
+MI 2206
+HEAD e32839faec3b75a7c10f4cfa340bbc7fa0a3854e
