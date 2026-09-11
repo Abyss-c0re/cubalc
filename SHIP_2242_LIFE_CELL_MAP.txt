@@ -1,13 +1,6 @@
-SHIP 2242 LIFE_CELL_MAP
-feature: LIFE_CELL_MAP
-method: map n
-continuum: ...->pepf->pdf->map
-proof: programs/proof/2242_life_cell_map.cubalc asserts_ok=240 asserts_fail=0
-atomic_printer_life_map: 84/0
-smx_mesh_vesicle_map_life: 72/0
-flagship_1620: 12/0
-sum: 408
-VERSION: 1.15.1739-usability
-HEAD: 34e05811e6485596612e60fa8cd14b9432438457
-unity: 1.0
-status: PASS sealed
+SHIP LIFE_CELL_MAP MI2242
+VERSION 1.15.1740-usability
+METHOD map n
+continuum ...->pepf->pdf->map
+proof asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
+Cube is SoT. Free energy must flow.

@@ -5,8 +5,8 @@
   "iter": 2242,
   "n": 2242,
   "mi": 2242,
-  "version": "1.15.1739-usability",
-  "VERSION": "1.15.1739-usability",
+  "version": "1.15.1740-usability",
+  "VERSION": "1.15.1740-usability",
   "feature": "life_cell_map",
   "FEATURE": "LIFE_CELL_MAP",
   "name": "LIFE_CELL_MAP",
@@ -22,36 +22,15 @@
     "programs/science/integration/smx_mesh_vesicle_map_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map",
+  "continuum": "...->pepe->pept->pepf->pdf->map",
   "domain": "MAP methionine aminopeptidase after PDF peptide deformylase",
-  "gift": "MAP cleaves N-terminal Met after PDF removes formyl so nascent peptide maturation completes under translation stress",
-  "cube": "SoT",
-  "free_energy": "must_flow",
-  "asserts_ok": {
+  "gift": "MAP cleaves initiator Met after PDF deformylation",
+  "proof_sum": {
     "life": 240,
-    "atomic_printer": 84,
+    "atomic": 84,
     "smx": 72,
-    "flagship_1620": 12,
-    "sum": 408
-  },
-  "asserts_fail": 0,
-  "unity": 1.0,
-  "note": "MAP after PDF; Met aminopeptidase path PASS asserts_fail:0 sum=408",
-  "prev_feature": "LIFE_CELL_PDF",
-  "prev_mi": 2241,
-  "head_before": "24227b8aa98155dc6d9284919f580cff46cba086",
-  "ts": 1789150716.933085,
-  "status": "sealed",
-  "asserts_ok_sum": 408,
-  "host": "pve",
-  "science": [
-    "programs/science/integration/atomic_printer_life_map.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_map_life.cubalc"
-  ],
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "anti_bloat": true,
-  "hold_flash": 1,
-  "host_finish": true,
-  "pinned_head": "24227b8aa98155dc6d9284919f580cff46cba086",
-  "head": "24227b8aa98155dc6d9284919f580cff46cba086"
+    "flagship": 12,
+    "sum": 408,
+    "asserts_fail": 0
+  }
 }
