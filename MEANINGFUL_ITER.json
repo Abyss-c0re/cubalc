@@ -5,18 +5,13 @@
   "version": "1.15.1750-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl",
   "asserts_fail": 0,
-  "asserts_ok": {
-    "life": 243,
-    "atomic_printer": 85,
-    "smx": 73,
-    "flagship_1620": 12,
-    "sum": 413
-  },
-  "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "b3880d79828a7ecb6b4c433069a8602da1f4be54",
-  "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
-  "creed": "Cube is SoT. Free energy must flow.",
   "asserts_ok_sum": 413,
-  "life_asserts": 243,
-  "ok": true
+  "life": 243,
+  "atomic_printer": 85,
+  "smx": 73,
+  "flagship_1620": 12,
+  "proof": "programs/proof/2252_life_cell_cgl.cubalc",
+  "HEAD": "3c9e742d6ff345ccaa6469dd7544b3ca1c576f6d",
+  "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
+  "cube": "SoT"
 }
