@@ -43,12 +43,12 @@
   "pass_": true,
   "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=275",
   "ts": "2026-09-11T02:27:37Z",
-  "HEAD": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "head": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "tip": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "pin": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "pinned_head": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "feat_head": "39b04bd01c7d3782d559a73570579df0c65edf07",
-  "commit": "39b04bd01c7d",
-  "short": "39b04bd01c7d"
+  "HEAD": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "head": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "tip": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "pin": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "pinned_head": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "feat_head": "71bd989dfc7985f82cc56259c3145001575e42c2",
+  "commit": "71bd989dfc79",
+  "short": "71bd989dfc79"
 }
