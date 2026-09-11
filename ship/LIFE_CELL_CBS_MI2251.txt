@@ -1,0 +1,5 @@
+LIFE_CELL_CBS MI 2251
+method: cbs n
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
+proof: PASS asserts_ok=412 asserts_fail=0
+version: 1.15.1748-usability

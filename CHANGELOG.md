@@ -1,3 +1,9 @@
+## 1.15.1748-usability — MI 2251 LIFE_CELL_CBS
+
+- feat(life): Cbs cystathionine-beta-synthase after Ahcy on life_cell
+- continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
+- proof PASS asserts_ok=412 asserts_fail=0 (life 242 + atomic 85 + smx 73 + flagship 12)
+
 # Changelog
 
 ## 1.15.1747-usability — MI2250 LIFE_CELL_AHCY (ahcy n)
