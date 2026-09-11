@@ -1,3 +1,14 @@
+# Changelog
+
+## 1.15.1744-usability — MI2247 LIFE_CELL_LUXS (luxs n)
+
+- feat(life): LuxS SRH lyase / AI-2 synthase after MtnN on life_cell
+- Continuum ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs
+- Proof programs/proof/2247_life_cell_luxs.cubalc asserts_ok=240 fail=0
+- Science atomic_printer_life_luxs + smx_mesh_vesicle_luxs_life (85+73)
+- Flagship 1620 regression PASS asserts_fail:0 sum=410
+- Cube is SoT. Free energy must flow. Gift: SRH → Hcys + DPD/AI-2 after MtnN opens SAH/MTA.
+
 
 ## 1.15.1743-usability — LIFE_CELL_MTNN (MI 2246)
 
