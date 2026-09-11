@@ -26,10 +26,10 @@
   "note": "LuxS after MtnN; SRH lyase / AI-2 synthase path PASS asserts_fail:0 sum=410",
   "unity": 1.0,
   "proof_status": "PASS",
-  "ts": 1789157474.2863672,
-  "HEAD": "7084e590d6d4a10b1c6ddbeeaffbc660d179bb0f",
-  "head": "7084e590d6d4a10b1c6ddbeeaffbc660d179bb0f",
-  "tip": "7084e590d6d4a10b1c6ddbeeaffbc660d179bb0f",
-  "short": "7084e590d6d4",
-  "pin": "7084e590d6d4a10b1c6ddbeeaffbc660d179bb0f"
+  "ts": 1789157546.5783682,
+  "HEAD": "fd47d96b2a5be66f6180795e6693b99f775503ac",
+  "head": "fd47d96b2a5be66f6180795e6693b99f775503ac",
+  "tip": "fd47d96b2a5be66f6180795e6693b99f775503ac",
+  "short": "fd47d96b2a5b",
+  "pin": "fd47d96b2a5be66f6180795e6693b99f775503ac"
 }
