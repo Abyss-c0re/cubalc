@@ -1,3 +1,11 @@
+## 1.15.1751-usability — MI2253 LIFE_CELL_GSHA (gsha)
+
+- **LIFE_CELL_GSHA**: GshA glutamate-cysteine ligase after Cgl on life_cell continuum.
+- Continuum: `...->metf->ahcy->cbs->cgl->gsha`
+- Proof: `programs/proof/2253_life_cell_gsha.cubalc` PASS asserts_ok sum=416 (life=244 atomic_printer=86 smx=74 flagship_1620=12) asserts_fail:0
+- atomic_printer_life_gsha + smx_mesh_vesicle_gsha_life PASS
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1750-usability — MI2252 LIFE_CELL_CGL
