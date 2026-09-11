@@ -14214,4 +14214,80 @@ CLASS Cell
   END
 
 
+  # PepE: alpha-aspartyl dipeptidase after PepB aminopeptidase B.
+  # PepE (peptidase E / alpha-aspartyl dipeptidase) specifically hydrolyzes
+  # dipeptides with N-terminal L-Asp (Asp-Xaa) that remain after PepB has
+  # cleared basic Arg/Lys stems from murein-derived oligopeptides. Aspartyl
+  # dipeptides are poor PepB substrates; PepE opens that acidic branch so
+  # free Asp + partner AA re-enter central nitrogen and TCA-linked pools.
+  # Distinct from PepB (Arg/Lys aminopeptidase B), PepA (leucyl aminopeptidase A),
+  # PepD (L-Ala-D/L-Glu dipeptidase), PepN, PepP, PepQ, MpaA, YcjG —
+  # PepE is the Asp-Xaa dipeptidase gate downstream of PepB on the murein
+  # peptide recycling continuum.
+  # Without PepE after PepB, Asp-Xaa dipeptides stall and the recycling
+  # continuum loses its acidic free-energy release branch.
+  # Domain: post-PepB PepE alpha-aspartyl dipeptidase / Asp-Xaa hydrolase
+  # (not PepB, not PepA, not PepD, not PepN, not PepP, not PepQ, not MpaA).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe
+  #   (PepB aminopeptidase B -> PepE alpha-aspartyl dipeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepE catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepe life-force.
+  # Usability: AGI models post-PepB PepE Asp-Xaa dipeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepe n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
