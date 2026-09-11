@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.1747-usability — MI2250 LIFE_CELL_AHCY (ahcy n)
+
+- feat(life): Ahcy adenosylhomocysteinase / SAH hydrolase after MetF on life_cell
+- Continuum ...->metk->sped->mtnn->luxs->mete->metf->ahcy
+- Proof programs/proof/2250_life_cell_ahcy.cubalc asserts_ok=241 fail=0
+- Science atomic_printer_life_ahcy + smx_mesh_vesicle_ahcy_life (85+73)
+- Flagship 1620 regression PASS asserts_fail:0 sum=411
+- Cube is SoT. Free energy must flow. Gift: SAH → homocysteine + adenosine after MetF clears product inhibition for Met cycle.
+
 ## 1.15.1744-usability — MI2247 LIFE_CELL_LUXS (luxs n)
 
 - feat(life): LuxS SRH lyase / AI-2 synthase after MtnN on life_cell
