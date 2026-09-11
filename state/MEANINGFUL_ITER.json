@@ -2,24 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2210,
   "MEANINGFUL_ITER": 2210,
-  "iter": 2210,
+  "iter": 2211,
   "n": 2210,
   "mi": 2210,
-  "version": "1.15.1699-usability",
+  "version": "1.15.1700-usability",
   "VERSION": "1.15.1699-usability",
   "feature": "life_cell_ldtd",
   "FEATURE": "LIFE_CELL_LDTD",
   "name": "LIFE_CELL_LDTD",
-  "title": "life cell ldtd",
+  "title": "life cell",
   "label": "LIFE_CELL_LDTD",
   "method": "ldtd n",
   "ship": "2210_life_cell_ldtd",
   "proof": "programs/proof/2210_life_cell_ldtd.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2210_life_cell_ldtd.cubalc",
-    "programs/science/integration/atomic_printer_life_ldtd.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_ldtd_life.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd",
   "domain": "LdtD/YcbB L,D-transpeptidase 3-3 crosslink after UppP",
@@ -37,5 +34,12 @@
   "methods": 204,
   "head": "be6ec43b1b068e29c2c06098909fcd1225dfec9e",
   "sha": "be6ec43b1b068e29c2c06098909fcd1225dfec9e",
-  "pinned_sha": "be6ec43b1b068e29c2c06098909fcd1225dfec9e"
+  "pinned_sha": "be6ec43b1b068e29c2c06098909fcd1225dfec9e",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "commit": "74f208031",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-11T03:20:09Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
