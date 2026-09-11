@@ -14885,4 +14885,74 @@ CLASS Cell
   END
 
 
+  # MetE: cobalamin-independent methionine synthase after NatE N-terminal seal.
+  # MetE (MetE / Met6) transfers a methyl group from 5-methyltetrahydrofolate
+  # onto L-homocysteine, regenerating L-methionine without cobalamin (B12).
+  # Distinct from NatA/B/C/E (N-terminal acetyltransferases), MAP, PDF, PepF,
+  # MetK (SAM synthetase), LuxS (AI-2), MtnN (MTA/SAH nucleosidase) — MetE is
+  # the folate-dependent Met recycle gate on the one-carbon / Met continuum.
+  # Without MetE after N-terminal maturation, homocysteine stalls and free
+  # energy accounting loses the B12-independent methionine synthase branch.
+  # Domain: post-NatE MetE cobalamin-independent methionine synthase / Hcy+CH3-THF
+  # (not NatE, not NatA, not MetK, not LuxS, not MtnN, not MAP, not PDF).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete
+  #   (NatE/Naa50 Met-hydrophobic N-Ac -> MetE B12-independent Met synthase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MetE methyl-transfer cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mete life-force.
+  # Usability: AGI models post-NatE MetE methionine regeneration under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mete n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END

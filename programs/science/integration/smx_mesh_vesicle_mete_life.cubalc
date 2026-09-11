@@ -1,0 +1,83 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle — MetE methionine synthase life-force on sealed exchange path
+# Continuum ...->nata->natb->natc->nate->mete under SMX vesicle energy gate
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle OF Cell 1 55 0
+SEND vesicle set_threshold 9
+SEND vesicle pulse 3
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 32
+SEND vesicle pump 24
+SEND vesicle photophos 22
+SEND vesicle charge 36
+SEND vesicle feed 34
+
+SEND vesicle pepf 2
+ASSERT LAST_N == 2 "smx pepf"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+SEND vesicle pdf 2
+ASSERT LAST_N == 2 "smx pdf"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 18
+SEND vesicle feed 12
+SEND vesicle map 2
+ASSERT LAST_N == 2 "smx map"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 20
+SEND vesicle feed 14
+SEND vesicle nata 2
+ASSERT LAST_N == 2 "smx nata"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 20
+SEND vesicle feed 14
+SEND vesicle natb 2
+ASSERT LAST_N == 2 "smx natb"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 20
+SEND vesicle feed 14
+SEND vesicle natc 2
+ASSERT LAST_N == 2 "smx natc"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 20
+SEND vesicle feed 14
+SEND vesicle nate 2
+ASSERT LAST_N == 2 "smx nate"
+SEND vesicle photosynth 16
+SEND vesicle glycolyse 12
+SEND vesicle charge 20
+SEND vesicle feed 14
+
+GETF vesicle heat
+LET h0 = LAST_N
+GETF vesicle energy
+LET e0 = LAST_N
+GETF vesicle atp
+LET a0 = LAST_N
+GETF vesicle pmf
+LET pmf0 = LAST_N
+
+SEND vesicle mete 3
+ASSERT LAST_N == 3 "smx mete3"
+GETF vesicle heat
+ASSERT LAST_N == h0 + 3 "smx mete heat"
+GETF vesicle energy
+ASSERT LAST_N == e0 - 3 "smx mete energy"
+GETF vesicle atp
+ASSERT LAST_N == a0 - 3 "smx mete atp"
+GETF vesicle pmf
+ASSERT LAST_N == pmf0 "smx mete pmf held"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_mete_life PASS"
