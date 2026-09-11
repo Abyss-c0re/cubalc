@@ -5,8 +5,8 @@
   "iter": 2202,
   "n": 2202,
   "mi": 2202,
-  "version": "1.15.1691-usability",
-  "VERSION": "1.15.1691-usability",
+  "version": "1.15.1690-usability",
+  "VERSION": "1.15.1690-usability",
   "feature": "life_cell_murd",
   "FEATURE": "LIFE_CELL_MURD",
   "name": "LIFE_CELL_MURD",
@@ -19,7 +19,10 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2202_life_cell_murd.cubalc",
     "programs/science/integration/atomic_printer_life_murd.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc",
+    "programs/proof/2201_life_cell_murc.cubalc",
+    "programs/science/integration/atomic_printer_life_murc.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_murc_life.cubalc"
   ],
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd",
   "asserts_ok": {
@@ -30,18 +33,16 @@
     "sum": 211
   },
   "asserts_fail": 0,
-  "note": "MurD D-Glu ligation on PG stem after MurC; MurC included after MurB",
-  "item": "life cell murd D-Glu ligase after murc continuum free-energy spark-safe",
+  "item": "life_cell murd post-murc UDP-MurNAc-L-Ala:D-Glu ligase continuum free-energy MurD stem ligation spark-safe",
   "item_id": "mi_life_cell_murd",
-  "summary": "LIFE_CELL_MURD MI2202 \u2014 METHOD murd after murc; atomic+SMX boards; proof 2202 PASS asserts_fail:0 sum=211.",
-  "ts": "2026-09-11T00:24:37Z",
-  "host_finish": true,
-  "anti_bloat": true,
-  "status": "unpinned",
+  "note": "METHOD murd n after murc; PASS life=133 atomic=36 smx=30 flag=12 sum=211",
+  "status": "sealed",
+  "hold_flash": 1,
   "pass": true,
   "proof_status": "PASS",
   "prior_feature": "LIFE_CELL_MURB",
-  "sealed": false,
-  "hold_flash": 1,
-  "pass_": true
+  "sealed": true,
+  "anti_bloat": true,
+  "pass_": true,
+  "summary": "LIFE_CELL_MURD MI2202 PASS asserts_ok=211"
 }
