@@ -13542,4 +13542,78 @@ CLASS Cell
     RET take
   END
 
+
+  # LdcA: L,D-carboxypeptidase recycling tetrapeptide->tripeptide after Mpl.
+  # LdcA (not DacA/B/C/D DD-CPases, not LdtA-F LD-transpeptidases, not AmpD
+  # amidase, not Mpl ligase, not MpaA murein peptide amidase, not YcjG
+  # epimerase) is the cytosolic L,D-carboxypeptidase that removes D-Ala from
+  # tetrapeptide stems liberated by AmpD so Mpl receives tripeptide substrates
+  # and recycled stem free-energy re-enters the UDP-MurNAc-tripeptide pool
+  # under elongation and division stress without full de novo MurC-F cost.
+  # Without LdcA after Mpl, tetrapeptide stems stall before Mpl ligation and
+  # the recycling continuum loses its LdcA branch; sacculus peptide free-energy
+  # cannot efficiently rejoin Mur precursors.
+  # Domain: post-Mpl LdcA L,D-carboxypeptidase / recycling (not DacA/B/C/D, not
+  # Ldt family, not AmpD, not Mpl, not MpaA, not YcjG, not EmtA).
+  # Continuum: ...->mlte->emta->mpl->ldca
+  #   (Mpl murein peptide ligase -> LdcA L,D-carboxypeptidase recycle trim).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LdcA catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ldca life-force.
+  # Usability: AGI models post-Mpl LdcA tetrapeptide-trim recycling gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ldca n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

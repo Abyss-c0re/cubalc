@@ -1,3 +1,12 @@
+## 2229 — LIFE_CELL_LDCA (1.15.1726-usability)
+
+- feat(life): LIFE_CELL_LDCA MI2229 LdcA L,D-carboxypeptidase recycling trim after Mpl
+- METHOD ldca n: post-Mpl cytosolic LD-CPase; continuum ...->emta->mpl->ldca
+- Proof 2229_life_cell_ldca + atomic_printer_life_ldca + smx_mesh_vesicle_ldca_life
+- asserts_fail:0 sum=291 (life=164 ap=63 smx=52 flagship_1620=12)
+- Cube is SoT. Free energy must flow.
+
+
 ## 2222 — LIFE_CELL_MLTA (1.15.1714-usability)
 
 - feat(life): LIFE_CELL_MLTA MI2222 MltA membrane lytic transglycosylase after AmpH
