@@ -1,8 +1,12 @@
-## 1.15.1749-usability — LIFE_CELL_CGL (MI 2252)
+# Changelog
 
-- feat(life): Cgl cystathionine-gamma-lyase after Cbs on life_cell
+## 1.15.1749-usability — MI2252 LIFE_CELL_CGL
+
+- feat(life): Cgl cystathionine-gamma-lyase after Cbs on life_cell (MI2252)
+- method: cgl n — post-Cbs cystathionine gamma-elimination / cysteine release
 - Continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
-- Proof PASS asserts_ok life=243 sum=413 (life=243 atomic_printer=85 smx=73 flagship_1620=12)
+- Proof PASS asserts_ok life=243 sum=413 (life=243 atomic_printer=85 smx=73 flagship_1620=12) asserts_fail=0
+- proof: programs/proof/2252_life_cell_cgl.cubalc
 - Cube is SoT. Free energy must flow.
 
 ## 1.15.1748-usability — MI 2251 LIFE_CELL_CBS
