@@ -42,9 +42,19 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_LDTB MI2215 PASS asserts_ok=303 asserts_fail=0 tip==pin sealed",
+  "summary": "LIFE_CELL_LDTB MI2215 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "methods": 203,
   "host_finish": true,
-  "ts": "2026-09-11T06:08:53Z"
+  "ts": "2026-09-11T06:08:53Z",
+  "HEAD": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "head": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "tip": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "pin": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "pinned_head": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "git_head": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "commit": "aae9656e0b1f",
+  "short": "aae9656e0b1f",
+  "FEAT_HEAD": "aae9656e0b1fb364ff47e809090c182d594f4909",
+  "feat_head": "aae9656e0b1fb364ff47e809090c182d594f4909"
 }
