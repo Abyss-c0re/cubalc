@@ -57,9 +57,12 @@
   "FEAT_HEAD": "7ba172ed46a2c2da8cefb29c0cb29fa2f982c4fc",
   "feat": "7ba172ed46a2c2da8cefb29c0cb29fa2f982c4fc",
   "feat_head": "7ba172ed46a2c2da8cefb29c0cb29fa2f982c4fc",
-  "head": "b35e80e84b69801078042293643680a667b0c30f",
-  "HEAD": "b35e80e84b69801078042293643680a667b0c30f",
+  "head": "fe6ee4d6f344d9ad36b896e9089bf351193852b6",
+  "HEAD": "fe6ee4d6f344d9ad36b896e9089bf351193852b6",
   "tip": "b35e80e84b69801078042293643680a667b0c30f",
   "pin": "b35e80e84b69801078042293643680a667b0c30f",
-  "short": "b35e80e84b69"
+  "short": "b35e80e84b69",
+  "FEAT": "7ba172ed46a2c2da8cefb29c0cb29fa2f982c4fc",
+  "pinned_head": "fe6ee4d6f344d9ad36b896e9089bf351193852b6",
+  "PINNED_HEAD": "fe6ee4d6f344d9ad36b896e9089bf351193852b6"
 }
