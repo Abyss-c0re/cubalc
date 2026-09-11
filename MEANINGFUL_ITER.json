@@ -53,7 +53,12 @@
   "prev_mi": 2247,
   "status": "sealed",
   "proof_status": "PASS",
-  "ts": 1789158038.3605735,
+  "ts": 1789158753.7584577,
   "FEAT_HEAD": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
-  "feat": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5"
+  "feat": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
+  "HEAD": "2c18eb6ebd6932cc22f724342f939d20ca8ef6b7",
+  "head": "2c18eb6ebd6932cc22f724342f939d20ca8ef6b7",
+  "tip": "2c18eb6ebd6932cc22f724342f939d20ca8ef6b7",
+  "pin": "2c18eb6ebd6932cc22f724342f939d20ca8ef6b7",
+  "short": "2c18eb6ebd69"
 }
