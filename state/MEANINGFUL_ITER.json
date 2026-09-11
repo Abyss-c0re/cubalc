@@ -35,7 +35,7 @@
   },
   "asserts_fail": 0,
   "note": "MurD ligates D-Glu onto UDP-MurNAc-L-Ala with ATP stand-in; extends PG stem after MurC so MurE can attach meso-DAP; methods=196",
-  "head": "9b1f8e643e4ff6b27207acdbc9b741bb5223905a",
-  "sha": "9b1f8e643e4ff6b27207acdbc9b741bb5223905a",
-  "pinned_sha": "9b1f8e643e4ff6b27207acdbc9b741bb5223905a"
+  "head": "2c673c418ec5575c71bd0ecdb7d3301adf1d5186",
+  "sha": "2c673c418ec5575c71bd0ecdb7d3301adf1d5186",
+  "pinned_sha": "2c673c418ec5575c71bd0ecdb7d3301adf1d5186"
 }
