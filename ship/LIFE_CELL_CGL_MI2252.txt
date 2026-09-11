@@ -1,0 +1,8 @@
+LIFE_CELL_CGL MI 2252
+method: cgl n
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
+proof: PASS asserts_ok sum=413 (life=243 atomic_printer=85 smx=73 flagship_1620=12) asserts_fail=0
+version: 1.15.1749-usability
+HEAD: 13c9bd91feb0331282b137ded8e87b855f6117a6
+feat: 090b8a0594a6d0afd04d16392983927f3ff4b58c
+Cube is SoT. Free energy must flow.
