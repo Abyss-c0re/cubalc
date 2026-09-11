@@ -1,4 +1,1 @@
-LIFE_CELL_LDTF MI2218 PASS asserts_fail:0 sum=303 continuum ...->ldte->ldtf
-proof programs/proof/2218_life_cell_ldtf.cubalc
-Cell.ldtf LdtF/YafK after LdtE
-HEAD=bb4ea8c780a4f68811b5dd9f68ea5e4248302d7d
+bd8e779af2be97e230f831c7fea75962b8165a7a
