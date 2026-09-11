@@ -34,5 +34,8 @@
   },
   "asserts_fail": 0,
   "note": "LdtE after LdtC; ErfK Lpp-PG 3-3 stress-route fourth paralog anchor after YnhG third-route Lpp-PG anchor",
-  "methods": 209
+  "methods": 209,
+  "head": "4b08c81a2dc7a39ade36abf462fcf30089b059d3",
+  "sha": "4b08c81a2dc7a39ade36abf462fcf30089b059d3",
+  "pinned_sha": "4b08c81a2dc7a39ade36abf462fcf30089b059d3"
 }
