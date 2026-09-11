@@ -41,10 +41,19 @@
   "prior_feature": "LIFE_CELL_LDTB",
   "sealed": true,
   "anti_bloat": true,
-  "summary": "LIFE_CELL_LDTC MI2216 PASS asserts_ok=303 asserts_fail:0",
+  "summary": "LIFE_CELL_LDTC MI2216 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "pass": true,
   "ts": "2026-09-11T06:56:48Z",
   "FEAT_HEAD": "00f30cd8736241b80e7e556db880cefba4ca51ec",
-  "feat_head": "00f30cd8736241b80e7e556db880cefba4ca51ec"
+  "feat_head": "00f30cd8736241b80e7e556db880cefba4ca51ec",
+  "HEAD": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "head": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "tip": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "pinned_head": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "PINNED_HEAD": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "pin": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "git_head": "88a6ed5c631c8496cda8e40bc175600bb20e031e",
+  "commit": "88a6ed5c631c",
+  "short": "88a6ed5c631c"
 }
