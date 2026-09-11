@@ -44,11 +44,11 @@
   "summary": "LIFE_CELL_AMPH MI2221 PASS asserts_ok=239 asserts_fail:0 tip==pin sealed",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "host_finish": true,
-  "FEAT_HEAD": "90c06271684239337545b36d1e77d0b5cdb442ca",
-  "feat_head": "90c06271684239337545b36d1e77d0b5cdb442ca",
-  "HEAD": "90c06271684239337545b36d1e77d0b5cdb442ca",
-  "head": "90c06271684239337545b36d1e77d0b5cdb442ca",
-  "tip": "90c06271684239337545b36d1e77d0b5cdb442ca",
-  "pinned_head": "90c06271684239337545b36d1e77d0b5cdb442ca",
+  "FEAT_HEAD": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
+  "feat_head": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
+  "HEAD": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
+  "head": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
+  "tip": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
+  "pinned_head": "5bbefccc7c761b910ab13b6e51c60f1445ec1ff1",
   "pass": true
 }
