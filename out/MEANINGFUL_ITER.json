@@ -2,18 +2,16 @@
   "mi": 2252,
   "feature": "LIFE_CELL_CGL",
   "method": "cgl n",
-  "version": "1.15.1749-usability",
+  "version": "1.15.1750-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl",
   "asserts_fail": 0,
-  "asserts_ok": {
+  "asserts_ok": 413,
+  "asserts_ok_detail": {
     "life": 243,
     "atomic_printer": 85,
     "smx": 73,
-    "flagship_1620": 12,
-    "sum": 413
+    "flagship_1620": 12
   },
   "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "13c9bd91feb0331282b137ded8e87b855f6117a6",
-  "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
-  "creed": "Cube is SoT. Free energy must flow."
+  "law": "cube_is_sot; free_energy_must_flow"
 }
