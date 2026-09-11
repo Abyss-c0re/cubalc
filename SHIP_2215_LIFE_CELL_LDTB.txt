@@ -1,6 +1,5 @@
-SHIP LIFE_CELL_LDTB MI2215
-method: ldtb n
-continuum: ...->mltg->ldtd->ldta->ldtb
-proofs: 2215 + atomic_printer_life_ldtb + smx_mesh_vesicle_ldtb_life + 1620
-asserts_ok=303 asserts_fail=0
+LIFE_CELL_LDTB MI2215 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb FEAT=1ff123d4a61ee7ed12373da60e49cf9926f1a296 HEAD=a00febdac160d2e48cd46a73912a822b8bf15a26
+METHOD ldtb on life_cell after ldta
+Proof 2215 + atomic_printer_life_ldtb + smx_mesh_vesicle_ldtb_life
+asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
 VERSION=1.15.1698-usability
