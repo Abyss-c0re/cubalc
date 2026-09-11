@@ -34,5 +34,13 @@
   "pass": true,
   "sealed": true,
   "summary": "LIFE_CELL_MLTG MI2212 tip==pin sealed PASS asserts_ok=303",
-  "feat_head": "f36d6615ebe191e1ca83c9f10009a961f0831c5d"
+  "feat_head": "f36d6615ebe191e1ca83c9f10009a961f0831c5d",
+  "HEAD": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "head": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "tip": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "pin": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "pinned_head": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "git_head": "8ad50254bf1028a527d0852f48ee3178a58f3c1c",
+  "commit": "8ad50254bf10",
+  "short": "8ad50254bf10"
 }
