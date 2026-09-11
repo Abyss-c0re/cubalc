@@ -50,10 +50,18 @@
   "asserts_ok_sum": 408,
   "status": "sealed",
   "proof_status": "PASS",
-  "ts": 1789155911.1336906,
+  "ts": 1789155911.3413289,
   "FEAT_HEAD": "ec45a85df74efc085c3aae905a6e6bf2cd723208",
   "feat": "ec45a85df74efc085c3aae905a6e6bf2cd723208",
   "feat_head": "ec45a85df74efc085c3aae905a6e6bf2cd723208",
   "sha": "ec45a85df74e",
-  "commit": "ec45a85df74e"
+  "commit": "ec45a85df74e",
+  "HEAD": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816",
+  "head": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816",
+  "tip": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816",
+  "short": "a80b6b8e1ff8",
+  "pin": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816",
+  "tip_eq_pin": true,
+  "pinned_head": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816",
+  "git_head": "a80b6b8e1ff8754a273ec8bf33228f6a67d64816"
 }
