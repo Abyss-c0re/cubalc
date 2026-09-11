@@ -1,3 +1,12 @@
+## 2230 — LIFE_CELL_MPAA (1.15.1727-usability)
+
+- feat(life): LIFE_CELL_MPAA MI2230 MpaA cytoplasmic murein peptide amidase after LdcA
+- METHOD mpaa n: post-LdcA gamma-D-Glu-mDAP amidase; continuum ...->emta->mpl->ldca->mpaa
+- Proof 2230_life_cell_mpaa + atomic_printer_life_mpaa + smx_mesh_vesicle_mpaa_life
+- asserts_fail:0 sum=294 (life=170 ap=62 smx=50 flagship_1620=12)
+- Cube is SoT. Free energy must flow.
+
+
 ## 2222 — LIFE_CELL_MLTA (1.15.1714-usability)
 
 - feat(life): LIFE_CELL_MLTA MI2222 MltA membrane lytic transglycosylase after AmpH
