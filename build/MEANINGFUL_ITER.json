@@ -5,8 +5,8 @@
   "iter": 2207,
   "n": 2207,
   "mi": 2207,
-  "version": "1.15.1694-usability",
-  "VERSION": "1.15.1694-usability",
+  "version": "1.15.1693-usability",
+  "VERSION": "1.15.1693-usability",
   "feature": "life_cell_murj",
   "FEATURE": "LIFE_CELL_MURJ",
   "name": "LIFE_CELL_MURJ",
@@ -24,10 +24,10 @@
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj",
   "asserts_ok": {
     "life": 171,
-    "atomic_printer": 48,
+    "atomic_printer": 50,
     "smx": 44,
     "flagship_1620": 12,
-    "sum": 275
+    "sum": 277
   },
   "asserts_fail": 0,
   "item": "life cell murj lipid-II flippase after murg continuum free-energy spark-safe",
@@ -43,12 +43,12 @@
   "pass_": true,
   "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=277",
   "ts": "2026-09-11T02:27:37Z",
-  "HEAD": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "head": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "tip": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "pin": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "pinned_head": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "feat_head": "3c2e1beedf7564395f368a1aa69c66817649d6bd",
-  "commit": "3c2e1beedf75",
-  "short": "3c2e1beedf75"
+  "HEAD": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "head": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "tip": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "pin": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "pinned_head": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "feat_head": "547798f40aee5d88cd5446ae8d113f25bb59bdc8",
+  "commit": "547798f40aee",
+  "short": "547798f40aee"
 }
