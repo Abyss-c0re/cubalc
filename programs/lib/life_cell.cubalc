@@ -122,6 +122,7 @@
 #   metf n              MetF methylenetetrahydrofolate reductase — pay n ATP/energy → heat+n (post-MetE CH3-H4folate / one-carbon methyl supply gate); pcr/reserve/age/pmf held; after mete
 #   ahcy n              Ahcy / SahH adenosylhomocysteinase — pay n ATP/energy → heat+n (post-MetF SAH → homocysteine + adenosine Met-cycle gate); pcr/reserve/age/pmf held; after metf
 #   cbs n              Cbs cystathionine-beta-synthase — pay n ATP/energy → heat+n (post-Ahcy Hcy+Ser → cystathionine / transsulfuration entry gate); pcr/reserve/age/pmf held; after ahcy
+#   cgl n              Cgl/Cth cystathionine-gamma-lyase — pay n ATP/energy → heat+n (post-Cbs cystathionine → cysteine + a-ketobutyrate / cysteine-release gate); pcr/reserve/age/pmf held; after cbs
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
 #   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
