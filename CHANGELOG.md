@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.1750-usability — MI2252 LIFE_CELL_CGL
+
+- feat(life): Cgl cystathionine-gamma-lyase after Cbs on life_cell
+- continuum ...->metf->ahcy->cbs->cgl; proof 2252 asserts_fail:0
+- asserts_ok sum 413 (life=243 atomic_printer=85 smx=73 flagship_1620=12)
+- atomic_printer_life_cgl + smx_mesh_vesicle_cgl_life PASS
+- Cube is SoT. Free energy must flow.
+
+
 ## 1.15.1749-usability — MI2252 LIFE_CELL_CGL
 
 - feat(life): Cgl cystathionine-gamma-lyase after Cbs on life_cell (MI2252)
