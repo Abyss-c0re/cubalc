@@ -1,3 +1,12 @@
+# Changelog
+
+## 1.15.1740-usability — MI2244 LIFE_CELL_METK
+
+- feat(life): MetK methionine adenosyltransferase after RimI on life_cell
+- continuum: ...->pdf->map->rimi->metk
+- proof 2244 PASS asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1740-usability — MI2243 LIFE_CELL_RIMI
 
 - feat(life): RimI N-terminal acetyltransferase after MAP on life_cell
