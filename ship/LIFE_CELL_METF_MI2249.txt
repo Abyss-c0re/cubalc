@@ -1,0 +1,7 @@
+LIFE_CELL_METF MI2249
+method: metf n
+continuum: ...->metk->sped->mtnn->luxs->mete->metf
+proof: programs/proof/2249_life_cell_metf.cubalc
+asserts_ok: 410 asserts_fail: 0
+MetF methylenetetrahydrofolate reductase after MetE on life_cell
+Cube is SoT. Free energy must flow.
