@@ -48,10 +48,10 @@
   "ts": "2026-09-11T06:14:42Z",
   "FEAT_HEAD": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
   "feat_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
-  "HEAD": "6e09b82fa1efe9c2b8df45ecb18278e73c06f743",
-  "head": "6e09b82fa1efe9c2b8df45ecb18278e73c06f743",
-  "tip": "6e09b82fa1efe9c2b8df45ecb18278e73c06f743",
-  "pinned_head": "6e09b82fa1efe9c2b8df45ecb18278e73c06f743",
-  "PINNED_HEAD": "6e09b82fa1efe9c2b8df45ecb18278e73c06f743",
+  "HEAD": "f1afb80fbe8ae82b3c4f19a5448f0160914d6f96\nHEAD_NOW.txt\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nPINNED_HEAD_SHA.txt",
+  "head": "f1afb80fbe8ae82b3c4f19a5448f0160914d6f96\nHEAD_NOW.txt\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nPINNED_HEAD_SHA.txt",
+  "tip": "f1afb80fbe8ae82b3c4f19a5448f0160914d6f96\nHEAD_NOW.txt\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nPINNED_HEAD_SHA.txt",
+  "pinned_head": "f1afb80fbe8ae82b3c4f19a5448f0160914d6f96\nHEAD_NOW.txt\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nPINNED_HEAD_SHA.txt",
+  "PINNED_HEAD": "f1afb80fbe8ae82b3c4f19a5448f0160914d6f96\nHEAD_NOW.txt\nHEAD_PIN.txt\nHEAD_PIN_SHA.txt\nPINNED_HEAD.txt\nPINNED_HEAD_SHA.txt",
   "pass": true
 }
