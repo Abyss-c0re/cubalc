@@ -1,3 +1,10 @@
+## 1.15.1742-usability — MI 2245 LIFE_CELL_SPED
+
+- **LIFE_CELL_SPED**: SpeD (S-adenosylmethionine decarboxylase / AdoMetDC) after MetK.
+- Continuum: ...->pdf->map->rimi->metk->sped
+- Proofs PASS asserts_fail:0 sum=408 (life=240 atomic_printer=84 smx=72 flagship_1620=12).
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1741-usability — MI2244 LIFE_CELL_METK (metk n)

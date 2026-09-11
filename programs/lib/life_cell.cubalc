@@ -14741,5 +14741,155 @@ CLASS Cell
   END
 
 
+  # SPED: S-adenosylmethionine decarboxylase after MetK methionine adenosyltransferase.
+  # SpeD (SAM decarboxylase / AdoMetDC) decarboxylates S-adenosylmethionine made by
+  # MetK to yield decarboxylated SAM (dcSAM), the obligatory aminopropyl donor for
+  # polyamine synthase. After MetK opens the SAM methyl economy, SpeD forks SAM into
+  # the polyamine priming branch so spermidine/spermine synthesis and stress-ready
+  # polycation pools continue under turnover.
+  # Distinct from MetK (methionine adenosyltransferase / SAM synthase), RimI
+  # (N-terminal acetyltransferase), MAP, PDF, SpeE, SpeH, IF2, translate — SpeD is
+  # the post-MetK SAM decarboxylase gate on the one-carbon / polyamine continuum.
+  # Without SpeD after MetK, SAM stalls as methyl-only stock and the continuum loses
+  # its decarboxylated-SAM free-energy release branch into polyamines.
+  # Domain: post-MetK SpeD S-adenosylmethionine decarboxylase / AdoMetDC
+  # (not MetK, not RimI, not MAP, not PDF, not SpeE, not SpeH, not IF2).
+  # Continuum: ...->pepf->pdf->map->rimi->metk->sped
+  #   (MetK methionine adenosyltransferase -> SpeD SAM decarboxylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for SpeD catalytic / putrescine-activated cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sped life-force.
+  # Usability: AGI models post-MetK SpeD SAM decarboxylase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sped n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # MTNN: MTA/SAH nucleosidase after MetK methionine adenosyltransferase.
+  # MtnN (Pfs / 5'-methylthioadenosine/S-adenosylhomocysteine nucleosidase)
+  # cleaves SAH and MTA produced after SAM-dependent methylation and polyamine
+  # priming. MetK builds SAM; MtnN opens the salvage and AI-2 feeder branch by
+  # releasing adenine + S-ribosylhomocysteine (from SAH) or methylthioribose
+  # (from MTA) so one-carbon turnover does not stall on dead-end nucleosides.
+  # Distinct from MetK (SAM synthase), RimI, MAP, PDF, PepF, SpeD, LuxS,
+  # methyltransferases — MtnN is the post-MetK MTA/SAH nucleosidase gate on the
+  # SAM methyl / methionine-salvage continuum.
+  # Without MtnN after MetK, SAH and MTA pile up, product-inhibit methyl cycles,
+  # and the continuum loses its nucleosidase free-energy release branch.
+  # Domain: post-MetK MtnN MTA/SAH nucleosidase / methionine salvage gate
+  # (not MetK, not RimI, not MAP, not LuxS, not SpeD, not SahH, not PepN).
+  # Continuum: ...->pepf->pdf->map->rimi->metk->mtnn
+  #   (MetK methionine adenosyltransferase -> MtnN MTA/SAH nucleosidase).
+  # Pay take=min(n,atp,energy) - catalytic stand-in for MtnN nucleoside cleavage.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mtnn life-force.
+  # Usability: AGI models post-MetK MtnN MTA/SAH nucleosidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mtnn n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 END
