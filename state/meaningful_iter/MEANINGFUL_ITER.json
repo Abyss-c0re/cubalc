@@ -7,6 +7,6 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 413,
   "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "",
+  "HEAD": "39ed175307351962be9270b84fbd509f27b3d288",
   "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c"
 }
