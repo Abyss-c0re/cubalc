@@ -38,7 +38,8 @@
   "unity": 1.0,
   "note": "YcjG after MpaA; L-Ala-D/L-Glu epimerase recycling PASS asserts_fail:0 sum=311; tip sealed on ship/LIFE_CELL_YCJG_MI2231",
   "methods": 225,
-  "feat_head": "5dd0da7fac6e14ebd8dbb708274504d1ddb06b59",
-  "head": "d6254281d7933c3288584e01fd9cf7df739dbc16",
-  "tip": "d6254281d7933c3288584e01fd9cf7df739dbc16"
+  "feat_head": "66a5aa729a7bcb5369add5e29b98597542149328",
+  "head": "66a5aa729a7bcb5369add5e29b98597542149328",
+  "tip": "66a5aa729a7bcb5369add5e29b98597542149328",
+  "sha": "66a5aa729a7b"
 }
