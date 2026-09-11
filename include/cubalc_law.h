@@ -36,7 +36,7 @@
 #define CUBALC_LANG_VERSION "1.15.1676-usability"
 /* Core talk is SMX2/CBLC binary. HTTP is optional host edge only — never required. */
 #define CUBALC_HTTP_REQUIRED 0
-#define CUBALC_MAX_SRC      (384 * 1024)
+#define CUBALC_MAX_SRC      (512 * 1024)
 #define CUBALC_MAX_HEAP     256
 /* Nest depth budget — cubes may nest; compile walks leaves first */
 #define CUBALC_MAX_NEST_DEPTH 8

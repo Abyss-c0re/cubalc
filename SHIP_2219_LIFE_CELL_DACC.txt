@@ -1,0 +1,3 @@
+LIFE_CELL_DACC MI2219 PASS sum=235 fail=0 feat=PENDING tip=PENDING
+continuum ...->daca->dacb->dacc
+Cell.dacc n DD-carboxypeptidase PBP6 after DacB
