@@ -36,5 +36,9 @@
   "prev_feature": "LIFE_CELL_PEPA",
   "prev_mi": 2236,
   "head_before": "4c6b5fc4c",
-  "ts": 1789142934.4449463
+  "ts": 1789142934.4449463,
+  "feat_head": "6c92abf35386201b9fe2575750485c4cda5c4389",
+  "FEAT_HEAD": "6c92abf35386201b9fe2575750485c4cda5c4389",
+  "commit": "6c92abf35",
+  "head": "6c92abf35386201b9fe2575750485c4cda5c4389"
 }
