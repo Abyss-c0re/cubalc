@@ -1,11 +1,1 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2241
-- **FEATURE**: LIFE_CELL_PDF
-- **method**: pdf n
-- **version**: 1.15.1739-usability
-- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf
-- **asserts_fail**: 0
-- **asserts_ok sum**: 408 (life=240 atomic_printer=84 smx=72 flagship_1620=12)
-- **proof**: programs/proof/2241_life_cell_pdf.cubalc
-- Cube is SoT. Free energy must flow.
+2242
