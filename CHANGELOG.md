@@ -1,3 +1,10 @@
+## 1.15.1740-usability — MI2243 LIFE_CELL_RIMI
+
+- feat(life): RimI N-terminal acetyltransferase after MAP on life_cell
+- continuum: ...->pepf->pdf->map->rimi
+- proof 2243 PASS asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1740-usability — MI2242 LIFE_CELL_MAP (map n)
