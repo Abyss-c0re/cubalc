@@ -13,8 +13,8 @@
     "sum": 413
   },
   "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "b178e236e4a9caa03de84cb179b26f0e14c96283",
-  "feat": "13cdcc526e28db6fc0554e5c497859da28fc3c5e",
+  "HEAD": "d0721fc7b3c392bbe908590bd00906e971cd7cae",
+  "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
   "creed": "Cube is SoT. Free energy must flow.",
   "asserts_ok_sum": 413,
   "life_asserts": 243,
