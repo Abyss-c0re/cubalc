@@ -33,8 +33,10 @@
     "sum": 100,
     "asserts_fail": 0
   },
-  "HEAD": "cfcb8a7530eb95b1dbe24efb61a0c75bf920df9a",
-  "head": "cfcb8a7530eb95b1dbe24efb61a0c75bf920df9a",
+  "HEAD": "4c7127fae41f8acb028a9624032d4232b0cc5946",
+  "head": "4c7127fae41f8acb028a9624032d4232b0cc5946",
   "feat": "4c7127fae41f8acb028a9624032d4232b0cc5946",
-  "FEAT_HEAD": "4c7127fae41f8acb028a9624032d4232b0cc5946"
+  "FEAT_HEAD": "4c7127fae41f8acb028a9624032d4232b0cc5946",
+  "tip": "aa1cfe06cc9abf6e774493c82301024b5ee6bd3c",
+  "pin": "aa1cfe06cc9abf6e774493c82301024b5ee6bd3c"
 }
