@@ -7,5 +7,16 @@
   "asserts_ok": 412,
   "proof": "programs/proof/2251_life_cell_cbs.cubalc",
   "HEAD": "eda4a078242e50d4b455153ea7201a0f10be783b",
-  "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
+  "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "MEANINGFUL_ITER": 2251,
+  "iter": 2251,
+  "n": 2251,
+  "meaningful_iter": 2251,
+  "FEATURE": "LIFE_CELL_CBS",
+  "name": "LIFE_CELL_CBS",
+  "VERSION": "1.15.1748-usability",
+  "head": "b97f346e8b3c449f7b30f795ecdccc031260991b",
+  "tip": "b97f346e8b3c449f7b30f795ecdccc031260991b",
+  "feat_head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs"
 }
