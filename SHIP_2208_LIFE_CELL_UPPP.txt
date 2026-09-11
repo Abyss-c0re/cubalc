@@ -4,3 +4,4 @@ Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp
 Proof 2208 + atomic_printer_life_uppp + smx_mesh_vesicle_uppp_life
 asserts_ok life=184 atomic=53 smx=49 sum=286 asserts_fail=0
 Cube is SoT. Free energy must flow.
+feat 
