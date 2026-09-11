@@ -1,3 +1,10 @@
+## MI 2216 — LIFE_CELL_LDTC (1.15.1699-usability)
+
+- Cell.ldtc LdtC/YcfS Lpp–PG L,D-transpeptidase after LdtB
+- Continuum ...->uppp->mltg->ldtd->ldta->ldtb->ldtc
+- Proof 2216 + atomic_printer_life_ldtc + smx_mesh_vesicle_ldtc_life
+- asserts_ok=303 asserts_fail=0
+
 ## MI 2215 — LIFE_CELL_LDTB (1.15.1697-usability)
 
 - Cell.ldtb LdtB/YbiS Lpp–PG L,D-transpeptidase after LdtA

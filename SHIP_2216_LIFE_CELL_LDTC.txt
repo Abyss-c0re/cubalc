@@ -1,0 +1,5 @@
+LIFE_CELL_LDTC MI2216 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb->ldtc
+METHOD ldtc on life_cell after ldtb
+Proof 2216 + atomic_printer_life_ldtc + smx_mesh_vesicle_ldtc_life
+asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
+VERSION=1.15.1699-usability
