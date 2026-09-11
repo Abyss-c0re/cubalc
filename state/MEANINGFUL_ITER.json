@@ -24,7 +24,7 @@
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte->emta->mpl->ldca->mpaa->ycjg",
   "domain": "YcjG L-Ala-D/L-Glu epimerase recycling after MpaA",
-  "gift": "cytosolic L-Ala-D/L-Glu epimerase converts MpaA-freed stem geometry toward L-Ala-L-Glu so recycled tripeptide can re-enter Mpl ligation and the UDP-MurNAc-tripeptide pool under elongation and division stress without full de novo MurC-F cost",
+  "gift": "cytosolic L-Ala-D/L-Glu epimerase converts stem geometry so recycled tripeptide can re-enter Mpl ligation and the UDP-MurNAc-tripeptide pool under elongation and division stress without full de novo MurC-F cost",
   "cube": "SoT",
   "free_energy": "must_flow",
   "asserts_ok": {
@@ -38,8 +38,8 @@
   "unity": 1.0,
   "note": "YcjG after MpaA; L-Ala-D/L-Glu epimerase recycling PASS asserts_fail:0 sum=311; tip sealed on ship/LIFE_CELL_YCJG_MI2231",
   "methods": 225,
-  "feat_head": "3f970103fcc391f7f00b6a7970c6043d20ec0b57",
-  "head": "3f970103fcc391f7f00b6a7970c6043d20ec0b57",
-  "tip": "3f970103fcc391f7f00b6a7970c6043d20ec0b57",
-  "sha": "3f970103fcc3"
+  "feat_head": "0e36263d2cb62249789eb2e8cfa5dd754e207f1a",
+  "head": "0e36263d2cb62249789eb2e8cfa5dd754e207f1a",
+  "tip": "0e36263d2cb62249789eb2e8cfa5dd754e207f1a",
+  "sha": "0e36263d2cb6"
 }
