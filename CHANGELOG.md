@@ -1,3 +1,12 @@
+
+## 1.15.1689-usability — LIFE_CELL_MURD MI2202
+- METHOD murc n: UDP-MurNAc:L-Ala ligase after MurB (stem-peptide start)
+- METHOD murd n: UDP-MurNAc-L-Ala:D-Glu ligase after MurC (D-Glu stem extend)
+- Continuum ...->murq->mura->murb->murc->murd
+- Proof programs/proof/2202_life_cell_murd.cubalc PASS asserts_ok=137
+- Boards atomic_printer_life_murd + smx_mesh_vesicle_murd_life PASS
+- Flagship 1620 PASS asserts_ok=12; sum=207 asserts_fail=0
+
 ## MI2197 LIFE_CELL_MURB
 
 - METHOD murb (MurB UDP-GlcNAc-EP reductase) after mura on life_cell

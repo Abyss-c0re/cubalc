@@ -1,0 +1,777 @@
+// 2202_life_cell_murd.cubalc
+// Proof 2202: life_cell murd - MurD UDP-MurNAc-L-Ala:D-Glu ligase after MurC.
+// Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
+// Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY gate OF Cell 1 40 0
+ENTITY poor OF Cell 1 0 0
+ENTITY dead OF Cell 0 20 0
+ENTITY g0 OF Cell 1 24 0
+ENTITY twin OF Cell 1 30 0
+ENTITY ceil OF Cell 1 28 0
+ENTITY starved OF Cell 1 36 0
+
+SEND gate set_threshold 10
+SEND poor set_threshold 10
+SEND g0 set_threshold 10
+SEND twin set_threshold 10
+SEND ceil set_threshold 10
+SEND starved set_threshold 10
+
+SEND gate pulse 6
+SEND gate photosynth 40
+SEND gate glycolyse 36
+SEND gate pump 28
+SEND gate photophos 28
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate charge 40
+SEND gate feed 40
+SEND gate charge_pcr 24
+GETF gate age
+ASSERT LAST_N == 6 "af a6"
+GETF gate atp
+ASSERT LAST_N >= 20 "af atp"
+GETF gate pmf
+LET pbase = LAST_N
+ASSERT pbase >= 5 "af pmf"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate trim 8
+ASSERT LAST_N == 8 "pre trim"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate cnx 4
+ASSERT LAST_N == 4 "pre cnx"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate charge_pcr 8
+SEND gate uggt 4
+ASSERT LAST_N == 4 "pre uggt"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mann 6
+ASSERT LAST_N == 6 "pre mann"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate os9 5
+ASSERT LAST_N == 5 "pre os9"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate charge_pcr 8
+SEND gate hrd 4
+ASSERT LAST_N == 4 "pre hrd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate vcp 4
+ASSERT LAST_N == 4 "pre vcp"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate psm 4
+ASSERT LAST_N == 4 "pre psm"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate pepr 4
+ASSERT LAST_N == 4 "pre pepr"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate aars 4
+ASSERT LAST_N == 4 "pre aars"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate eftu 4
+ASSERT LAST_N == 4 "pre eftu"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ptc 4
+ASSERT LAST_N == 4 "pre ptc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate efg 4
+ASSERT LAST_N == 4 "pre efg"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate rf1 4
+ASSERT LAST_N == 4 "pre rf1"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate rf3 4
+ASSERT LAST_N == 4 "pre rf3"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate rrf 4
+ASSERT LAST_N == 4 "pre rrf"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate if3 4
+ASSERT LAST_N == 4 "pre if3"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate if2 4
+ASSERT LAST_N == 4 "pre if2"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ftsz 4
+ASSERT LAST_N == 4 "pre ftsz"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ftsi 5
+ASSERT LAST_N == 5 "pre ftsi"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate amic 5
+ASSERT LAST_N == 5 "pre amic"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate envc 5
+ASSERT LAST_N == 5 "pre envc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ftsn 3
+ASSERT LAST_N == 3 "pre ftsn"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ftsk 3
+ASSERT LAST_N == 3 "pre ftsk"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate xercd 3
+ASSERT LAST_N == 3 "pre xercd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate cpob 3
+ASSERT LAST_N == 3 "pre cpob"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate lpob 3
+ASSERT LAST_N == 3 "pre lpob"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate pbp1b 5
+ASSERT LAST_N == 5 "pre pbp1b"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate dedd 5
+ASSERT LAST_N == 5 "pre dedd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate nlpd 4
+ASSERT LAST_N == 4 "pre nlpd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate rlpa 4
+ASSERT LAST_N == 4 "pre rlpa"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate tolpal 4
+ASSERT LAST_N == 4 "pre tolpal"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate fispay 4
+ASSERT LAST_N == 4 "pre fispay"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate roda 4
+ASSERT LAST_N == 4 "pre roda"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mreb 4
+ASSERT LAST_N == 4 "pre mreb"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mrec 4
+ASSERT LAST_N == 4 "pre mrec"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mred 4
+ASSERT LAST_N == 4 "pre mred"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate rodz 5
+ASSERT LAST_N == 5 "pre rodz"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate pbp2 5
+ASSERT LAST_N == 5 "pre pbp2"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate lpoa 4
+ASSERT LAST_N == 4 "pre lpoa"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate pbp1a 5
+ASSERT LAST_N == 5 "pre pbp1a"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate meps 5
+ASSERT LAST_N == 5 "pre meps"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate meph 5
+ASSERT LAST_N == 5 "pre meph"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate slt 5
+ASSERT LAST_N == 5 "pre slt"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ampg 5
+ASSERT LAST_N == 5 "pre ampg"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate nagz 5
+ASSERT LAST_N == 5 "pre nagz"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ampd 5
+ASSERT LAST_N == 5 "pre ampd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murq 5
+ASSERT LAST_N == 5 "pre murq"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mura 4
+ASSERT LAST_N == 4 "pre gate mura"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murb 4
+ASSERT LAST_N == 4 "pre gate murb"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murc 4
+ASSERT LAST_N == 4 "pre gate murc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+GETF gate heat
+LET h0 = LAST_N
+GETF gate energy
+LET e0 = LAST_N
+GETF gate atp
+LET a0 = LAST_N
+GETF gate pcr
+LET c0 = LAST_N
+GETF gate reserve
+LET r0 = LAST_N
+GETF gate age
+LET age0 = LAST_N
+GETF gate pmf
+LET pmf0 = LAST_N
+GETF gate setpoint
+LET sp0 = LAST_N
+GETF gate threshold
+LET thr0 = LAST_N
+SEND gate murd 5
+ASSERT LAST_N == 5 "gate murd"
+GETF gate heat
+ASSERT LAST_N == h0 + 5 "h+5"
+GETF gate energy
+ASSERT LAST_N == e0 - 5 "e-5"
+GETF gate atp
+ASSERT LAST_N == a0 - 5 "atp-5"
+GETF gate pcr
+ASSERT LAST_N == c0 "pcr held"
+GETF gate reserve
+ASSERT LAST_N == r0 "reserve held"
+GETF gate age
+ASSERT LAST_N == age0 "age held"
+GETF gate pmf
+ASSERT LAST_N == pmf0 "pmf held"
+GETF gate setpoint
+ASSERT LAST_N == sp0 "sp held"
+GETF gate threshold
+ASSERT LAST_N == thr0 "thr held"
+GETF gate alive
+ASSERT LAST_N == 1 "alive"
+SEND dead ampg 3
+ASSERT LAST_N == 0 "dead ampg0"
+SEND dead nagz 3
+ASSERT LAST_N == 0 "dead nagz0"
+SEND dead ampd 3
+ASSERT LAST_N == 0 "dead ampd0"
+SEND dead murq 3
+ASSERT LAST_N == 0 "dead murq0"
+SEND dead murb 3
+ASSERT LAST_N == 0 "dead murb0"
+SEND dead murc 3
+ASSERT LAST_N == 0 "dead murc0"
+SEND dead murd 3
+ASSERT LAST_N == 0 "dead murd0"
+SEND poor ampg 3
+ASSERT LAST_N == 0 "poor ampg0"
+SEND poor nagz 3
+ASSERT LAST_N == 0 "poor nagz0"
+SEND poor ampd 3
+ASSERT LAST_N == 0 "poor ampd0"
+SEND poor murq 3
+ASSERT LAST_N == 0 "poor murq0"
+SEND poor murb 3
+ASSERT LAST_N == 0 "poor murb0"
+SEND poor murc 3
+ASSERT LAST_N == 0 "poor murc0"
+SEND poor murd 3
+ASSERT LAST_N == 0 "poor murd0"
+SEND gate murd 0
+ASSERT LAST_N == 0 "n0"
+SEND gate murd -2
+ASSERT LAST_N == 0 "nneg"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin slt 3
+ASSERT LAST_N == 3 "twin slt"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin ampg 3
+ASSERT LAST_N == 3 "twin ampg"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin nagz 3
+ASSERT LAST_N == 3 "twin nagz"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin ampd 3
+ASSERT LAST_N == 3 "twin ampd"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+GETF twin heat
+LET th = LAST_N
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+SEND twin murq 3
+ASSERT LAST_N == 3 "pre twin murq"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin mura 4
+ASSERT LAST_N == 4 "pre twin mura"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin murb 3
+ASSERT LAST_N == 3 "pre twin murb"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin murc 3
+ASSERT LAST_N == 3 "pre twin murc"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
+GETF twin heat
+LET th = LAST_N
+GETF twin energy
+LET te = LAST_N
+GETF twin atp
+LET ta = LAST_N
+SEND twin murd 3
+ASSERT LAST_N == 3 "twin murd"
+GETF twin heat
+ASSERT LAST_N == th + 3 "twin h+3"
+GETF twin energy
+ASSERT LAST_N == te - 3 "twin e-3"
+GETF twin atp
+ASSERT LAST_N == ta - 3 "twin atp-3"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil meph 4
+ASSERT LAST_N == 4 "ceil meph"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil slt 4
+ASSERT LAST_N == 4 "ceil slt"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil ampg 4
+ASSERT LAST_N == 4 "ceil ampg"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil nagz 4
+ASSERT LAST_N == 4 "ceil nagz"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil ampd 4
+ASSERT LAST_N == 4 "ceil ampd"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil murq 4
+ASSERT LAST_N == 4 "pre ceil murq"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil mura 4
+ASSERT LAST_N == 4 "pre ceil mura"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil murb 4
+ASSERT LAST_N == 4 "pre ceil murb"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil murc 4
+ASSERT LAST_N == 4 "pre ceil murc"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
+GETF ceil heat
+LET ch0 = LAST_N
+GETF ceil energy
+LET ce0 = LAST_N
+GETF ceil atp
+LET ca0 = LAST_N
+GETF ceil pcr
+LET cc0 = LAST_N
+GETF ceil reserve
+LET cr0 = LAST_N
+GETF ceil age
+LET cage0 = LAST_N
+GETF ceil pmf
+LET cpmf0 = LAST_N
+GETF ceil setpoint
+LET csp0 = LAST_N
+GETF ceil threshold
+LET cthr0 = LAST_N
+SEND ceil murd 4
+ASSERT LAST_N == 4 "ceil murd"
+GETF ceil heat
+ASSERT LAST_N == ch0 + 4 "ceil h+4"
+GETF ceil energy
+ASSERT LAST_N == ce0 - 4 "ceil e-4"
+GETF ceil atp
+ASSERT LAST_N == ca0 - 4 "ceil atp-4"
+GETF ceil pcr
+ASSERT LAST_N == cc0 "ceil pcr held"
+GETF ceil reserve
+ASSERT LAST_N == cr0 "ceil r held"
+GETF ceil age
+ASSERT LAST_N == cage0 "ceil age held"
+GETF ceil pmf
+ASSERT LAST_N == cpmf0 "ceil pmf held"
+GETF ceil setpoint
+ASSERT LAST_N == csp0 "ceil sp held"
+GETF ceil threshold
+ASSERT LAST_N == cthr0 "ceil thr held"
+SEND g0 pulse 3
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 charge_pcr 14
+SEND g0 quiesce
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 mura 4
+ASSERT LAST_N == 4 "pre g0 mura"
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 murb 3
+ASSERT LAST_N == 3 "pre g0 murb"
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 murc 3
+ASSERT LAST_N == 3 "pre g0 murc"
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 photosynth 24
+SEND g0 glycolyse 20
+SEND g0 charge 30
+SEND g0 feed 20
+SEND g0 murd 3
+ASSERT LAST_N == 3 "g0 murd"
+GETF g0 ready
+ASSERT LAST_N == 0 "g0 ready0"
+SEND starved pulse 4
+SEND starved photosynth 24
+SEND starved glycolyse 20
+SEND starved charge 30
+SEND starved feed 20
+SEND starved photosynth 24
+SEND starved glycolyse 20
+SEND starved charge 30
+SEND starved feed 20
+SEND starved ampg 3
+ASSERT LAST_N == 3 "starved ampg"
+SEND starved photosynth 24
+SEND starved glycolyse 20
+SEND starved charge 30
+SEND starved feed 20
+SEND starved nagz 3
+ASSERT LAST_N == 3 "starved nagz"
+SEND starved photosynth 24
+SEND starved glycolyse 20
+SEND starved charge 30
+SEND starved feed 20
+SEND starved ampd 3
+ASSERT LAST_N == 3 "starved ampd"
+SEND starved photosynth 24
+SEND starved glycolyse 20
+SEND starved charge 30
+SEND starved feed 20
+SEND starved murq 3
+ASSERT LAST_N == 3 "starved murq"
+SEND starved photosynth 4
+SEND starved glycolyse 2
+SEND starved mura 2
+ASSERT LAST_N == 2 "pre starved mura"
+SEND starved photosynth 4
+SEND starved glycolyse 2
+SEND starved charge 8
+SEND starved feed 4
+SEND starved murb 3
+ASSERT LAST_N == 3 "pre starved murb"
+SEND starved photosynth 4
+SEND starved glycolyse 2
+SEND starved charge 8
+SEND starved feed 4
+SEND starved murc 3
+ASSERT LAST_N == 3 "pre starved murc"
+SEND starved photosynth 4
+SEND starved glycolyse 2
+SEND starved charge 8
+SEND starved feed 4
+SEND starved photosynth 4
+SEND starved glycolyse 2
+GETF starved energy
+LET se = LAST_N
+GETF starved atp
+LET sa = LAST_N
+SEND starved murd 100
+LET took = LAST_N
+ASSERT took >= 1 "starved murd took"
+GETF starved atp
+ASSERT LAST_N == sa - took "starved atp dec"
+GETF starved energy
+ASSERT LAST_N == se - took "starved e dec"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate ampd 3
+ASSERT LAST_N == 3 "gate ampd2"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murq 3
+ASSERT LAST_N == 3 "gate murq2"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mura 4
+ASSERT LAST_N == 4 "pre gate mura"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murb 4
+ASSERT LAST_N == 4 "pre gate murb"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate murc 4
+ASSERT LAST_N == 4 "pre gate murc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+GETF gate heat
+LET h1 = LAST_N
+GETF gate energy
+LET e1 = LAST_N
+GETF gate atp
+LET a1 = LAST_N
+SEND gate murd 2
+ASSERT LAST_N == 2 "gate murd2"
+GETF gate heat
+ASSERT LAST_N == h1 + 2 "h1+2"
+GETF gate energy
+ASSERT LAST_N == e1 - 2 "e1-2"
+GETF gate atp
+ASSERT LAST_N == a1 - 2 "a1-2"

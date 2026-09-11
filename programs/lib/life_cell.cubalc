@@ -11241,4 +11241,142 @@ CLASS Cell
   END
 
 
+  # MurC: UDP-MurNAc:L-alanine ligase after MurB.
+  # MurC ATP-dependently ligates L-Ala onto UDP-MurNAc, opening the stem-peptide
+  # chain on the muramyl precursor that MurD–F will extend. Without MurC after
+  # MurB, UDP-MurNAc cannot receive its first stem residue and PG peptide
+  # assembly stalls before D-Glu / meso-DAP / D-Ala-D-Ala loading.
+  # Domain: post-MurB MurC L-Ala ligase (not MurB reductase, not MurA transferase,
+  # not MurQ etherase, not AnmK kinase, not AmpD amidase, not NagZ GlcNAc
+  # hydrolase, not AmpG IM permease, not Slt lytic TG, not MepH/LpoA/PBP1A).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc
+  #   (MurB UDP-GlcNAc-EP reductase -> MurC UDP-MurNAc:L-Ala ligase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurC L-Ala ligation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - murc life-force.
+  # Usability: AGI models post-MurB MurC stem-peptide start energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD murc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MurD: UDP-MurNAc-L-Ala:D-glutamate ligase after MurC.
+  # MurD ATP-dependently ligates D-Glu onto UDP-MurNAc-L-Ala, extending the
+  # PG stem peptide past MurC's L-Ala start. Without MurD after MurC, the
+  # stem stalls at mono-L-Ala and cannot accept meso-DAP / D-Ala-D-Ala from MurE/F,
+  # blocking cytoplasmic PG precursor maturation into lipid I/II substrate.
+  # Domain: post-MurC MurD D-Glu ligase (not MurC L-Ala ligase, not MurB reductase,
+  # not MurA transferase, not MurQ etherase, not AnmK kinase, not AmpD amidase,
+  # not NagZ GlcNAc hydrolase, not AmpG IM permease, not Slt lytic TG, not MepH/LpoA/PBP1A).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd
+  #   (MurC UDP-MurNAc:L-Ala ligase -> MurD UDP-MurNAc-L-Ala:D-Glu ligase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurD D-Glu ligation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - murd life-force.
+  # Usability: AGI models post-MurC MurD D-Glu stem ligation energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD murd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
