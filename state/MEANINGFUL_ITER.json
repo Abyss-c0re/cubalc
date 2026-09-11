@@ -22,13 +22,7 @@
     "programs/science/integration/smx_mesh_vesicle_dacb_life.cubalc"
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb",
-  "asserts_ok": {
-    "life": 132,
-    "atomic_printer": 50,
-    "smx": 41,
-    "flagship_1620": 12,
-    "sum": 235
-  },
+  "asserts_ok": 235,
   "asserts_fail": 0,
   "asserts_ok_breakdown": {
     "life": 141,
@@ -52,11 +46,11 @@
   "method_name": "dacb",
   "domain": "DacB PBP4 DD-endopeptidase cleave 4-3 after DacA",
   "gift": "open 4-3 D-Ala-mDAP cross-links after DacA trim so sacculus remodeling free energy flows",
-  "head": "f05c8daa72df8d9b6cfad33e1a93fcde15af8688",
-  "tip": "7ce6b6c406d044d4fd3b1ddfcc17a9087a9d344f",
+  "head": "34b41e793cfceb89649d297b67c64bae8359b4d9",
+  "tip": "34b41e793cfceb89649d297b67c64bae8359b4d9",
   "pin": "a291a499007ef89e93d614bb81b7db1dbce41e0c",
-  "sha": "f05c8daa72df8d9b6cfad33e1a93fcde15af8688",
-  "pinned_sha": "f05c8daa72df8d9b6cfad33e1a93fcde15af8688",
+  "sha": "34b41e793cfceb89649d297b67c64bae8359b4d9",
+  "pinned_sha": "34b41e793cfceb89649d297b67c64bae8359b4d9",
   "cube": "SoT",
   "free_energy": "must_flow",
   "methods": 212,
