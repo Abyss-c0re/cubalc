@@ -5,7 +5,7 @@
   "iter": 2248,
   "n": 2248,
   "meaningful_iter": 2248,
-  "feature": "life_cell_mete",
+  "feature": "LIFE_CELL_METE",
   "FEATURE": "LIFE_CELL_METE",
   "name": "LIFE_CELL_METE",
   "title": "MetE cobalamin-independent methionine synthase after LuxS on life_cell",
@@ -26,7 +26,7 @@
     "programs/science/integration/smx_mesh_vesicle_mete_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete",
+  "continuum": "...->metk->sped->mtnn->luxs->mete",
   "domain": "MetE cobalamin-independent methionine synthase after LuxS SRH lyase / AI-2 synthase",
   "gift": "MetE methylates homocysteine from LuxS with CH3-H4PteGlu3 to regenerate methionine so MetK can rebuild SAM without B12, keeping one-carbon free energy flowing under cobalamin-limited salvage stress after MetK/SpeD/MtnN/LuxS",
   "cube": "SoT",
@@ -56,9 +56,10 @@
   "ts": 1789158753.7584577,
   "FEAT_HEAD": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
   "feat": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
-  "HEAD": "ac469c0b6a4ee764cf784b5ac2832e2301e6b5fe",
-  "head": "ac469c0b6a4ee764cf784b5ac2832e2301e6b5fe",
-  "tip": "ac469c0b6a4ee764cf784b5ac2832e2301e6b5fe",
-  "pin": "ac469c0b6a4ee764cf784b5ac2832e2301e6b5fe",
-  "short": "ac469c0b6a4e"
+  "HEAD": "b5822c10bc5bae25f19752a912ea9019897d672b",
+  "head": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
+  "tip": "b5822c10bc5bae25f19752a912ea9019897d672b",
+  "pin": "b5822c10bc5bae25f19752a912ea9019897d672b",
+  "short": "b5822c10bc5b",
+  "feat_head": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5"
 }
