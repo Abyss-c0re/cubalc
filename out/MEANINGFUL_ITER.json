@@ -1,6 +1,6 @@
 {
   "mi": 2253,
-  "feature": "LIFE_CELL_GSHA",
+  "feature": "life_cell_gsha",
   "method": "gsha n",
   "version": "1.15.1751-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha",
@@ -13,7 +13,20 @@
     "sum": 416
   },
   "proof": "programs/proof/2253_life_cell_gsha.cubalc",
-  "HEAD": "92743a2469064c9ea96aa07af7e74877cb9b570c",
+  "HEAD": "ec679c1ddb325bbd919391857d193c2319de4f72",
   "feat": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
-  "creed": "Cube is SoT. Free energy must flow."
+  "creed": "Cube is SoT. Free energy must flow.",
+  "head": "ec679c1ddb325bbd919391857d193c2319de4f72",
+  "tip": "ec679c1ddb325bbd919391857d193c2319de4f72",
+  "feat_head": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
+  "feat_commit": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
+  "FEAT_HEAD": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
+  "MEANINGFUL_ITER": 2253,
+  "meaningful_iter": 2253,
+  "iter": 2253,
+  "n": 2253,
+  "FEATURE": "LIFE_CELL_GSHA",
+  "pass": true,
+  "sealed": true,
+  "asserts_ok_sum": 416
 }
