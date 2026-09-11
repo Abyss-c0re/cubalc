@@ -34,5 +34,8 @@
   },
   "asserts_fail": 0,
   "note": "MurJ lipid-II flippase after MurG; flips complete lipid-II to periplasm for PBP polymerization",
-  "methods": 201
+  "methods": 201,
+  "head": "64ab911b30057f33014810de9e48481c2b85fe8f",
+  "sha": "64ab911b30057f33014810de9e48481c2b85fe8f",
+  "pinned_sha": "64ab911b30057f33014810de9e48481c2b85fe8f"
 }
