@@ -13,10 +13,20 @@
     "sum": 413
   },
   "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "89ab15fe54c987892801a345162f0ec11fded11d",
+  "HEAD": "eef14ad38aa47b97c7ffb71d83295192e9b8ec94",
   "feat": "f56f610af1c73ca7b9464e523a9befd1a833b0d6",
   "creed": "Cube is SoT. Free energy must flow.",
-  "asserts_ok_sum": 413,
-  "life_asserts": 243,
-  "ok": true
+  "head": "eef14ad38aa47b97c7ffb71d83295192e9b8ec94",
+  "tip": "eef14ad38aa47b97c7ffb71d83295192e9b8ec94",
+  "feat_head": "f56f610af1c73ca7b9464e523a9befd1a833b0d6",
+  "feat_commit": "f56f610af1c73ca7b9464e523a9befd1a833b0d6",
+  "FEAT_HEAD": "f56f610af1c73ca7b9464e523a9befd1a833b0d6",
+  "MEANINGFUL_ITER": 2252,
+  "meaningful_iter": 2252,
+  "iter": 2252,
+  "n": 2252,
+  "FEATURE": "LIFE_CELL_CGL",
+  "pass": true,
+  "sealed": true,
+  "asserts_ok_sum": 413
 }
