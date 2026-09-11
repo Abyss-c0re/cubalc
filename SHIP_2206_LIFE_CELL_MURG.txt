@@ -1,0 +1,6 @@
+SHIP LIFE_CELL_MURG MI2206
+MurG lipid-II GlcNAc transferase after MraY; MraY lipid-I after MurF.
+Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg
+Proof 2206 + atomic_printer_life_murg + smx_mesh_vesicle_murg_life
+asserts_ok life=159 atomic=45 smx=39 flagship_1620=12 sum=255 asserts_fail=0
+VERSION=1.15.1692-usability

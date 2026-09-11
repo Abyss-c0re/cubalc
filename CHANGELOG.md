@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.15.1692-usability — LIFE_CELL_MURG MI2206
+
+- METHOD mray n: MraY lipid-I transferase after MurF (membrane entry of PG stem)
+- METHOD murg n: MurG lipid-II GlcNAc transferase after MraY
+- Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg
+- Proof programs/proof/2206_life_cell_murg.cubalc PASS asserts_ok=159
+- Boards atomic_printer_life_murg + smx_mesh_vesicle_murg_life PASS
+- Flagship 1620 PASS asserts_ok=12; sum=255 asserts_fail=0
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1691-usability — LIFE_CELL_MURD MI2202
 
 - METHOD murc n: UDP-MurNAc:L-Ala ligase after MurB (stem-peptide start)
