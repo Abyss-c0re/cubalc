@@ -12671,4 +12671,76 @@ CLASS Cell
     RET take
   END
 
+
+  # DacA: DD-carboxypeptidase (PBP5) trims D-Ala4 after LdtF.
+  # DacA/PBP5 removes the terminal D-Ala from pentapeptide stems, yielding
+  # tetrapeptide donors that feed L,D-transpeptidase 3-3 cross-link routes
+  # (LdtD/YcbB and LdtF/YafK) and balance sacculus peptide donor supply after
+  # dual-route peptide-peptide LDT capacity is online.
+  # Without DacA after LdtF, pentapeptide stems stay untrimmed and LDT donor
+  # pools starve even when LdtD/LdtF 3-3 and Lpp anchors exist.
+  # Domain: post-LdtF DD-carboxypeptidase / DacA/PBP5 (not LdtF/YafK peptide
+  # 3-3 LDT, not LdtD/YcbB primary 3-3 LDT, not LdtA-E Lpp LDTs, not MltG,
+  # not UppP, not DacB/PBP4 endopeptidase, not DacC/PBP6, not PBP1A aPBP).
+  # Continuum: ...->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca
+  #   (LdtF YafK peptide-peptide 3-3 second -> DacA PBP5 DD-CPase trim D-Ala4).
+  # Pay take=min(n,atp,energy) - ATP stand-in for DacA DD-CPase catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - daca life-force.
+  # Usability: AGI models post-LdtF DacA PBP5 DD-CPase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD daca n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
