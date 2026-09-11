@@ -1,3 +1,3 @@
-LIFE_CELL_DACB MI2218 PASS sum=235 fail=0 head=e1e1e4c69a46a50cf6312b1d4d0dc9d21e7849be
+LIFE_CELL_DACB MI2218 PASS sum=235 fail=0 feat=a291a499007ef89e93d614bb81b7db1dbce41e0c tip=c96c87783a45bc84e4c80998f51ff2891822ce25
 continuum ...->daca->dacb
 Cell.dacb n DD-endopeptidase PBP4 after DacA
