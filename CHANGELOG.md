@@ -1,3 +1,10 @@
+## 1.15.1743-usability — LIFE_CELL_MTNN (MI 2246)
+
+- feat(life): MtnN MTA/SAH nucleosidase after SpeD/MetK on life_cell
+- continuum: ...->map->rimi->metk->sped->mtnn
+- proof: programs/proof/2246_life_cell_mtnn.cubalc asserts_ok=240 fail=0 (sum=408 with boards)
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1742-usability — MI 2245 LIFE_CELL_SPED
 
 - **LIFE_CELL_SPED**: SpeD (S-adenosylmethionine decarboxylase / AdoMetDC) after MetK.
