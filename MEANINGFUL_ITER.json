@@ -5,8 +5,8 @@
   "iter": 2202,
   "n": 2202,
   "mi": 2202,
-  "version": "1.15.1689-usability",
-  "VERSION": "1.15.1689-usability",
+  "version": "1.15.1690-usability",
+  "VERSION": "1.15.1690-usability",
   "feature": "life_cell_murd",
   "FEATURE": "LIFE_CELL_MURD",
   "name": "LIFE_CELL_MURD",
@@ -19,7 +19,10 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2202_life_cell_murd.cubalc",
     "programs/science/integration/atomic_printer_life_murd.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_murd_life.cubalc",
+    "programs/proof/2201_life_cell_murc.cubalc",
+    "programs/science/integration/atomic_printer_life_murc.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_murc_life.cubalc"
   ],
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd",
   "asserts_ok": {
@@ -30,7 +33,7 @@
     "sum": 211
   },
   "asserts_fail": 0,
-  "item": "life_cell murd post-murc UDP-MurNAc-L-Ala:D-Glu ligase continuum free-energy MurD D-Glu stem ligation spark-safe",
+  "item": "life_cell murd post-murc UDP-MurNAc-L-Ala:D-Glu ligase continuum free-energy MurD stem ligation spark-safe",
   "item_id": "mi_life_cell_murd",
   "note": "METHOD murd n after murc; PASS life=133 atomic=36 smx=30 flag=12 sum=211",
   "status": "sealed",
@@ -41,14 +44,5 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURD MI2202 tip==pin 894b7e8be PASS sum=211",
-  "head": "894b7e8bea4acf392031af021b38c18513a50d2b",
-  "HEAD": "894b7e8bea4acf392031af021b38c18513a50d2b",
-  "tip": "894b7e8bea4acf392031af021b38c18513a50d2b",
-  "pin": "894b7e8bea4acf392031af021b38c18513a50d2b",
-  "short": "894b7e8be",
-  "cube_law": "cube is SoT; free energy must flow",
-  "method_signature": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held",
-  "also_added": "METHOD murc n (UDP-MurNAc:L-Ala ligase) enabling MurD continuum",
-  "feat_commit": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666"
+  "summary": "LIFE_CELL_MURD MI2202 PASS asserts_ok=211"
 }

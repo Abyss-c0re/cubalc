@@ -1,0 +1,7 @@
+LIFE_CELL_MURC MI2201
+METHOD murc on life_cell after murb
+Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc
+Proof 2201 + atomic_printer_life_murc + smx_mesh_vesicle_murc_life
+Prerequisite continuum for MURD; sealed with MI2202.
+asserts_ok life=127 atomic/smx bundled under MURD boards
+VERSION=1.15.1690-usability

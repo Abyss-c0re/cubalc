@@ -1,3 +1,8 @@
+SHIP LIFE_CELL_MURD MI2202 1.15.1691-usability
+MurD D-Glu ligation PG stem after MurC (+MurC L-Ala after MurB)
+Continuum: ...->mura->murb->murc->murd
+asserts_fail:0 sum=211
+
 SHIP LIFE_CELL_MURB MI2197 1.15.1685-usability
 MurB reductase PG-precursor after MurA
 Continuum: ...->murq->mura->murb
@@ -16,3 +21,5 @@ Prior Slt MI2189:
   science slt total=327 fail=0
 methods slt+ampg on life_cell after meph
 Cube is SoT. Free energy must flow.
+
+MI2202 LIFE_CELL_MURD murd after murc D-Glu stem ligation PASS sum=211

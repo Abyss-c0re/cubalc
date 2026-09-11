@@ -1,7 +1,7 @@
-// 2202_life_cell_murd.cubalc
-// Proof 2202: life_cell murd - MurD UDP-MurNAc-L-Ala:D-Glu ligase after MurC.
+// 2201_life_cell_murc.cubalc
+// Proof 2201: life_cell murc - MurC UDP-MurNAc:L-Ala ligase after MurB.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
-// Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd. Free energy must flow.
+// Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc. Free energy must flow.
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -350,12 +350,6 @@ SEND gate charge 30
 SEND gate feed 20
 SEND gate murb 4
 ASSERT LAST_N == 4 "pre gate murb"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate murc 4
-ASSERT LAST_N == 4 "pre gate murc"
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -374,8 +368,8 @@ GETF gate setpoint
 LET sp0 = LAST_N
 GETF gate threshold
 LET thr0 = LAST_N
-SEND gate murd 5
-ASSERT LAST_N == 5 "gate murd"
+SEND gate murc 5
+ASSERT LAST_N == 5 "gate murc"
 GETF gate heat
 ASSERT LAST_N == h0 + 5 "h+5"
 GETF gate energy
@@ -404,8 +398,8 @@ SEND dead ampd 3
 ASSERT LAST_N == 0 "dead ampd0"
 SEND dead murq 3
 ASSERT LAST_N == 0 "dead murq0"
-SEND dead murd 3
-ASSERT LAST_N == 0 "dead murd0"
+SEND dead murc 3
+ASSERT LAST_N == 0 "dead murc0"
 SEND poor ampg 3
 ASSERT LAST_N == 0 "poor ampg0"
 SEND poor nagz 3
@@ -414,11 +408,11 @@ SEND poor ampd 3
 ASSERT LAST_N == 0 "poor ampd0"
 SEND poor murq 3
 ASSERT LAST_N == 0 "poor murq0"
-SEND poor murd 3
-ASSERT LAST_N == 0 "poor murd0"
-SEND gate murd 0
+SEND poor murc 3
+ASSERT LAST_N == 0 "poor murc0"
+SEND gate murc 0
 ASSERT LAST_N == 0 "n0"
-SEND gate murd -2
+SEND gate murc -2
 ASSERT LAST_N == 0 "nneg"
 SEND twin photosynth 24
 SEND twin glycolyse 20
@@ -480,20 +474,14 @@ SEND twin charge 30
 SEND twin feed 20
 SEND twin murb 4
 ASSERT LAST_N == 4 "pre twin murb"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 30
-SEND twin feed 20
-SEND twin murc 4
-ASSERT LAST_N == 4 "pre twin murc"
 GETF twin heat
 LET th = LAST_N
 GETF twin energy
 LET te = LAST_N
 GETF twin atp
 LET ta = LAST_N
-SEND twin murd 3
-ASSERT LAST_N == 3 "twin murd"
+SEND twin murc 3
+ASSERT LAST_N == 3 "twin murc"
 GETF twin heat
 ASSERT LAST_N == th + 3 "twin h+3"
 GETF twin energy
@@ -556,12 +544,6 @@ SEND ceil charge 30
 SEND ceil feed 20
 SEND ceil murb 4
 ASSERT LAST_N == 4 "pre ceil murb"
-SEND ceil photosynth 24
-SEND ceil glycolyse 20
-SEND ceil charge 30
-SEND ceil feed 20
-SEND ceil murc 4
-ASSERT LAST_N == 4 "pre ceil murc"
 GETF ceil heat
 LET ch0 = LAST_N
 GETF ceil energy
@@ -580,8 +562,8 @@ GETF ceil setpoint
 LET csp0 = LAST_N
 GETF ceil threshold
 LET cthr0 = LAST_N
-SEND ceil murd 4
-ASSERT LAST_N == 4 "ceil murd"
+SEND ceil murc 4
+ASSERT LAST_N == 4 "ceil murc"
 GETF ceil heat
 ASSERT LAST_N == ch0 + 4 "ceil h+4"
 GETF ceil energy
@@ -627,14 +609,8 @@ SEND g0 charge 30
 SEND g0 feed 20
 SEND g0 murb 4
 ASSERT LAST_N == 4 "pre g0 murb"
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 30
-SEND g0 feed 20
-SEND g0 murc 4
-ASSERT LAST_N == 4 "pre g0 murc"
-SEND g0 murd 3
-ASSERT LAST_N == 3 "g0 murd"
+SEND g0 murc 3
+ASSERT LAST_N == 3 "g0 murc"
 GETF g0 ready
 ASSERT LAST_N == 0 "g0 ready0"
 SEND starved pulse 4
@@ -678,19 +654,13 @@ SEND starved charge 30
 SEND starved feed 20
 SEND starved murb 4
 ASSERT LAST_N == 4 "pre starved murb"
-SEND starved photosynth 24
-SEND starved glycolyse 20
-SEND starved charge 30
-SEND starved feed 20
-SEND starved murc 4
-ASSERT LAST_N == 4 "pre starved murc"
 GETF starved energy
 LET se = LAST_N
 GETF starved atp
 LET sa = LAST_N
-SEND starved murd 100
+SEND starved murc 100
 LET took = LAST_N
-ASSERT took >= 1 "starved murd took"
+ASSERT took >= 1 "starved murc took"
 GETF starved atp
 ASSERT LAST_N == sa - took "starved atp dec"
 GETF starved energy
@@ -723,20 +693,14 @@ SEND gate charge 30
 SEND gate feed 20
 SEND gate murb 4
 ASSERT LAST_N == 4 "pre gate murb"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate murc 4
-ASSERT LAST_N == 4 "pre gate murc"
 GETF gate heat
 LET h1 = LAST_N
 GETF gate energy
 LET e1 = LAST_N
 GETF gate atp
 LET a1 = LAST_N
-SEND gate murd 2
-ASSERT LAST_N == 2 "gate murd2"
+SEND gate murc 2
+ASSERT LAST_N == 2 "gate murc2"
 GETF gate heat
 ASSERT LAST_N == h1 + 2 "h1+2"
 GETF gate energy

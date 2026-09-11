@@ -1,0 +1,3 @@
+LIFE_CELL_MURC MI2198 (support continuum for MURD)
+METHOD murc on life_cell after murb
+Proof 2198 PASS

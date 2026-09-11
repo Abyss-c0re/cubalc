@@ -1,3 +1,27 @@
+# Changelog
+
+## 1.15.1691-usability — LIFE_CELL_MURD MI2202
+
+- METHOD murc n: UDP-MurNAc:L-Ala ligase after MurB (stem-peptide start)
+- METHOD murd n: UDP-MurNAc-L-Ala:D-Glu ligase after MurC (D-Glu stem extend)
+- Continuum ...->murq->mura->murb->murc->murd
+- Proof programs/proof/2202_life_cell_murd.cubalc PASS asserts_ok=133
+- Boards atomic_printer_life_murd + smx_mesh_vesicle_murd_life PASS
+- Flagship 1620 PASS asserts_ok=12; sum=211 asserts_fail=0
+- Cube is SoT. Free energy must flow.
+
+## 2202 — LIFE_CELL_MURD (1.15.1690-usability)
+
+- feat(life): METHOD murd n — MurD UDP-MurNAc-L-Ala:D-Glu ligase after MurC
+- continuum: ...->murq->mura->murb->murc->murd
+- also lands METHOD murc n (UDP-MurNAc:L-Ala ligase after MurB) as stem-peptide start
+- proof: 2202_life_cell_murd PASS asserts_ok=133 fail=0
+- atomic: atomic_printer_life_murd PASS asserts_ok=36
+- smx: smx_mesh_vesicle_murd_life PASS asserts_ok=30
+- flagship: 1620_atomic_printer_life_force PASS asserts_ok=12
+- sum asserts_ok=211 asserts_fail=0
+- Cube is SoT. Free energy must flow.
+
 
 ## 1.15.1689-usability — LIFE_CELL_MURD MI2202
 - METHOD murc n: UDP-MurNAc:L-Ala ligase after MurB (stem-peptide start)

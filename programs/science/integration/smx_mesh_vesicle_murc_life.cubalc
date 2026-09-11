@@ -1,5 +1,5 @@
-// smx_mesh_vesicle_murd_life.cubalc
-// SMX mesh vesicle board: life_cell murd MurD after MurC.
+// smx_mesh_vesicle_murc_life.cubalc
+// SMX mesh vesicle board: life_cell murc MurC after MurB.
 // Cube is SoT. Free energy must flow.
 
 REQUIRE VERSION "1.15"
@@ -65,12 +65,6 @@ SEND vesicle charge 24
 SEND vesicle feed 16
 SEND vesicle murb 3
 ASSERT LAST_N == 3 "pre vesicle murb"
-SEND vesicle photosynth 20
-SEND vesicle glycolyse 16
-SEND vesicle charge 24
-SEND vesicle feed 16
-SEND vesicle murc 3
-ASSERT LAST_N == 3 "pre vesicle murc"
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
@@ -85,8 +79,8 @@ GETF vesicle age
 LET vage = LAST_N
 GETF vesicle pmf
 LET vpmf = LAST_N
-SEND vesicle murd 4
-ASSERT LAST_N == 4 "ves murd"
+SEND vesicle murc 4
+ASSERT LAST_N == 4 "ves murc"
 GETF vesicle heat
 ASSERT LAST_N == vh + 4 "ves h+4"
 GETF vesicle energy
@@ -123,31 +117,25 @@ SEND cargo charge 24
 SEND cargo feed 16
 SEND cargo murb 3
 ASSERT LAST_N == 3 "pre cargo murb"
-SEND cargo photosynth 20
-SEND cargo glycolyse 16
-SEND cargo charge 24
-SEND cargo feed 16
-SEND cargo murc 3
-ASSERT LAST_N == 3 "pre cargo murc"
 GETF cargo heat
 LET ch = LAST_N
 GETF cargo energy
 LET ce = LAST_N
 GETF cargo atp
 LET ca = LAST_N
-SEND cargo murd 2
-ASSERT LAST_N == 2 "cargo murd"
+SEND cargo murc 2
+ASSERT LAST_N == 2 "cargo murc"
 GETF cargo heat
 ASSERT LAST_N == ch + 2 "cargo h+2"
 GETF cargo energy
 ASSERT LAST_N == ce - 2 "cargo e-2"
 GETF cargo atp
 ASSERT LAST_N == ca - 2 "cargo atp-2"
-SEND ghost murd 3
-ASSERT LAST_N == 0 "ghost murd 0"
-SEND vesicle murd 0
-ASSERT LAST_N == 0 "ves murd n0"
-SEND vesicle murd -3
-ASSERT LAST_N == 0 "ves murd nneg"
+SEND ghost murc 3
+ASSERT LAST_N == 0 "ghost murc 0"
+SEND vesicle murc 0
+ASSERT LAST_N == 0 "ves murc n0"
+SEND vesicle murc -3
+ASSERT LAST_N == 0 "ves murc nneg"
 GETF vesicle alive
 ASSERT LAST_N == 1 "ves alive"

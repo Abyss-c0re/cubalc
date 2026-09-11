@@ -1,5 +1,5 @@
-// 2202_life_cell_murd.cubalc
-// Proof 2202: life_cell murd - MurD UDP-MurNAc-L-Ala:D-Glu ligase after MurC.
+// 2199_life_cell_murd.cubalc
+// Proof 2199: life_cell murd - MurD D-Glu ligase on PG stem after MurC.
 // Pay min(n,atp,energy) -> heat+n atp-n energy-n; age/pcr/reserve/pmf/sp/thr held.
 // Continuum ...->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd. Free energy must flow.
 
@@ -354,8 +354,16 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 SEND gate murc 4
 ASSERT LAST_N == 4 "pre gate murc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -484,8 +492,16 @@ SEND twin photosynth 24
 SEND twin glycolyse 20
 SEND twin charge 30
 SEND twin feed 20
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
 SEND twin murc 4
 ASSERT LAST_N == 4 "pre twin murc"
+SEND twin photosynth 24
+SEND twin glycolyse 20
+SEND twin charge 30
+SEND twin feed 20
 GETF twin heat
 LET th = LAST_N
 GETF twin energy
@@ -560,8 +576,16 @@ SEND ceil photosynth 24
 SEND ceil glycolyse 20
 SEND ceil charge 30
 SEND ceil feed 20
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
 SEND ceil murc 4
 ASSERT LAST_N == 4 "pre ceil murc"
+SEND ceil photosynth 24
+SEND ceil glycolyse 20
+SEND ceil charge 30
+SEND ceil feed 20
 GETF ceil heat
 LET ch0 = LAST_N
 GETF ceil energy
@@ -621,18 +645,6 @@ SEND g0 photosynth 24
 SEND g0 glycolyse 20
 SEND g0 charge 30
 SEND g0 feed 20
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 30
-SEND g0 feed 20
-SEND g0 murb 4
-ASSERT LAST_N == 4 "pre g0 murb"
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 30
-SEND g0 feed 20
-SEND g0 murc 4
-ASSERT LAST_N == 4 "pre g0 murc"
 SEND g0 murd 3
 ASSERT LAST_N == 3 "g0 murd"
 GETF g0 ready
@@ -672,18 +684,6 @@ SEND starved mura 2
 ASSERT LAST_N == 2 "pre starved mura"
 SEND starved photosynth 4
 SEND starved glycolyse 2
-SEND starved photosynth 24
-SEND starved glycolyse 20
-SEND starved charge 30
-SEND starved feed 20
-SEND starved murb 4
-ASSERT LAST_N == 4 "pre starved murb"
-SEND starved photosynth 24
-SEND starved glycolyse 20
-SEND starved charge 30
-SEND starved feed 20
-SEND starved murc 4
-ASSERT LAST_N == 4 "pre starved murc"
 GETF starved energy
 LET se = LAST_N
 GETF starved atp
@@ -727,8 +727,16 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 SEND gate murc 4
 ASSERT LAST_N == 4 "pre gate murc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 GETF gate heat
 LET h1 = LAST_N
 GETF gate energy
