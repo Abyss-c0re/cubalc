@@ -3,7 +3,9 @@
 - feat(life): LIFE_CELL_MLTA MI2222 MltA membrane lytic transglycosylase after AmpH
 - METHOD mlta n: post-AmpH OM-anchored LT; continuum ...->dacd->amph->mlta
 - Proof 2222_life_cell_mlta + atomic_printer_life_mlta + smx_mesh_vesicle_mlta_life
-- asserts_fail:0; Cube is SoT; free energy must flow.
+- asserts_fail:0 sum=243 (life=136 ap=52 smx=43 flagship_1620=12)
+- Cube is SoT. Free energy must flow.
+
 
 ## 1.15.1712-usability — LIFE_CELL_AMPH MI2221
 
