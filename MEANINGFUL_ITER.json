@@ -46,5 +46,17 @@
   "unity": 1.0,
   "note": "RimI after MAP; N-terminal acetyltransferase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_MAP",
-  "prev_mi": 2242
+  "prev_mi": 2242,
+  "FEAT_HEAD": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "feat": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "feat_head": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "HEAD": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "head": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "tip": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "pin": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "pinned_head": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "git_head": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
+  "short": "3b6840d3d7c0",
+  "sha": "3b6840d3d7c0",
+  "commit": "3b6840d3d7c0"
 }
