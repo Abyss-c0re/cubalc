@@ -1,0 +1,12 @@
+LIFE_CELL_UPPP MI2209
+method: uppp n
+continuum: ...->mray->murg->murj->mtga->uppp
+domain: UppP undecaprenyl-PP phosphatase / BacA carrier recycle after MtgA
+gift: C55-PP -> C55-P recycle so MraY lipid-I continuum re-fires
+proof: programs/proof/2209_life_cell_uppp.cubalc
+atomic: programs/science/integration/atomic_printer_life_uppp.cubalc
+smx: programs/science/integration/smx_mesh_vesicle_uppp_life.cubalc
+asserts_fail: 0
+version: 1.15.1698-usability
+cube: SoT
+free_energy: must_flow

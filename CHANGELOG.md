@@ -1,3 +1,12 @@
+# Changelog
+
+## MI 2209 — LIFE_CELL_UPPP (1.15.1698-usability)
+
+- feat(life): UppP undecaprenyl-PP phosphatase after MtgA glycan polymerase
+- Continuum ...->mray->murg->murj->mtga->uppp (C55-PP recycle for MraY re-fire)
+- Proof 2209 + atomic_printer + smx_mesh_vesicle; asserts_fail:0
+- methods: 203; life-force/science/SMX only (no IF*P duals)
+
 ## 1.15.1696-usability — LIFE_CELL_MURJ (MI 2207)
 - feat(life): MurJ lipid-II flippase after MurG for atomic printer
 - METHOD murj n on life_cell (methods=201); continuum ...->murf->mray->murg->murj
