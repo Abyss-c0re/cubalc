@@ -29,14 +29,11 @@
   "free_energy": "must_flow",
   "asserts_ok": {
     "life": 148,
-    "atomic_printer": 60,
-    "smx": 48,
+    "atomic_printer": 57,
+    "smx": 47,
     "flagship_1620": 12,
-    "sum": 268
+    "sum": 264
   },
   "asserts_fail": 0,
-  "unity": 1.0,
-  "feat_head": "4d65a72d6bb9fce0d143519978d22ede7e8e250b",
-  "head": "4b8b719a3db7cc3028dc1a44393ea684a1832c98",
-  "tip": "4b8b719a3db7cc3028dc1a44393ea684a1832c98"
+  "unity": 1.0
 }
