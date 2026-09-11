@@ -4,6 +4,6 @@ version: 1.15.1750-usability
 continuum: ...->ahcy->cbs->cgl
 asserts_fail: 0 asserts_ok_sum: 413 (life=243)
 proof: programs/proof/2252_life_cell_cgl.cubalc
-HEAD: eef14ad38aa47b97c7ffb71d83295192e9b8ec94
+HEAD: d0c88b198fb68bcc82edaf7b85bc61aa9fd95014
 feat: f56f610af1c73ca7b9464e523a9befd1a833b0d6
 Cube is SoT. Free energy must flow.
