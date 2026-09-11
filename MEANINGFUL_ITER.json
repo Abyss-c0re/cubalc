@@ -47,21 +47,11 @@
   "note": "MAP after PDF; methionine aminopeptidase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_PDF",
   "prev_mi": 2241,
-  "head_before": "34e05811e",
-  "ts": 1789150772.5114245,
-  "methods": 229,
-  "status": "sealed",
-  "asserts_ok_sum": 408,
-  "host": "pve",
-  "science": [
-    "programs/science/integration/atomic_printer_life_map.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_map_life.cubalc"
-  ],
-  "feat": "0c87a9eec879656112245d98a5cd96ea4f163a77",
-  "feat_commit": "0c87a9eec879656112245d98a5cd96ea4f163a77",
-  "head": "dc6d230f983f22917eb7d227c9ef3169c59b0d68",
-  "HEAD": "dc6d230f983f22917eb7d227c9ef3169c59b0d68",
-  "tip": "dc6d230f983f22917eb7d227c9ef3169c59b0d68",
-  "short": "dc6d230f983",
-  "pinned_head": "cd40bd7cc2622c16d2a7ae77eb0925bae4957c62"
+  "HEAD": "b8202bf977ed0d6f928d42f9b9098879e4a75e81",
+  "head": "b8202bf977ed0d6f928d42f9b9098879e4a75e81",
+  "FEAT_HEAD": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
+  "feat": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
+  "tip": "b8202bf977ed0d6f928d42f9b9098879e4a75e81",
+  "short": "b8202bf977e",
+  "ts": 1789150807.10687
 }

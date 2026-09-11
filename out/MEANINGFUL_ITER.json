@@ -1,19 +1,54 @@
 {
+  "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2242,
-  "feature": "LIFE_CELL_MAP",
-  "method": "map n",
+  "MEANINGFUL_ITER": 2242,
+  "iter": 2242,
+  "n": 2242,
+  "mi": 2242,
   "version": "1.15.1740-usability",
+  "VERSION": "1.15.1740-usability",
+  "feature": "life_cell_map",
+  "FEATURE": "LIFE_CELL_MAP",
+  "name": "LIFE_CELL_MAP",
+  "title": "MAP methionine aminopeptidase after PDF on life_cell",
+  "label": "LIFE_CELL_MAP",
+  "method": "map n",
+  "ship": "2242_life_cell_map",
+  "proof": "programs/proof/2242_life_cell_map.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2242_life_cell_map.cubalc",
+    "programs/science/integration/atomic_printer_life_map.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_map_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map",
-  "asserts_fail": 0,
+  "domain": "MAP methionine aminopeptidase after PDF peptide deformylase",
+  "gift": "MAP cleaves initiator methionine after PDF removes N-formyl so mature N-termini open and free Met re-enters translation and nitrogen pools under turnover stress",
+  "cube": "SoT",
+  "free_energy": "must_flow",
   "asserts_ok": {
+    "life": 240,
+    "atomic_printer": 84,
+    "smx": 72,
+    "flagship_1620": 12,
+    "sum": 408
+  },
+  "proof_sum": {
     "life": 240,
     "atomic": 84,
     "smx": 72,
     "flagship": 12,
-    "sum": 408
+    "sum": 408,
+    "asserts_fail": 0
   },
-  "proof": "programs/proof/2242_life_cell_map.cubalc",
-  "head": "9db82e392aa811cb7ef81ffeb2dc12800664c316",
-  "status": "PASS",
-  "ts": 1789150766.2468321
+  "asserts_fail": 0,
+  "unity": 1.0,
+  "note": "MAP after PDF; methionine aminopeptidase path PASS asserts_fail:0 sum=408",
+  "prev_feature": "LIFE_CELL_PDF",
+  "prev_mi": 2241,
+  "HEAD": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
+  "head": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
+  "FEAT_HEAD": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
+  "feat": "0fe2edf2217949c77f19b47ea7d812e0dc341879"
 }
