@@ -3,5 +3,5 @@ method: pept n — PepT tripeptidase after PepE
 continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept
 proof: PASS asserts_fail:0 life=239 atomic=84 smx=72 flagship=12 sum=407
 feat: 7dd34393d6c31de870d13af79e40d3ced597d5dd
-HEAD: 8d28818642f84bf31f3e14a844b7ba12e75402da
+HEAD: 208c6b766bd5d93846dcebe3a43786b94352bf20
 status: sealed
