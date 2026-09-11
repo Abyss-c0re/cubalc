@@ -1,0 +1,48 @@
+{
+  "action": "extend_offline_capable_probe",
+  "brand": 0,
+  "capable": 1,
+  "cloud": 0,
+  "collapse_nanobot_tip_to_feat_cubalc": 1,
+  "craft": "void_lattice",
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "ext_sha16": "1a3bf10dc0a15861",
+  "ext_sha40": "1a3bf10dc0a158616a3e1be98e6d853bb59e6acc",
+  "fold_lanes": {
+    "algo": "10100101101001011010010110100101",
+    "raw": "11001100100110100110011010011010"
+  },
+  "foldbits": "11001100100110100110011010011010",
+  "hint": "grokium_offline_bits",
+  "hold_flash": 1,
+  "lanes_n": 2,
+  "offline": 1,
+  "path": "filter->offline->extend->probe->hive->core",
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "prior_seq": 68,
+  "probe_sha16": "41d167969331e722",
+  "schema": "grokium.offline.extend.v1",
+  "seq": 69,
+  "share": "state_matrix_only",
+  "shared_tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "slice": "4002745",
+  "src_sha16": "12c65d10a000160b",
+  "tip_collapse": {},
+  "tip_collapse_n": 0,
+  "tip_fanout_n": 1,
+  "ts": "2026-09-10T20:26:34Z",
+  "void_slots_board": 1,
+  "void_slots_n": 27
+}

@@ -1,0 +1,844 @@
+{
+  "c_core_src_smx_filter": 1,
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "expected_chain": [
+    {
+      "path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "seq": 53,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->gap->board->hive",
+      "seq": 54,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->hive->board",
+      "seq": 55,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 56,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 57,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 58,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "seq": 59,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 60,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 62,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 63,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 64,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "seq": 65,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 66,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board->plate->core",
+      "seq": 67,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 68,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 69,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 70,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 71,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->c_core->plate->dual_wire->hive->core",
+      "seq": 72,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board->plate->core",
+      "seq": 73,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 74,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 75,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 76,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 77,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->c_core->plate->dual_wire->hive->core",
+      "seq": 78,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board->plate->dual_wire->core",
+      "seq": 79,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 80,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->dual_wire->hive->core",
+      "seq": 81,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 82,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 83,
+      "task": "smx_filter_gap"
+    }
+  ],
+  "filter_root": 1,
+  "gap_closed": 0,
+  "gap_n": 3,
+  "gap_sha16": "0a96bc133943ecd4",
+  "gap_sha40": "0a96bc133943ecd4290253a14f3ffc3f47efa70e",
+  "gaps": [
+    {
+      "expected_path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "kind": "missing_seq",
+      "seq": 71,
+      "task": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "kind": "missing_seq",
+      "seq": 76,
+      "task": "smx_filter_gap"
+    },
+    {
+      "hint": "c_core_src_smx_filter",
+      "kind": "honesty_gap",
+      "missing": [],
+      "pred_n": 33,
+      "pred_pass": 31,
+      "preds": {
+        "board_void_lattice": true,
+        "c_core_h_exists": true,
+        "c_core_mentions_seq": true,
+        "c_core_mentions_slice": true,
+        "c_core_plate_dual_wire": true,
+        "core_c_exists": true,
+        "core_c_smx_hold_tokens": true,
+        "core_c_wired": true,
+        "dual_wire_honesty_residual": true,
+        "dual_wire_tip_raw_collapsed": true,
+        "filter_gap_seq_aligned": true,
+        "filter_honesty_slice_83": true,
+        "filter_script_present": true,
+        "full_marker_files_ge4": true,
+        "hist_void_59_65_soft": true,
+        "honesty_pred_floor_30": true,
+        "kb_evict_src_present": true,
+        "lattice_law_src_present": true,
+        "marked_src_ge10": true,
+        "marker_files_ge8": true,
+        "no_missing_src": true,
+        "offline_hold_bind": true,
+        "path_has_lattice_bind": true,
+        "shared_tip_pinned": true,
+        "smx_filter_c_core_bind": false,
+        "smx_filter_cubalc_exists": true,
+        "smx_filter_mentions_filter": true,
+        "smx_h_exists": true,
+        "smx_hold_flash": true,
+        "sot_h_exists": true,
+        "sot_hold_smx_bind": false,
+        "tip_fanout_collapsed": true,
+        "void_slots_board_pinned": true
+      }
+    }
+  ],
+  "have_seqs": [
+    55,
+    56,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    66,
+    67,
+    68,
+    69,
+    70,
+    72,
+    73,
+    74,
+    75,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    86,
+    87
+  ],
+  "hold_flash": 1,
+  "honesty": {
+    "action": "one_smx_filter_honesty_slice",
+    "c_core_src_smx_filter": 1,
+    "files": [
+      {
+        "exists": 1,
+        "has_c_core": 1,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 3,
+        "n": 1504,
+        "path": "include/cubalc_c_core.h",
+        "sha16": "cc29690c4aef2fd6",
+        "sha40": "cc29690c4aef2fd674d1fb85c265081eb1db54c5"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 3153,
+        "path": "include/cubalc_smx.h",
+        "sha16": "29a473b82c5a8fd3",
+        "sha40": "29a473b82c5a8fd3206847c287c872fe23fcf90d"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 4995,
+        "path": "include/cubalc_law.h",
+        "sha16": "cf74362b175a1ab8",
+        "sha40": "cf74362b175a1ab891d508af1754261064903dc2"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 0,
+        "has_smx": 0,
+        "marker_score": 0,
+        "n": 128,
+        "path": "include/cubalc_sot.h",
+        "sha16": "ada198dbddc42257",
+        "sha40": "ada198dbddc422575c4a69fd590b0fcdc1ef0120"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 50408,
+        "path": "src/cubalc_core.c",
+        "sha16": "00e2f7e265762add",
+        "sha40": "00e2f7e265762add6d5fa81a7dd2c782f81493ff"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 1961,
+        "path": "programs/hive_mind/smx_filter.cubalc",
+        "sha16": "904684012cb8c2be",
+        "sha40": "904684012cb8c2beae7bf6058b0448a6cdc01047"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 1,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 3,
+        "n": 29788,
+        "path": "scripts/smx/filter_gap.py",
+        "sha16": "7e6251f7ed5d2eb9",
+        "sha40": "7e6251f7ed5d2eb9abe00ed6098a9ac2fc118069"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 1,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 3,
+        "n": 20254,
+        "path": "scripts/smx/c_core_plate.py",
+        "sha16": "08608c54619d4065",
+        "sha40": "08608c54619d40650da03703a75dbb50e2a4e579"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 25970,
+        "path": "scripts/smx/cubalc_board.py",
+        "sha16": "4f16c7d419e21258",
+        "sha40": "4f16c7d419e212587b0db83778ddd111422a1e80"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 1,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 3,
+        "n": 21367,
+        "path": "scripts/smx/offline_extend.py",
+        "sha16": "6a08d1d21852aad7",
+        "sha40": "6a08d1d21852aad7d6cbd7932191e01acd20cf70"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 0,
+        "has_hold": 1,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 13071,
+        "path": "scripts/smx/lattice_law.py",
+        "sha16": "693643816eafd0c6",
+        "sha40": "693643816eafd0c6a05db4e07a2fa0d12bdc3c7b"
+      },
+      {
+        "exists": 1,
+        "has_c_core": 1,
+        "has_hold": 0,
+        "has_smx": 1,
+        "marker_score": 2,
+        "n": 22339,
+        "path": "scripts/smx/kb_evict_ingest.py",
+        "sha16": "262589c5c2ac0aad",
+        "sha40": "262589c5c2ac0aad1cc7010bb6a61b0e19038142"
+      }
+    ],
+    "full_marked_n": 11,
+    "hint": "c_core_src_smx_filter",
+    "honesty_ok": 0,
+    "honesty_score": 0.9394,
+    "honesty_sha16": "cc701e8ee7fb5469",
+    "honesty_sha40": "cc701e8ee7fb5469d47ade2f84a28aaefd05f35f",
+    "marked_n": 11,
+    "missing": [],
+    "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+    "pred_n": 33,
+    "pred_pass": 31,
+    "preds": {
+      "board_void_lattice": true,
+      "c_core_h_exists": true,
+      "c_core_mentions_seq": true,
+      "c_core_mentions_slice": true,
+      "c_core_plate_dual_wire": true,
+      "core_c_exists": true,
+      "core_c_smx_hold_tokens": true,
+      "core_c_wired": true,
+      "dual_wire_honesty_residual": true,
+      "dual_wire_tip_raw_collapsed": true,
+      "filter_gap_seq_aligned": true,
+      "filter_honesty_slice_83": true,
+      "filter_script_present": true,
+      "full_marker_files_ge4": true,
+      "hist_void_59_65_soft": true,
+      "honesty_pred_floor_30": true,
+      "kb_evict_src_present": true,
+      "lattice_law_src_present": true,
+      "marked_src_ge10": true,
+      "marker_files_ge8": true,
+      "no_missing_src": true,
+      "offline_hold_bind": true,
+      "path_has_lattice_bind": true,
+      "shared_tip_pinned": true,
+      "smx_filter_c_core_bind": false,
+      "smx_filter_cubalc_exists": true,
+      "smx_filter_mentions_filter": true,
+      "smx_h_exists": true,
+      "smx_hold_flash": true,
+      "sot_h_exists": true,
+      "sot_hold_smx_bind": false,
+      "tip_fanout_collapsed": true,
+      "void_slots_board_pinned": true
+    },
+    "schema": "grokium.filter.honesty.v1",
+    "seq": 83,
+    "slice": "8110635",
+    "void_seal": 1
+  },
+  "honesty_ok": 0,
+  "honesty_score": 0.9394,
+  "honesty_sha16": "cc701e8ee7fb5469",
+  "missing_window": [
+    53,
+    54,
+    59,
+    65,
+    71,
+    76
+  ],
+  "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+  "path_breaks": [],
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "present": [
+    {
+      "expected_path": "filter->hive->board",
+      "key": "seq55_ee84cc1",
+      "path": "filter->hive->board",
+      "seq": 55,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_36a382b",
+      "path": "",
+      "seq": 56,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq56_36a382b",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 56,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq57_ed9e042",
+      "path": "filter->offline->extend->hive->core",
+      "seq": 57,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "key": "seq58_4e7ee7e",
+      "path": "filter->lattice->law->hive->core",
+      "seq": 58,
+      "task_expected": "lattice_law",
+      "task_got": "lattice_law"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "c_core_7f3fc76",
+      "path": "",
+      "seq": 60,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "seq60_7f3fc76",
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 60,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq61_95fd681",
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq61_a8e7052",
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_2cd524f",
+      "path": "",
+      "seq": 62,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq62_2cd524f",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 62,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq63_b4d4aac",
+      "path": "filter->offline->extend->hive->core",
+      "seq": 63,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "key": "seq64_8311240",
+      "path": "filter->lattice->law->hive->core",
+      "seq": 64,
+      "task_expected": "lattice_law",
+      "task_got": "lattice_law"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "c_core_b23b86a",
+      "path": "",
+      "seq": 66,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "seq66_b23b86a",
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 66,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq67_f9055e7",
+      "path": "filter->hive->board->plate->core",
+      "seq": 67,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_9d66779",
+      "path": "",
+      "seq": 68,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq68_9d66779",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 68,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq69_4002745",
+      "path": "filter->offline->extend->probe->hive->core",
+      "seq": 69,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq69_d5a7774",
+      "path": "filter->offline->extend->hive->core",
+      "seq": 69,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "key": "seq70_c000",
+      "path": "filter->lattice->law->hive->core",
+      "seq": 70,
+      "task_expected": "lattice_law",
+      "task_got": "lattice_law"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "c_core_c8df561",
+      "path": "",
+      "seq": 72,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "seq72_c8df561",
+      "path": "filter->c_core->plate->dual_wire->hive->core",
+      "seq": 72,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq73_c0e0f2d",
+      "path": "filter->hive->board->plate->core",
+      "seq": 73,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq73_d994159",
+      "path": "filter->hive->board->residual->plate->core",
+      "seq": 73,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_4e7d0dc",
+      "path": "",
+      "seq": 74,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq74_2576934",
+      "path": "kb_evict_ingest",
+      "seq": 74,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq74_4e7d0dc",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 74,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq75_7",
+      "path": "filter->offline->extend->probe->hive->core",
+      "seq": 75,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "key": "seq77_730b8e3",
+      "path": "filter->gap->honesty->c_core_src->void_seal->collapse->hive->core",
+      "seq": 77,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "c_core_3",
+      "path": "",
+      "seq": 78,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "c_core_b7821a7",
+      "path": "",
+      "seq": 78,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "seq78_3",
+      "path": "filter->c_core->plate->dual_wire->hive->core",
+      "seq": 78,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->c_core->plate->dual_wire->hive->core",
+      "key": "seq78_b7821a7",
+      "path": "filter->c_core->plate->dual_wire->hive->core",
+      "seq": 78,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->dual_wire->core",
+      "key": "seq79_ff3e2e6",
+      "path": "filter->hive->board->residual->plate->core",
+      "seq": 79,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_463b62f",
+      "path": "",
+      "seq": 80,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq80_463b62f",
+      "path": "filter->evict_lowest_non_sot_ingest->unique_C->hive->core",
+      "seq": 80,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->dual_wire->hive->core",
+      "key": "seq81_8",
+      "path": "filter->offline->extend->probe->hive->core",
+      "seq": 81,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "key": "seq82_407a433",
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->collapse->hive->core",
+      "seq": 82,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "key": "seq83_8110635",
+      "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+      "seq": 83,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    }
+  ],
+  "present_n": 40,
+  "schema": "grokium.filter.gap.v1",
+  "seq": 83,
+  "share": "state_matrix_only",
+  "shared_tip": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+  "slice": "8110635",
+  "soft_sealed": [
+    {
+      "expected_path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "kind": "missing_seq",
+      "reason": "hist_void_soft_seal_board_absorb",
+      "seq": 53,
+      "soft": 1,
+      "task": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->gap->board->hive",
+      "kind": "missing_seq",
+      "reason": "hist_void_soft_seal_board_absorb",
+      "seq": 54,
+      "soft": 1,
+      "task": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "kind": "missing_seq",
+      "reason": "hist_void_soft_seal_board_absorb",
+      "seq": 59,
+      "soft": 1,
+      "task": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->gap->honesty->void_seal->dual_wire->collapse->hive->core",
+      "kind": "missing_seq",
+      "reason": "hist_void_soft_seal_board_absorb",
+      "seq": 65,
+      "soft": 1,
+      "task": "smx_filter_gap"
+    }
+  ],
+  "soft_sealed_n": 4,
+  "sym_hits": {
+    "CUBALC_HOLD_FLASH": true,
+    "HOLD": true,
+    "SMX": true
+  },
+  "task": "smx_filter_gap",
+  "tip_collapse": {
+    "ad0761d7fa832b38160accb31e6c6279e1ed2742": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+    "fe52950a4493316b39fea1761431d41e64578da5": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e"
+  },
+  "tip_fanout_n": 1,
+  "tip_fanout_raw_n": 3,
+  "tip_residual": 0,
+  "ts": "2026-09-11T01:24:17Z"
+}

@@ -1,0 +1,29 @@
+{
+  "board_class_n": 41,
+  "dual_residual_wire": 1,
+  "lanes": [
+    "residual_top",
+    "residual_nested",
+    "residual_evolve"
+  ],
+  "order": [
+    "realworld/agent_json_plate_schema_board.cubalc",
+    "realworld/agent_json_plate_stamp_board.cubalc",
+    "realworld/agent_plate_boot_flags_board.cubalc",
+    "realworld/agent_plate_contract_needp_board.cubalc",
+    "realworld/agent_plate_counter_field_board.cubalc",
+    "realworld/agent_plate_field_patch_board.cubalc",
+    "realworld/agent_plate_overlay_board.cubalc",
+    "realworld/agent_plate_patch_cli_board.cubalc",
+    "realworld/agent_plate_session_dump_board.cubalc",
+    "realworld/agent_plate_setp_session_board.cubalc",
+    "realworld/agent_report_fillpfile_board.cubalc",
+    "realworld/agent_status_template_fillp_board.cubalc"
+  ],
+  "residual_board_n": 2,
+  "residual_sha16": "4612730e893508f6",
+  "schema": "grokium.cubalc.void_slot.v1",
+  "seq": 79,
+  "slice": "ff3e2e6",
+  "ts": "2026-09-10T23:08:56Z"
+}

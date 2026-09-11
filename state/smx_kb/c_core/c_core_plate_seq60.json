@@ -1,0 +1,111 @@
+{
+  "action": "seal_c_core_plate",
+  "bind": {
+    "has_core_protect": true,
+    "has_sot": true,
+    "hold_flash": 1,
+    "law_defs_n": 18,
+    "law_named_n": 18,
+    "law_names": [
+      "sot",
+      "in_out",
+      "core_io",
+      "bin_talk",
+      "smx_key",
+      "hold_flash",
+      "no_bci",
+      "share_smx",
+      "dev_free",
+      "one_cmd",
+      "manifest_smx",
+      "algocube",
+      "energy_flow",
+      "flow_compile",
+      "nest",
+      "pure_science",
+      "evolve",
+      "core_protect"
+    ],
+    "law_sha16": "3cd74937e00579d8",
+    "smx_proto": 2,
+    "smx_sha16": "29a473b82c5a8fd3",
+    "sot_sha16": "ada198dbddc42257"
+  },
+  "budget": {
+    "CUBALC_BUDGET": 40,
+    "CUBALC_C_CORE_CELL_N": 6,
+    "CUBALC_HOLD_FLASH": 1,
+    "CUBALC_PROTO_SMX2": 2
+  },
+  "c_core_include": 1,
+  "c_core_plate": 1,
+  "c_sha16": "8dd48686d35dba7d",
+  "c_sha40": "8dd48686d35dba7daef90dd2fc5c212945f40e58",
+  "cell_n": 6,
+  "cells": [
+    {
+      "id": "C0_void",
+      "role": "lattice_origin",
+      "w": 1.0
+    },
+    {
+      "id": "C1_form",
+      "role": "structure_seer_seal",
+      "w": 1.0
+    },
+    {
+      "id": "C2_tip",
+      "role": "shared_tip_bind",
+      "tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+      "w": 1.0
+    },
+    {
+      "id": "C3_plate",
+      "role": "c_core_plate_gate",
+      "seq": 60,
+      "w": 1.0
+    },
+    {
+      "id": "C4_hive",
+      "role": "hive_kb_mirror",
+      "w": 1.0
+    },
+    {
+      "id": "C5_core",
+      "role": "core_protect_sink",
+      "w": 1.0
+    }
+  ],
+  "collapse_nanobot_tip_to_feat_cubalc": 1,
+  "craft": "void_lattice",
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "from": "structure_seer",
+  "header_path": "include/cubalc_c_core.h",
+  "header_sha16": "7f59f79cbe28486d",
+  "hint": "c_core_plate_unique_C",
+  "path": "filter->c_core->plate->hive->core",
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "schema": "grokium.c_core.v1",
+  "seq": 60,
+  "shared_tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "slice": "7f3fc76",
+  "sot": 1,
+  "task": "c_core_plate",
+  "tip_fanout_n": 1,
+  "ts": "2026-09-10T18:05:11Z",
+  "unique_C": 1,
+  "unique_key": "C_7f3fc76_f0e9fed1f4df_8dd48686"
+}

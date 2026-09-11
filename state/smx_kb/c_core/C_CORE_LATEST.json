@@ -1,0 +1,82 @@
+{
+  "action": "evict_lowest_non_sot_ingest",
+  "c_core_include": 1,
+  "c_sha16": "9f7f3604e8476316",
+  "c_sha40": "9f7f3604e847631676f1d8668362aaade8cb7ac8",
+  "cell_n": 6,
+  "cells": [
+    {
+      "id": "C0_void",
+      "role": "lattice_origin",
+      "w": 1.0
+    },
+    {
+      "id": "C1_form",
+      "role": "structure_seer_seal",
+      "w": 1.0
+    },
+    {
+      "id": "C2_tip",
+      "role": "shared_tip_bind",
+      "tip": "cd8162edd95ffee7c61960a612ecf26fc3926e15",
+      "w": 1.0
+    },
+    {
+      "id": "C3_evict",
+      "role": "kb_evict_gate",
+      "seq": 86,
+      "victim": "seq76_3df7189",
+      "w": 1.0
+    },
+    {
+      "id": "C4_hive",
+      "role": "hive_plate_mirror",
+      "w": 1.0
+    },
+    {
+      "id": "C5_core",
+      "role": "c_core_land",
+      "w": 1.0
+    }
+  ],
+  "craft": "void_lattice",
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "dual_wire": 1,
+  "dual_wire_meta": {
+    "land_one_C": 1,
+    "schema": "grokium.c_core.dual_wire.v1",
+    "seq": 86,
+    "slice": "582ded7",
+    "wire_a": "C2_tip->C3_evict",
+    "wire_b": "C3_evict->C5_core",
+    "wire_n": 2,
+    "wire_pair_sha16": "fa7d1d0d4b219164"
+  },
+  "from": "structure_seer",
+  "header_path": "state/smx_kb/c_core/kb_evict_core_582ded7.h",
+  "header_sha16": "d78fff6054bbfad6",
+  "hint": "lowest_non_sot_one_shot_C_dual_wire",
+  "land_one_C": 1,
+  "path": "filter->evict_lowest_non_sot->unique_C->dual_wire->hive->core",
+  "schema": "grokium.c_core.v1",
+  "seq": 86,
+  "shared_tip": "cd8162edd95ffee7c61960a612ecf26fc3926e15",
+  "slice": "582ded7",
+  "sot": 1,
+  "task": "kb_evict_ingest",
+  "tip_fanout_n": 2,
+  "tip_fanout_raw_n": 5,
+  "ts": "2026-09-11T00:58:25Z",
+  "unique_C": 1,
+  "unique_key": "C_582ded7_cd8162edd95f_9f7f3604",
+  "victim_key": "seq76_3df7189",
+  "victim_seq": 76,
+  "wire_a": "C2_tip->C3_evict",
+  "wire_b": "C3_evict->C5_core",
+  "wire_n": 2,
+  "wire_pair_sha16": "fa7d1d0d4b219164",
+  "wires": [
+    "C2_tip->C3_evict",
+    "C3_evict->C5_core"
+  ]
+}

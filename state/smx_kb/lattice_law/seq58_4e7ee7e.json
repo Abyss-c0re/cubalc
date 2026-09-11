@@ -1,0 +1,334 @@
+{
+  "budget": {
+    "CUBALC_ATOM_BITS": 64,
+    "CUBALC_BUDGET": 40,
+    "CUBALC_CREED": "C3",
+    "CUBALC_HOLD_FLASH": 1,
+    "CUBALC_HTTP_REQUIRED": 0,
+    "CUBALC_ID_LEN": 32,
+    "CUBALC_LAW_COUNT": 18,
+    "CUBALC_MAX_CUBES": 40,
+    "CUBALC_MAX_NEST_DEPTH": 8,
+    "CUBALC_MAX_PORTS": 8,
+    "CUBALC_PROTO_SMX2": 2,
+    "CUBALC_SHARE": "smx"
+  },
+  "collapse_nanobot_tip_to_feat_cubalc": 1,
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "genome": [
+    4,
+    0,
+    6,
+    3,
+    9,
+    3,
+    0,
+    9,
+    4,
+    1,
+    6,
+    8,
+    4,
+    7,
+    8,
+    6,
+    7,
+    0,
+    8,
+    7,
+    6,
+    9,
+    4,
+    3,
+    5,
+    5,
+    2,
+    0,
+    2,
+    7,
+    4,
+    1
+  ],
+  "genome_len": 32,
+  "hold_flash": 1,
+  "law_count_header": 18,
+  "law_defs": {
+    "CUBALC_LAW_ALGOCUBE": 11,
+    "CUBALC_LAW_BINARY_TALK": 3,
+    "CUBALC_LAW_CORE_IO": 2,
+    "CUBALC_LAW_CORE_PROTECT": 17,
+    "CUBALC_LAW_DEVICES_FREE": 8,
+    "CUBALC_LAW_ENERGY_FLOW": 12,
+    "CUBALC_LAW_EVOLVE": 16,
+    "CUBALC_LAW_FLOW_COMPILE": 13,
+    "CUBALC_LAW_HOLD_FLASH": 5,
+    "CUBALC_LAW_IN_OUT": 1,
+    "CUBALC_LAW_MANIFEST_SMX": 10,
+    "CUBALC_LAW_MATRIX_KEY": 4,
+    "CUBALC_LAW_NEST": 14,
+    "CUBALC_LAW_NO_BRAIN_WIRES": 6,
+    "CUBALC_LAW_ONE_COMMANDER": 9,
+    "CUBALC_LAW_PURE_SCIENCE": 15,
+    "CUBALC_LAW_SHARE_MATRIX": 7,
+    "CUBALC_LAW_SOT": 0
+  },
+  "law_n": 40,
+  "law_named_n": 18,
+  "law_sha16": "dc456891df3e363a",
+  "law_sha40": "dc456891df3e363ad41511ada42d8f2b2c74b538",
+  "laws": [
+    {
+      "id": 0,
+      "name": "sot",
+      "token": "law_sot"
+    },
+    {
+      "id": 1,
+      "name": "in_out",
+      "token": "law_in_out"
+    },
+    {
+      "id": 2,
+      "name": "core_io",
+      "token": "law_core_io"
+    },
+    {
+      "id": 3,
+      "name": "bin_talk",
+      "token": "law_bin_talk"
+    },
+    {
+      "id": 4,
+      "name": "smx_key",
+      "token": "law_smx_key"
+    },
+    {
+      "id": 5,
+      "name": "hold_flash",
+      "token": "law_hold_flash"
+    },
+    {
+      "id": 6,
+      "name": "no_bci",
+      "token": "law_no_bci"
+    },
+    {
+      "id": 7,
+      "name": "share_smx",
+      "token": "law_share_smx"
+    },
+    {
+      "id": 8,
+      "name": "dev_free",
+      "token": "law_dev_free"
+    },
+    {
+      "id": 9,
+      "name": "one_cmd",
+      "token": "law_one_cmd"
+    },
+    {
+      "id": 10,
+      "name": "manifest_smx",
+      "token": "law_manifest_smx"
+    },
+    {
+      "id": 11,
+      "name": "algocube",
+      "token": "law_algocube"
+    },
+    {
+      "id": 12,
+      "name": "energy_flow",
+      "token": "law_energy_flow"
+    },
+    {
+      "id": 13,
+      "name": "flow_compile",
+      "token": "law_flow_compile"
+    },
+    {
+      "id": 14,
+      "name": "nest",
+      "token": "law_nest"
+    },
+    {
+      "id": 15,
+      "name": "pure_science",
+      "token": "law_pure_science"
+    },
+    {
+      "id": 16,
+      "name": "evolve",
+      "token": "law_evolve"
+    },
+    {
+      "id": 17,
+      "name": "core_protect",
+      "token": "law_core_protect"
+    },
+    {
+      "id": 18,
+      "name": "void_slot_18",
+      "token": "law_void_18",
+      "void": 1
+    },
+    {
+      "id": 19,
+      "name": "void_slot_19",
+      "token": "law_void_19",
+      "void": 1
+    },
+    {
+      "id": 20,
+      "name": "void_slot_20",
+      "token": "law_void_20",
+      "void": 1
+    },
+    {
+      "id": 21,
+      "name": "void_slot_21",
+      "token": "law_void_21",
+      "void": 1
+    },
+    {
+      "id": 22,
+      "name": "void_slot_22",
+      "token": "law_void_22",
+      "void": 1
+    },
+    {
+      "id": 23,
+      "name": "void_slot_23",
+      "token": "law_void_23",
+      "void": 1
+    },
+    {
+      "id": 24,
+      "name": "void_slot_24",
+      "token": "law_void_24",
+      "void": 1
+    },
+    {
+      "id": 25,
+      "name": "void_slot_25",
+      "token": "law_void_25",
+      "void": 1
+    },
+    {
+      "id": 26,
+      "name": "void_slot_26",
+      "token": "law_void_26",
+      "void": 1
+    },
+    {
+      "id": 27,
+      "name": "void_slot_27",
+      "token": "law_void_27",
+      "void": 1
+    },
+    {
+      "id": 28,
+      "name": "void_slot_28",
+      "token": "law_void_28",
+      "void": 1
+    },
+    {
+      "id": 29,
+      "name": "void_slot_29",
+      "token": "law_void_29",
+      "void": 1
+    },
+    {
+      "id": 30,
+      "name": "void_slot_30",
+      "token": "law_void_30",
+      "void": 1
+    },
+    {
+      "id": 31,
+      "name": "void_slot_31",
+      "token": "law_void_31",
+      "void": 1
+    },
+    {
+      "id": 32,
+      "name": "void_slot_32",
+      "token": "law_void_32",
+      "void": 1
+    },
+    {
+      "id": 33,
+      "name": "void_slot_33",
+      "token": "law_void_33",
+      "void": 1
+    },
+    {
+      "id": 34,
+      "name": "void_slot_34",
+      "token": "law_void_34",
+      "void": 1
+    },
+    {
+      "id": 35,
+      "name": "void_slot_35",
+      "token": "law_void_35",
+      "void": 1
+    },
+    {
+      "id": 36,
+      "name": "void_slot_36",
+      "token": "law_void_36",
+      "void": 1
+    },
+    {
+      "id": 37,
+      "name": "void_slot_37",
+      "token": "law_void_37",
+      "void": 1
+    },
+    {
+      "id": 38,
+      "name": "void_slot_38",
+      "token": "law_void_38",
+      "void": 1
+    },
+    {
+      "id": 39,
+      "name": "void_slot_39",
+      "token": "law_void_39",
+      "void": 1
+    }
+  ],
+  "path": "filter->lattice->law->hive->core",
+  "pins_freeze": 1,
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "schema": "grokium.lattice.law.v1",
+  "seq": 58,
+  "share": "state_matrix_only",
+  "shared_tip": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed",
+  "slice": "4e7ee7e",
+  "src_sha16": "cf74362b175a1ab8",
+  "tip_collapse": {
+    "32c8130d107cabe32afc030750c03113f85e4e0f": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed",
+    "FEAT_HEAD": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed",
+    "HEAD_NOW": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed",
+    "PINNED_HEAD": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed",
+    "f3734b9a50131124a8802fde77c076fcbdb2fdfd": "8ff6bead0c88ab7b07dc97df44fdfbb60f7b6fed"
+  },
+  "tip_collapse_n": 2,
+  "tip_fanout_n": 3,
+  "ts": "2026-09-10T17:28:28Z"
+}

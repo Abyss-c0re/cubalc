@@ -1,0 +1,24 @@
+{
+  "c_core_src_smx_filter": 1,
+  "gap_closed": 1,
+  "gap_n": 0,
+  "gap_sha16": "71f6bbba00dc037e",
+  "honesty_ok": 1,
+  "honesty_score": 1.0,
+  "honesty_sha16": "e187e0e8f851467c",
+  "missing_window": [
+    53,
+    54,
+    59,
+    65,
+    71,
+    76
+  ],
+  "path": "filter->gap->honesty->c_core_src->void_seal->dual_wire->lattice_bind->collapse->hive->core",
+  "seq": 88,
+  "shared_tip": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+  "slice": "d4d05dc",
+  "soft_sealed_n": 6,
+  "tip_fanout_n": 1,
+  "tip_residual": 0
+}

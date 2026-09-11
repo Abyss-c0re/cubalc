@@ -1,0 +1,135 @@
+{
+  "action": "one_smx_filter_honesty_slice",
+  "c_core_src_smx_filter": 1,
+  "files": [
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 1522,
+      "path": "include/cubalc_c_core.h",
+      "sha16": "1520815a6f8b3f1f",
+      "sha40": "1520815a6f8b3f1f689d28ce43d367f891131164"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 3153,
+      "path": "include/cubalc_smx.h",
+      "sha16": "29a473b82c5a8fd3",
+      "sha40": "29a473b82c5a8fd3206847c287c872fe23fcf90d"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 4995,
+      "path": "include/cubalc_law.h",
+      "sha16": "cf74362b175a1ab8",
+      "sha40": "cf74362b175a1ab891d508af1754261064903dc2"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 0,
+      "has_smx": 0,
+      "n": 128,
+      "path": "include/cubalc_sot.h",
+      "sha16": "ada198dbddc42257",
+      "sha40": "ada198dbddc422575c4a69fd590b0fcdc1ef0120"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 50408,
+      "path": "src/cubalc_core.c",
+      "sha16": "00e2f7e265762add",
+      "sha40": "00e2f7e265762add6d5fa81a7dd2c782f81493ff"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 1961,
+      "path": "programs/hive_mind/smx_filter.cubalc",
+      "sha16": "904684012cb8c2be",
+      "sha40": "904684012cb8c2beae7bf6058b0448a6cdc01047"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 24724,
+      "path": "scripts/smx/filter_gap.py",
+      "sha16": "f8b53d7410b93cac",
+      "sha40": "f8b53d7410b93cac2d9e0c22df12774666b97eab"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 19575,
+      "path": "scripts/smx/c_core_plate.py",
+      "sha16": "52b15230d302359b",
+      "sha40": "52b15230d302359b14766e294474a6974b175709"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 22241,
+      "path": "scripts/smx/cubalc_board.py",
+      "sha16": "30e7219101465488",
+      "sha40": "30e7219101465488f748c9dc6c3ae6afd40ba3f8"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 0,
+      "has_smx": 1,
+      "n": 16827,
+      "path": "scripts/smx/offline_extend.py",
+      "sha16": "f2b92a53d0acdcee",
+      "sha40": "f2b92a53d0acdcee322d4eeaf35c09a2d920603b"
+    }
+  ],
+  "hint": "c_core_src_smx_filter",
+  "honesty_ok": 1,
+  "honesty_score": 1.0,
+  "honesty_sha16": "c4e94474e2641dd5",
+  "honesty_sha40": "c4e94474e2641dd5fba2333bd22504b7adffb542",
+  "missing": [],
+  "path": "filter->gap->honesty->c_core_src->collapse->hive->core",
+  "pred_n": 15,
+  "pred_pass": 15,
+  "preds": {
+    "c_core_h_exists": true,
+    "c_core_mentions_seq": true,
+    "c_core_mentions_slice": true,
+    "c_core_plate_dual_wire": true,
+    "core_c_exists": true,
+    "core_c_wired": true,
+    "filter_gap_seq_aligned": true,
+    "filter_script_present": true,
+    "no_missing_src": true,
+    "shared_tip_pinned": true,
+    "smx_filter_cubalc_exists": true,
+    "smx_filter_mentions_filter": true,
+    "smx_h_exists": true,
+    "smx_hold_flash": true,
+    "tip_fanout_collapsed": true
+  },
+  "schema": "grokium.filter.honesty.v1",
+  "seq": 76,
+  "slice": "3df7189"
+}

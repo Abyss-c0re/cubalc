@@ -1,0 +1,16 @@
+{
+  "CUBALC_HEAD": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+  "FEAT_HEAD": "ad0761d7fa832b38160accb31e6c6279e1ed2742",
+  "HEAD_NOW": "fe52950a4493316b39fea1761431d41e64578da5",
+  "PINNED_HEAD": "fe52950a4493316b39fea1761431d41e64578da5",
+  "SHARED_TIP": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+  "tip_fanout_raw_n": 3,
+  "tip_fanout_logical_n": 3,
+  "collapse_nanobot_tip_to_feat_cubalc": 1,
+  "tip_collapse_target": "77cc75cfc144e15ff080e5acba6c8d3b80be9c5e",
+  "tip_fanout_n": 1,
+  "void_slots_board_n": 27,
+  "freeze_pins_kb_n4": 1,
+  "frozen_ts": "2026-09-11T01:39:59Z",
+  "freeze": 1
+}

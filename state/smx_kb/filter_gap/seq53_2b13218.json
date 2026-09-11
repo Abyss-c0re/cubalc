@@ -1,0 +1,129 @@
+{
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "expected_chain": [
+    {
+      "path": "filter->core->plate->hive",
+      "seq": 48,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board",
+      "seq": 49,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive->core",
+      "seq": 50,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 51,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 52,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 53,
+      "task": "smx_filter_gap"
+    }
+  ],
+  "filter_root": 1,
+  "gap_closed": 0,
+  "gap_n": 5,
+  "gap_sha16": "9d75fc65778b78b0",
+  "gap_sha40": "9d75fc65778b78b0af8f6b7a116d3ae453006105",
+  "gaps": [
+    {
+      "expected_path": "filter->core->plate->hive",
+      "kind": "missing_seq",
+      "seq": 48,
+      "task": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board",
+      "kind": "missing_seq",
+      "seq": 49,
+      "task": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive->core",
+      "kind": "missing_seq",
+      "seq": 50,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "kind": "missing_seq",
+      "seq": 51,
+      "task": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "kind": "missing_seq",
+      "seq": 52,
+      "task": "lattice_law"
+    }
+  ],
+  "have_seqs": [
+    53,
+    55,
+    56,
+    57,
+    58
+  ],
+  "hold_flash": 1,
+  "missing_window": [
+    48,
+    49,
+    50,
+    51,
+    52
+  ],
+  "path": "filter->gap->collapse->hive->core",
+  "path_breaks": [],
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "present": [
+    {
+      "expected_path": "filter->gap->collapse->hive->core",
+      "key": "seq53_2b13218",
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 53,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    }
+  ],
+  "present_n": 1,
+  "schema": "grokium.filter.gap.v1",
+  "seq": 53,
+  "share": "state_matrix_only",
+  "shared_tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "slice": "2b13218",
+  "sym_hits": {
+    "CUBALC_HOLD_FLASH": true,
+    "HOLD": true,
+    "SMX": true
+  },
+  "task": "smx_filter_gap",
+  "tip_collapse": {},
+  "tip_fanout_n": 1,
+  "tip_fanout_raw_n": 1,
+  "tip_residual": 0,
+  "ts": "2026-09-10T17:43:38Z"
+}

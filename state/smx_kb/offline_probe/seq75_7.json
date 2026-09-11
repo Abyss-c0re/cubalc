@@ -1,0 +1,177 @@
+{
+  "action": "extend_offline_capable_probe",
+  "bit_names": [
+    "local_src",
+    "foldbits_ok",
+    "lanes_ge1",
+    "tip_collapsed",
+    "no_cloud",
+    "no_brand",
+    "hold_flash",
+    "kb_n4",
+    "void27",
+    "src_body",
+    "unity_ok",
+    "ring5",
+    "share_smx",
+    "offline_src",
+    "pins_frozen",
+    "seq75"
+  ],
+  "capable": 1,
+  "craft": "void_lattice",
+  "foldbits": "11001100100110100110011010011010",
+  "gates": {
+    "brand": 0,
+    "cloud": 0,
+    "foldbits_ok": 1,
+    "hold_flash": 1,
+    "kb_n4": 1,
+    "lanes_n": 2,
+    "local_src": 1,
+    "offline_src": 1,
+    "pins_frozen": 1,
+    "ring5": 1,
+    "seq75": 1,
+    "share": "state_matrix_only",
+    "src_body": 1,
+    "tip_collapsed": 1,
+    "tip_fanout_n": 1,
+    "unity_ok": 1,
+    "void_slots_n": 27
+  },
+  "hint": "grokium_offline_bits",
+  "lanes": {
+    "algo": "10100101101001011010010110100101",
+    "raw": "11001100100110100110011010011010"
+  },
+  "offline": 1,
+  "offline_bits": "1111111111111111",
+  "offline_word": 65535,
+  "offline_word_hex": "ffff",
+  "path": "filter->offline->extend->probe->hive->core",
+  "probe_sha16": "fa2242cb18bd514d",
+  "probe_sha40": "fa2242cb18bd514db9b28f6113ebc3f35c51bfbc",
+  "ring": [
+    {
+      "acc16": "0001",
+      "addr": "4a3c0590",
+      "bit": "1",
+      "cube": "raw",
+      "offline": 1,
+      "plug": "raw->algo"
+    },
+    {
+      "acc16": "0003",
+      "addr": "00da85e4",
+      "bit": "1",
+      "cube": "algo",
+      "offline": 1,
+      "plug": "algo->brain"
+    },
+    {
+      "acc16": "0006",
+      "addr": "9304bc4b",
+      "bit": "0",
+      "cube": "brain",
+      "offline": 1,
+      "plug": "brain->nexus"
+    },
+    {
+      "acc16": "000c",
+      "addr": "b9c6cb1c",
+      "bit": "0",
+      "cube": "nexus",
+      "offline": 1,
+      "plug": "nexus->fix"
+    },
+    {
+      "acc16": "0019",
+      "addr": "c07cac1b",
+      "bit": "1",
+      "cube": "fix",
+      "offline": 1,
+      "plug": "RING"
+    }
+  ],
+  "schema": "grokium.offline.probe.v1",
+  "seq": 75,
+  "shared_tip": "612d7e0e438e21ac4624908cd5a9ec38e8945902",
+  "slice": "7",
+  "src_sha16": "12c65d10a000160b",
+  "ts": "2026-09-10T21:58:05Z",
+  "unity_xor": "01101001001111111100001100111111",
+  "void_fill_head": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23,
+    0,
+    4
+  ],
+  "void_fill_order": [
+    {
+      "lane": "residual",
+      "rank": 0,
+      "slot": 3
+    },
+    {
+      "lane": "nested",
+      "rank": 1,
+      "slot": 7
+    },
+    {
+      "lane": "evolve",
+      "rank": 2,
+      "slot": 11
+    },
+    {
+      "lane": "residual",
+      "rank": 3,
+      "slot": 15
+    },
+    {
+      "lane": "nested",
+      "rank": 4,
+      "slot": 19
+    },
+    {
+      "lane": "evolve",
+      "rank": 5,
+      "slot": 23
+    },
+    {
+      "lane": "residual",
+      "rank": 6,
+      "slot": 0
+    },
+    {
+      "lane": "nested",
+      "rank": 7,
+      "slot": 4
+    },
+    {
+      "lane": "evolve",
+      "rank": 8,
+      "slot": 8
+    },
+    {
+      "lane": "residual",
+      "rank": 9,
+      "slot": 12
+    },
+    {
+      "lane": "nested",
+      "rank": 10,
+      "slot": 16
+    },
+    {
+      "lane": "evolve",
+      "rank": 11,
+      "slot": 20
+    }
+  ],
+  "why": "ops_green_develop"
+}

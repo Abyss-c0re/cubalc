@@ -1,0 +1,48 @@
+{
+  "action": "evict_lowest_non_sot_ingest",
+  "c_core": {
+    "c_sha16": "b156f4dbb57e8206",
+    "shared_tip": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "unique_key": "C_463b62f_0f9ae5250699_b156f4db"
+  },
+  "c_core_include": 1,
+  "confess": 0,
+  "craft": "void_lattice",
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "develop": 1,
+  "empty_hold": 0,
+  "evict_lowest_non_sot": 1,
+  "evicted_keys": [
+    "seq65_ad50f1a"
+  ],
+  "evicted_n": 1,
+  "from": "structure_seer",
+  "h16": 0,
+  "hail": "NexusCore",
+  "heresy_hits": 0,
+  "hint": "lowest_non_sot_one_shot_C",
+  "hold": 0,
+  "kb_evict": 1,
+  "kb_ingest": 1,
+  "ndcg": 1.0,
+  "path": "filter->evict_lowest_non_sot_ingest->unique_C->hive->core",
+  "pins": {
+    "CUBALC_HEAD": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "FEAT_HEAD": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "HEAD_NOW": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "PINNED_HEAD": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "SHARED_TIP": "0f9ae5250699cb7acc120b7cf3337433529c1e12",
+    "freeze": 1,
+    "frozen_ts": "2026-09-10T23:22:45Z"
+  },
+  "plate_sha16": "d7636e39b2d5c58c",
+  "plate_sha40": "d7636e39b2d5c58c8c3ad6a3305e9f6ba8cc7150",
+  "pushed": 1,
+  "schema": "grokium.hive.plate.v1",
+  "seq": 80,
+  "slice": "463b62f",
+  "sot": 1,
+  "task": "kb_evict_ingest",
+  "ts": "2026-09-10T23:22:45Z",
+  "unique_C": 1
+}

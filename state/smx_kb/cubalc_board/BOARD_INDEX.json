@@ -1,0 +1,21 @@
+{
+  "board_class_n": 41,
+  "board_n": 27,
+  "board_sha16": "3feaf8e30f6d1985",
+  "board_tight_sha16": "c0bb257069cc42c5",
+  "dual_residual_wire": 1,
+  "path": "filter->hive->board->residual->plate->core",
+  "programs_evolve_n": 63,
+  "programs_top_n": 27,
+  "residual_board_n": 2,
+  "residual_n": 54,
+  "residual_nested_n": 18,
+  "residual_nested_sha16": "fa0bd85ef729a9ea",
+  "residual_sha16": "4612730e893508f6",
+  "residual_top_sha16": "8064bb3ef0f7e5f0",
+  "schema": "grokium.cubalc.board.index.v1",
+  "seq": 79,
+  "seq79_tighten": 1,
+  "slice": "ff3e2e6",
+  "ts": "2026-09-10T23:08:56Z"
+}

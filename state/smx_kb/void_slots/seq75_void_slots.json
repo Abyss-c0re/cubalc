@@ -1,0 +1,197 @@
+{
+  "n": 27,
+  "schema": "grokium.void.slots.v1",
+  "seq": 75,
+  "shared_tip": "612d7e0e438e21ac4624908cd5a9ec38e8945902",
+  "slots": [
+    {
+      "addr": "4fefb577",
+      "bit": "1",
+      "cube": "raw",
+      "i": 0,
+      "lane": "raw"
+    },
+    {
+      "addr": "56e2834b",
+      "bit": "1",
+      "cube": "algo",
+      "i": 1,
+      "lane": "algo"
+    },
+    {
+      "addr": "51a3a981",
+      "bit": "0",
+      "cube": "brain",
+      "i": 2,
+      "lane": "raw"
+    },
+    {
+      "addr": "67818266",
+      "bit": "0",
+      "cube": "nexus",
+      "i": 3,
+      "lane": "algo"
+    },
+    {
+      "addr": "b1d58b62",
+      "bit": "1",
+      "cube": "fix",
+      "i": 4,
+      "lane": "raw"
+    },
+    {
+      "addr": "ce2201d6",
+      "bit": "1",
+      "cube": "void",
+      "i": 5,
+      "lane": "algo"
+    },
+    {
+      "addr": "cf6e54e2",
+      "bit": "0",
+      "cube": "raw",
+      "i": 6,
+      "lane": "raw"
+    },
+    {
+      "addr": "cdee33a1",
+      "bit": "0",
+      "cube": "algo",
+      "i": 7,
+      "lane": "algo"
+    },
+    {
+      "addr": "ca09a6a4",
+      "bit": "1",
+      "cube": "brain",
+      "i": 8,
+      "lane": "raw"
+    },
+    {
+      "addr": "90736461",
+      "bit": "0",
+      "cube": "nexus",
+      "i": 9,
+      "lane": "algo"
+    },
+    {
+      "addr": "91353981",
+      "bit": "0",
+      "cube": "fix",
+      "i": 10,
+      "lane": "raw"
+    },
+    {
+      "addr": "9cf90420",
+      "bit": "1",
+      "cube": "void",
+      "i": 11,
+      "lane": "algo"
+    },
+    {
+      "addr": "ae4a3869",
+      "bit": "1",
+      "cube": "raw",
+      "i": 12,
+      "lane": "raw"
+    },
+    {
+      "addr": "d5b8e784",
+      "bit": "0",
+      "cube": "algo",
+      "i": 13,
+      "lane": "algo"
+    },
+    {
+      "addr": "7733132e",
+      "bit": "1",
+      "cube": "brain",
+      "i": 14,
+      "lane": "raw"
+    },
+    {
+      "addr": "7c4edb89",
+      "bit": "0",
+      "cube": "nexus",
+      "i": 15,
+      "lane": "algo"
+    },
+    {
+      "addr": "e098c94b",
+      "bit": "0",
+      "cube": "fix",
+      "i": 16,
+      "lane": "raw"
+    },
+    {
+      "addr": "c6ef43aa",
+      "bit": "1",
+      "cube": "void",
+      "i": 17,
+      "lane": "algo"
+    },
+    {
+      "addr": "6f9166f1",
+      "bit": "1",
+      "cube": "raw",
+      "i": 18,
+      "lane": "raw"
+    },
+    {
+      "addr": "06ccb1c7",
+      "bit": "0",
+      "cube": "algo",
+      "i": 19,
+      "lane": "algo"
+    },
+    {
+      "addr": "0a32f4be",
+      "bit": "0",
+      "cube": "brain",
+      "i": 20,
+      "lane": "raw"
+    },
+    {
+      "addr": "f079e873",
+      "bit": "1",
+      "cube": "nexus",
+      "i": 21,
+      "lane": "algo"
+    },
+    {
+      "addr": "c8bda58e",
+      "bit": "1",
+      "cube": "fix",
+      "i": 22,
+      "lane": "raw"
+    },
+    {
+      "addr": "e32dc052",
+      "bit": "0",
+      "cube": "void",
+      "i": 23,
+      "lane": "algo"
+    },
+    {
+      "addr": "7c83acf3",
+      "bit": "1",
+      "cube": "raw",
+      "i": 24,
+      "lane": "raw"
+    },
+    {
+      "addr": "a24d1393",
+      "bit": "0",
+      "cube": "algo",
+      "i": 25,
+      "lane": "algo"
+    },
+    {
+      "addr": "9a2aebd7",
+      "bit": "0",
+      "cube": "brain",
+      "i": 26,
+      "lane": "raw"
+    }
+  ]
+}

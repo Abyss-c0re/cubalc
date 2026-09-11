@@ -1,0 +1,46 @@
+{
+  "brand": 0,
+  "cloud": 0,
+  "collapse_nanobot_tip_to_feat_cubalc": 1,
+  "craft": "void_lattice",
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "ext_sha16": "56e07c1996e5af77",
+  "ext_sha40": "56e07c1996e5af77e6d9ab75fe5388d8625ac3a2",
+  "foldbits": "11001100100110100110011010011010",
+  "hold_flash": 1,
+  "offline": 1,
+  "path": "filter->offline->extend->hive->core",
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "prior_seq": 62,
+  "schema": "grokium.offline.extend.v1",
+  "seq": 63,
+  "share": "state_matrix_only",
+  "shared_tip": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+  "slice": "b4d4aac",
+  "src_sha16": "12c65d10a000160b",
+  "tip_collapse": {
+    "44f3c3ec114ee845032cb44a3d0eed8eb231336d": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+    "8e4a6cb854bad2fa1a1cacc7c07a5a6dc0f31db9": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+    "FEAT_HEAD": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+    "HEAD_NOW": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+    "PINNED_HEAD": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763",
+    "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab": "495ea141fe9cb682c3ebbd9e0d09f7230e3b1763"
+  },
+  "tip_collapse_n": 3,
+  "tip_fanout_n": 4,
+  "ts": "2026-09-10T18:46:59Z",
+  "void_slots_board": 1,
+  "void_slots_n": 27
+}

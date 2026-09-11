@@ -1,0 +1,88 @@
+{
+  "action": "one_smx_filter_honesty_slice",
+  "c_core_src_smx_filter": 1,
+  "files": [
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 1522,
+      "path": "include/cubalc_c_core.h",
+      "sha16": "1520815a6f8b3f1f",
+      "sha40": "1520815a6f8b3f1f689d28ce43d367f891131164"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 3153,
+      "path": "include/cubalc_smx.h",
+      "sha16": "29a473b82c5a8fd3",
+      "sha40": "29a473b82c5a8fd3206847c287c872fe23fcf90d"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 4995,
+      "path": "include/cubalc_law.h",
+      "sha16": "cf74362b175a1ab8",
+      "sha40": "cf74362b175a1ab891d508af1754261064903dc2"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 0,
+      "has_hold": 0,
+      "has_smx": 0,
+      "n": 128,
+      "path": "include/cubalc_sot.h",
+      "sha16": "ada198dbddc42257",
+      "sha40": "ada198dbddc422575c4a69fd590b0fcdc1ef0120"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 21478,
+      "path": "scripts/smx/filter_gap.py",
+      "sha16": "83c41e77af74738d",
+      "sha40": "83c41e77af74738df301520b6160518ccb6c26a4"
+    },
+    {
+      "exists": 1,
+      "has_c_core": 1,
+      "has_hold": 1,
+      "has_smx": 1,
+      "n": 19575,
+      "path": "scripts/smx/c_core_plate.py",
+      "sha16": "52b15230d302359b",
+      "sha40": "52b15230d302359b14766e294474a6974b175709"
+    }
+  ],
+  "hint": "c_core_src_smx_filter",
+  "honesty_ok": 1,
+  "honesty_score": 1.0,
+  "honesty_sha16": "5f82b80943b07486",
+  "honesty_sha40": "5f82b80943b07486d6a4aa848789bd2ff210aee5",
+  "missing": [],
+  "path": "filter->gap->honesty->collapse->hive->core",
+  "pred_n": 8,
+  "pred_pass": 8,
+  "preds": {
+    "c_core_h_exists": true,
+    "c_core_mentions_seq": true,
+    "c_core_mentions_slice": true,
+    "filter_script_present": true,
+    "no_missing_src": true,
+    "shared_tip_pinned": true,
+    "smx_h_exists": true,
+    "smx_hold_flash": true
+  },
+  "schema": "grokium.filter.honesty.v1",
+  "seq": 71,
+  "slice": "3e901b3"
+}

@@ -1,0 +1,1 @@
+{"develop": 1, "evict_lowest_non_sot": 1, "evict_reason": "replace_thin_seq86_with_dual_wire_seal", "evicted_key": "seq71_3e901b3", "heresy_hits": 0, "ndcg": 1.0, "schema": "grokium.hive.plate.v1", "seq": 86, "slice": "3e901b3", "sot": 0, "task": "kb_evict_ingest", "ts": "2026-09-11T00:53:06Z"}

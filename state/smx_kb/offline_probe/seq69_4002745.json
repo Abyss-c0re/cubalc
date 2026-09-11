@@ -1,0 +1,73 @@
+{
+  "action": "extend_offline_capable_probe",
+  "capable": 1,
+  "craft": "void_lattice",
+  "foldbits": "11001100100110100110011010011010",
+  "gates": {
+    "brand": 0,
+    "cloud": 0,
+    "foldbits_ok": 1,
+    "hold_flash": 1,
+    "kb_n4": 1,
+    "lanes_n": 2,
+    "local_src": 1,
+    "share": "state_matrix_only",
+    "tip_collapsed": 1,
+    "tip_fanout_n": 1,
+    "void_slots_n": 27
+  },
+  "hint": "grokium_offline_bits",
+  "lanes": {
+    "algo": "10100101101001011010010110100101",
+    "raw": "11001100100110100110011010011010"
+  },
+  "offline": 1,
+  "path": "filter->offline->extend->probe->hive->core",
+  "probe_sha16": "41d167969331e722",
+  "probe_sha40": "41d167969331e722b15eec63b3d2df7aac489d01",
+  "ring": [
+    {
+      "acc16": "0001",
+      "addr": "009d1bbc",
+      "bit": "1",
+      "cube": "raw",
+      "offline": 1
+    },
+    {
+      "acc16": "0003",
+      "addr": "10a03748",
+      "bit": "1",
+      "cube": "algo",
+      "offline": 1
+    },
+    {
+      "acc16": "0006",
+      "addr": "c2b336d9",
+      "bit": "0",
+      "cube": "brain",
+      "offline": 1
+    },
+    {
+      "acc16": "000c",
+      "addr": "685ec820",
+      "bit": "0",
+      "cube": "nexus",
+      "offline": 1
+    },
+    {
+      "acc16": "0019",
+      "addr": "8b47f812",
+      "bit": "1",
+      "cube": "fix",
+      "offline": 1
+    }
+  ],
+  "schema": "grokium.offline.probe.v1",
+  "seq": 69,
+  "shared_tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "slice": "4002745",
+  "src_sha16": "12c65d10a000160b",
+  "ts": "2026-09-10T20:26:34Z",
+  "unity_xor": "01101001001111111100001100111111",
+  "why": "ops_green_develop"
+}

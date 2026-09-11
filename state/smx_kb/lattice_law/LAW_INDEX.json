@@ -1,0 +1,27 @@
+{
+  "budget": 40,
+  "genome_len": 32,
+  "law_n": 40,
+  "law_sha16": "077476815f0a8d2a",
+  "names": [
+    "sot",
+    "in_out",
+    "core_io",
+    "bin_talk",
+    "smx_key",
+    "hold_flash",
+    "no_bci",
+    "share_smx",
+    "dev_free",
+    "one_cmd",
+    "manifest_smx",
+    "algocube",
+    "energy_flow",
+    "flow_compile",
+    "nest",
+    "pure_science",
+    "evolve",
+    "core_protect"
+  ],
+  "void_slots": 22
+}

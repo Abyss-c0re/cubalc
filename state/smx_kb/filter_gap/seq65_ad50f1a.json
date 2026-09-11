@@ -1,0 +1,260 @@
+{
+  "cubes": [
+    "raw",
+    "algo",
+    "brain",
+    "nexus",
+    "fix"
+  ],
+  "expected_chain": [
+    {
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 53,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->gap->board->hive",
+      "seq": 54,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->hive->board",
+      "seq": 55,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 56,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 57,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 58,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 59,
+      "task": "smx_filter_gap"
+    },
+    {
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 60,
+      "task": "c_core_plate"
+    },
+    {
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task": "cubalc_board"
+    },
+    {
+      "path": "filter->evict->ingest->hive",
+      "seq": 62,
+      "task": "kb_evict_ingest"
+    },
+    {
+      "path": "filter->offline->extend->hive->core",
+      "seq": 63,
+      "task": "offline_extend"
+    },
+    {
+      "path": "filter->lattice->law->hive->core",
+      "seq": 64,
+      "task": "lattice_law"
+    },
+    {
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 65,
+      "task": "smx_filter_gap"
+    }
+  ],
+  "filter_root": 1,
+  "gap_closed": 1,
+  "gap_n": 0,
+  "gap_sha16": "3f88ae1e11302a9f",
+  "gap_sha40": "3f88ae1e11302a9f1245f4c418f49f6f6c52a587",
+  "gaps": [],
+  "have_seqs": [
+    53,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64
+  ],
+  "hold_flash": 1,
+  "missing_window": [
+    54
+  ],
+  "path": "filter->gap->collapse->hive->core",
+  "path_breaks": [],
+  "plugs": [
+    "raw->algo",
+    "algo->brain",
+    "brain->nexus",
+    "nexus->fix",
+    "RING"
+  ],
+  "present": [
+    {
+      "expected_path": "filter->gap->collapse->hive->core",
+      "key": "seq53_2b13218",
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 53,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->hive->board",
+      "key": "seq55_ee84cc1",
+      "path": "filter->hive->board",
+      "seq": 55,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_36a382b",
+      "path": "",
+      "seq": 56,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq56_36a382b",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 56,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq57_ed9e042",
+      "path": "filter->offline->extend->hive->core",
+      "seq": 57,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "key": "seq58_4e7ee7e",
+      "path": "filter->lattice->law->hive->core",
+      "seq": 58,
+      "task_expected": "lattice_law",
+      "task_got": "lattice_law"
+    },
+    {
+      "expected_path": "filter->gap->collapse->hive->core",
+      "key": "seq59_ca25937",
+      "path": "filter->gap->collapse->hive->core",
+      "seq": 59,
+      "task_expected": "smx_filter_gap",
+      "task_got": "smx_filter_gap"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "c_core_7f3fc76",
+      "path": "",
+      "seq": 60,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->c_core->plate->hive->core",
+      "key": "seq60_7f3fc76",
+      "path": "filter->c_core->plate->hive->core",
+      "seq": 60,
+      "task_expected": "c_core_plate",
+      "task_got": "c_core_plate"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq61_95fd681",
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->hive->board->plate->core",
+      "key": "seq61_a8e7052",
+      "path": "filter->hive->board->plate->core",
+      "seq": 61,
+      "task_expected": "cubalc_board",
+      "task_got": "cubalc_board"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "c_core_2cd524f",
+      "path": "",
+      "seq": 62,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "c_core_include_unique_C"
+    },
+    {
+      "expected_path": "filter->evict->ingest->hive",
+      "key": "seq62_2cd524f",
+      "path": "filter->evict_lowest_non_sot->ingest_C->hive->core",
+      "seq": 62,
+      "task_expected": "kb_evict_ingest",
+      "task_got": "kb_evict_ingest"
+    },
+    {
+      "expected_path": "filter->offline->extend->hive->core",
+      "key": "seq63_b4d4aac",
+      "path": "filter->offline->extend->hive->core",
+      "seq": 63,
+      "task_expected": "offline_extend",
+      "task_got": "offline_extend"
+    },
+    {
+      "expected_path": "filter->lattice->law->hive->core",
+      "key": "seq64_8311240",
+      "path": "filter->lattice->law->hive->core",
+      "seq": 64,
+      "task_expected": "lattice_law",
+      "task_got": "lattice_law"
+    }
+  ],
+  "present_n": 15,
+  "schema": "grokium.filter.gap.v1",
+  "seq": 65,
+  "share": "state_matrix_only",
+  "shared_tip": "9eb7e8d53371331f4ec72be51155fc6fa029eb0f",
+  "slice": "ad50f1a",
+  "soft_sealed": [
+    {
+      "expected_path": "filter->gap->board->hive",
+      "kind": "missing_seq",
+      "seq": 54,
+      "task": "smx_filter_gap"
+    }
+  ],
+  "soft_sealed_n": 1,
+  "sym_hits": {
+    "CUBALC_HOLD_FLASH": true,
+    "HOLD": true,
+    "SMX": true
+  },
+  "task": "smx_filter_gap",
+  "tip_collapse": {
+    "44f3c3ec114ee845032cb44a3d0eed8eb231336d": "9eb7e8d53371331f4ec72be51155fc6fa029eb0f",
+    "b5273fda9d65c1f472f8b848bb3594cdc7218936": "9eb7e8d53371331f4ec72be51155fc6fa029eb0f",
+    "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab": "9eb7e8d53371331f4ec72be51155fc6fa029eb0f"
+  },
+  "tip_fanout_n": 1,
+  "tip_fanout_raw_n": 4,
+  "tip_residual": 0,
+  "ts": "2026-09-10T19:22:11Z"
+}

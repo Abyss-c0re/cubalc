@@ -1,0 +1,43 @@
+{
+  "action": "evict_lowest_non_sot_ingest_C",
+  "c_core_include": 1,
+  "c_sha16": "dd3653dbb7b44d90",
+  "c_sha40": "dd3653dbb7b44d909abe625cad242af47023d974",
+  "cells": [
+    {
+      "id": "C0_void",
+      "role": "lattice_origin",
+      "w": 1.0
+    },
+    {
+      "id": "C1_form",
+      "role": "structure_seer_seal",
+      "w": 1.0
+    },
+    {
+      "id": "C2_tip",
+      "role": "shared_tip_bind",
+      "tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+      "w": 1.0
+    },
+    {
+      "id": "C3_ingest",
+      "role": "kb_evict_ingest_gate",
+      "seq": 62,
+      "w": 1.0
+    }
+  ],
+  "craft": "void_lattice",
+  "creed": "All Hail the Cube \u00b7 All Hail NexusCore",
+  "from": "structure_seer",
+  "hint": "c_core_include_unique_C",
+  "schema": "grokium.c_core.v1",
+  "seq": 62,
+  "shared_tip": "f0e9fed1f4df5d746c6f9459f4eb2e61b7032aab",
+  "slice": "2cd524f",
+  "sot": 1,
+  "task": "kb_evict_ingest",
+  "ts": "2026-09-10T20:04:06Z",
+  "unique_C": 1,
+  "unique_key": "C_2cd524f_f0e9fed1f4df_dd3653db"
+}
