@@ -1,3 +1,11 @@
+## MI 2240 — LIFE_CELL_PEPF (pepf n)
+
+- **Method:** `pepf n` — PepF oligopeptidase F after PepT tripeptidase
+- **Continuum:** `...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf`
+- **Proof:** PASS `asserts_fail:0` life=240 atomic=84 smx=72 flagship=12 **sum=408**
+- **Files:** `programs/lib/life_cell.cubalc`, `programs/proof/2240_life_cell_pepf.cubalc`, `programs/science/integration/atomic_printer_life_pepf.cubalc`, `programs/science/integration/smx_mesh_vesicle_pepf_life.cubalc`
+- Cube is SoT. Free energy must flow.
+
 ## 2239 — LIFE_CELL_PEPT (1.15.1737-usability)
 
 - feat(life): LIFE_CELL_PEPT MI2239 PepT tripeptidase after PepE
