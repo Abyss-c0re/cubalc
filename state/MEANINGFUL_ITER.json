@@ -39,5 +39,8 @@
   "methods": 225,
   "head_before": "62ecf9228",
   "prev_feature": "LIFE_CELL_MPAA",
-  "prev_mi": 2230
+  "prev_mi": 2230,
+  "head": "1b23570bc1407ee7c598a42c66bf9494ad1009df",
+  "head_short": "1b23570bc",
+  "pinned_sha": "1b23570bc1407ee7c598a42c66bf9494ad1009df"
 }
