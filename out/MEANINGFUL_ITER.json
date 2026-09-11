@@ -22,7 +22,7 @@
     "programs/science/integration/smx_mesh_vesicle_pept_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte->emta->mpl->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept",
+  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept",
   "domain": "PepT tripeptidase after PepE alpha-aspartyl dipeptidase",
   "gift": "PepT hydrolyzes residual tripeptides after PepE clears Asp-Xaa dipeptides so dipeptide + free AA re-enter PepA/B/D/E/N routes and nitrogen pools under murein turnover stress",
   "cube": "SoT",
@@ -39,7 +39,15 @@
   "note": "PepT after PepE; tripeptidase recycling path PASS asserts_fail:0 sum=407",
   "prev_feature": "LIFE_CELL_PEPE",
   "prev_mi": 2238,
-  "feat_commit": "7dd34393d6c31de870d13af79e40d3ced597d5dd",
-  "ts": 1789147271.9170685,
-  "methods": 226
+  "head_before": "07b06ebcd",
+  "ts": 1789147341.5074105,
+  "methods": 226,
+  "status": "PASS",
+  "asserts_ok_sum": 407,
+  "host": "pve",
+  "science": [
+    "programs/science/integration/atomic_printer_life_pept.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_pept_life.cubalc"
+  ],
+  "feat": "7dd34393d6c31de870d13af79e40d3ced597d5dd"
 }

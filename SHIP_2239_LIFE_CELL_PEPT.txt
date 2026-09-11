@@ -1,4 +1,3 @@
-SHIP LIFE_CELL_PEPT MI2239
-proof PASS asserts_fail:0 life=239 atomic=84 smx=72 flagship=12 sum=407
-method pept n continuum ...->pepa->pepb->pepe->pept
+LIFE_CELL_PEPT MI2239 PASS asserts_fail:0 life=239 atomic=84 smx=72 flagship=12 sum=407
+METHOD pept n continuum ...->pepb->pepe->pept
 Cube is SoT. Free energy must flow.
