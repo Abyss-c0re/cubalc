@@ -26,7 +26,7 @@
     "programs/science/integration/smx_mesh_vesicle_cbs_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs",
+  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs",
   "domain": "Cbs cystathionine-beta-synthase after Ahcy SAH hydrolase",
   "gift": "Cbs condenses Hcy+Ser to cystathionine after Ahcy frees Hcy; transsulfuration entry commits excess Hcy into Cys under sulfur/redox demand",
   "cube": "SoT",
@@ -61,14 +61,14 @@
   "status": "shipped",
   "proof_status": "PASS",
   "pass": true,
-  "HEAD": "7967f6f5f6d3b740e41402b5da5e8fc854b72d31",
-  "head": "7967f6f5f6d3b740e41402b5da5e8fc854b72d31",
+  "HEAD": "df0ec801b6db526e09f88e2344a01a6a912e5292",
+  "head": "df0ec801b6db526e09f88e2344a01a6a912e5292",
   "commit": "55061e6178816dac4d1e6f6dbec6487202b870eb",
-  "tip": "7967f6f5f6d3b740e41402b5da5e8fc854b72d31",
+  "tip": "df0ec801b6db526e09f88e2344a01a6a912e5292",
   "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
   "FEAT_HEAD": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
   "ts": 1789163901.5307019,
-  "pinned_head": "7967f6f5f6d3b740e41402b5da5e8fc854b72d31",
-  "pinned_head_short": "7967f6f5f",
+  "pinned_head": "df0ec801b6db526e09f88e2344a01a6a912e5292",
+  "pinned_head_short": "df0ec801b",
   "feat_head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
 }

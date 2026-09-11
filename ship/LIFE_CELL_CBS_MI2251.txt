@@ -1,7 +1,8 @@
-LIFE_CELL_CBS MI2251
+LIFE_CELL_CBS MI 2251
 method: cbs n
-continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
-proof: programs/proof/2251_life_cell_cbs.cubalc
-asserts_ok=412 asserts_fail=0 (life=242 atomic=85 smx=73 flagship=12)
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
+proof: PASS asserts_ok=412 asserts_fail=0 (life=242 atomic=85 smx=73 flagship=12)
 version: 1.15.1748-usability
+HEAD: df0ec801b6db526e09f88e2344a01a6a912e5292
+feat: d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e
 Cube is SoT. Free energy must flow.
