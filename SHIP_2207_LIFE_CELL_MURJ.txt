@@ -1,6 +1,5 @@
 SHIP LIFE_CELL_MURJ MI2207
 MurJ lipid-II flippase after MurG; MurG lipid-II after MraY.
-Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj
+Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj
 Proof 2207 + atomic_printer_life_murj + smx_mesh_vesicle_murj_life
 asserts_ok life=171 atomic=50 smx=44 flagship_1620=12 sum=277 asserts_fail=0
-VERSION=1.15.1693-usability

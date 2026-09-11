@@ -1,3 +1,10 @@
+## 1.15.1694-usability — MI2207 LIFE_CELL_MURJ (PASS)
+
+- METHOD murj n on life_cell: MurJ lipid-II flippase after MurG
+- Continuum ...->mray->murg->murj (PG carrier flipped to periplasm)
+- Proof 2207 + atomic_printer + smx_mesh boards + flagship 1620 PASS (sum=277)
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1692-usability — LIFE_CELL_MURG MI2206
