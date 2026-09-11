@@ -47,13 +47,13 @@
   "methods": 191,
   "host_finish": true,
   "HEAD": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
-  "head": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
-  "tip": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
+  "head": "56ca845c817b91d9e8d05979df06ec37bdcdc29d",
+  "tip": "56ca845c817b91d9e8d05979df06ec37bdcdc29d",
   "pin": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
   "pinned_head": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
-  "feat_head": "8f2d08ddbd7ee31bb872eb7c9f29b7d9239ad921",
+  "feat_head": "b8770f693c6739de59350a990b57277e8d88879e",
   "commit": "8f2d08ddbd7e",
   "short": "8f2d08ddbd7e",
-  "git_head": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "git_head": "56ca845c817b91d9e8d05979df06ec37bdcdc29d",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
