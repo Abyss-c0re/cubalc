@@ -1,5 +1,6 @@
-LIFE_CELL_LDTA MI2214 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta FEAT=aa332e0aa59f12e4ff54b446601141aa07750857 HEAD=5f0e6a6c96e64ad34f4b9c62e3102a0e956762e6
+LIFE_CELL_LDTA MI2214 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta FEAT=aa332e0aa59f12e4ff54b446601141aa07750857
 METHOD ldta on life_cell after ldtd
 Proof 2214 + atomic_printer_life_ldta + smx_mesh_vesicle_ldta_life
 asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
 VERSION=1.15.1696-usability
+HEAD=PENDING_PIN
