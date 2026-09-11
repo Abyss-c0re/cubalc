@@ -1,0 +1,13 @@
+LIFE_CELL_LDTC MI2214
+method: ldtc n
+continuum: ...->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc
+domain: LdtC YnhG Lpp-PG third paralog anchor after LdtB
+gift: third-route Braun lipoprotein Lpp meso-DAP anchor after LdtB so OM-PG coupling holds when LdtA/LdtB are limiting
+proof: programs/proof/2214_life_cell_ldtc.cubalc
+atomic: programs/science/integration/atomic_printer_life_ldtc.cubalc
+smx: programs/science/integration/smx_mesh_vesicle_ldtc_life.cubalc
+asserts_ok: 126+44+35=205
+asserts_fail: 0
+version: 1.15.1702-usability
+cube: SoT
+free_energy: must_flow
