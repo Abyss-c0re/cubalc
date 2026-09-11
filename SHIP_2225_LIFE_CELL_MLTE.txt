@@ -1,0 +1,5 @@
+LIFE_CELL_MLTE MI2225
+MltE OM-lipoprotein lytic murein transglycosylase after MltD
+Proof PASS asserts_fail:0 sum=265 (life=149+ap=57+smx=47+flagship_1620=12)
+Continuum ...->amph->mlta->mltb->mltc->mltd->mlte
+Cube is SoT. Free energy must flow.
