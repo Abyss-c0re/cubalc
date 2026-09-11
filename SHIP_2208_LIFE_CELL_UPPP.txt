@@ -1,0 +1,5 @@
+SHIP LIFE_CELL_UPPP MI2208
+UppP/BacA C55-PP phosphatase after MurJ; carrier recycle to MraY.
+Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp
+Proof 2208 + atomic_printer_life_uppp + smx_mesh_vesicle_uppp_life + flagship_1620
+asserts_ok life=184 atomic=53 smx=49 flagship_1620=12 sum=298 asserts_fail=0
