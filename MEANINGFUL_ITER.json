@@ -39,7 +39,7 @@
   "note": "PepF after PepT; oligopeptidase recycling path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_PEPT",
   "prev_mi": 2239,
-  "feat_commit": "PENDING",
-  "ts": 1789147850.8579469,
+  "feat_commit": "653d65d0f230206bc7976ed9e80852e46dfbecbc",
+  "ts": 1789147866.9241307,
   "methods": 227
 }
