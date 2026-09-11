@@ -41,8 +41,13 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURD MI2202 MurD D-Glu ligation on PG stem after MurC",
+  "summary": "LIFE_CELL_MURD MI2202 tip==pin 4fb5a6aac PASS sum=207",
   "cube_law": "cube is SoT; free energy must flow",
   "method_signature": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held",
-  "also_added": "METHOD murc n (UDP-MurNAc:L-Ala ligase) enabling MurD continuum"
+  "also_added": "METHOD murc n (UDP-MurNAc:L-Ala ligase) enabling MurD continuum",
+  "head": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
+  "HEAD": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
+  "tip": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
+  "pin": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
+  "short": "4fb5a6aac"
 }
