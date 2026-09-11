@@ -12743,4 +12743,76 @@ CLASS Cell
   END
 
 
+  # DacB: DD-endopeptidase (PBP4) cleaves 4-3 cross-links after DacA.
+  # DacB/PBP4 hydrolyzes D-Ala-meso-DAP 4-3 peptide cross-bridges in PG,
+  # remodeling the sacculus after DacA/PBP5 trimmed pentapeptide stems.
+  # Distinct from DacA/PBP5 (major DD-CPase), DacC/PBP6 (stationary DD-CPase),
+  # and aPBP GT/TP pairs — DacB specializes in DD-endopeptidase loosening of
+  # 4-3 links so sacculus free-energy can flow during growth and turnover.
+  # Without DacB after DacA, the post-PBP5 DD-endopeptidase gate is missing and
+  # the continuum loses its PBP4 branch.
+  # Domain: post-DacA DD-endopeptidase / DacB/PBP4 (not DacA/PBP5 DD-CPase,
+  # not DacC/PBP6, not DacD/PBP6b, not LdtF/YafK, not LdtD/YcbB, not MltG,
+  # not MepH/MepS, not PBP1A/LpoA aPBP).
+  # Continuum: ...->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb
+  #   (DacA/PBP5 DD-CPase trim D-Ala4 -> DacB/PBP4 DD-endopeptidase 4-3 cleave).
+  # Pay take=min(n,atp,energy) - ATP stand-in for DacB DD-edit catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dacb life-force.
+  # Usability: AGI models post-DacA DacB PBP4 DD-endopeptidase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dacb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
