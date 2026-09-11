@@ -48,12 +48,18 @@
   "prev_feature": "LIFE_CELL_RIMI",
   "prev_mi": 2243,
   "asserts_ok_sum": 408,
-  "status": "shipping",
+  "status": "sealed",
   "proof_status": "PASS",
-  "ts": 1789154371.1139154,
-  "FEAT_HEAD": "22cded6ee56777089f8e381624a6800bae3ec0c9",
-  "feat": "22cded6ee56777089f8e381624a6800bae3ec0c9",
+  "ts": 1789154401.2544985,
+  "FEAT_HEAD": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
+  "feat": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
   "feat_head": "22cded6ee56777089f8e381624a6800bae3ec0c9",
   "sha": "22cded6ee567",
-  "commit": "22cded6ee567"
+  "commit": "22cded6ee567",
+  "HEAD": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
+  "head": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
+  "tip": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
+  "short": "483bcd590",
+  "pin": "483bcd590b4bfe26f68ea84930d104c6e2b6c44f",
+  "tip_eq_pin": true
 }
