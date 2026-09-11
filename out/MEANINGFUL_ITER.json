@@ -26,8 +26,25 @@
     "programs/science/integration/smx_mesh_vesicle_cbs_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
+  "continuum": "...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs",
+  "domain": "Cbs cystathionine-beta-synthase after Ahcy SAH hydrolase",
+  "gift": "Cbs condenses Hcy+Ser to cystathionine after Ahcy frees Hcy; transsulfuration entry commits excess Hcy into Cys under sulfur/redox demand",
+  "cube": "SoT",
+  "free_energy": "must_flow",
   "asserts_ok": 412,
   "asserts_fail": 0,
+  "life_asserts_ok": 242,
+  "atomic_printer_asserts_ok": 85,
+  "smx_asserts_ok": 73,
+  "flagship_asserts_ok": 12,
+  "proof_sum": {
+    "life": 242,
+    "atomic": 85,
+    "smx": 73,
+    "flagship": 12,
+    "sum": 412,
+    "asserts_fail": 0
+  },
   "asserts": {
     "life": 242,
     "atomic_printer": 85,
@@ -35,14 +52,14 @@
     "flagship_1620": 12,
     "sum": 412
   },
-  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs",
+  "unity": 1.0,
   "version": "1.15.1748-usability",
+  "VERSION": "1.15.1748-usability",
+  "note": "Cbs after Ahcy; cystathionine-beta-synthase / transsulfuration entry PASS asserts_fail:0 sum=412",
+  "prev_feature": "LIFE_CELL_AHCY",
+  "prev_mi": 2250,
+  "status": "shipping",
+  "proof_status": "PASS",
   "pass": true,
-  "cube": "SoT",
-  "free_energy": "must_flow",
-  "feat_head": "e5a9748943c558fc0ce7511be166d446954388a3",
-  "HEAD": "e5a9748943c558fc0ce7511be166d446954388a3",
-  "head": "e5a9748943c558fc0ce7511be166d446954388a3",
-  "commit": "e5a9748943c558fc0ce7511be166d446954388a3",
-  "tip": "e5a9748943c558fc0ce7511be166d446954388a3"
+  "ts": 1789163781.391635
 }
