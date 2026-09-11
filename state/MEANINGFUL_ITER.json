@@ -39,7 +39,7 @@
   "note": "MAP after PDF; Met aminopeptidase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_PDF",
   "prev_mi": 2241,
-  "head_before": "34e05811e6485596612e60fa8cd14b9432438457",
+  "head_before": "24227b8aa98155dc6d9284919f580cff46cba086",
   "ts": 1789150716.933085,
   "status": "sealed",
   "asserts_ok_sum": 408,
@@ -51,5 +51,7 @@
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "anti_bloat": true,
   "hold_flash": 1,
-  "host_finish": true
+  "host_finish": true,
+  "pinned_head": "24227b8aa98155dc6d9284919f580cff46cba086",
+  "head": "24227b8aa98155dc6d9284919f580cff46cba086"
 }
