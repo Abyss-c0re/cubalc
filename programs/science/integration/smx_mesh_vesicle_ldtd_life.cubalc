@@ -1,0 +1,245 @@
+// smx_mesh_vesicle_ldtd_life.cubalc
+// SMX mesh vesicle board: life_cell ldtd LdtD/YcbB L,D-transpeptidase 3-3 crosslink after MltG.
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 40 0
+ENTITY cargo OF Cell 1 28 0
+ENTITY ghost OF Cell 0 12 0
+
+SEND vesicle set_threshold 8
+SEND cargo set_threshold 8
+SEND vesicle pulse 3
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle pump 20
+SEND vesicle charge 36
+SEND vesicle feed 28
+SEND vesicle slt 3
+ASSERT LAST_N == 3 "ves slt"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle ampg 3
+ASSERT LAST_N == 3 "ves ampg"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle nagz 3
+ASSERT LAST_N == 3 "ves nagz"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle ampd 3
+ASSERT LAST_N == 3 "ves ampd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle anmk 3
+ASSERT LAST_N == 3 "ves anmk"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murq 3
+ASSERT LAST_N == 3 "ves murq"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mura 3
+ASSERT LAST_N == 3 "pre vesicle mura"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murb 3
+ASSERT LAST_N == 3 "pre vesicle murb"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murc 3
+ASSERT LAST_N == 3 "pre vesicle murc"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murd 3
+ASSERT LAST_N == 3 "pre vesicle murd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mure 3
+ASSERT LAST_N == 3 "pre vesicle mure"
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pcr
+LET vc = LAST_N
+GETF vesicle reserve
+LET vr = LAST_N
+GETF vesicle age
+LET vage = LAST_N
+GETF vesicle pmf
+LET vpmf = LAST_N
+SEND vesicle mray 4
+ASSERT LAST_N == 4 "pre vesicle mray"
+SEND vesicle murg 4
+ASSERT LAST_N == 4 "ves murg"
+SEND vesicle murj 4
+ASSERT LAST_N == 4 "ves murj"
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 36
+SEND vesicle charge 40
+SEND vesicle feed 36
+GETF vesicle heat
+LET vhu = LAST_N
+GETF vesicle energy
+LET veu = LAST_N
+GETF vesicle atp
+LET vau = LAST_N
+GETF vesicle pcr
+LET vcu = LAST_N
+GETF vesicle reserve
+LET vru = LAST_N
+GETF vesicle age
+LET vageu = LAST_N
+GETF vesicle pmf
+LET vpmfu = LAST_N
+SEND vesicle ldtd 4
+ASSERT LAST_N == 4 "ves ldtd"
+GETF vesicle heat
+ASSERT LAST_N == vhu + 4 "ves h+ldtd"
+GETF vesicle energy
+ASSERT LAST_N == veu - 4 "ves e-ldtd"
+GETF vesicle atp
+ASSERT LAST_N == vau - 4 "ves atp-ldtd"
+GETF vesicle pcr
+ASSERT LAST_N == vcu "ves pcr held"
+GETF vesicle reserve
+ASSERT LAST_N == vru "ves reserve held"
+GETF vesicle age
+ASSERT LAST_N == vageu "ves age held"
+GETF vesicle pmf
+ASSERT LAST_N == vpmfu "ves pmf held"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo murq 2
+ASSERT LAST_N == 2 "cargo murq"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo mura 3
+ASSERT LAST_N == 3 "pre cargo mura"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo murb 3
+ASSERT LAST_N == 3 "pre cargo murb"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo murc 3
+ASSERT LAST_N == 3 "pre cargo murc"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo murd 3
+ASSERT LAST_N == 3 "pre cargo murd"
+SEND cargo photosynth 20
+SEND cargo glycolyse 16
+SEND cargo charge 24
+SEND cargo feed 16
+SEND cargo mure 3
+ASSERT LAST_N == 3 "pre cargo mure"
+GETF cargo heat
+LET ch = LAST_N
+GETF cargo energy
+LET ce = LAST_N
+GETF cargo atp
+LET ca = LAST_N
+SEND cargo mray 2
+ASSERT LAST_N == 2 "pre cargo mray"
+SEND cargo murg 2
+ASSERT LAST_N == 2 "cargo murg"
+SEND cargo murj 2
+ASSERT LAST_N == 2 "cargo murj"
+SEND cargo photosynth 40
+SEND cargo glycolyse 36
+SEND cargo charge 40
+SEND cargo feed 36
+GETF cargo heat
+LET chu = LAST_N
+GETF cargo energy
+LET ceu = LAST_N
+GETF cargo atp
+LET cau = LAST_N
+SEND cargo ldtd 2
+ASSERT LAST_N == 2 "cargo ldtd"
+GETF cargo heat
+ASSERT LAST_N == chu + 2 "cargo h+ldtd"
+GETF cargo energy
+ASSERT LAST_N == ceu - 2 "cargo e-ldtd"
+GETF cargo atp
+ASSERT LAST_N == cau - 2 "cargo atp-ldtd"
+SEND ghost murd 3
+SEND ghost mure 3
+SEND ghost mray 3
+ASSERT LAST_N == 0 "pre ghost mray"
+SEND ghost murg 3
+ASSERT LAST_N == 0 "ghost murg 0"
+SEND ghost murj 3
+ASSERT LAST_N == 0 "ghost murj0"
+SEND ghost ldtd 3
+ASSERT LAST_N == 0 "ghost ldtd0"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murd 3
+ASSERT LAST_N == 3 "pre vesicle murd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mure 3
+ASSERT LAST_N == 3 "pre vesicle mure"
+SEND vesicle murg 0
+ASSERT LAST_N == 0 "ves murg n0"
+SEND vesicle murj 0
+ASSERT LAST_N == 0 "ves murj n0"
+SEND vesicle ldtd 0
+ASSERT LAST_N == 0 "ves ldtd n0"
+SEND vesicle murg -3
+ASSERT LAST_N == 0 "ves murg nneg"
+SEND vesicle murj -3
+ASSERT LAST_N == 0 "ves murj nneg"
+SEND vesicle ldtd -3
+ASSERT LAST_N == 0 "ves ldtd nneg"
+GETF vesicle alive
+ASSERT LAST_N == 1 "ves alive"

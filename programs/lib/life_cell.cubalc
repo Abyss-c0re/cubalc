@@ -172,6 +172,9 @@
 #   rrf n                post-rf3 ribosome recycling factor RRF·EF-G·GTP 70S split / IF3 mRNA release — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n + reserve +n; age/pmf/sp/thr held; ready recompute
 #   murg n               post-mray MurG lipid-II GlcNAc transferase — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 #   murj n               post-murg MurJ lipid-II flippase / inner→periplasmic leaflet flip — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+#   uppp n               post-murj UppP/BacA C55-PP phosphatase carrier recycle — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+#   mltg n               post-uppp MltG membrane lytic TG strand terminator — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+#   ldtd n               post-mltg LdtD/YcbB L,D-transpeptidase 3–3 crosslink — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -11830,6 +11833,81 @@ CLASS Cell
   # Usability: AGI models post-UppP MltG PG strand-termination energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD mltg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # LdtD: L,D-transpeptidase (YcbB) after MltG (3–3 crosslink on terminated strands).
+  # LdtD/YcbB is the copper-inducible L,D-transpeptidase that forms meso-DAP–meso-DAP
+  # 3–3 cross-links on PG donor tetrapeptides after MltG has terminated nascent glycan
+  # strands (1,6-anhydro-MurNAc ends). It bypasses classical D,D-transpeptidase PBPs,
+  # stabilizes sacculus under beta-lactam stress, and consumes the terminal D-Ala of a
+  # donor stem while accepting an acceptor meso-DAP amine — a distinct free-energy gate
+  # after strand termination. Without LdtD after MltG, 3–3 cross-link density collapses
+  # and the post-terminator PG continuum lacks its L,D branch — distinct from MltG lytic
+  # TG, UppP carrier recycle, MurJ flippase, Slt soluble LTG, and PBP D,D-transpeptidases.
+  # Domain: post-MltG LdtD/YcbB L,D-transpeptidase (not MltG membrane lytic TG, not UppP
+  # C55-PP phosphatase, not MurJ lipid II flippase, not MurG GlcNAc transferase, not MraY
+  # lipid I transferase, not MurF/E/D/C/B/A, not MurQ/AnmK/AmpD/NagZ/AmpG, not Slt, not
+  # PBP/LpoA/MepH D,D enzymes).
+  # Continuum: ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg->ldtd
+  #   (MltG lytic TG strand terminator -> LdtD L,D-transpeptidase 3-3 crosslink).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LdtD L,D-transpeptidation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ldtd life-force.
+  # Usability: AGI models post-MltG LdtD 3-3 crosslink energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ldtd n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
