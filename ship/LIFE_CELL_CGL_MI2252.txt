@@ -4,6 +4,6 @@ continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->
 proof: PASS asserts_ok=413 asserts_fail=0 (life=243 atomic=85 smx=73 flagship=12)
 version: 1.15.1750-usability
 proof_file: programs/proof/2252_life_cell_cgl.cubalc
-HEAD: c38bf71a8ebf7b8677aa6b3b0a546b306332c537
+HEAD: 6de929483b691defa7e72ba583ba7cf7536ebecc
 feat: 090b8a0594a6d0afd04d16392983927f3ff4b58c
 Cube is SoT. Free energy must flow.
