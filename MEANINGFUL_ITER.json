@@ -42,10 +42,18 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_UPPP MI2208 PASS asserts_ok life=184 atomic=53 smx=49 flagship_1620=12 sum=298 asserts_fail:0",
+  "summary": "LIFE_CELL_UPPP MI2208 tip==pin sealed PASS asserts_ok=298",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "head": "dedd002bbc95f5dd0d94f0aa9c3df9b2e21501f2",
-  "tip": "dedd002bbc95f5dd0d94f0aa9c3df9b2e21501f2",
-  "git_head": "dedd002bbc95f5dd0d94f0aa9c3df9b2e21501f2",
-  "feat_head": "b8770f693c6739de59350a990b57277e8d88879e"
+  "HEAD": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "head": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "tip": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "pin": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "pinned_head": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "git_head": "91db9b47d58aa83b8c8f4560b6d7fcb2b9171b6a",
+  "feat_head": "b8770f693c6739de59350a990b57277e8d88879e",
+  "commit": "91db9b47d58a",
+  "short": "91db9b47d58a",
+  "methods": 199,
+  "host_finish": true,
+  "ts": "2026-09-11T06:30:00Z"
 }
