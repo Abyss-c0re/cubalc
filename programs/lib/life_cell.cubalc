@@ -13467,4 +13467,79 @@ CLASS Cell
   END
 
 
+
+  # Mpl: murein peptide ligase after EmtA endolytic anhydro path.
+  # Mpl (not MurC UDP-MurNAc-L-Ala ligase de novo, not MurD D-Glu adding,
+  # not MurE meso-DAP adding, not MurF D-Ala-D-Ala adding, not AmpD cytosolic
+  # amidase, not AnmK anhydro-MurNAc kinase, not MurQ etherase, not NagZ
+  # glucosaminidase, not AmpG permease) is the specialized recycling ligase
+  # that attaches EmtA/Slt-derived tri/tetrapeptide stems liberated by AmpD
+  # back onto UDP-MurNAc, so recycled stem free-energy re-enters the Mur
+  # precursor pool under elongation and division stress without full de novo
+  # MurC-F cost.
+  # Without Mpl after EmtA, anhydro-muropeptide stems imported via AmpG and
+  # cleaved by AmpD cannot rejoin UDP-MurNAc and sacculus peptide free-energy
+  # stalls while MurC alone cannot absorb the recycled tripeptide flux.
+  # Domain: post-EmtA Mpl murein peptide ligase / recycling (not MurC, not MurD,
+  # not MurE, not MurF, not AmpD, not AnmK, not MurQ, not NagZ, not EmtA).
+  # Continuum: ...->mlta->mltb->mltc->mltd->mlte->mltf->emta->mpl
+  #   (EmtA endolytic membrane LT branch -> Mpl murein peptide ligase branch).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Mpl ligase catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mpl life-force.
+  # Usability: AGI models post-EmtA Mpl peptide-recycling ligase path under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mpl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
