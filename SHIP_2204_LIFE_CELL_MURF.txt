@@ -1,0 +1,3 @@
+SHIP LIFE_CELL_MURF MI2204
+MurF D-Ala-D-Ala ligase after MurE; MurE after MurD.
+asserts_fail:0 sum=241 VERSION 1.15.1691-usability

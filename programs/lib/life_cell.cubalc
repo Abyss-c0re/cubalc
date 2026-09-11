@@ -11378,5 +11378,143 @@ CLASS Cell
     RET take
   END
 
+  # MurE: UDP-MurNAc-L-Ala-D-Glu:meso-diaminopimelate ligase after MurD.
+  # MurE ATP-dependently ligates meso-DAP (or L-Lys) onto UDP-MurNAc-L-Ala-D-Glu,
+  # extending the PG stem peptide past MurD's D-Glu. Without MurE after MurD, the
+  # stem stalls at dipeptide and cannot accept D-Ala-D-Ala from MurF, blocking
+  # cytoplasmic PG precursor maturation into lipid I/II substrate.
+  # Domain: post-MurD MurE meso-DAP/L-Lys ligase (not MurD D-Glu ligase, not MurC
+  # L-Ala ligase, not MurB reductase, not MurA transferase, not MurQ etherase,
+  # not AnmK kinase, not AmpD amidase, not NagZ GlcNAc hydrolase, not AmpG IM
+  # permease, not Slt lytic TG, not MepH/LpoA/PBP1A).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure
+  #   (MurD UDP-MurNAc-L-Ala:D-Glu ligase -> MurE meso-DAP ligase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurE meso-DAP ligation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mure life-force.
+  # Usability: AGI models post-MurD MurE meso-DAP stem ligation energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mure n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # MurF: UDP-MurNAc-tripeptide:D-Ala-D-Ala ligase after MurE.
+  # MurF ATP-dependently ligates the D-Ala-D-Ala dipeptide onto the MurE
+  # UDP-MurNAc-tripeptide (L-Ala-D-Glu-meso-DAP), completing the cytoplasmic
+  # PG stem pentapeptide. Without MurF after MurE, lipid I/II cannot form and
+  # periplasmic cross-linking substrates stall before MraY/MurG/PBP work.
+  # Domain: post-MurE MurF D-Ala-D-Ala ligase (not MurE meso-DAP ligase, not MurD
+  # D-Glu ligase, not MurC L-Ala ligase, not MurB reductase, not MurA transferase,
+  # not MurQ etherase, not AnmK kinase, not AmpD amidase, not NagZ GlcNAc
+  # hydrolase, not AmpG IM permease, not Slt lytic TG, not MepH/LpoA/PBP1A).
+  # Continuum: ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf
+  #   (MurE meso-DAP ligase -> MurF D-Ala-D-Ala ligase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MurF D-Ala-D-Ala ligation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - murf life-force.
+  # Usability: AGI models post-MurE MurF D-Ala-D-Ala stem ligation energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD murf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
