@@ -1,3 +1,11 @@
+## 2233 — LIFE_CELL_PEPN (1.15.1730-usability)
+
+- feat(life): LIFE_CELL_PEPN MI2233 PepN cytoplasmic aminopeptidase N after PepD
+- METHOD pepn n: post-PepD broad aminopeptidase free-AA gate; continuum ...->mpaa->ycjg->pepd->pepn
+- Proof 2233_life_cell_pepn + atomic_printer_life_pepn + smx_mesh_vesicle_pepn_life + flagship 1620
+- asserts_ok life=197 atomic=68 smx=56 flagship=12 sum=333 asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
 ## 2231 — LIFE_CELL_YCJG (1.15.1728-usability)
 
 - feat(life): LIFE_CELL_YCJG MI2231 YcjG cytoplasmic L-Ala-D/L-Glu epimerase after MpaA
