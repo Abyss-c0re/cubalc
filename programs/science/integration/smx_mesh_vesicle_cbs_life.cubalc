@@ -1,0 +1,87 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle life — Cbs after AhcY on vesicle cell
+# Continuum: ...->mete->metk->ahcy->cbs
+# Gift: vesicle commits AhcY-cleared Hcy into cystathionine via Cbs.
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle OF Cell 1 50 0
+SEND vesicle set_threshold 9
+SEND vesicle pulse 3
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 34
+SEND vesicle pump 24
+SEND vesicle charge 36
+SEND vesicle feed 32
+
+SEND vesicle pepf 2
+ASSERT LAST_N == 2 "smx pepf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle pdf 2
+ASSERT LAST_N == 2 "smx pdf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle map 2
+ASSERT LAST_N == 2 "smx map"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nata 2
+ASSERT LAST_N == 2 "smx nata"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natb 2
+ASSERT LAST_N == 2 "smx natb"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natc 2
+ASSERT LAST_N == 2 "smx natc"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nate 2
+ASSERT LAST_N == 2 "smx nate"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle mete 2
+ASSERT LAST_N == 2 "smx mete"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle metk 2
+ASSERT LAST_N == 2 "smx metk"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle ahcy 2
+ASSERT LAST_N == 2 "smx ahcy"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+
+GETF vesicle heat
+LET h0 = LAST_N
+GETF vesicle energy
+LET e0 = LAST_N
+GETF vesicle atp
+LET a0 = LAST_N
+
+SEND vesicle cbs 3
+ASSERT LAST_N == 3 "smx cbs3"
+GETF vesicle heat
+ASSERT LAST_N == h0 + 3 "smx cbs heat"
+GETF vesicle energy
+ASSERT LAST_N == e0 - 3 "smx cbs energy"
+GETF vesicle atp
+ASSERT LAST_N == a0 - 3 "smx cbs atp"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_cbs_life PASS"
