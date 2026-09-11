@@ -1,0 +1,3 @@
+LIFE_CELL_DACD MI2220
+DacD/PBP6b secondary stationary DD-CPase after DacC
+Proof PASS asserts_fail:0 sum=235 (132+50+41+12)

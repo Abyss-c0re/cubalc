@@ -1,3 +1,10 @@
+## 1.15.1709-usability — LIFE_CELL_DACD MI2220
+
+- Cell.dacd DacD/PBP6b secondary DD-carboxypeptidase after DacC on continuum
+  ...->ldtf->daca->dacb->dacc->dacd
+- Proof 2220 + atomic_printer_life_dacd + smx_mesh_vesicle_dacd_life + flagship 1620
+- asserts_fail:0 sum=235 (132+50+41+12)
+
 ## 1.15.1707-usability — LIFE_CELL_DACB MI2218
 
 - Cell.dacb DacB/PBP4 DD-endopeptidase/carboxypeptidase after DacA on continuum
