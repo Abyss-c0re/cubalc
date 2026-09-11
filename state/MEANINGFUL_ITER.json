@@ -2,24 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2212,
   "MEANINGFUL_ITER": 2212,
-  "iter": 2212,
+  "iter": 2213,
   "n": 2212,
   "mi": 2212,
-  "version": "1.15.1700-usability",
+  "version": "1.15.1701-usability",
   "VERSION": "1.15.1700-usability",
   "feature": "life_cell_ldta",
   "FEATURE": "LIFE_CELL_LDTA",
   "name": "LIFE_CELL_LDTA",
-  "title": "life cell ldta",
+  "title": "smx mesh vesicle ldtb life",
   "label": "LIFE_CELL_LDTA",
   "method": "ldta n",
   "ship": "2212_life_cell_ldta",
   "proof": "programs/proof/2212_life_cell_ldta.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2212_life_cell_ldta.cubalc",
-    "programs/science/integration/atomic_printer_life_ldta.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_ldta_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_ldtb_life.cubalc"
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta",
   "domain": "LdtA YbiS Lpp-PG L,D-transpeptidase anchor after MltG",
@@ -37,5 +34,12 @@
   "methods": 206,
   "head": "1ced6d6e3c907c94909e3705ff89107203be07cd",
   "sha": "1ced6d6e3c907c94909e3705ff89107203be07cd",
-  "pinned_sha": "1ced6d6e3c907c94909e3705ff89107203be07cd"
+  "pinned_sha": "1ced6d6e3c907c94909e3705ff89107203be07cd",
+  "item": "smx mesh vesicle ldtb life",
+  "item_id": "mi_smx_mesh_vesicle_ldtb_life",
+  "commit": "2be177256",
+  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_ldtb_life).",
+  "ts": "2026-09-11T06:21:46Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
