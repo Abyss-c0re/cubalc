@@ -1,0 +1,3 @@
+LIFE_CELL_LDTB MI2215 PASS asserts_ok=303 asserts_fail=0
+continuum ...->mltg->ldtd->ldta->ldtb
+VERSION 1.15.1697-usability

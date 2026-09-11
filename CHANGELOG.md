@@ -1,3 +1,10 @@
+## MI 2215 — LIFE_CELL_LDTB (1.15.1697-usability)
+
+- Cell.ldtb LdtB/YbiS Lpp–PG L,D-transpeptidase after LdtA
+- Continuum ...->uppp->mltg->ldtd->ldta->ldtb
+- Proof 2215 + atomic_printer_life_ldtb + smx_mesh_vesicle_ldtb_life
+- asserts_ok=303 asserts_fail=0
+
 ## 1.15.1694-usability — MI2207 LIFE_CELL_MURJ (PASS)
 
 - METHOD murj n on life_cell: MurJ lipid-II flippase after MurG
