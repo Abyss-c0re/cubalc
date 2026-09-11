@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.1746-usability — MI2248 LIFE_CELL_METK
+
+- feat(life): MetK SAM synthetase after MetE on life_cell
+- continuum ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk; proof 2248 asserts_fail:0
+- atomic_printer_life_metk + smx_mesh_vesicle_metk_life PASS
+- asserts_ok sum 95 (life=52 atomic=15 smx=16 flagship_1620=12)
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1741-usability — MI2243 LIFE_CELL_NATA
 
 - feat(life): NatA N-terminal acetyltransferase after MAP on life_cell
