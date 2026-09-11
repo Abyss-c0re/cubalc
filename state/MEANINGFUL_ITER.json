@@ -41,14 +41,14 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=275",
+  "summary": "LIFE_CELL_MURJ MI2207 tip==pin sealed PASS asserts_ok=277",
   "ts": "2026-09-11T02:27:37Z",
-  "HEAD": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "head": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "tip": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "pin": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "pinned_head": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "feat_head": "e0cf92379391d8ffe7090d59cf41a3d866573c33",
-  "commit": "e0cf92379391",
-  "short": "e0cf92379391"
+  "HEAD": "bb1a758698720c851901024882bb5d73cf993955",
+  "head": "bb1a758698720c851901024882bb5d73cf993955",
+  "tip": "bb1a758698720c851901024882bb5d73cf993955",
+  "pin": "bb1a758698720c851901024882bb5d73cf993955",
+  "pinned_head": "bb1a758698720c851901024882bb5d73cf993955",
+  "feat_head": "bb1a758698720c851901024882bb5d73cf993955",
+  "commit": "bb1a75869872",
+  "short": "bb1a75869872"
 }
