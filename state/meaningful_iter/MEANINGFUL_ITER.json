@@ -50,8 +50,8 @@
   "asserts_ok_sum": 410,
   "status": "sealed",
   "proof_status": "PASS",
-  "pin": "462214a0bd934cd531ac4f9b23551c5390d0dede",
+  "pin": "978ca7635859ba05cfc8e35fd979846c3226b809",
   "tip_eq_pin": true,
-  "git_head": "462214a0bd934cd531ac4f9b23551c5390d0dede",
-  "pinned_head": "462214a0bd934cd531ac4f9b23551c5390d0dede"
+  "git_head": "978ca7635859ba05cfc8e35fd979846c3226b809",
+  "pinned_head": "978ca7635859ba05cfc8e35fd979846c3226b809"
 }
