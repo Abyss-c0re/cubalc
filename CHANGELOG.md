@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.15.1741-usability — MI2244 LIFE_CELL_METK (metk n)
+
+- feat(life): MetK methionine adenosyltransferase after RimI on life_cell
+- Continuum ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk
+- Proof programs/proof/2244_life_cell_metk.cubalc asserts_ok=240 fail=0
+- Science atomic_printer_life_metk + smx_mesh_vesicle_metk_life (84+72)
+- Flagship 1620 regression PASS asserts_fail:0 sum=408
+- Cube is SoT. Free energy must flow. Gift: free Met → SAM after RimI seals N-termini.
+
+## 2244 — LIFE_CELL_METK (1.15.1741-usability)
+
+- feat(life): LIFE_CELL_METK MI2244 MetK methionine adenosyltransferase after RimI
+- METHOD metk n: post-RimI SAM synthase gate; continuum ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk
+- Proof 2244_life_cell_metk + atomic_printer_life_metk + smx_mesh_vesicle_metk_life + flagship 1620
+- asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
+- Cube is SoT. Free energy must flow. Gift: SAM methyl economy after MAP/RimI maturation.
+
 ## 1.15.1740-usability — MI2244 LIFE_CELL_METK
 
 - feat(life): MetK methionine adenosyltransferase after RimI on life_cell
