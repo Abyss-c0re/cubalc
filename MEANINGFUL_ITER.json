@@ -23,14 +23,20 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte",
-  "domain": "post-MltD OM-lipoprotein lytic murein transglycosylase / MltE",
-  "free_energy": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mlte life-force",
-  "gift": "MltE OM-lipoprotein LT anhydro path after MltD",
+  "domain": "MltE OM-lipoprotein lytic murein transglycosylase after MltD",
+  "gift": "post-MltD OM-lipoprotein LT so sacculus free-energy flows under anhydro-muropeptide recycling stress",
   "cube": "SoT",
-  "asserts_ok": 148,
+  "free_energy": "must_flow",
+  "asserts_ok": {
+    "life": 148,
+    "atomic_printer": 60,
+    "smx": 48,
+    "flagship_1620": 12,
+    "sum": 268
+  },
   "asserts_fail": 0,
   "unity": 1.0,
-  "head": "3b96abbb0c44dce3fa2bce25785bfcc05c3336bd",
-  "tip": "3b96abbb0c44dce3fa2bce25785bfcc05c3336bd",
-  "feat_head": "3b96abbb0c44dce3fa2bce25785bfcc05c3336bd"
+  "feat_head": "adae4a724c6172f8d698754c787c193b86d1c546",
+  "head": "adae4a724c6172f8d698754c787c193b86d1c546",
+  "tip": "adae4a724c6172f8d698754c787c193b86d1c546"
 }
