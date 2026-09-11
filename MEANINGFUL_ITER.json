@@ -36,10 +36,10 @@
   },
   "asserts_fail": 0,
   "unity": 1.0,
-  "note": "LdcA after Mpl; L,D-carboxypeptidase recycling trim PASS asserts_fail:0 sum=291",
+  "note": "LdcA after Mpl; L,D-carboxypeptidase recycling trim PASS asserts_fail:0 sum=291; tip sealed on ship/LIFE_CELL_LDCA_MI2229",
   "methods": 223,
-  "feat_head": "83f2822a386804552a11fc8c109c2f5cdb45c6e1",
-  "head": "83f2822a386804552a11fc8c109c2f5cdb45c6e1",
-  "tip": "83f2822a386804552a11fc8c109c2f5cdb45c6e1",
-  "sha": "83f2822a3868"
+  "feat_head": "a71526ac8adcfe0b51907779865153a62f890f69",
+  "head": "a71526ac8adcfe0b51907779865153a62f890f69",
+  "tip": "a71526ac8adcfe0b51907779865153a62f890f69",
+  "sha": "a71526ac8adc"
 }
