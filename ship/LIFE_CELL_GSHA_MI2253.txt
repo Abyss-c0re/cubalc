@@ -3,6 +3,6 @@ method: gsha n
 continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha
 proof: PASS asserts_ok=416 asserts_fail=0 (life=244 atomic=86 smx=74 flagship=12)
 version: 1.15.1751-usability
-HEAD: PENDING
-feat: PENDING
+HEAD: 98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d
+feat: 98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d
 Cube is SoT. Free energy must flow.
