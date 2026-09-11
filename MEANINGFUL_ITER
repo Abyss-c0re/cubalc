@@ -3,9 +3,11 @@
 - **MI**: 2252
 - **FEATURE**: LIFE_CELL_CGL
 - **method**: cgl n
-- **version**: 1.15.1750-usability
+- **version**: 1.15.1749-usability
 - **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
 - **asserts_fail**: 0
 - **asserts_ok sum**: 413 (life=243 atomic_printer=85 smx=73 flagship_1620=12)
 - **proof**: programs/proof/2252_life_cell_cgl.cubalc
+- **HEAD**: f56f610af1c73ca7b9464e523a9befd1a833b0d6
+- **feat**: 090b8a0594a6d0afd04d16392983927f3ff4b58c
 - Cube is SoT. Free energy must flow.
