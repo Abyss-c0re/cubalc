@@ -41,7 +41,7 @@
   "prior_feature": "LIFE_CELL_LDTE",
   "sealed": true,
   "anti_bloat": true,
-  "summary": "LIFE_CELL_LDTF MI2218 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed",
+  "summary": "LIFE_CELL_LDTF MI2218 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed ship=4e392d608d8",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "methods": 205,
   "host_finish": true,
@@ -58,5 +58,10 @@
   "git_head": "f8537451455b3528394fbce1d95ce9387d666e67",
   "commit": "f85374514",
   "short": "f85374514",
-  "ts": "2026-09-11T07:50:13Z"
+  "ts": "2026-09-11T07:50:13Z",
+  "ship_branches": [
+    "ship/LIFE_CELL_LDTF_MI2218",
+    "ship/life-cell-ldtf-mi2218"
+  ],
+  "ship_head": "4e392d608d8d5cada2e6ba5caec441d97acb4620"
 }
