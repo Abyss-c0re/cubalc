@@ -1,0 +1,13 @@
+SHIP LIFE_CELL_MRAY MI2205
+VERSION 1.15.1694-usability
+FEATURE life_cell mray n
+DOMAIN MraY phospho-N-acetylmuramoyl-pentapeptide-transferase (lipid-I) after MurF
+CONTINUUM ...->ampg->nagz->ampd->anmk->murq->naga->nagb->pfka->mura->murb->murc->murd->mure->murf->mray
+PROOF programs/proof/2205_life_cell_mray.cubalc asserts_ok=111 asserts_fail=0
+ATOMIC programs/science/integration/atomic_printer_life_mray.cubalc asserts_ok=37 asserts_fail=0
+SMX programs/science/integration/smx_mesh_vesicle_mray_life.cubalc asserts_ok=28 asserts_fail=0
+SUM 176
+LIB programs/lib/life_cell.cubalc METHOD mray n
+GIFT CubalC life-force PG lipid-I membrane-transfer commit after MurF pentapeptide
+CUBE SoT
+FREE_ENERGY must_flow

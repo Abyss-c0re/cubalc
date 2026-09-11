@@ -1,3 +1,9 @@
+## 1.15.1694-usability — 2205 LIFE_CELL_MRAY
+
+- feat(life): MraY lipid-I UDP-MurNAc-pentapeptide:undecaprenyl-P transferase after MurF
+- Continuum ...->ampg->nagz->ampd->anmk->murq->naga->nagb->pfka->mura->murb->murc->murd->mure->murf->mray
+- proof 2205 PASS 111/0; atomic_printer 37/0; smx vesicle 28/0 (sum 176)
+
 ## 1.15.1690-usability — 2203 LIFE_CELL_MURE
 
 - feat(life): MurE UDP-MurNAc-L-Ala-D-Glu:meso-DAP/L-Lys ligase after MurD PG stem
