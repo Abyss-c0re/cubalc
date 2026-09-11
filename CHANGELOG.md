@@ -1,3 +1,9 @@
+## 2218 LIFE_CELL_DACB (1.15.1706-usability)
+
+- Cell.dacb n — DacB/PBP4 D,D-endopeptidase 4-3 cut after DacA/PBP5
+- Proof 2218 + atomic_printer + smx_mesh vesicle boards PASS asserts_fail:0 sum=235
+- Continuum ...->ldtf->daca->dacb
+
 ## MI 2215 — LIFE_CELL_LDTE (LdtE/ErfK Lpp-PG stress-route fourth paralog after LdtC)
 
 - **feat(life):** METHOD `ldte n` — LdtE/ErfK stress-route 3-3 meso-DAP-Lpp anchor after LdtC/YnhG.

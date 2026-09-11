@@ -167,6 +167,16 @@ SEND vesicle photosynth 18
 SEND vesicle glycolyse 16
 SEND vesicle charge 22
 SEND vesicle feed 16
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
+SEND vesicle daca 3
+ASSERT LAST_N == 3 "pre vesicle daca"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
@@ -220,6 +230,16 @@ SEND dock photosynth 14
 SEND dock glycolyse 12
 SEND dock charge 16
 SEND dock feed 12
+SEND dock photosynth 24
+SEND dock glycolyse 20
+SEND dock charge 28
+SEND dock feed 20
+SEND dock daca 2
+ASSERT LAST_N == 2 "pre dock daca"
+SEND dock photosynth 24
+SEND dock glycolyse 20
+SEND dock charge 28
+SEND dock feed 20
 GETF dock heat
 LET dh = LAST_N
 GETF dock energy

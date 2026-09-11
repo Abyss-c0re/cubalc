@@ -1,5 +1,5 @@
 // atomic_printer_life_dacb.cubalc
-// Atomic printer: DacB PBP4 DD-endopeptidase 4-3 cleave after DacA.
+// Atomic printer: DacB/PBP4 D,D-carboxypeptidase terminal D-Ala trim after DacA.
 // Cube is SoT. Free energy must flow.
 // Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb
 
@@ -193,26 +193,32 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer ldtf 4
-ASSERT LAST_N == 4 "pr ldtf"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
 LET pe = LAST_N
 GETF printer atp
 LET pa = LAST_N
+SEND printer ldtf 4
+ASSERT LAST_N == 4 "pre printer ldtf"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
+SEND printer daca 4
+ASSERT LAST_N == 4 "pre printer daca"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
 SEND printer dacb 4
 ASSERT LAST_N == 4 "pr dacb"
 GETF printer heat
-ASSERT LAST_N == ph + 4 "pr dacb h+4"
+ASSERT LAST_N == ph + 8 "pr dacb h+8"
 GETF printer energy
-ASSERT LAST_N == pe - 4 "pr dacb e-4"
+ASSERT LAST_N == pe - 8 "pr dacb e-8"
 GETF printer atp
-ASSERT LAST_N == pa - 4 "pr dacb atp-4"
+ASSERT LAST_N == pa - 8 "pr dacb atp-8"
 
 SEND ink photosynth 28
 SEND ink glycolyse 24
@@ -265,11 +271,17 @@ SEND ink glycolyse 16
 SEND ink charge 24
 SEND ink feed 16
 SEND ink ldtf 3
-ASSERT LAST_N == 3 "ink ldtf"
-SEND ink photosynth 20
-SEND ink glycolyse 16
-SEND ink charge 24
-SEND ink feed 16
+ASSERT LAST_N == 3 "pre ink ldtf"
+SEND ink photosynth 24
+SEND ink glycolyse 20
+SEND ink charge 28
+SEND ink feed 20
+SEND ink daca 3
+ASSERT LAST_N == 3 "pre ink daca"
+SEND ink photosynth 24
+SEND ink glycolyse 20
+SEND ink charge 28
+SEND ink feed 20
 GETF ink heat
 LET ih = LAST_N
 GETF ink energy
@@ -285,6 +297,8 @@ ASSERT LAST_N == ie - 3 "ink dacb e-3"
 GETF ink atp
 ASSERT LAST_N == ia - 3 "ink dacb atp-3"
 
+SEND scrap ldtf 3
+ASSERT LAST_N == 0 "dead scrap ldtf"
 SEND scrap dacb 3
 ASSERT LAST_N == 0 "dead scrap dacb"
 
