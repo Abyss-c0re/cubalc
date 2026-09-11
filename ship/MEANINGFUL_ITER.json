@@ -1,6 +1,6 @@
 {
   "mi": 2252,
-  "feature": "life_cell_cgl",
+  "feature": "LIFE_CELL_CGL",
   "method": "cgl n",
   "version": "1.15.1750-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl",
@@ -13,21 +13,10 @@
     "sum": 413
   },
   "proof": "programs/proof/2252_life_cell_cgl.cubalc",
-  "HEAD": "379d2303f789830c191030686449c0ff03b00ce7",
-  "feat": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
+  "HEAD": "89ab15fe54c987892801a345162f0ec11fded11d",
+  "feat": "f56f610af1c73ca7b9464e523a9befd1a833b0d6",
   "creed": "Cube is SoT. Free energy must flow.",
-  "head": "b522a4bb371fcf76899e608e692d69c0e68e499d",
-  "tip": "b522a4bb371fcf76899e608e692d69c0e68e499d",
-  "feat_head": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
-  "feat_commit": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
-  "FEAT_HEAD": "090b8a0594a6d0afd04d16392983927f3ff4b58c",
-  "MEANINGFUL_ITER": 2252,
-  "meaningful_iter": 2252,
-  "iter": 2252,
-  "n": 2252,
-  "FEATURE": "LIFE_CELL_CGL",
-  "pass": true,
-  "sealed": true,
   "asserts_ok_sum": 413,
-  "note": "Cube is SoT. Free energy must flow."
+  "life_asserts": 243,
+  "ok": true
 }
