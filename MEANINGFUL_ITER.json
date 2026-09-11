@@ -33,9 +33,9 @@
   "item": "MltG membrane lytic TG strand terminator after UppP",
   "item_id": "mi_life_cell_mltg",
   "note": "LIFE_CELL_MLTG|MLTG PG strand terminator after UppP carrier recycle; distinct from Slt",
-  "FEAT_HEAD": "fd0e44c0918fdaf99ee55042591b8c1735c319e7",
+  "FEAT_HEAD": "3af4f3b1480890317328bcb1a1f016eb91e8da99",
   "host_finish": true,
   "ts": "2026-09-11T05:00:14Z",
-  "tip": "7e4a68ca5528bf0b26a022d800d01dc436cc0549",
-  "HEAD": "7e4a68ca5528bf0b26a022d800d01dc436cc0549"
+  "tip": "20f45a8b7dae9417222553deb2139592f7eca7ac",
+  "HEAD": "20f45a8b7dae9417222553deb2139592f7eca7ac"
 }
