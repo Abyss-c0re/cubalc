@@ -45,9 +45,12 @@
   "prior_feature": "LIFE_CELL_DACA",
   "sealed": true,
   "anti_bloat": true,
-  "summary": "LIFE_CELL_DACB MI2218 PASS asserts_ok=239 asserts_fail:0",
+  "summary": "LIFE_CELL_DACB MI2218 PASS asserts_ok=239 asserts_fail:0 tip==pin sealed ship=b869f605e",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "methods": 212,
   "host_finish": true,
-  "pass": true
+  "pass": true,
+  "head": "b869f605ecf0c066f2f3754a68a5adf61bf18925",
+  "sha": "b869f605ecf0c066f2f3754a68a5adf61bf18925",
+  "pinned_sha": "b869f605ecf0c066f2f3754a68a5adf61bf18925"
 }
