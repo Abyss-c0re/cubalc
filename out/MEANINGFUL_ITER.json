@@ -61,5 +61,10 @@
   "status": "shipping",
   "proof_status": "PASS",
   "pass": true,
-  "ts": 1789163781.391635
+  "ts": 1789163781.391635,
+  "feat_head": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
+  "HEAD": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
+  "head": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
+  "commit": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
+  "tip": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4"
 }
