@@ -1,3 +1,12 @@
+## 2239 — LIFE_CELL_PEPT (1.15.1737-usability)
+
+- feat(life): LIFE_CELL_PEPT MI2239 PepT tripeptidase after PepE
+- METHOD pept n: post-PepE tripeptide hydrolase gate; continuum ...->pepa->pepb->pepe->pept
+- Proof 2239_life_cell_pept + atomic_printer_life_pept + smx_mesh_vesicle_pept_life + flagship 1620
+- asserts_fail:0 life=239 atomic=84 smx=72 flagship=12 sum=407
+- Cube is SoT. Free energy must flow. Gift: tripeptides open after PepE Asp-Xaa clearance.
+
+
 ## 2235 — LIFE_CELL_PEPP (1.15.1732-usability)
 
 - feat(life): LIFE_CELL_PEPP MI2235 PepP Xaa-Pro aminopeptidase P after PepQ
