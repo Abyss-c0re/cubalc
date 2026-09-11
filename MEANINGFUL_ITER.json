@@ -35,5 +35,8 @@
     "sum": 247
   },
   "asserts_fail": 0,
-  "unity": 1.0
+  "unity": 1.0,
+  "feat_head": "1fed7e8da4ce6432e7dcb0f61c54c65a279219c2",
+  "head": "1fed7e8da4ce6432e7dcb0f61c54c65a279219c2",
+  "tip": "1fed7e8da4ce6432e7dcb0f61c54c65a279219c2"
 }
