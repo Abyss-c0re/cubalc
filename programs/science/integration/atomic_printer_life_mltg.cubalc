@@ -207,6 +207,8 @@ SEND ink murg 3
 ASSERT LAST_N == 3 "ink murg"
 SEND ink murj 3
 ASSERT LAST_N == 3 "ink murj"
+SEND ink uppp 3
+ASSERT LAST_N == 3 "ink uppp"
 SEND ink photosynth 40
 SEND ink glycolyse 36
 SEND ink charge 40
@@ -233,6 +235,8 @@ SEND scrap murg 3
 ASSERT LAST_N == 0 "scrap murg0"
 SEND scrap murj 3
 ASSERT LAST_N == 0 "scrap murj0"
+SEND scrap uppp 3
+ASSERT LAST_N == 0 "scrap uppp0"
 SEND scrap mltg 3
 ASSERT LAST_N == 0 "scrap mltg0"
 SEND printer photosynth 20
@@ -250,11 +254,15 @@ ASSERT LAST_N == 3 "pre printer mure"
 SEND printer murg 0
 SEND printer murj 0
 ASSERT LAST_N == 0 "pr murj n0"
+SEND printer uppp 0
+ASSERT LAST_N == 0 "pr uppp n0"
 SEND printer mltg 0
 ASSERT LAST_N == 0 "pr mltg n0"
 SEND printer murg -2
 SEND printer murj -2
 ASSERT LAST_N == 0 "pr murj nneg"
+SEND printer uppp -2
+ASSERT LAST_N == 0 "pr uppp nneg"
 SEND printer mltg -2
 ASSERT LAST_N == 0 "pr mltg nneg"
 GETF printer alive
