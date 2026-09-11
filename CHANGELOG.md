@@ -1,3 +1,9 @@
+## 1.15.1695-usability — LIFE_CELL_MURG (MI 2206)
+
+- feat(life): MurG lipid-II GlcNAc transferase after MraY for atomic printer
+- METHOD murg n on life_cell (methods=200); continuum ...->murf->mray->murg
+- proof 2206_life_cell_murg asserts_ok=113; smx=30; atomic_printer=39; fail=0
+
 ## 1.15.1694-usability — 2205 LIFE_CELL_MRAY
 
 - feat(life): MraY lipid-I UDP-MurNAc-pentapeptide:undecaprenyl-P transferase after MurF
