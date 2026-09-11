@@ -1,9 +1,10 @@
-## 1.15.1711-usability — LIFE_CELL_AMPH MI2221
+## 1.15.1712-usability — LIFE_CELL_AMPH MI2221
 
 - Cell.amph AmpH NlpC/P60 endopeptidase after DacD on continuum
   ...->daca->dacb->dacc->dacd->amph
 - Proof 2221 + atomic_printer_life_amph + smx_mesh_vesicle_amph_life + flagship 1620
-- asserts_fail:0 sum=235 (132+50+41+12)
+- Pre-dacd continuum gates on printer/smx boards; asserts_fail:0 sum=239 (134+51+42+12)
+
 
 ## 1.15.1709-usability — LIFE_CELL_DACD MI2220
 

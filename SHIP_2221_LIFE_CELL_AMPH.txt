@@ -1,3 +1,5 @@
 LIFE_CELL_AMPH MI2221
 AmpH NlpC/P60 endopeptidase after DacD
-Proof PASS asserts_fail:0 sum=235 (132+50+41+12)
+Proof PASS asserts_fail:0 sum=239 (134+51+42+12)
+Continuum ...->daca->dacb->dacc->dacd->amph
+Cube is SoT. Free energy must flow.
