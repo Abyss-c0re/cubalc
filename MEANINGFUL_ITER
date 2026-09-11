@@ -1,11 +1,11 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2246
-- **FEATURE**: LIFE_CELL_MTNN
-- **method**: mtnn n
-- **version**: 1.15.1743-usability
-- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn
+- **MI**: 2245
+- **FEATURE**: LIFE_CELL_SPED
+- **method**: sped n
+- **version**: 1.15.1740-usability
+- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped
 - **asserts_fail**: 0
 - **asserts_ok sum**: 408 (life=240 atomic_printer=84 smx=72 flagship_1620=12)
-- **proof**: programs/proof/2246_life_cell_mtnn.cubalc
+- **proof**: programs/proof/2245_life_cell_sped.cubalc
 - Cube is SoT. Free energy must flow.
