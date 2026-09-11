@@ -3,4 +3,4 @@ MltG membrane-bound lytic transglycosylase after UppP; PG strand terminator.
 Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg
 Proof 2212 + atomic_printer_life_mltg + smx_mesh_vesicle_mltg_life + 1620
 asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
-feat 3ec7a060f9f33e6695c48dedaead1f9277ba7a61
+feat fd0e44c0918fdaf99ee55042591b8c1735c319e7
