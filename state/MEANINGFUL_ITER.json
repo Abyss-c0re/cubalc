@@ -32,5 +32,9 @@
     "flagship": 12,
     "sum": 408,
     "asserts_fail": 0
-  }
+  },
+  "HEAD": "3baaad9595c1cad2f35f66835dab09abfdcc9d3d",
+  "head": "3baaad9595c1cad2f35f66835dab09abfdcc9d3d",
+  "feat": "3cb82817cfb14b63379c484347b84b2b8aa885c3",
+  "FEAT_HEAD": "3cb82817cfb14b63379c484347b84b2b8aa885c3"
 }
