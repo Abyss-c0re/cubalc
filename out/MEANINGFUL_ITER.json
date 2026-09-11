@@ -51,7 +51,9 @@
   "note": "MetE after LuxS; B12-independent Met synthase path PASS asserts_fail:0 sum=410",
   "prev_feature": "LIFE_CELL_LUXS",
   "prev_mi": 2247,
-  "status": "draft",
+  "status": "sealed",
   "proof_status": "PASS",
-  "ts": 1789158038.1923478
+  "ts": 1789158038.3605735,
+  "FEAT_HEAD": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5",
+  "feat": "e4b1bff6d804e67f8d4ea8ec542838418d96efe5"
 }
