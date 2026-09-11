@@ -1,0 +1,91 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle life — Cgl after Cbs on vesicle cell
+# Continuum: ...->mete->metk->ahcy->cbs->cgl
+# Gift: vesicle harvests cysteine from Cbs cystathionine via Cgl lyase.
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle OF Cell 1 50 0
+SEND vesicle set_threshold 9
+SEND vesicle pulse 3
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 34
+SEND vesicle pump 24
+SEND vesicle charge 36
+SEND vesicle feed 32
+
+SEND vesicle pepf 2
+ASSERT LAST_N == 2 "smx pepf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle pdf 2
+ASSERT LAST_N == 2 "smx pdf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle map 2
+ASSERT LAST_N == 2 "smx map"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nata 2
+ASSERT LAST_N == 2 "smx nata"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natb 2
+ASSERT LAST_N == 2 "smx natb"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natc 2
+ASSERT LAST_N == 2 "smx natc"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nate 2
+ASSERT LAST_N == 2 "smx nate"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle mete 2
+ASSERT LAST_N == 2 "smx mete"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle metk 2
+ASSERT LAST_N == 2 "smx metk"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle ahcy 2
+ASSERT LAST_N == 2 "smx ahcy"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle cbs 2
+ASSERT LAST_N == 2 "smx pre cbs"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+SEND vesicle cgl 3
+ASSERT LAST_N == 3 "smx cgl3"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "smx cgl heat"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "smx cgl energy"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "smx cgl atp"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_cgl_life PASS"

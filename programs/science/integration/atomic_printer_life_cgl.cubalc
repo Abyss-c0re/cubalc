@@ -1,0 +1,117 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# Atomic printer life force — Cgl cystathionine-gamma-lyase after Cbs
+# Extends printer continuum after MetK/AhcY: pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl
+# Gift: Cgl harvests cysteine from Cbs-made cystathionine on the printer board.
+# Cube is SoT. Free energy must flow.
+
+ENTITY printer OF Cell 1 60 0
+SEND printer set_threshold 8
+SEND printer pulse 4
+SEND printer photosynth 48
+SEND printer glycolyse 40
+SEND printer pump 30
+SEND printer photophos 28
+SEND printer charge 44
+SEND printer feed 40
+
+SEND printer pepf 2
+ASSERT LAST_N == 2 "ap pepf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer pdf 2
+ASSERT LAST_N == 2 "ap pdf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer map 2
+ASSERT LAST_N == 2 "ap map"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nata 2
+ASSERT LAST_N == 2 "ap nata"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natb 2
+ASSERT LAST_N == 2 "ap natb"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natc 2
+ASSERT LAST_N == 2 "ap natc"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nate 2
+ASSERT LAST_N == 2 "ap nate"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer mete 2
+ASSERT LAST_N == 2 "ap mete"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer metk 2
+ASSERT LAST_N == 2 "ap metk"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer ahcy 2
+ASSERT LAST_N == 2 "ap ahcy"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+
+SEND printer cbs 3
+ASSERT LAST_N == 3 "ap pre cbs3"
+GETF printer heat
+ASSERT LAST_N == h0 + 3 "ap pre cbs heat"
+GETF printer energy
+ASSERT LAST_N == e0 - 3 "ap pre cbs energy"
+GETF printer atp
+ASSERT LAST_N == a0 - 3 "ap pre cbs atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET a1 = LAST_N
+SEND printer cgl 3
+ASSERT LAST_N == 3 "ap cgl3"
+GETF printer heat
+ASSERT LAST_N == h1 + 3 "ap cgl heat"
+GETF printer energy
+ASSERT LAST_N == e1 - 3 "ap cgl energy"
+GETF printer atp
+ASSERT LAST_N == a1 - 3 "ap cgl atp"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive"
+
+ASSERT 1 == 1 "atomic_printer_life_cgl PASS"
