@@ -56,12 +56,12 @@
   "feat_head": "33a70d8f22a931c859a610cb887ee5835999e908",
   "sha": "33a70d8f22a9",
   "commit": "33a70d8f22a9",
-  "HEAD": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5",
-  "head": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5",
-  "tip": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5",
-  "short": "eecfa0052def",
-  "pin": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5",
+  "HEAD": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa",
+  "head": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa",
+  "tip": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa",
+  "short": "f7beb18543b4",
+  "pin": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa",
   "tip_eq_pin": true,
-  "pinned_head": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5",
-  "git_head": "eecfa0052defa6e5e2129c98bd0e585dbe9acab5"
+  "pinned_head": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa",
+  "git_head": "f7beb18543b43ed0983279dec8eeab26bb3aa7aa"
 }
