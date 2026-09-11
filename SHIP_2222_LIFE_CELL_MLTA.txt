@@ -1,5 +1,5 @@
 LIFE_CELL_MLTA MI2222
 MltA membrane lytic transglycosylase after AmpH
-Proof PASS asserts_fail:0 sum=243 (life=136+ap=52+smx=43+flagship_1620=12)
+Proof PASS asserts_fail:0 sum=244 (life=137+ap=52+smx=43+flagship_1620=12)
 Continuum ...->daca->dacb->dacc->dacd->amph->mlta
 Cube is SoT. Free energy must flow.
