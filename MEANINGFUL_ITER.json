@@ -24,13 +24,13 @@
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte",
   "domain": "post-MltD OM-lipoprotein lytic murein transglycosylase / MltE",
+  "free_energy": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mlte life-force",
   "gift": "MltE OM-lipoprotein LT anhydro path after MltD",
   "cube": "SoT",
-  "free_energy": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mlte life-force",
-  "asserts_ok": 149,
+  "asserts_ok": 148,
   "asserts_fail": 0,
   "unity": 1.0,
-  "feat_head": "4d32afa7f191b5162cdf681ed51286fa3aae2eef",
-  "head": "4d32afa7f191b5162cdf681ed51286fa3aae2eef",
-  "tip": "4d32afa7f191b5162cdf681ed51286fa3aae2eef"
+  "head": "",
+  "tip": "",
+  "feat_head": ""
 }

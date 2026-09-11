@@ -1,8 +1,8 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_CELL_MLTE MltE OM-lipoprotein lytic murein transglycosylase after MltD
-# Continuum ...->nagb->pfka->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->KEEPMLTE->mlte
+# LIFE_CELL_MLTE MltE OM-lipoprotein LT anhydro path after MltD
+# Continuum ...->nagb->pfka->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte
 # Cube is SoT. Free energy must flow.
 
 ENTITY gate OF Cell 1 40 0
@@ -237,8 +237,12 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate KEEPMLTE 4
-ASSERT LAST_N == 4 "KEEP_PRE_MLTE"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mltd 2
+ASSERT LAST_N == 2 "pre mltd"
 SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
@@ -568,12 +572,6 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer KEEPMLTE 4
-ASSERT LAST_N == 4 "KEEP_PR_PRE_MLTE"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
@@ -715,8 +713,12 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate KEEPMLTE 2
-ASSERT LAST_N == 2 "KEEP_SEAL_MLTE"
+SEND gate mltd 2
+ASSERT LAST_N == 2 "seal mltd"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 SEND gate mlte 2
 ASSERT LAST_N == 2 "seal mlte"
 

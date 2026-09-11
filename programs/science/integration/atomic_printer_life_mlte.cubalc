@@ -1,7 +1,7 @@
 // atomic_printer_life_mlte.cubalc
 // Atomic printer: MltE OM-lipoprotein LT anhydro path after MltD.
 // Cube is SoT. Free energy must flow.
-// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->KEEPMLTE->mlte
+// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd->mlte
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -233,6 +233,16 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
+SEND printer mltd 2
+ASSERT LAST_N == 2 "pre mltd"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
@@ -300,6 +310,16 @@ SEND ink charge 24
 SEND ink feed 16
 SEND ink ldtf 3
 ASSERT LAST_N == 3 "ink ldtf"
+SEND ink photosynth 20
+SEND ink glycolyse 16
+SEND ink charge 24
+SEND ink feed 16
+SEND ink photosynth 20
+SEND ink glycolyse 16
+SEND ink charge 24
+SEND ink feed 16
+SEND ink mltd 2
+ASSERT LAST_N == 2 "ink pre mltd"
 SEND ink photosynth 20
 SEND ink glycolyse 16
 SEND ink charge 24
