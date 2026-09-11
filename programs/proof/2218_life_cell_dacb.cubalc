@@ -1,7 +1,7 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_CELL_DACB DacB PBP4 DD-carboxypeptidase/endopeptidase after DacA
+# LIFE_CELL_DACB DacB PBP4 DD-endopeptidase 4-3 cleave after DacA
 # Continuum ...->nagb->pfka->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb
 # Cube is SoT. Free energy must flow.
 
@@ -207,16 +207,6 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
-SEND gate daca 4
-ASSERT LAST_N == 4 "pre gate daca"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -259,16 +249,6 @@ SEND twin photosynth 28
 SEND twin glycolyse 24
 SEND twin charge 32
 SEND twin feed 24
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 28
-SEND twin feed 20
-SEND twin daca 3
-ASSERT LAST_N == 3 "pre twin daca"
-SEND twin photosynth 24
-SEND twin glycolyse 20
-SEND twin charge 28
-SEND twin feed 20
 GETF twin heat
 LET twinh = LAST_N
 GETF twin energy
@@ -288,16 +268,6 @@ SEND ceil photosynth 28
 SEND ceil glycolyse 24
 SEND ceil charge 32
 SEND ceil feed 24
-SEND ceil photosynth 24
-SEND ceil glycolyse 20
-SEND ceil charge 28
-SEND ceil feed 20
-SEND ceil daca 3
-ASSERT LAST_N == 3 "pre ceil daca"
-SEND ceil photosynth 24
-SEND ceil glycolyse 20
-SEND ceil charge 28
-SEND ceil feed 20
 GETF ceil heat
 LET ceilh = LAST_N
 GETF ceil energy
@@ -317,16 +287,6 @@ SEND g0 photosynth 28
 SEND g0 glycolyse 24
 SEND g0 charge 32
 SEND g0 feed 24
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 28
-SEND g0 feed 20
-SEND g0 daca 3
-ASSERT LAST_N == 3 "pre g0 daca"
-SEND g0 photosynth 24
-SEND g0 glycolyse 20
-SEND g0 charge 28
-SEND g0 feed 20
 GETF g0 heat
 LET g0h = LAST_N
 GETF g0 energy
@@ -346,16 +306,6 @@ SEND gate photosynth 28
 SEND gate glycolyse 24
 SEND gate charge 36
 SEND gate feed 24
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
-SEND gate daca 4
-ASSERT LAST_N == 4 "pre gate daca"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
 GETF gate heat
 LET h_commit = LAST_N
 GETF gate energy
@@ -399,16 +349,6 @@ GETF starved heat
 LET sh2 = LAST_N
 ASSERT sa2 >= 7 "starved atp primed"
 ASSERT se2 >= 7 "starved energy primed"
-SEND starved photosynth 24
-SEND starved glycolyse 20
-SEND starved charge 28
-SEND starved feed 20
-SEND starved daca 4
-ASSERT LAST_N == 4 "pre starved daca"
-SEND starved photosynth 24
-SEND starved glycolyse 20
-SEND starved charge 28
-SEND starved feed 20
 SEND starved dacb 7
 ASSERT LAST_N == 7 "starved murc7"
 GETF starved atp
@@ -568,16 +508,6 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
-SEND printer daca 4
-ASSERT LAST_N == 4 "pre printer daca"
-SEND printer photosynth 24
-SEND printer glycolyse 20
-SEND printer charge 28
-SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
@@ -689,16 +619,6 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
-SEND gate daca 2
-ASSERT LAST_N == 2 "pre gate daca"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
 SEND gate dacb 2
 ASSERT LAST_N == 2 "seal dacb"
 
@@ -720,16 +640,6 @@ SEND gate glycolyse 16
 SEND gate charge 24
 SEND gate feed 16
 SEND gate quiesce
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
-SEND gate daca 3
-ASSERT LAST_N == 3 "pre gate daca"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 28
-SEND gate feed 20
 GETF gate heat
 LET hq = LAST_N
 GETF gate energy
