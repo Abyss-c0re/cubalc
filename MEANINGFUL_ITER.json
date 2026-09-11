@@ -41,13 +41,13 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURD MI2202 tip==pin 4fb5a6aac PASS sum=207",
+  "summary": "LIFE_CELL_MURD MI2202 tip==pin d4f0dbc12 PASS sum=207",
   "cube_law": "cube is SoT; free energy must flow",
   "method_signature": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held",
   "also_added": "METHOD murc n (UDP-MurNAc:L-Ala ligase) enabling MurD continuum",
-  "head": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
-  "HEAD": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
-  "tip": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
-  "pin": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666",
-  "short": "4fb5a6aac"
+  "head": "d4f0dbc12d7d32c5bdb15020618403f4c1dd3f77",
+  "HEAD": "d4f0dbc12d7d32c5bdb15020618403f4c1dd3f77",
+  "tip": "d4f0dbc12d7d32c5bdb15020618403f4c1dd3f77",
+  "pin": "d4f0dbc12d7d32c5bdb15020618403f4c1dd3f77",
+  "short": "d4f0dbc12"
 }
