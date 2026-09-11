@@ -1,3 +1,19 @@
+## 2235 — LIFE_CELL_PEPP (1.15.1732-usability)
+
+- feat(life): LIFE_CELL_PEPP MI2235 PepP Xaa-Pro aminopeptidase P after PepQ
+- METHOD pepp n: post-PepQ Xaa-Pro aminopeptidase gate; continuum ...->pepd->pepn->pepq->pepp
+- Proof 2235_life_cell_pepp + atomic_printer_life_pepp + smx_mesh_vesicle_pepp_life + flagship 1620
+- asserts_ok life=234 atomic=80 smx=68 flagship=12 sum=394 asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
+## 2234 — LIFE_CELL_PEPQ (1.15.1731-usability)
+
+- feat(life): LIFE_CELL_PEPQ MI2234 PepQ Xaa-Pro dipeptidase (prolidase) after PepN
+- METHOD pepq n: post-PepN Xaa-Pro prolidase free-AA gate; continuum ...->mpaa->ycjg->pepd->pepn->pepq
+- Proof 2234_life_cell_pepq + atomic_printer_life_pepq + smx_mesh_vesicle_pepq_life + flagship 1620
+- asserts_ok life=227 atomic=76 smx=64 flagship=12 sum=379 asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
 ## 2233 — LIFE_CELL_PEPN (1.15.1730-usability)
 
 - feat(life): LIFE_CELL_PEPN MI2233 PepN cytoplasmic aminopeptidase N after PepD
