@@ -1,0 +1,8 @@
+LIFE_CELL_AMPH MI2221 sealed
+METHOD amph n — AmpH NlpC/P60 endopeptidase after DacD
+Continuum ...->daca->dacb->dacc->dacd->amph
+Proof PASS asserts_ok=239 asserts_fail=0 (134+51+42+12)
+VERSION 1.15.1711-usability
+FEAT_HEAD 97ab44b8a4a0ab4b0765cf2e7862acb134af79c3
+HEAD 97ab44b8a4a0ab4b0765cf2e7862acb134af79c3
+Cube is SoT. Free energy must flow.
