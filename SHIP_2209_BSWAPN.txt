@@ -1,0 +1,6 @@
+SHIP BSWAPN MI2209
+BSWAPN|BYTESWAPN|BSWAP64N|ENDIANSWAPN|SWAB64N — 64-bit byte-swap usability form.
+Twin of stack SBSWAP64 / function BSWAP64; completes BITREVN/POPCOUNTN endian plane.
+Proof programs/proof/2209_bswapn.cubalc PASS asserts_ok=26 asserts_fail=0
+Pure C: src/lang/lang_ops_math.c + help src/lang/lang_ops_core.c
+Cube is SoT. Free energy must flow.

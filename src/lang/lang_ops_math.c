@@ -6894,6 +6894,58 @@ int cubalc_lang_ops_math(VM *vm, Lex *L){
   }
 
 
+  /* BSWAPN|BYTESWAPN|BSWAP64N|ENDIANSWAPN|SWAB64N x — byte-swap 64-bit word → LAST_N.
+   * Twin of stack SBSWAP64 / function BSWAP64. Completes BITREVN/POPCOUNTN endian plane.
+   * Usability: be = BSWAPN le after GETFLAGN; wire = BSWAPN host for network order.
+   * Aliases: BSWAP_N BYTESWAP64N ENDIAN64N REVBYTESN SWABN (full 8-byte reverse). */
+  if (kw(&L->cur,"BSWAPN") || kw(&L->cur,"BYTESWAPN") || kw(&L->cur,"BSWAP64N") ||
+      kw(&L->cur,"ENDIANSWAPN") || kw(&L->cur,"SWAB64N") || kw(&L->cur,"BSWAP_N") ||
+      kw(&L->cur,"BYTESWAP64N") || kw(&L->cur,"ENDIAN64N") || kw(&L->cur,"REVBYTESN") ||
+      kw(&L->cur,"SWABN")){
+    long x = 0;
+    char nbuf[32];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) { x = L->cur.num; lex_next(L); }
+    else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind != TK_NUM) { var_set_num(vm,"OK",0); bump(vm); return 1; }
+      x = -L->cur.num; lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *v = var_get(vm, L->cur.text, 0);
+      if (!v) {
+        fail_at(vm, L, "BSWAPN x — unknown x");
+        return -1;
+      }
+      x = v->val; lex_next(L);
+    } else {
+      fail_at(vm, L, "BSWAPN x — BSWAPN n");
+      return -1;
+    }
+    {
+      unsigned long w = (unsigned long)x;
+      w = ((w & 0x00000000000000FFul) << 56) | ((w & 0x000000000000FF00ul) << 40) |
+          ((w & 0x0000000000FF0000ul) << 24) | ((w & 0x00000000FF000000ul) << 8) |
+          ((w & 0x000000FF00000000ul) >> 8) | ((w & 0x0000FF0000000000ul) >> 24) |
+          ((w & 0x00FF000000000000ul) >> 40) | ((w & 0xFF00000000000000ul) >> 56);
+      x = (long)w;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", x);
+    var_set_num(vm, "LAST_N", x);
+    vm->last_n = x;
+    var_set_num(vm, "BSWAPN", x);
+    var_set_num(vm, "BYTESWAPN", x);
+    var_set_num(vm, "BSWAP64N", x);
+    var_set_num(vm, "BSWAPN_OK", 1L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST", nbuf);
+    var_set_str(vm, "FLAG", nbuf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    if (vm->trace)
+      fprintf(vm->trace, "# bswapn -> %ld\n", x);
+    bump(vm); return 1;
+  }
+
+
 
   return 0;
 }

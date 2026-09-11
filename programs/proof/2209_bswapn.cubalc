@@ -1,0 +1,112 @@
+# BSWAPN / BYTESWAPN / BSWAP64N — 64-bit byte-swap usability (MI 2209)
+# Twin of stack SBSWAP64 / function BSWAP64. Completes BITREVN endian plane.
+# Usability: be = BSWAPN le after GETFLAGN; wire = BSWAPN host for network order.
+
+HOLD_FLASH 1
+
+# zero fixed
+BSWAPN 0
+ASSERT LAST_N == 0
+ASSERT BSWAPN_OK == 1
+
+# single low byte -> top byte (sign bit set for 0x01 -> 1<<56)
+BSWAPN 1
+LET b1 = LAST_N
+ASSERT b1 != 0
+# rev-rev restores
+BSWAPN b1
+ASSERT LAST_N == 1 "revrev 1"
+
+# 0x0102030405060708 pattern via known constants
+# 0xFF low byte -> top byte all ones in high position
+BSWAPN 255
+LET r255 = LAST_N
+BSWAPN r255
+ASSERT LAST_N == 255 "revrev 255"
+
+# 0x00FF (256+255=511? use 0xFF00 = 65280)
+BSWAPN 65280
+LET rff00 = LAST_N
+BSWAPN rff00
+ASSERT LAST_N == 65280 "revrev 0xFF00"
+
+# involution: BSWAPN twice is identity on several values
+BSWAPN 0x123456789ABCDEF
+LET rx = LAST_N
+BSWAPN rx
+ASSERT LAST_N == 0x123456789ABCDEF "revrev hex pattern"
+
+# aliases match primary
+BSWAPN 2
+LET p = LAST_N
+BYTESWAPN 2
+ASSERT LAST_N == p
+BSWAP64N 2
+ASSERT LAST_N == p
+ENDIANSWAPN 2
+ASSERT LAST_N == p
+SWAB64N 2
+ASSERT LAST_N == p
+BYTESWAP64N 2
+ASSERT LAST_N == p
+ENDIAN64N 2
+ASSERT LAST_N == p
+REVBYTESN 2
+ASSERT LAST_N == p
+SWABN 2
+ASSERT LAST_N == p
+
+# all-ones fixed point
+BSWAPN -1
+ASSERT LAST_N == -1
+
+# var subject
+LET v = 3
+BSWAPN v
+LET r3 = LAST_N
+BSWAPN r3
+ASSERT LAST_N == 3 "revrev 3"
+
+# BSWAPN 0x80 = 128 -> byte to top
+BSWAPN 128
+LET r128 = LAST_N
+BSWAPN r128
+ASSERT LAST_N == 128 "revrev 128"
+
+# POPCOUNT preserved under bswap (Hamming weight invariant)
+POPCOUNTN 255
+LET h1 = LAST_N
+BSWAPN 255
+POPCOUNTN LAST_N
+ASSERT LAST_N == h1 "popcount invariant under bswap"
+
+POPCOUNTN 0x123456789ABCDEF
+LET h2 = LAST_N
+BSWAPN 0x123456789ABCDEF
+POPCOUNTN LAST_N
+ASSERT LAST_N == h2 "popcount invariant pattern"
+
+# known: BSWAPN(0x0100000000000000) should be 1 if we can express it
+# 2^56 = 72057594037927936
+BSWAPN 72057594037927936
+ASSERT LAST_N == 1 "2^56 bswap -> 1"
+
+# BSWAPN(0x0000000000000100) = 2^8 = 256 -> 2^48
+BSWAPN 256
+LET r256 = LAST_N
+BSWAPN r256
+ASSERT LAST_N == 256 "revrev 256"
+
+# LAST_N and BSWAPN var equal
+BSWAPN 7
+ASSERT LAST_N == BSWAPN
+ASSERT BYTESWAPN == LAST_N
+ASSERT BSWAP64N == LAST_N
+
+# negative small: -2 bswap involution
+BSWAPN -2
+LET rn2 = LAST_N
+BSWAPN rn2
+ASSERT LAST_N == -2 "revrev -2"
+
+HOLD_FLASH 0
