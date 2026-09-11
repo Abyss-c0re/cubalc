@@ -47,9 +47,9 @@
   "note": "MetK after RimI/MAP; methionine adenosyltransferase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_RIMI",
   "prev_mi": 2243,
-  "FEAT_HEAD": "33a70d8f22a931c859a610cb887ee5835999e908",
-  "feat": "33a70d8f22a931c859a610cb887ee5835999e908",
-  "feat_head": "33a70d8f22a931c859a610cb887ee5835999e908",
+  "FEAT_HEAD": "22cded6ee56777089f8e381624a6800bae3ec0c9",
+  "feat": "22cded6ee56777089f8e381624a6800bae3ec0c9",
+  "feat_head": "22cded6ee56777089f8e381624a6800bae3ec0c9",
   "HEAD": "33a70d8f22a931c859a610cb887ee5835999e908",
   "head": "33a70d8f22a931c859a610cb887ee5835999e908",
   "tip": "33a70d8f22a931c859a610cb887ee5835999e908",
@@ -57,6 +57,6 @@
   "pinned_head": "33a70d8f22a931c859a610cb887ee5835999e908",
   "git_head": "33a70d8f22a931c859a610cb887ee5835999e908",
   "short": "33a70d8f22a9",
-  "sha": "33a70d8f22a9",
-  "commit": "33a70d8f22a9"
+  "sha": "22cded6ee567",
+  "commit": "22cded6ee567"
 }
