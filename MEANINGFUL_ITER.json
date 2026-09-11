@@ -21,27 +21,19 @@
     "programs/science/integration/smx_mesh_vesicle_mltg_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg",
+  "continuum": "...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg",
   "asserts_ok": 303,
   "asserts_fail": 0,
+  "asserts": {
+    "life": 184,
+    "atomic": 58,
+    "smx": 49,
+    "f1620": 12
+  },
   "item": "MltG membrane lytic TG strand terminator after UppP",
   "item_id": "mi_life_cell_mltg",
-  "note": "LIFE_CELL_MLTG|MLTG PG strand terminator after UppP carrier recycle; distinct from Slt soluble LTG",
-  "FEAT_HEAD": "fd0e44c0918fdaf99ee55042591b8c1735c319e7",
+  "note": "LIFE_CELL_MLTG|MLTG PG strand terminator after UppP; distinct from Slt",
+  "FEAT_HEAD": "3ec7a060f9f33e6695c48dedaead1f9277ba7a61",
   "host_finish": true,
-  "ts": "2026-09-11T04:59:29Z",
-  "status": "sealed",
-  "pass": true,
-  "sealed": true,
-  "summary": "LIFE_CELL_MLTG MI2212 PASS asserts_ok=303 asserts_fail=0 tip==pin sealed",
-  "feat_head": "fd0e44c0918fdaf99ee55042591b8c1735c319e7",
-  "HEAD": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "head": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "tip": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "pin": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "pinned_head": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "git_head": "3c2308a0808427e571a4efda7f354bfb2198a510",
-  "commit": "3c2308a08084",
-  "short": "3c2308a08084",
-  "proof_status": "PASS"
+  "ts": "2026-09-11T04:59:33Z"
 }
