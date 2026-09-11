@@ -1,14 +1,14 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2224,
-  "MEANINGFUL_ITER": 2224,
+  "MEANINGFUL_ITER": 2233,
   "iter": 2224,
   "n": 2224,
-  "mi": 2224,
+  "mi": 2233,
   "version": "1.15.1714-usability",
   "VERSION": "1.15.1714-usability",
-  "feature": "life_cell_mltd",
-  "FEATURE": "LIFE_CELL_MLTD",
+  "feature": "life_cell_pepn",
+  "FEATURE": "LIFE_CELL_PEPN",
   "name": "LIFE_CELL_MLTD",
   "title": "life cell mltd",
   "label": "LIFE_CELL_MLTD",
@@ -36,7 +36,11 @@
   },
   "asserts_fail": 0,
   "unity": 1.0,
-  "feat_head": "b8671c65069381cc3dff63640fde7628d4940181",
-  "head": "b8671c65069381cc3dff63640fde7628d4940181",
-  "tip": "a1d6260b7dfcbd77bfc1d8d9327c6a4526eccd3e"
+  "feat_head": "9fd3981e32b8e35c99e197bfda3cd5a3b3d6679c",
+  "head": "9fd3981e32b8e35c99e197bfda3cd5a3b3d6679c",
+  "tip": "9fd3981e32b8e35c99e197bfda3cd5a3b3d6679c",
+  "short": "9fd3981e32b8",
+  "commit": "9fd3981e32b8",
+  "HEAD": "9fd3981e32b8e35c99e197bfda3cd5a3b3d6679c",
+  "FEAT_HEAD": "9fd3981e32b8e35c99e197bfda3cd5a3b3d6679c"
 }
