@@ -44,5 +44,7 @@
   "summary": "LIFE_CELL_LDTC MI2216 PASS asserts_ok=303 asserts_fail:0",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "pass": true,
-  "ts": "2026-09-11T06:56:48Z"
+  "ts": "2026-09-11T06:56:48Z",
+  "FEAT_HEAD": "00f30cd8736241b80e7e556db880cefba4ca51ec",
+  "feat_head": "00f30cd8736241b80e7e556db880cefba4ca51ec"
 }
