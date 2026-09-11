@@ -1,3 +1,10 @@
+## MI 2213 — LIFE_CELL_LDTB (LdtB/YcfS Lpp-PG paralog after LdtA)
+
+- **feat(life):** METHOD `ldtb n` — LdtB/YcfS second-route 3–3 meso-DAP–Lpp anchor after LdtA/YbiS.
+- Continuum: `...->mtga->uppp->ldtd->mltg->ldta->ldtb`.
+- Proof 125 + atomic 42 + smx 33 = 200 asserts_fail:0.
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## MI 2211 — LIFE_CELL_MLTG (1.15.1700-usability)

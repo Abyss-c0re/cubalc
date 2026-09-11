@@ -1,6 +1,6 @@
-LIFE_CELL_MLTG
-method: mltg n
-continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg
-asserts_ok=123+40+31=194
-MI 2211
-HEAD e25392aa77b7f5374f888d68bab4652efdc06510
+LIFE_CELL_LDTB
+method: ldtb n
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb
+asserts_ok=125+42+33=200
+MI 2213
+HEAD PENDING

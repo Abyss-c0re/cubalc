@@ -1,7 +1,7 @@
-// smx_mesh_vesicle_ldta_life.cubalc
-// SMX vesicle: LdtA/YbiS Lpp-PG anchor after MltG.
+// smx_mesh_vesicle_ldtb_life.cubalc
+// SMX vesicle: LdtB/YcfS Lpp-PG paralog anchor after LdtA.
 // Cube is SoT. Free energy must flow.
-// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta
+// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -137,8 +137,8 @@ SEND vesicle photosynth 18
 SEND vesicle glycolyse 16
 SEND vesicle charge 22
 SEND vesicle feed 16
-SEND vesicle mltg 3
-ASSERT LAST_N == 3 "ves mltg"
+SEND vesicle ldta 3
+ASSERT LAST_N == 3 "ves ldta"
 SEND vesicle photosynth 18
 SEND vesicle glycolyse 16
 SEND vesicle charge 22
@@ -149,14 +149,14 @@ GETF vesicle energy
 LET ve = LAST_N
 GETF vesicle atp
 LET va = LAST_N
-SEND vesicle ldta 3
-ASSERT LAST_N == 3 "ves ldta"
+SEND vesicle ldtb 3
+ASSERT LAST_N == 3 "ves ldtb"
 GETF vesicle heat
-ASSERT LAST_N == vh + 3 "ves ldta h+3"
+ASSERT LAST_N == vh + 3 "ves ldtb h+3"
 GETF vesicle energy
-ASSERT LAST_N == ve - 3 "ves ldta e-3"
+ASSERT LAST_N == ve - 3 "ves ldtb e-3"
 GETF vesicle atp
-ASSERT LAST_N == va - 3 "ves ldta atp-3"
+ASSERT LAST_N == va - 3 "ves ldtb atp-3"
 
 SEND dock photosynth 24
 SEND dock glycolyse 20
@@ -166,8 +166,8 @@ SEND dock photosynth 14
 SEND dock glycolyse 12
 SEND dock charge 16
 SEND dock feed 12
-SEND dock mltg 2
-ASSERT LAST_N == 2 "dock mltg"
+SEND dock ldta 2
+ASSERT LAST_N == 2 "dock ldta"
 SEND dock photosynth 14
 SEND dock glycolyse 12
 SEND dock charge 16
@@ -178,17 +178,17 @@ GETF dock energy
 LET de = LAST_N
 GETF dock atp
 LET da = LAST_N
-SEND dock ldta 2
-ASSERT LAST_N == 2 "dock ldta"
+SEND dock ldtb 2
+ASSERT LAST_N == 2 "dock ldtb"
 GETF dock heat
-ASSERT LAST_N == dh + 2 "dock ldta h+2"
+ASSERT LAST_N == dh + 2 "dock ldtb h+2"
 GETF dock energy
-ASSERT LAST_N == de - 2 "dock ldta e-2"
+ASSERT LAST_N == de - 2 "dock ldtb e-2"
 GETF dock atp
-ASSERT LAST_N == da - 2 "dock ldta atp-2"
+ASSERT LAST_N == da - 2 "dock ldtb atp-2"
 
-SEND void ldta 2
-ASSERT LAST_N == 0 "void ldta 0"
+SEND void ldtb 2
+ASSERT LAST_N == 0 "void ldtb 0"
 
 GETF vesicle alive
 ASSERT LAST_N == 1 "vesicle alive"

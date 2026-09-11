@@ -1,7 +1,7 @@
-// atomic_printer_life_ldta.cubalc
-// Atomic printer: LdtA YbiS Lpp-PG anchor after MltG.
+// atomic_printer_life_ldtb.cubalc
+// Atomic printer: LdtB YcfS Lpp-PG paralog anchor after LdtA.
 // Cube is SoT. Free energy must flow.
-// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta
+// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
@@ -170,7 +170,7 @@ SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
 SEND printer ldta 4
-ASSERT LAST_N == 4 "pr mltg"
+ASSERT LAST_N == 4 "pr ldta"
 SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
@@ -181,14 +181,14 @@ GETF printer energy
 LET pe = LAST_N
 GETF printer atp
 LET pa = LAST_N
-SEND printer ldta 4
-ASSERT LAST_N == 4 "pr mltg"
+SEND printer ldtb 4
+ASSERT LAST_N == 4 "pr ldta"
 GETF printer heat
-ASSERT LAST_N == ph + 4 "pr mltg h+4"
+ASSERT LAST_N == ph + 4 "pr ldta h+4"
 GETF printer energy
-ASSERT LAST_N == pe - 4 "pr mltg e-4"
+ASSERT LAST_N == pe - 4 "pr ldta e-4"
 GETF printer atp
-ASSERT LAST_N == pa - 4 "pr mltg atp-4"
+ASSERT LAST_N == pa - 4 "pr ldta atp-4"
 
 SEND ink photosynth 28
 SEND ink glycolyse 24
@@ -216,8 +216,8 @@ SEND ink photosynth 20
 SEND ink glycolyse 16
 SEND ink charge 24
 SEND ink feed 16
-SEND ink mltg 3
-ASSERT LAST_N == 3 "ink mltg"
+SEND ink ldta 3
+ASSERT LAST_N == 3 "ink ldta"
 SEND ink photosynth 20
 SEND ink glycolyse 16
 SEND ink charge 24
@@ -228,17 +228,17 @@ GETF ink energy
 LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
-SEND ink ldta 3
-ASSERT LAST_N == 3 "ink ldta"
+SEND ink ldtb 3
+ASSERT LAST_N == 3 "ink ldtb"
 GETF ink heat
-ASSERT LAST_N == ih + 3 "ink ldta h+3"
+ASSERT LAST_N == ih + 3 "ink ldtb h+3"
 GETF ink energy
-ASSERT LAST_N == ie - 3 "ink ldta e-3"
+ASSERT LAST_N == ie - 3 "ink ldtb e-3"
 GETF ink atp
-ASSERT LAST_N == ia - 3 "ink ldta atp-3"
+ASSERT LAST_N == ia - 3 "ink ldtb atp-3"
 
-SEND scrap ldta 3
-ASSERT LAST_N == 0 "dead scrap ldta"
+SEND scrap ldtb 3
+ASSERT LAST_N == 0 "dead scrap ldtb"
 
 GETF printer alive
 ASSERT LAST_N == 1 "printer alive"
