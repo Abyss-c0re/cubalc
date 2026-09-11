@@ -43,12 +43,12 @@
   "pass_": true,
   "summary": "LIFE_CELL_MURG MI2206 tip==pin sealed PASS asserts_ok=255",
   "ts": "2026-09-11T01:50:39Z",
-  "HEAD": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "head": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "tip": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "pin": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "pinned_head": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "feat_head": "984f52aea69e2b25861238d6e7e71718484d6386",
-  "commit": "984f52aea69e",
-  "short": "984f52aea69e"
+  "HEAD": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "head": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "tip": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "pin": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "pinned_head": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "feat_head": "6c8b92f8c075e77a7e0ed30db6941de43224be3e",
+  "commit": "6c8b92f8c075",
+  "short": "6c8b92f8c075"
 }
