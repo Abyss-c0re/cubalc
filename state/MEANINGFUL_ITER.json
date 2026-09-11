@@ -50,5 +50,7 @@
   "asserts_ok_sum": 408,
   "status": "sealed",
   "proof_status": "PASS",
-  "ts": 1789156039.1246655
+  "ts": 1789156039.1246655,
+  "feat_head": "a8e5cc83c6db0850efaa2039d83dd55857b6ef29",
+  "head": "a8e5cc83c6db0850efaa2039d83dd55857b6ef29"
 }
