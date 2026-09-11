@@ -33,7 +33,7 @@
   },
   "item": "LdtC/YnhG Lpp-PG L,D-transpeptidase after LdtB",
   "item_id": "mi_life_cell_ldtc",
-  "note": "LIFE_CELL_LDTC|LDTC LdtC/YnhG Braun Lpp-PG 3-3 paralog triad close after LdtB/YbiS; distinct from LdtA/ErfK, LdtB/YbiS, LdtD/YcbB and PBP D,D-TPase",
+  "note": "LIFE_CELL_LDTC|LDTC LdtC/YnhG Braun Lpp-PG 3-3 triad close after LdtB; distinct from LdtA/ErfK, LdtB/YbiS, LdtD/YcbB and PBP D,D-TPase",
   "status": "sealed",
   "hold_flash": 1,
   "pass_": true,
@@ -43,7 +43,7 @@
   "anti_bloat": true,
   "summary": "LIFE_CELL_LDTC MI2216 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "methods": 204,
+  "methods": 203,
   "host_finish": true,
   "ts": "2026-09-11T06:58:32Z",
   "FEAT_HEAD": "e2d973acf0297a35c33468f459320ffd4fb408a2",
@@ -51,5 +51,6 @@
   "HEAD": "e89dcb38dceead932a428ba01e4cd88f264a782a",
   "head": "e89dcb38dceead932a428ba01e4cd88f264a782a",
   "tip": "e89dcb38dceead932a428ba01e4cd88f264a782a",
-  "pinned_head": "e89dcb38dceead932a428ba01e4cd88f264a782a"
+  "pinned_head": "e89dcb38dceead932a428ba01e4cd88f264a782a",
+  "pass": true
 }

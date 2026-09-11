@@ -1,4 +1,4 @@
-## MI 2216 — LIFE_CELL_LDTC (1.15.1699-usability)
+## 1.15.1701-usability — LIFE_CELL_LDTC MI2216
 
 - Cell.ldtc LdtC/YcfS Lpp–PG L,D-transpeptidase after LdtB
 - Continuum ...->uppp->mltg->ldtd->ldta->ldtb->ldtc

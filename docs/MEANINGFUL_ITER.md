@@ -1070,3 +1070,8 @@ Doc: `docs/LIFE_FORCE.md`
 - Proof: `programs/proof/2185_life_cell_lpoa.cubalc` asserts_ok=165
 
 - **MI2186 LIFE_CELL_PBP1A**: METHOD `pbp1a n` bifunctional aPBP sidewall after LpoA. Continuum ...->lpoa->pbp1a. asserts_ok=302. VERSION 1.15.1671-usability.
+
+## MI2216 LIFE_CELL_LDTC
+
+LdtC/YnhG after LdtB — Lpp-PG triad close. Proof `programs/proof/2216_life_cell_ldtc.cubalc` PASS asserts_ok=303.
+Continuum `...->ldtd->ldta->ldtb->ldtc`. VERSION 1.15.1700-usability.
