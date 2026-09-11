@@ -1,3 +1,10 @@
+## MI 2215 — LIFE_CELL_LDTE (LdtE/ErfK Lpp-PG stress-route fourth paralog after LdtC)
+
+- **feat(life):** METHOD `ldte n` — LdtE/ErfK stress-route 3-3 meso-DAP-Lpp anchor after LdtC/YnhG.
+- Continuum: `...->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte`.
+- Proof 129 + atomic 46 + smx 37 = 212 asserts_fail:0.
+- Cube is SoT. Free energy must flow.
+
 ## MI 2214 — LIFE_CELL_LDTC (LdtC/YnhG Lpp-PG third paralog after LdtB)
 
 - **feat(life):** METHOD `ldtc n` — LdtC/YnhG third-route 3-3 meso-DAP-Lpp anchor after LdtB/YcfS.

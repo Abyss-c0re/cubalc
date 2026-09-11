@@ -1,2 +1,6 @@
-LIFE_CELL_LDTC
-27925d0da7db3c4b6c7cae2e106f3b7c5674bb7a
+LIFE_CELL_LDTE
+MI2215
+method: ldte n
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte
+version: 1.15.1703-usability
+asserts: 129+46+37=212 fail=0

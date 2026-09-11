@@ -1,0 +1,13 @@
+LIFE_CELL_LDTE MI2215
+method: ldte n
+continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte
+domain: LdtE ErfK Lpp-PG L,D-transpeptidase stress-route fourth paralog after LdtC
+gift: stress-route Braun lipoprotein Lpp meso-DAP anchor after LdtC so OM-PG coupling holds when LdtA/B/C are limiting
+proof: programs/proof/2215_life_cell_ldte.cubalc
+atomic: programs/science/integration/atomic_printer_life_ldte.cubalc
+smx: programs/science/integration/smx_mesh_vesicle_ldte_life.cubalc
+asserts_ok: 129+46+37=212
+asserts_fail: 0
+version: 1.15.1703-usability
+cube: SoT
+free_energy: must_flow
