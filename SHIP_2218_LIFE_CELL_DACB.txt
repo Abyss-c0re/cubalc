@@ -7,5 +7,5 @@ proofs:
   programs/science/integration/smx_mesh_vesicle_dacb_life.cubalc asserts_ok=41 asserts_fail=0
   programs/proof/1620_atomic_printer_life_force.cubalc asserts_ok=12 asserts_fail=0
 sum=235 PASS
-MEANINGFUL_ITER=2218 VERSION=1.15.1707-usability HEAD=581ef25a02147ecbc1afd6e86a4f872783ad7c37
+MEANINGFUL_ITER=2218 VERSION=1.15.1707-usability HEAD=099a8dc8ed430eb39bcedd755beddd483db3e197
 Cube is SoT. Free energy must flow. CT101 forever.
