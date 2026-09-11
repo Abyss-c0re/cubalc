@@ -1,3 +1,10 @@
+## 1.15.1690-usability — 2203 LIFE_CELL_MURE
+
+- feat(life): MurE UDP-MurNAc-L-Ala-D-Glu:meso-DAP/L-Lys ligase after MurD PG stem
+- Continuum ...->ampg->nagz->ampd->anmk->murq->naga->nagb->pfka->mura->murb->murc->murd->mure
+- proof 2203 PASS 106/0; atomic_printer 33/0; smx vesicle 24/0 (sum 163)
+- methods=197; free energy flow; cube is SoT
+
 ## 1.15.1688-usability — 2201 LIFE_CELL_MURC
 
 - feat(life): MurC UDP-MurNAc:L-alanine ligase after MurB PG backbone

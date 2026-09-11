@@ -1,0 +1,13 @@
+SHIP LIFE_CELL_MURE MI2203
+VERSION 1.15.1690-usability
+FEATURE life_cell mure n
+DOMAIN MurE cytoplasmic UDP-MurNAc-L-Ala-D-Glu:meso-DAP/L-Lys ligase after MurD
+CONTINUUM ...->ampg->nagz->ampd->anmk->murq->naga->nagb->pfka->mura->murb->murc->murd->mure
+PROOF programs/proof/2203_life_cell_mure.cubalc asserts_ok=106 asserts_fail=0
+ATOMIC programs/science/integration/atomic_printer_life_mure.cubalc asserts_ok=33 asserts_fail=0
+SMX programs/science/integration/smx_mesh_vesicle_mure_life.cubalc asserts_ok=24 asserts_fail=0
+SUM 163
+LIB programs/lib/life_cell.cubalc METHOD mure n
+GIFT CubalC life-force PG stem meso-DAP/L-Lys ligation commit
+CUBE SoT
+FREE_ENERGY must_flow
