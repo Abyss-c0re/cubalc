@@ -1,4 +1,4 @@
-LIFE_CELL_LDTB MI2215 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb FEAT=1ff123d4a61ee7ed12373da60e49cf9926f1a296 HEAD=52a6b66b8ed3bb065c8d8c5bb71d9a5fc046e09c
+LIFE_CELL_LDTB MI2215 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb FEAT=1ff123d4a61ee7ed12373da60e49cf9926f1a296 HEAD=7ffa01f2f0aa41ee96d960394bef2bc0c8bc77bc
 METHOD ldtb on life_cell after ldta
 Proof 2215 + atomic_printer_life_ldtb + smx_mesh_vesicle_ldtb_life
 asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
