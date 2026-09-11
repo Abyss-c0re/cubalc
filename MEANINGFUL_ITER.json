@@ -52,5 +52,7 @@
   "short": "d3efd829f",
   "host_finish": true,
   "ts": "2026-09-11T07:45:38Z",
-  "summary": "LIFE_CELL_LDTF MI2218 PASS asserts_ok=303 asserts_fail:0 tip==pin"
+  "summary": "LIFE_CELL_LDTF MI2218 PASS asserts_ok=303 asserts_fail:0 tip==pin sealed HEAD=d3efd829f7c3",
+  "TIP": "d3efd829f7c3fc27c026f8e2b848ce60fdac51cf",
+  "PIN": "d3efd829f7c3fc27c026f8e2b848ce60fdac51cf"
 }
