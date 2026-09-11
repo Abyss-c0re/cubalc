@@ -1,4 +1,4 @@
 LIFE_CELL_LDTF MI2218 PASS asserts_fail:0 sum=303 continuum ...->ldte->ldtf
 proof programs/proof/2218_life_cell_ldtf.cubalc
-Cell.ldtf LdtF/YafK L,D-carboxypeptidase/endopeptidase after LdtE
-HEAD f4df2e0101ece194ddff9ba5deb6fa1dd80efabf
+Cell.ldtf LdtF/YafK after LdtE
+HEAD 96bbcdf26ea34bda2f2e67917a9b889a34d325c2
