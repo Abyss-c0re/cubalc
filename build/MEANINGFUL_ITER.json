@@ -44,5 +44,15 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURD MI2202 PASS asserts_ok=211"
+  "summary": "LIFE_CELL_MURD MI2202 PASS asserts_ok=211tip==pin sealed PASS asserts_ok=211",
+  "HEAD": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "tip": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "pin": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "pinned_head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "feat_head": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "FEAT_HEAD": "4fb43633106f4c10fcee29148d8b77cc95065a3d",
+  "commit": "4fb436331",
+  "short": "4fb43633106",
+  "host_finish": true
 }
