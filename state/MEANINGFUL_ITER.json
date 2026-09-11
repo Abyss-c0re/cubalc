@@ -2,25 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2247,
   "MEANINGFUL_ITER": 2247,
-  "iter": 2247,
+  "iter": 2248,
   "n": 2247,
   "mi": 2247,
-  "version": "1.15.1745-usability",
+  "version": "1.15.1746-usability",
   "VERSION": "1.15.1745-usability",
   "feature": "life_cell_mete",
   "FEATURE": "LIFE_CELL_METE",
   "name": "LIFE_CELL_METE",
-  "title": "MetE cobalamin-independent methionine synthase after NatE on life_cell",
+  "title": "smx mesh vesicle metk life",
   "label": "LIFE_CELL_METE",
   "method": "mete n",
   "ship": "2247_life_cell_mete",
   "proof": "programs/proof/2247_life_cell_mete.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2247_life_cell_mete.cubalc",
-    "programs/science/integration/atomic_printer_life_mete.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_mete_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_metk_life.cubalc"
   ],
   "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete",
   "domain": "MetE cobalamin-independent methionine synthase after NatE N-terminal seal",
@@ -36,5 +32,12 @@
   "HEAD": "d4e9513e774d2e3bf34696942411398e90a479fe",
   "head": "d4e9513e774d2e3bf34696942411398e90a479fe",
   "feat": "d4e9513e774d2e3bf34696942411398e90a479fe",
-  "FEAT_HEAD": "d4e9513e774d2e3bf34696942411398e90a479fe"
+  "FEAT_HEAD": "d4e9513e774d2e3bf34696942411398e90a479fe",
+  "item": "smx mesh vesicle metk life",
+  "item_id": "mi_smx_mesh_vesicle_metk_life",
+  "commit": "401292761",
+  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_metk_life).",
+  "ts": "2026-09-11T20:34:04Z",
+  "host_finish": true,
+  "anti_bloat": true
 }
