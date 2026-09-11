@@ -40,9 +40,9 @@
   "pass": true,
   "cube": "SoT",
   "free_energy": "must_flow",
-  "feat_head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
-  "HEAD": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
-  "head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
-  "commit": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
-  "tip": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
+  "feat_head": "e5a9748943c558fc0ce7511be166d446954388a3",
+  "HEAD": "e5a9748943c558fc0ce7511be166d446954388a3",
+  "head": "e5a9748943c558fc0ce7511be166d446954388a3",
+  "commit": "e5a9748943c558fc0ce7511be166d446954388a3",
+  "tip": "e5a9748943c558fc0ce7511be166d446954388a3"
 }
