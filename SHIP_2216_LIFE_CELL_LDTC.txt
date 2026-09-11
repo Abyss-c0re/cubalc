@@ -1,4 +1,4 @@
-LIFE_CELL_LDTC MI2216 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb->ldtc FEAT=00f30cd8736241b80e7e556db880cefba4ca51ec HEAD=88a6ed5c631c8496cda8e40bc175600bb20e031e
+LIFE_CELL_LDTC MI2216 PASS sum=303 fail=0 continuum=...->mltg->ldtd->ldta->ldtb->ldtc FEAT=00f30cd8736241b80e7e556db880cefba4ca51ec HEAD=07dae9bdb111689e3427244551fc5b12c9f78915
 METHOD ldtc on life_cell after ldtb
 Proof 2216 + atomic_printer_life_ldtc + smx_mesh_vesicle_ldtc_life
 asserts_ok life=184 atomic=58 smx=49 flagship_1620=12 sum=303 asserts_fail=0
