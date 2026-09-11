@@ -1,0 +1,9 @@
+LIFE_CELL_NATA MI2243
+NatA N-terminal acetyltransferase after MAP on life_cell.
+Continuum ...->pepf->pdf->map->nata
+Proof 2243 asserts_ok=41 asserts_fail=0
+atomic_printer_life_nata asserts_ok=17
+smx_mesh_vesicle_nata_life asserts_ok=16
+flagship 1620 asserts_ok=12
+sum life+atomic+smx+flagship = 41+17+16+12 = 86
+Cube is SoT. Free energy must flow.

@@ -1,0 +1,90 @@
+// smx_mesh_vesicle_nata_life.cubalc
+// SMX vesicle mesh: NatA N-terminal acetyl seal after MAP on living vesicle.
+// Continuum ...->pdf->map->nata
+// Cube is SoT. Free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+CUBE vesicle ROLE host PROTON 1
+CUBE dock ROLE construct PROTON 1
+CUBE mind ROLE nanobot PROTON 1
+
+FOLDBITS vesicle "1111111100001111000011110000111111110000111100001111000011110000"
+FOLDBITS dock    "1111000011110000111100001111000011110000111100001111000011111111"
+FOLDBITS mind    "0000111111110000000011111111000000001111111100000000111111110000"
+
+PLUG vesicle dock
+PLUG dock mind
+PLUG vesicle mind
+
+ENTITY cargo OF Cell 1 46 0
+ENTITY hull OF Cell 1 30 0
+PLUG vesicle cargo
+
+IMPULSE vesicle 1
+IMPULSE dock 1
+ENERGYFLOW 3
+FLOW 2
+
+SMX KEY
+SMX EXCHANGE vesicle dock
+SMX EXCHANGE dock mind
+ASSERT SMX_OK == 1 "smx ok"
+ASSERT SMX_TALKS >= 2 "smx talks"
+
+COMPARE vesicle mind
+HARMONY mind
+RESOLVE mind
+ASSERT DECIDE >= 0 "decide floor"
+ASSERT ENERGY > 0 "energy flows"
+
+SEND cargo set_threshold 9
+SEND hull set_threshold 10
+SEND cargo pulse 5
+SEND cargo photosynth 38
+SEND cargo glycolyse 30
+SEND cargo charge 34
+SEND cargo feed 30
+SEND cargo pdf 2
+ASSERT LAST_N == 2 "ves pdf"
+SEND cargo photosynth 18
+SEND cargo charge 22
+SEND cargo feed 14
+SEND cargo map 2
+ASSERT LAST_N == 2 "ves map"
+SEND cargo photosynth 18
+SEND cargo charge 22
+SEND cargo feed 14
+
+GETF cargo heat
+LET ch = LAST_N
+GETF cargo energy
+LET ce = LAST_N
+GETF cargo atp
+LET ca = LAST_N
+SEND cargo nata 3
+ASSERT LAST_N == 3 "ves nata3"
+GETF cargo heat
+ASSERT LAST_N == ch + 3 "ves h+3"
+GETF cargo energy
+ASSERT LAST_N == ce - 3 "ves e-3"
+GETF cargo atp
+ASSERT LAST_N == ca - 3 "ves a-3"
+
+SEND hull pulse 3
+SEND hull photosynth 28
+SEND hull charge 24
+SEND hull feed 22
+SEND hull map 1
+ASSERT LAST_N == 1 "hull map"
+GETF hull heat
+LET hh = LAST_N
+SEND hull nata 2
+ASSERT LAST_N == 2 "hull nata2"
+GETF hull heat
+ASSERT LAST_N == hh + 2 "hull h+2"
+
+GETF cargo alive
+ASSERT LAST_N == 1 "cargo alive"
+ASSERT UNITY >= 0 "unity floor"
