@@ -1,0 +1,232 @@
+// smx_mesh_vesicle_ldtf_life.cubalc
+// SMX vesicle: LdtF/YafK peptide-peptide 3-3 second paralog after LdtD.
+// Cube is SoT. Free energy must flow.
+// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+ENTITY vesicle OF Cell 1 44 0
+ENTITY dock OF Cell 1 28 0
+ENTITY void OF Cell 0 12 0
+
+SEND vesicle set_threshold 8
+SEND dock set_threshold 8
+SEND vesicle pulse 3
+SEND vesicle photosynth 36
+SEND vesicle glycolyse 32
+SEND vesicle pump 20
+SEND vesicle charge 36
+SEND vesicle feed 32
+
+SEND vesicle ampg 3
+ASSERT LAST_N == 3 "ves ampg"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle nagz 3
+ASSERT LAST_N == 3 "ves nagz"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle ampd 3
+ASSERT LAST_N == 3 "ves ampd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle anmk 3
+ASSERT LAST_N == 3 "ves anmk"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murq 3
+ASSERT LAST_N == 3 "ves murq"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle naga 3
+ASSERT LAST_N == 3 "ves naga"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle nagb 3
+ASSERT LAST_N == 3 "ves nagb"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle pfka 3
+ASSERT LAST_N == 3 "ves pfka"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mura 3
+ASSERT LAST_N == 3 "ves mura"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murb 3
+ASSERT LAST_N == 3 "ves murb"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murc 3
+ASSERT LAST_N == 3 "ves murc"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murd 3
+ASSERT LAST_N == 3 "ves murd"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mure 3
+ASSERT LAST_N == 3 "ves mure"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murf 3
+ASSERT LAST_N == 3 "ves murf"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mray 3
+ASSERT LAST_N == 3 "ves mray"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murg 3
+ASSERT LAST_N == 3 "ves murg"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle murj 3
+ASSERT LAST_N == 3 "ves murj"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle mtga 3
+ASSERT LAST_N == 3 "ves mtga"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle uppp 3
+ASSERT LAST_N == 3 "ves uppp"
+SEND vesicle photosynth 20
+SEND vesicle glycolyse 16
+SEND vesicle charge 24
+SEND vesicle feed 16
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle ldta 3
+ASSERT LAST_N == 3 "ves ldta"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle ldtb 3
+ASSERT LAST_N == 3 "ves ldtb"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle ldtc 3
+ASSERT LAST_N == 3 "ves ldtc"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle ldte 3
+ASSERT LAST_N == 3 "ves ldte"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+SEND vesicle ldtf 3
+ASSERT LAST_N == 3 "ves ldtf"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "ves ldtf h+3"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "ves ldtf e-3"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "ves ldtf atp-3"
+
+SEND dock photosynth 24
+SEND dock glycolyse 20
+SEND dock charge 28
+SEND dock feed 20
+SEND dock photosynth 14
+SEND dock glycolyse 12
+SEND dock charge 16
+SEND dock feed 12
+SEND dock ldta 2
+ASSERT LAST_N == 2 "dock ldta"
+SEND dock photosynth 14
+SEND dock glycolyse 12
+SEND dock charge 16
+SEND dock feed 12
+SEND dock ldtb 2
+ASSERT LAST_N == 2 "dock ldtb"
+SEND dock photosynth 14
+SEND dock glycolyse 12
+SEND dock charge 16
+SEND dock feed 12
+SEND dock ldtc 2
+ASSERT LAST_N == 2 "dock ldtc"
+SEND dock photosynth 14
+SEND dock glycolyse 12
+SEND dock charge 16
+SEND dock feed 12
+SEND dock ldte 2
+ASSERT LAST_N == 2 "dock ldte"
+SEND dock photosynth 14
+SEND dock glycolyse 12
+SEND dock charge 16
+SEND dock feed 12
+GETF dock heat
+LET dh = LAST_N
+GETF dock energy
+LET de = LAST_N
+GETF dock atp
+LET da = LAST_N
+SEND dock ldtf 2
+ASSERT LAST_N == 2 "dock ldtf"
+GETF dock heat
+ASSERT LAST_N == dh + 2 "dock ldtf h+2"
+GETF dock energy
+ASSERT LAST_N == de - 2 "dock ldtf e-2"
+GETF dock atp
+ASSERT LAST_N == da - 2 "dock ldtf atp-2"
+
+SEND void ldtf 2
+ASSERT LAST_N == 0 "void ldtf 0"
+
+GETF vesicle alive
+ASSERT LAST_N == 1 "vesicle alive"
+GETF vesicle energy
+ASSERT LAST_N >= 0 "ves energy nonneg"
