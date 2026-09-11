@@ -8,6 +8,6 @@
 - **asserts_fail**: 0
 - **asserts_ok sum**: 412 (life=242 atomic_printer=85 smx=73 flagship_1620=12)
 - **proof**: programs/proof/2251_life_cell_cbs.cubalc
-- **HEAD**: a295db7097a15d1d200b045928e8d2e42e32c8bf
+- **HEAD**: 55061e6178816dac4d1e6f6dbec6487202b870eb
 - **feat**: d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e
 - Cube is SoT. Free energy must flow.
