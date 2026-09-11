@@ -13,11 +13,11 @@
     "sum": 416
   },
   "proof": "programs/proof/2253_life_cell_gsha.cubalc",
-  "HEAD": "40028294528ccd4c607caf3e0cb9cb85312b95f6",
+  "HEAD": "e2c5bdafddac0556d19c9be44856e5eb79d1bdd8",
   "feat": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
   "creed": "Cube is SoT. Free energy must flow.",
-  "head": "40028294528ccd4c607caf3e0cb9cb85312b95f6",
-  "tip": "40028294528ccd4c607caf3e0cb9cb85312b95f6",
+  "head": "e2c5bdafddac0556d19c9be44856e5eb79d1bdd8",
+  "tip": "e2c5bdafddac0556d19c9be44856e5eb79d1bdd8",
   "feat_head": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
   "feat_commit": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
   "FEAT_HEAD": "98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d",
@@ -28,6 +28,5 @@
   "FEATURE": "LIFE_CELL_GSHA",
   "pass": true,
   "sealed": true,
-  "asserts_ok_sum": 416,
-  "note": "Cube is SoT. Free energy must flow."
+  "asserts_ok_sum": 416
 }
