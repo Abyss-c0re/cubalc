@@ -117,6 +117,7 @@
 #   metk n              MetK methionine adenosyltransferase — pay n ATP/energy → heat+n (SAM synthase after RimI); pcr/reserve/age/pmf held; after rimi
 #   sped n              SpeD SAM decarboxylase / AdoMetDC — pay n ATP/energy → heat+n (dcSAM polyamine aminopropyl gate after MetK); pcr/reserve/age/pmf held; after metk
 #   mtnn n              MtnN MTA/SAH nucleosidase — pay n ATP/energy → heat+n (methionine-salvage / AI-2 feeder after SpeD/MetK); pcr/reserve/age/pmf held; after sped
+#   luxs n              LuxS SRH lyase / AI-2 synthase — pay n ATP/energy → heat+n (post-MtnN methionine-salvage / quorum AI-2 gate); pcr/reserve/age/pmf held; after mtnn
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
 #   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
