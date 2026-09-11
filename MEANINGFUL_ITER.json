@@ -61,14 +61,14 @@
   "status": "shipped",
   "proof_status": "PASS",
   "pass": true,
-  "HEAD": "6ccc778bf3e6c9210e05dd3f3039e3a43a329920",
-  "head": "6ccc778bf3e6c9210e05dd3f3039e3a43a329920",
+  "HEAD": "5407c6d4faa9027feb63362dedec381fdc6839ad",
+  "head": "5407c6d4faa9027feb63362dedec381fdc6839ad",
   "commit": "55061e6178816dac4d1e6f6dbec6487202b870eb",
   "tip": "6ccc778bf3e6c9210e05dd3f3039e3a43a329920",
   "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
   "FEAT_HEAD": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
   "ts": 1789163901.5307019,
-  "pinned_head": "6ccc778bf3e6c9210e05dd3f3039e3a43a329920",
+  "pinned_head": "5407c6d4faa9027feb63362dedec381fdc6839ad",
   "pinned_head_short": "6ccc778bf",
   "feat_head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
 }
