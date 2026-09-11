@@ -199,13 +199,18 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
+SEND printer dacd 4
+ASSERT LAST_N == 4 "pre dacd"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy
 LET pe = LAST_N
 GETF printer atp
 LET pa = LAST_N
-SEND printer dacd 4
 SEND printer amph 4
 ASSERT LAST_N == 4 "pr amph"
 GETF printer heat

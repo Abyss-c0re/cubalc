@@ -167,13 +167,18 @@ SEND vesicle photosynth 18
 SEND vesicle glycolyse 16
 SEND vesicle charge 22
 SEND vesicle feed 16
+SEND vesicle dacd 3
+ASSERT LAST_N == 3 "pre dacd"
+SEND vesicle photosynth 18
+SEND vesicle glycolyse 16
+SEND vesicle charge 22
+SEND vesicle feed 16
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
 LET ve = LAST_N
 GETF vesicle atp
 LET va = LAST_N
-SEND vesicle dacd 4
 SEND vesicle amph 3
 ASSERT LAST_N == 3 "ves amph"
 GETF vesicle heat
