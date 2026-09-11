@@ -35,7 +35,7 @@
   "asserts_fail": 0,
   "note": "LdtB after LdtA; YcfS Lpp-PG 3-3 paralog anchor after YbiS primary Lpp-PG anchor",
   "methods": 207,
-  "head": "PENDING",
-  "sha": "PENDING",
-  "pinned_sha": "PENDING"
+  "head": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194",
+  "sha": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194",
+  "pinned_sha": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194"
 }
