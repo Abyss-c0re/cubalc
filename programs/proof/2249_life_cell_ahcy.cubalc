@@ -1,0 +1,284 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_AHCY — AhcY SAH hydrolase after MetK
+# Continuum ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy
+# Gift: AhcY clears SAH into adenosine + Hcy after MetK SAM cycle.
+# Cube is SoT. Free energy must flow.
+
+ENTITY founder OF Cell 1 44 0
+ENTITY quiet OF Cell 1 28 0
+ENTITY corpse OF Cell 0 18 0
+ENTITY empty OF Cell 1 0 0
+ENTITY bed OF Cell 1 52 0
+
+SEND founder set_threshold 10
+SEND quiet set_threshold 12
+SEND bed set_threshold 8
+SEND empty set_threshold 10
+
+SEND founder pulse 5
+SEND founder photosynth 42
+SEND founder glycolyse 34
+SEND founder pump 26
+SEND founder photophos 24
+SEND founder charge 38
+SEND founder feed 36
+GETF founder age
+ASSERT LAST_N == 5 "founder age5"
+GETF founder atp
+ASSERT LAST_N >= 18 "founder atp"
+GETF founder energy
+ASSERT LAST_N >= 18 "founder energy"
+GETF founder pmf
+ASSERT LAST_N >= 4 "founder pmf"
+
+SEND founder pepf 3
+ASSERT LAST_N == 3 "pre pepf"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 26
+SEND founder feed 18
+SEND founder pdf 3
+ASSERT LAST_N == 3 "pre pdf"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 26
+SEND founder feed 18
+SEND founder map 3
+ASSERT LAST_N == 3 "pre map"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder nata 3
+ASSERT LAST_N == 3 "pre nata"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder natb 3
+ASSERT LAST_N == 3 "pre natb"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder natc 3
+ASSERT LAST_N == 3 "pre natc"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder nate 3
+ASSERT LAST_N == 3 "pre nate"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder mete 3
+ASSERT LAST_N == 3 "pre mete"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder metk 3
+ASSERT LAST_N == 3 "pre metk"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+
+GETF founder heat
+LET h0 = LAST_N
+GETF founder energy
+LET e0 = LAST_N
+GETF founder atp
+LET a0 = LAST_N
+GETF founder age
+LET age0 = LAST_N
+GETF founder pcr
+LET pcr0 = LAST_N
+GETF founder reserve
+LET rsv0 = LAST_N
+GETF founder pmf
+LET pmf0 = LAST_N
+GETF founder threshold
+LET thr0 = LAST_N
+
+SEND founder ahcy 4
+ASSERT LAST_N == 4 "ahcy take4"
+GETF founder heat
+ASSERT LAST_N == h0 + 4 "ahcy heat+4"
+GETF founder energy
+ASSERT LAST_N == e0 - 4 "ahcy energy-4"
+GETF founder atp
+ASSERT LAST_N == a0 - 4 "ahcy atp-4"
+GETF founder age
+ASSERT LAST_N == age0 "ahcy age held"
+GETF founder pcr
+ASSERT LAST_N == pcr0 "ahcy pcr held"
+GETF founder reserve
+ASSERT LAST_N == rsv0 "ahcy reserve held"
+GETF founder pmf
+ASSERT LAST_N == pmf0 "ahcy pmf held"
+GETF founder threshold
+ASSERT LAST_N == thr0 "ahcy thr held"
+
+SEND corpse ahcy 3
+ASSERT LAST_N == 0 "dead ahcy0"
+SEND empty ahcy 2
+ASSERT LAST_N == 0 "empty ahcy0"
+
+SEND quiet pulse 4
+SEND quiet photosynth 36
+SEND quiet glycolyse 30
+SEND quiet charge 32
+SEND quiet feed 28
+SEND quiet map 2
+ASSERT LAST_N == 2 "quiet pre map"
+SEND quiet photosynth 20
+SEND quiet charge 24
+SEND quiet feed 16
+SEND quiet nata 2
+ASSERT LAST_N == 2 "quiet pre nata"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet natb 2
+ASSERT LAST_N == 2 "quiet pre natb"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet natc 2
+ASSERT LAST_N == 2 "quiet pre natc"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet nate 2
+ASSERT LAST_N == 2 "quiet pre nate"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet mete 2
+ASSERT LAST_N == 2 "quiet pre mete"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet metk 2
+ASSERT LAST_N == 2 "quiet pre metk"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+GETF quiet heat
+LET qh = LAST_N
+GETF quiet energy
+LET qe = LAST_N
+GETF quiet atp
+LET qa = LAST_N
+SEND quiet ahcy 3
+ASSERT LAST_N == 3 "quiet ahcy3"
+GETF quiet heat
+ASSERT LAST_N == qh + 3 "quiet ahcy h+3"
+GETF quiet energy
+ASSERT LAST_N == qe - 3 "quiet ahcy e-3"
+GETF quiet atp
+ASSERT LAST_N == qa - 3 "quiet ahcy a-3"
+
+SEND bed pulse 6
+SEND bed photosynth 44
+SEND bed glycolyse 36
+SEND bed pump 24
+SEND bed charge 40
+SEND bed feed 36
+SEND bed pdf 2
+ASSERT LAST_N == 2 "bed pdf"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed map 2
+ASSERT LAST_N == 2 "bed map"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed nata 2
+ASSERT LAST_N == 2 "bed nata"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed natb 2
+ASSERT LAST_N == 2 "bed natb"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed natc 2
+ASSERT LAST_N == 2 "bed natc"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed nate 2
+ASSERT LAST_N == 2 "bed nate"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed mete 2
+ASSERT LAST_N == 2 "bed mete"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed metk 2
+ASSERT LAST_N == 2 "bed metk"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+GETF bed heat
+LET bh = LAST_N
+GETF bed energy
+LET be = LAST_N
+GETF bed atp
+LET ba = LAST_N
+SEND bed ahcy 5
+ASSERT LAST_N == 5 "bed ahcy5"
+GETF bed heat
+ASSERT LAST_N == bh + 5 "bed ahcy h+5"
+GETF bed energy
+ASSERT LAST_N == be - 5 "bed ahcy e-5"
+GETF bed atp
+ASSERT LAST_N == ba - 5 "bed ahcy a-5"
+GETF bed energy
+LET e_fin = LAST_N
+GETF bed threshold
+LET thr_fin = LAST_N
+GETF bed ready
+LET rd = LAST_N
+IF e_fin >= thr_fin THEN
+  ASSERT rd == 1 "bed ready when e>=thr"
+END
+IF e_fin < thr_fin THEN
+  ASSERT rd == 0 "bed unready when e<thr"
+END
+
+SEND founder photosynth 16
+SEND founder charge 12
+SEND founder feed 10
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder ahcy 2
+  ASSERT LAST_N == 2 "drain ahcy2"
+END
+GETF founder atp
+LET sa2 = LAST_N
+GETF founder energy
+LET se2 = LAST_N
+ASSERT sa2 <= sa "drain atp not up"
+ASSERT se2 <= se "drain energy not up"
+
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-ahcy"
+
+SEND founder ahcy 0
+ASSERT LAST_N == 0 "ahcy n0"
+
+ASSERT 1 == 1 "LIFE_CELL_AHCY continuum PASS"
