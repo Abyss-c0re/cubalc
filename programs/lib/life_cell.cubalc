@@ -13112,5 +13112,214 @@ CLASS Cell
     RET take
   END
 
+  # MltB: membrane-bound lytic transglycosylase after MltA.
+  # MltB is a membrane-anchored LT that cleaves beta-1,4 MurNAc-GlcNAc bonds
+  # and forms 1,6-anhydro-MurNAc ends for PG turnover after MltA.
+  # Distinct from MltG (endolytic nascent-glycan terminator), Slt70 (soluble LT),
+  # MepS/MepM/MepH (LytM endopeptidases), AmpG/AmpD/AmpH, and prior Mlt family
+  # gates — MltB extends the membrane LT anhydro path so sacculus free-energy
+  # can flow when anhydro-muropeptide recycling demand rises after MltA.
+  # Without MltB after MltA, the post-MltA membrane LT gate is
+  # missing and the continuum loses its MltB branch.
+  # Domain: post-MltA membrane lytic transglycosylase / MltB (not MltA OM-anchored LT, not MltG, not Slt, not AmpH, not Mep family).
+  # Continuum: ...->amph->mlta->mltb
+  #   (MltA -> MltB membrane lytic transglycosylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MltB catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mltb life-force.
+  # Usability: AGI models post-MltA MltB membrane LT energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mltb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # MltC: membrane-bound lytic transglycosylase after MltB.
+  # MltC is a membrane-anchored LT that cleaves beta-1,4 MurNAc-GlcNAc bonds
+  # and forms 1,6-anhydro-MurNAc ends for PG turnover after MltB.
+  # Distinct from MltG (endolytic nascent-glycan terminator), Slt70 (soluble LT),
+  # MepS/MepM/MepH (LytM endopeptidases), AmpG/AmpD/AmpH, and prior Mlt family
+  # gates — MltC extends the membrane LT anhydro path so sacculus free-energy
+  # can flow when anhydro-muropeptide recycling demand rises after MltB.
+  # Without MltC after MltB, the post-MltB membrane LT gate is
+  # missing and the continuum loses its MltC branch.
+  # Domain: post-MltB membrane lytic transglycosylase / MltC (not MltA/MltB, not MltG, not Slt, not AmpH, not Mep family).
+  # Continuum: ...->amph->mlta->mltb->mltc
+  #   (MltB -> MltC membrane lytic transglycosylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MltC catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mltc life-force.
+  # Usability: AGI models post-MltB MltC membrane LT energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mltc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # MltD: membrane-bound lytic transglycosylase after MltC.
+  # MltD is a membrane-anchored LT that cleaves beta-1,4 MurNAc-GlcNAc bonds
+  # and forms 1,6-anhydro-MurNAc ends for PG turnover after MltC.
+  # Distinct from MltG (endolytic nascent-glycan terminator), Slt70 (soluble LT),
+  # MepS/MepM/MepH (LytM endopeptidases), AmpG/AmpD/AmpH, and prior Mlt family
+  # gates — MltD extends the membrane LT anhydro path so sacculus free-energy
+  # can flow when anhydro-muropeptide recycling demand rises after MltC.
+  # Without MltD after MltC, the post-MltC membrane LT gate is
+  # missing and the continuum loses its MltD branch.
+  # Domain: post-MltC membrane lytic transglycosylase / MltD (not MltA/MltB/MltC, not MltG, not Slt, not AmpH, not Mep family).
+  # Continuum: ...->amph->mlta->mltb->mltc->mltd
+  #   (MltC -> MltD membrane lytic transglycosylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MltD catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mltd life-force.
+  # Usability: AGI models post-MltC MltD membrane LT energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mltd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END
