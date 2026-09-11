@@ -2,7 +2,9 @@ SHIP LIFE_CELL_MAP MI 2242
 method: map n — MAP methionine aminopeptidase after PDF
 continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map
 proof: PASS asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
-feat: 24227b8aa chore(mi): seal MI2242 LIFE_CELL_MAP
-HEAD: 0fe2edf2217949c77f19b47ea7d812e0dc341879
+feat: 0c87a9eec feat(life): MAP methionine aminopeptidase after PDF on life_cell (MI2242)
+pin: 981ad2b13 chore(mi): pin MEANINGFUL_ITER MI2242 LIFE_CELL_MAP PASS
+lock: 0fe2edf22 chore(mi): final HEAD tip lock MI2242 LIFE_CELL_MAP
+HEAD: 825fbaa65b786f076f2a75ef9925514e10088178
 status: sealed
 Cube is SoT. Free energy must flow.

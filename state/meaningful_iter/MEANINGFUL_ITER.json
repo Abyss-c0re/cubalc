@@ -47,11 +47,8 @@
   "note": "MAP after PDF; methionine aminopeptidase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_PDF",
   "prev_mi": 2241,
-  "HEAD": "ca796f14631ef145244fb6e1a5c8c774a5c60983",
-  "head": "ca796f14631ef145244fb6e1a5c8c774a5c60983",
-  "FEAT_HEAD": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
-  "feat": "0fe2edf2217949c77f19b47ea7d812e0dc341879",
-  "tip": "ca796f14631ef145244fb6e1a5c8c774a5c60983",
-  "short": "ca796f14631",
-  "ts": 1789150807.245677
+  "HEAD": "825fbaa65b786f076f2a75ef9925514e10088178",
+  "head": "825fbaa65b786f076f2a75ef9925514e10088178",
+  "FEAT_HEAD": "825fbaa65b786f076f2a75ef9925514e10088178",
+  "feat": "825fbaa65b786f076f2a75ef9925514e10088178"
 }
