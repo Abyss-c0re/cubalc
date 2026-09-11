@@ -47,12 +47,12 @@
   "note": "MAP after PDF; methionine aminopeptidase path PASS asserts_fail:0 sum=408",
   "prev_feature": "LIFE_CELL_PDF",
   "prev_mi": 2241,
-  "HEAD": "25c39c76c7026916e0243b411fe33c885791b711",
-  "head": "25c39c76c7026916e0243b411fe33c885791b711",
+  "HEAD": "a4d316c2c9177bb4eda558e796f7c00670df66dd",
+  "head": "a4d316c2c9177bb4eda558e796f7c00670df66dd",
   "FEAT_HEAD": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
   "feat": "3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85",
-  "tip": "25c39c76c7026916e0243b411fe33c885791b711",
-  "pin": "25c39c76c7026916e0243b411fe33c885791b711",
-  "pinned_head": "25c39c76c7026916e0243b411fe33c885791b711",
-  "git_head": "25c39c76c7026916e0243b411fe33c885791b711"
+  "tip": "a4d316c2c9177bb4eda558e796f7c00670df66dd",
+  "pin": "a4d316c2c9177bb4eda558e796f7c00670df66dd",
+  "pinned_head": "a4d316c2c9177bb4eda558e796f7c00670df66dd",
+  "git_head": "a4d316c2c9177bb4eda558e796f7c00670df66dd"
 }
