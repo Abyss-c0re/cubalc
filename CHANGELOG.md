@@ -1,3 +1,10 @@
+## 1.15.1704-usability — LIFE_CELL_DACA MI2219
+
+- Cell.daca DacA/PBP5 D,D-carboxypeptidase after LdtF on continuum
+  ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte->ldtf->daca
+- Proof 2219 + atomic_printer_life_daca + smx_mesh_vesicle_daca_life + flagship 1620
+- asserts_fail:0 sum=309 (190+58+49+12)
+
 ## 1.15.1703-usability — LIFE_CELL_LDTF MI2218
 
 - Cell.ldtf LdtF/YafK L,D-carboxypeptidase/endopeptidase after LdtE on continuum

@@ -180,6 +180,7 @@
 #   ldtc n               post-ldtb LdtC/YnhG Lpp-PG L,D-transpeptidase paralog tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 #   ldte n               post-ldtc LdtE/YcfS Lpp-PG L,D-transpeptidase stress/auxiliary tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 #   ldtf n               post-ldte LdtF/YafK L,D-carboxypeptidase/endopeptidase PG 3-3 edit — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+  #   daca n               post-ldtf DacA/PBP5 D,D-carboxypeptidase terminal D-Ala trim — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -12292,6 +12293,80 @@ CLASS Cell
   # Usability: AGI models post-LdtE LdtF L,D-edit energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD ldtf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # DacA: D,D-carboxypeptidase (PBP5) after LdtF (PG pentapeptide D-Ala trim branch).
+  # DacA/PBP5 is the major periplasmic D,D-carboxypeptidase that removes the terminal
+  # D-Ala from pentapeptide stems after the LdtA-F L,D continuum has densified and
+  # edited 3-3 / Lpp-PG linkages on MltG-terminated strands. Distinct from LdtF/YafK
+  # L,D-carboxypeptidase/endopeptidase: DacA is a DD-enzyme (PBP family) that regulates
+  # cross-link density by trimming donor peptides before PBPs consume them.
+  # Without DacA after LdtF, the post-Ldt D,D-carboxypeptidase gate is missing and the
+  # continuum loses its PBP5 branch.
+  # Domain: post-LdtF DacA/PBP5 D,D-carboxypeptidase (not LdtF/YafK, not LdtA/ErfK,
+  # not LdtB/YbiS, not LdtC/YnhG, not LdtD/YcbB, not LdtE/YcfS, not MltG, not UppP,
+  # not MurJ/MurG/MraY, not MurF/E/D/C/B/A, not MurQ/AnmK/AmpD/NagZ/AmpG, not Slt,
+  # not MepH/MepS D,D-endopeptidases, not PBP1A/LpoA).
+  # Continuum: ...->murj->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte->ldtf->daca
+  #   (LdtF/YafK L,D-edit -> DacA/PBP5 D,D-carboxypeptidase terminal D-Ala trim).
+  # Pay take=min(n,atp,energy) - ATP stand-in for DacA D,D-carboxypeptidase cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - daca life-force.
+  # Usability: AGI models post-LdtF DacA D,D-carboxypeptidase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD daca n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
