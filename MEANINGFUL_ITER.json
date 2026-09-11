@@ -24,9 +24,16 @@
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg->ldtd->ldta->ldtb",
   "asserts_ok": 303,
   "asserts_fail": 0,
+  "asserts_ok_breakdown": {
+    "life": 184,
+    "atomic_printer": 58,
+    "smx": 49,
+    "flagship_1620": 12,
+    "sum": 303
+  },
   "item": "LdtB/YbiS Lpp-PG L,D-transpeptidase after LdtA",
   "item_id": "mi_life_cell_ldtb",
-  "note": "LIFE_CELL_LDTB|LDTB LdtB/YbiS Braun Lpp-PG 3-3 paralog tether after LdtA/ErfK; distinct from LdtA/ErfK, LdtD/YcbB and PBP D,D-TPase",
+  "note": "LIFE_CELL_LDTB|LDTB LdtB/YbiS Braun Lpp-PG 3-3 paralog tether after LdtA; distinct from LdtA/ErfK, LdtD/YcbB and PBP D,D-TPase",
   "status": "sealed",
   "hold_flash": 1,
   "pass": true,
@@ -39,5 +46,15 @@
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "methods": 203,
   "host_finish": true,
-  "ts": "2026-09-11T06:08:43Z"
+  "ts": "2026-09-11T06:08:53Z",
+  "FEAT_HEAD": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "feat_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "HEAD": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "tip": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "pin": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "pinned_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "git_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
+  "commit": "1ff123d4a61e",
+  "short": "1ff123d4a61e"
 }
