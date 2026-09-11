@@ -1,5 +1,13 @@
 ## 1.15.1748-usability — MI 2251 LIFE_CELL_CBS
 
+## 1.15.1749-usability — LIFE_CELL_CGL (MI 2252)
+
+- feat(life): Cgl cystathionine-gamma-lyase after Cbs on life_cell
+- Continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
+- Proof PASS asserts_ok life=243 sum=413 (life=243 atomic_printer=85 smx=73 flagship_1620=12)
+- Cube is SoT. Free energy must flow.
+
+
 - feat(life): Cbs cystathionine-beta-synthase after Ahcy on life_cell
 - continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
 - proof PASS asserts_ok=412 asserts_fail=0 (life 242 + atomic 85 + smx 73 + flagship 12)

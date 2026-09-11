@@ -15285,4 +15285,80 @@ CLASS Cell
   END
 
 
+  # CGL: cystathionine-gamma-lyase after Cbs cystathionine-beta-synthase.
+  # Cgl (cystathionine-gamma-lyase / Cth) cleaves cystathionine to cysteine +
+  # alpha-ketobutyrate + NH3 once Cbs has condensed homocysteine + serine.
+  # After Cbs commits Hcy into the transsulfuration entry, Cgl releases free
+  # cysteine and completes the Met-cycle sulfur free-energy branch that Ahcy
+  # opened by returning Hcy from SAH.
+  # Distinct from Cbs (cystathionine-beta-synthase), Ahcy (SAH hydrolase),
+  # MetF, MetE, MetK, Cbl (unrelated), CSE aliases — Cgl is the post-Cbs
+  # cystathionine-gamma-lyase / cysteine-release gate on the methionine-
+  # cysteine continuum.
+  # Without Cgl after Cbs, cystathionine accumulates and the continuum loses
+  # its cysteine free-energy release branch.
+  # Domain: post-Cbs Cgl/Cth cystathionine-gamma-lyase / cysteine release
+  # (not Cbs, not Ahcy, not MetF, not MetE, not MetK).
+  # Continuum: ...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
+  #   (Cbs cystathionine-beta-synthase -> Cgl cystathionine-gamma-lyase).
+  # Pay take=min(n,atp,energy) - catalytic stand-in for Cgl PLP-dependent
+  # cystathionine gamma-elimination to cysteine.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cgl life-force.
+  # Usability: AGI models post-Cbs Cgl cysteine-release gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cgl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

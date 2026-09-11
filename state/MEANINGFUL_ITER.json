@@ -1,19 +1,19 @@
 {
-  "mi": 2251,
-  "feature": "LIFE_CELL_CBS",
-  "method": "cbs n",
-  "version": "1.15.1748-usability",
-  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs",
+  "mi": 2252,
+  "feature": "LIFE_CELL_CGL",
+  "method": "cgl n",
+  "version": "1.15.1749-usability",
+  "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl",
   "asserts_fail": 0,
   "asserts_ok": {
-    "life": 242,
+    "life": 243,
     "atomic_printer": 85,
     "smx": 73,
     "flagship_1620": 12,
-    "sum": 412
+    "sum": 413
   },
-  "proof": "programs/proof/2251_life_cell_cbs.cubalc",
-  "HEAD": "9aa2ded7ae95f705beba8332f64deb894bbd5e44",
-  "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "proof": "programs/proof/2252_life_cell_cgl.cubalc",
+  "HEAD": "PENDING",
+  "feat": "PENDING",
   "creed": "Cube is SoT. Free energy must flow."
 }
