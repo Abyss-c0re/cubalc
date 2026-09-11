@@ -39,5 +39,7 @@
   "methods": 224,
   "head_before": "d120a971a",
   "prev_feature": "life_cell_ldca",
-  "prev_mi": 2229
+  "prev_mi": 2229,
+  "head": "8aec6dee4726a709df3751df864514e77893b176",
+  "sha": "8aec6dee4726"
 }
