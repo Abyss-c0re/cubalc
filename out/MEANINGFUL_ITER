@@ -4,10 +4,10 @@
 - **FEATURE**: LIFE_CELL_CBS
 - **method**: cbs n
 - **version**: 1.15.1748-usability
-- **continuum**: ...->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
+- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs
 - **asserts_fail**: 0
 - **asserts_ok sum**: 412 (life=242 atomic_printer=85 smx=73 flagship_1620=12)
 - **proof**: programs/proof/2251_life_cell_cbs.cubalc
-- **HEAD**: 4ad5e06e0fff547c2944af80e101b8e13e7d9265
+- **HEAD**: 6ccc778bf3e6c9210e05dd3f3039e3a43a329920
 - **feat**: d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e
 - Cube is SoT. Free energy must flow.
