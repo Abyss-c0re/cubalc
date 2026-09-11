@@ -118,6 +118,7 @@
 #   sped n              SpeD SAM decarboxylase / AdoMetDC — pay n ATP/energy → heat+n (dcSAM polyamine aminopropyl gate after MetK); pcr/reserve/age/pmf held; after metk
 #   mtnn n              MtnN MTA/SAH nucleosidase — pay n ATP/energy → heat+n (methionine-salvage / AI-2 feeder after SpeD/MetK); pcr/reserve/age/pmf held; after sped
 #   luxs n              LuxS SRH lyase / AI-2 synthase — pay n ATP/energy → heat+n (post-MtnN methionine-salvage / quorum AI-2 gate); pcr/reserve/age/pmf held; after mtnn
+#   mete n              MetE cobalamin-independent methionine synthase — pay n ATP/energy → heat+n (post-LuxS Met return / B12-independent methyl gate); pcr/reserve/age/pmf held; after luxs
 #   buttress n           reserve → raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal; yield sheds reserve; ready recompute)
 #   fission              cytokinesis prep: half energy + half reserve as maternal endowment code (de*1000+dr); parent keeps phenotype; ready cleared
 #   bud                  asymmetric cytokinesis / budding: ~1/3 energy + ~1/3 reserve as minority endowment code (de*1000+dr); mother keeps majority; ready cleared
@@ -14970,6 +14971,82 @@ CLASS Cell
     RET take
   END
 
+
+
+
+
+  # METE: cobalamin-independent methionine synthase after LuxS SRH lyase.
+  # MetE (5-methyltetrahydropteroyltriglutamate-homocysteine methyltransferase)
+  # transfers a methyl from CH3-H4PteGlu3 to homocysteine released by LuxS,
+  # regenerating methionine so MetK can rebuild SAM. After MetK→SpeD→MtnN→LuxS
+  # opens salvage and AI-2, MetE closes the methionine return leg without B12,
+  # keeping one-carbon free energy flowing under cobalamin-limited stress.
+  # Distinct from LuxS (SRH lyase / AI-2), MetH (B12-dependent Met synthase),
+  # MetK (SAM synthase), SpeD, MtnN, SahH, MetF — MetE is the post-LuxS
+  # cobalamin-independent methionine synthase gate on the salvage continuum.
+  # Without MetE after LuxS, homocysteine stalls, Met cannot return, and the
+  # continuum loses its B12-independent methyl-return free-energy branch.
+  # Domain: post-LuxS MetE cobalamin-independent methionine synthase
+  # (not LuxS, not MetH, not MetK, not SpeD, not MtnN, not SahH, not MetF).
+  # Continuum: ...->pdf->map->rimi->metk->sped->mtnn->luxs->mete
+  #   (LuxS SRH lyase / AI-2 synthase -> MetE Met synthase B12-independent).
+  # Pay take=min(n,atp,energy) - catalytic stand-in for MetE Zn methyl transfer.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mete life-force.
+  # Usability: AGI models post-LuxS MetE methionine synthase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mete n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 
 END
