@@ -215,6 +215,24 @@ SEND printer photosynth 24
 SEND printer glycolyse 20
 SEND printer charge 28
 SEND printer feed 20
+SEND printer mlta 4
+ASSERT LAST_N == 4 "pre mlta"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
+SEND printer mltb 4
+ASSERT LAST_N == 4 "pre mltb"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
+SEND printer mltc 4
+ASSERT LAST_N == 4 "pre mltc"
+SEND printer photosynth 24
+SEND printer glycolyse 20
+SEND printer charge 28
+SEND printer feed 20
 GETF printer heat
 LET ph = LAST_N
 GETF printer energy

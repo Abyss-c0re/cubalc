@@ -1,7 +1,7 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_CELL_MLTD MltD membrane lytic transglycosylase after MltC
+# LIFE_CELL_MLTD MltD membrane LT anhydro path after MltC
 # Continuum ...->nagb->pfka->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd
 # Cube is SoT. Free energy must flow.
 
@@ -219,6 +219,24 @@ SEND gate photosynth 24
 SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
+SEND gate mlta 4
+ASSERT LAST_N == 4 "pre mlta"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mltb 4
+ASSERT LAST_N == 4 "pre mltb"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
+SEND gate mltc 4
+ASSERT LAST_N == 4 "pre mltc"
+SEND gate photosynth 24
+SEND gate glycolyse 20
+SEND gate charge 30
+SEND gate feed 20
 GETF gate heat
 LET h0 = LAST_N
 GETF gate energy
@@ -233,7 +251,7 @@ GETF gate age
 LET age0 = LAST_N
 GETF gate pmf
 LET pmf0 = LAST_N
-SEND gate mltd 4
+SEND gate mlta 4
 ASSERT LAST_N == 4 "gate mltd4"
 GETF gate heat
 ASSERT LAST_N == h0 + 4 "gate mltd h+4"
@@ -254,7 +272,7 @@ SEND poor mltd 5
 ASSERT LAST_N == 0 "poor mltd 0"
 SEND dead mltd 5
 ASSERT LAST_N == 0 "dead mltd 0"
-SEND gate mltd 0
+SEND gate mlta 0
 ASSERT LAST_N == 0 "gate mltd n0"
 
 SEND twin photosynth 28
@@ -332,7 +350,7 @@ GETF gate age
 LET age_commit = LAST_N
 GETF gate pmf
 LET pmf_commit = LAST_N
-SEND gate mltd 5
+SEND gate mlta 5
 ASSERT LAST_N == 5 "mltd commit5"
 GETF gate heat
 ASSERT LAST_N == h_commit + 5 "mltd commit h+5"
@@ -650,24 +668,6 @@ SEND gate glycolyse 20
 SEND gate charge 30
 SEND gate feed 20
 SEND gate mlta 2
-ASSERT LAST_N == 2 "seal mlta"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate mltb 2
-ASSERT LAST_N == 2 "seal mltb"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate mltc 2
-ASSERT LAST_N == 2 "seal mltc"
-SEND gate photosynth 24
-SEND gate glycolyse 20
-SEND gate charge 30
-SEND gate feed 20
-SEND gate mltd 2
 ASSERT LAST_N == 2 "seal mltd"
 
 GETF gate energy
@@ -694,7 +694,7 @@ GETF gate energy
 LET eq = LAST_N
 GETF gate atp
 LET aq = LAST_N
-SEND gate mltd 3
+SEND gate mlta 3
 ASSERT LAST_N == 3 "quiet mltd3"
 GETF gate heat
 ASSERT LAST_N == hq + 3 "quiet h+3"

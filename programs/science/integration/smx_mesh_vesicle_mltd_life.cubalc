@@ -183,6 +183,24 @@ SEND vesicle photosynth 24
 SEND vesicle glycolyse 20
 SEND vesicle charge 28
 SEND vesicle feed 20
+SEND vesicle mlta 4
+ASSERT LAST_N == 4 "pre mlta"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
+SEND vesicle mltb 4
+ASSERT LAST_N == 4 "pre mltb"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
+SEND vesicle mltc 4
+ASSERT LAST_N == 4 "pre mltc"
+SEND vesicle photosynth 24
+SEND vesicle glycolyse 20
+SEND vesicle charge 28
+SEND vesicle feed 20
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
