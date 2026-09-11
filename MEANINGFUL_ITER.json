@@ -29,5 +29,7 @@
   "note": "LIFE_CELL_MLTG|MLTG PG strand terminator after UppP carrier recycle; distinct from Slt soluble LTG",
   "FEAT_HEAD": "c6395aa420cde522decd54c8adf1b95da2d02ce0",
   "host_finish": true,
-  "ts": "2026-09-11T04:57:57Z"
+  "ts": "2026-09-11T04:57:58Z",
+  "tip": "fd151826810f912bb2cbc8cf49176ed46d2553b0",
+  "HEAD": "fd151826810f912bb2cbc8cf49176ed46d2553b0"
 }
