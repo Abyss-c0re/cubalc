@@ -41,12 +41,12 @@
   "feat_head": "7263bd30567c37c4411162233ced8c7631ddecd8",
   "methods": 200,
   "host_finish": true,
-  "HEAD": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "head": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "tip": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "pin": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "pinned_head": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "git_head": "0055647b0fafcb54f1fee849a5ddc932ffe73e5b",
-  "commit": "0055647b0faf",
-  "short": "0055647b0faf"
+  "HEAD": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "head": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "tip": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "pin": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "pinned_head": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "git_head": "08619a7a04c8b7a5359b0bbed419f39cb05ae652",
+  "commit": "08619a7a04c8",
+  "short": "08619a7a04c8"
 }
