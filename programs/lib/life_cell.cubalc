@@ -13838,4 +13838,77 @@ CLASS Cell
   END
 
 
+  # PepN: cytoplasmic aminopeptidase N after PepD dipeptidase.
+  # PepN (aminopeptidase N / PepN metallopeptidase) clears residual oligopeptides
+  # and N-terminal residues after PepD frees L-Ala + L-Glu from YcjG-epimerized
+  # dipeptides, returning bulk amino-acid free-energy into central catabolism and
+  # re-entry pools under murein-turnover stress. Distinct from PepD (L-Ala-L-Glu
+  # dipeptidase), YcjG (L-Ala-D/L-Glu epimerase), MpaA (gamma-D-Glu-mDAP amidase),
+  # LdcA, Mpl, AmpD, AmiA/B/C - PepN is the broad-specificity cytoplasmic
+  # aminopeptidase gate downstream of PepD dipeptide hydrolysis.
+  # Without PepN after PepD, residual oligopeptide stems stall and the recycling
+  # continuum loses its terminal aminopeptidase free-energy release branch.
+  # Domain: post-PepD PepN cytoplasmic aminopeptidase N / oligopeptide hydrolase
+  # (not PepD, not YcjG, not MpaA, not LdcA, not Mpl, not AmpD, not Ami family).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn
+  #   (PepD L-Ala-L-Glu dipeptidase -> PepN aminopeptidase N).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepN catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepn life-force.
+  # Usability: AGI models post-PepD PepN aminopeptidase recycling gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepn n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
