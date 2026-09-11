@@ -1,0 +1,3 @@
+LIFE_CELL_LDTE MI2217 PASS asserts_fail:0 sum=303 continuum ...->ldtc->ldte VERSION 1.15.1702-usability
+proof programs/proof/2217_life_cell_ldte.cubalc
+Cell.ldte LdtE/YcfS Lpp-PG L,D-transpeptidase after LdtC

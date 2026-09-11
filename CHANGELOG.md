@@ -1,3 +1,10 @@
+## 1.15.1702-usability — LIFE_CELL_LDTE MI2217
+
+- Cell.ldte LdtE/YcfS Lpp–PG L,D-transpeptidase after LdtC
+- Continuum ...->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte
+- Proof 2217 + atomic_printer_life_ldte + smx_mesh_vesicle_ldte_life
+- asserts_fail:0 sum=303 (184+58+49+12)
+
 ## 1.15.1701-usability — LIFE_CELL_LDTC MI2216
 
 - Cell.ldtc LdtC/YcfS Lpp–PG L,D-transpeptidase after LdtB

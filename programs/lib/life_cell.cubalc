@@ -178,6 +178,7 @@
 #   ldta n               post-ldtd LdtA/ErfK Lpp-PG L,D-transpeptidase Braun tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 #   ldtb n               post-ldta LdtB/YbiS Lpp-PG L,D-transpeptidase paralog tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 #   ldtc n               post-ldtb LdtC/YnhG Lpp-PG L,D-transpeptidase paralog tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+#   ldte n               post-ldtc LdtE/YcfS Lpp-PG L,D-transpeptidase stress/auxiliary tether — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
@@ -12137,6 +12138,84 @@ CLASS Cell
   # Usability: AGI models post-LdtB LdtC Lpp-PG triad-close energy gate under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD ldtc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LdtE: L,D-transpeptidase (YcfS) after LdtC (Lpp-PG stress/auxiliary branch).
+  # LdtE/YcfS is a periplasmic L,D-transpeptidase that covalently anchors Braun's
+  # lipoprotein (Lpp) Lys side-chain to meso-DAP of PG acceptor peptides via 3-3
+  # Lpp-PG cross-links after the LdtA/ErfK primary tether, LdtB/YbiS paralog reserve,
+  # and LdtC/YnhG triad-close have established OM-sacculus coupling on LdtD-densified,
+  # MltG-terminated glycan strands. Distinct from LdtA/ErfK (primary Lpp-PG TPase),
+  # from LdtB/YbiS (first paralog), from LdtC/YnhG (triad close), from LdtD/YcbB
+  # donor-tetrapeptide 3-3 peptide bridges, and from classical D,D-transpeptidase PBPs
+  # — LdtE specializes in stress-inducible/auxiliary Lpp-PG tethering that extends the
+  # Ldt Lpp-PG paralog set and buffers OM-sacculus free-energy coupling under envelope
+  # stress and stationary-phase remodeling.
+  # Without LdtE after LdtC, the post-triad Lpp-PG stress branch is missing and the
+  # continuum loses its YcfS gate.
+  # Domain: post-LdtC LdtE/YcfS Lpp-PG L,D-transpeptidase (not LdtA/ErfK primary
+  # Lpp-PG TPase, not LdtB/YbiS paralog, not LdtC/YnhG triad close, not LdtD/YcbB
+  # peptide 3-3 TPase, not MltG membrane lytic TG, not UppP, not MurJ/MurG/MraY,
+  # not MurF/E/D/C/B/A, not MurQ/AnmK/AmpD/NagZ/AmpG, not Slt, not PBP/LpoA/MepH).
+  # Continuum: ...->murj->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte
+  #   (LdtC/YnhG Lpp-PG triad close -> LdtE/YcfS Lpp-PG stress/auxiliary branch).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LdtE Lpp-PG L,D cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ldte life-force.
+  # Usability: AGI models post-LdtC LdtE Lpp-PG stress-branch energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ldte n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
