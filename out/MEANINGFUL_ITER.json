@@ -58,13 +58,15 @@
   "note": "Cbs after Ahcy; cystathionine-beta-synthase / transsulfuration entry PASS asserts_fail:0 sum=412",
   "prev_feature": "LIFE_CELL_AHCY",
   "prev_mi": 2250,
-  "status": "shipping",
+  "status": "shipped",
   "proof_status": "PASS",
   "pass": true,
-  "ts": 1789163781.391635,
+  "ts": 1789163833.459195,
   "feat_head": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
-  "HEAD": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
-  "head": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
-  "commit": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4",
-  "tip": "e8f7ca373af8365f83b120e2c06e75bc495ed2b4"
+  "HEAD": "4ad5e06e0fff547c2944af80e101b8e13e7d9265",
+  "head": "4ad5e06e0fff547c2944af80e101b8e13e7d9265",
+  "commit": "4ad5e06e0fff547c2944af80e101b8e13e7d9265",
+  "tip": "4ad5e06e0fff547c2944af80e101b8e13e7d9265",
+  "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "FEAT_HEAD": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
 }
