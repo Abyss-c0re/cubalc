@@ -1,0 +1,14 @@
+SHIP LIFE_CELL_YCJG MI2231
+method: ycjg n
+continuum: ...->mpl->ldca->mpaa->ycjg
+proofs:
+  programs/lib/life_cell.cubalc
+  programs/proof/2231_life_cell_ycjg.cubalc (asserts_ok=176 fail=0)
+  programs/science/integration/atomic_printer_life_ycjg.cubalc (67/0)
+  programs/science/integration/smx_mesh_vesicle_ycjg_life.cubalc (56/0)
+  programs/proof/1620_atomic_printer_life_force.cubalc (12/0)
+sum asserts_ok=311 asserts_fail=0
+methods=225
+feat_head=5dd0da7fac6e14ebd8dbb708274504d1ddb06b59
+VERSION=1.15.1728-usability
+cube=SoT free_energy=must_flow
