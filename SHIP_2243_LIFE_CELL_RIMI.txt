@@ -4,7 +4,7 @@ continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->
 proof: PASS asserts_fail:0 life=240 atomic=84 smx=72 flagship=12 sum=408
 feat: 3b6840d3d feat(life): RimI N-terminal acetyltransferase after MAP on life_cell (MI2243)
 pin: HEAD tip lock MI2243 LIFE_CELL_RIMI
-HEAD: 38a68143b8b94588aaf51082a61ea7e1c74fed8c
+HEAD: 3766c17a303a848da37140263aae63b93786840a
 FEAT_HEAD: 3b6840d3d7c0733a1cf01bf0c1eebd56f1bc5c85
 status: sealed verified_run
 Cube is SoT. Free energy must flow.
