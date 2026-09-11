@@ -43,5 +43,13 @@
   "summary": "LIFE_CELL_UPPP MI2208 PASS asserts_ok=286",
   "ts": "2026-09-11T03:18:02Z",
   "methods": 191,
-  "host_finish": true
+  "host_finish": true,
+  "HEAD": "680e5c843df19f1729adcbd384432f1120d8ee33",
+  "head": "680e5c843df19f1729adcbd384432f1120d8ee33",
+  "tip": "680e5c843df19f1729adcbd384432f1120d8ee33",
+  "pin": "680e5c843df19f1729adcbd384432f1120d8ee33",
+  "pinned_head": "680e5c843df19f1729adcbd384432f1120d8ee33",
+  "feat_head": "26778fee8c46c3c970d97dc90e41b8fda13569c7",
+  "commit": "680e5c843df1",
+  "short": "680e5c843df1"
 }
