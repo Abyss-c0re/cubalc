@@ -49,12 +49,12 @@
   "ts": "2026-09-11T06:08:53Z",
   "FEAT_HEAD": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
   "feat_head": "1ff123d4a61ee7ed12373da60e49cf9926f1a296",
-  "HEAD": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "head": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "tip": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "pin": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "pinned_head": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "git_head": "8cedb8edc207af7ec78e26d3693f4b4634f74c60",
-  "commit": "8cedb8edc207",
-  "short": "8cedb8edc207"
+  "HEAD": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "head": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "tip": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "pin": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "pinned_head": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "git_head": "ca49983726fc2942eb729fb20491e0ac7158efe7",
+  "commit": "ca49983726fc",
+  "short": "ca49983726fc"
 }
