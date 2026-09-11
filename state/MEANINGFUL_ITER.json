@@ -2,24 +2,21 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2213,
   "MEANINGFUL_ITER": 2213,
-  "iter": 2213,
+  "iter": 2214,
   "n": 2213,
   "mi": 2213,
-  "version": "1.15.1701-usability",
+  "version": "1.15.1702-usability",
   "VERSION": "1.15.1701-usability",
   "feature": "life_cell_ldtb",
   "FEATURE": "LIFE_CELL_LDTB",
   "name": "LIFE_CELL_LDTB",
-  "title": "life cell ldtb",
+  "title": "life cell",
   "label": "LIFE_CELL_LDTB",
   "method": "ldtb n",
   "ship": "2213_life_cell_ldtb",
   "proof": "programs/proof/2213_life_cell_ldtb.cubalc",
   "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2213_life_cell_ldtb.cubalc",
-    "programs/science/integration/atomic_printer_life_ldtb.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_ldtb_life.cubalc"
+    "programs/lib/life_cell.cubalc"
   ],
   "continuum": "...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb",
   "domain": "LdtB YcfS Lpp-PG L,D-transpeptidase paralog after LdtA",
@@ -37,5 +34,12 @@
   "methods": 207,
   "head": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194",
   "sha": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194",
-  "pinned_sha": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194"
+  "pinned_sha": "5f104ee1fbfaf9756f0d2013c8f26aa88ecae194",
+  "item": "life cell",
+  "item_id": "mi_life_cell",
+  "commit": "2f5eb5612",
+  "summary": "Host-finished MI ship after nanobot partial (life_cell).",
+  "ts": "2026-09-11T07:01:09Z",
+  "host_finish": true,
+  "anti_bloat": true
 }

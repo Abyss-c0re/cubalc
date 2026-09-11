@@ -12455,4 +12455,77 @@ CLASS Cell
 
 
 
+  # LdtC: L,D-transpeptidase (YnhG) third-route Lpp-PG anchor paralog after LdtB.
+  # LdtC/YnhG forms a third-route 3-3 meso-DAP-Lpp (Lys) bridge that tethers
+  # Braun lipoprotein to the sacculus after LdtB/YcfS second-route Lpp-PG anchor.
+  # Triple-redundant OM-PG coupling so envelope integrity holds when LdtA/LdtB
+  # routes are limiting under turgor or envelope stress.
+  # Without LdtC after LdtB, Lpp-PG anchor capacity stays dual-route and OM-PG
+  # coupling thins under extreme turgor even when MltG terminate and LdtA/LdtB exist.
+  # Domain: post-LdtB Lpp-PG L,D-transpeptidase paralog / LdtC/YnhG (not LdtA/YbiS
+  # primary Lpp LDT, not LdtB/YcfS second-route Lpp LDT, not LdtD/YcbB peptide-
+  # peptide 3-3 LDT, not MltG endolytic LT, not DacA/PBP5 DD-CPase, not UppP,
+  # not Slt bulk LT).
+  # Continuum: ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc
+  #   (LdtB YcfS Lpp-PG anchor paralog -> LdtC YnhG Lpp-PG anchor third paralog).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LdtC Lpp-anchor LDT cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ldtc life-force.
+  # Usability: AGI models post-LdtB LdtC Lpp-PG third-paralog energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ldtc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
