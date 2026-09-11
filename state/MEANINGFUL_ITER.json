@@ -39,5 +39,10 @@
   "version": "1.15.1748-usability",
   "pass": true,
   "cube": "SoT",
-  "free_energy": "must_flow"
+  "free_energy": "must_flow",
+  "feat_head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "HEAD": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "head": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "commit": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
+  "tip": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e"
 }
