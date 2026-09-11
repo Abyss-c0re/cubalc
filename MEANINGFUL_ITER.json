@@ -13,13 +13,12 @@
     "sum": 412
   },
   "proof": "programs/proof/2251_life_cell_cbs.cubalc",
-  "HEAD": "81f29a72cb94323ae7715a604af734e4497b9eab",
+  "HEAD": "0481b6fafc9a5f8574b11a19b8413b9a2fb0c1fa",
   "feat": "d8e28ac63bbc7f97a5ee8dd6e33d876d2cd4815e",
   "proof_run": {
     "ok": true,
     "asserts_ok": 242,
-    "asserts_fail": 0,
-    "runner": "out/cubalc -L programs/lib"
+    "asserts_fail": 0
   },
   "creed": "Cube is SoT. Free energy must flow."
 }
