@@ -15246,4 +15246,78 @@ CLASS Cell
   END
 
 
+  # GshA: glutamate-cysteine ligase after Cgl cystathionine-gamma-lyase.
+  # GshA (GCLC / GshA / gamma-GCS) ligates L-glutamate + L-cysteine + ATP ->
+  # gamma-L-glutamyl-L-cysteine + ADP + Pi (rate-limiting first step of
+  # glutathione biosynthesis). Cgl harvests free cysteine from cystathionine;
+  # GshA commits that Cys into the gamma-Glu-Cys dipeptide that GshB later
+  # seals with glycine into GSH — the cell's master thiol redox buffer.
+  # Distinct from Cgl (cystathionine->cysteine lyase), Cbs (Hcy+Ser->cystathionine),
+  # AhcY (SAH hydrolase), GshB (glutathione synthetase), Gor/Gsr (GSSG reductase),
+  # Gpx (GSH peroxidase) — GshA is the Cys+Glu ATP-dependent gamma-ligase after Cgl.
+  # Without GshA after Cgl, free cysteine stalls as a monomer pool and never enters
+  # the glutathione free-energy shield that protects Fe-S clusters and protein thiols.
+  # Domain: post-Cgl GshA glutamate-cysteine ligase / Cys+Glu->gamma-Glu-Cys
+  # (not Cgl, not Cbs, not GshB, not Gor, not Gpx, not TrxB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha
+  #   (Cgl cystathionine-gamma-lyase -> GshA glutamate-cysteine ligase / GSH gate).
+  # Pay take=min(n,atp,energy) - ATP stand-in for GshA gamma-ligase ATP hydrolysis.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gsha life-force.
+  # Usability: AGI models post-Cgl GshA glutathione-gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gsha n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
