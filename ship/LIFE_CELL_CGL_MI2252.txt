@@ -1,9 +1,9 @@
-LIFE_CELL_CGL MI2252 PASS
+LIFE_CELL_CGL MI 2252
 method: cgl n
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl
+proof: PASS asserts_ok=413 asserts_fail=0 (life=243 atomic=85 smx=73 flagship=12)
 version: 1.15.1750-usability
-continuum: ...->ahcy->cbs->cgl
-asserts_fail: 0 asserts_ok_sum: 413 (life=243)
-proof: programs/proof/2252_life_cell_cgl.cubalc
-HEAD: 04b9c7b7413b206a3e511f59975229473f855be4
-feat: f56f610af1c73ca7b9464e523a9befd1a833b0d6
+proof_file: programs/proof/2252_life_cell_cgl.cubalc
+HEAD: b29b768e90774c3c8bec89c8095476afe6de46aa
+feat: 090b8a0594a6d0afd04d16392983927f3ff4b58c
 Cube is SoT. Free energy must flow.
