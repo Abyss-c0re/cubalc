@@ -48,5 +48,10 @@
   "science": [
     "programs/science/integration/atomic_printer_life_pdf.cubalc",
     "programs/science/integration/smx_mesh_vesicle_pdf_life.cubalc"
-  ]
+  ],
+  "feat": "d19d271bbd40322c4dd89e12d70889ccb9eb805f",
+  "feat_commit": "d19d271bbd40322c4dd89e12d70889ccb9eb805f",
+  "feat_head": "d19d271bbd40322c4dd89e12d70889ccb9eb805f",
+  "FEAT_HEAD": "d19d271bbd40322c4dd89e12d70889ccb9eb805f",
+  "head": "d19d271bbd40322c4dd89e12d70889ccb9eb805f"
 }
