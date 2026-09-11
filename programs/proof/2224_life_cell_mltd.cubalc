@@ -568,8 +568,8 @@ GETF printer energy
 LET pe = LAST_N
 GETF printer atp
 LET pa = LAST_N
-SEND printer mlta 4
-ASSERT LAST_N == 4 "pr mlta"
+SEND printer mltd 4
+ASSERT LAST_N == 4 "pr mltd"
 GETF printer heat
 ASSERT LAST_N == ph + 4 "pr mltd h+4"
 GETF printer energy

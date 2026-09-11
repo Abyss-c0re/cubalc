@@ -1,7 +1,7 @@
 // atomic_printer_life_mltd.cubalc
-// Atomic printer: MltD membrane lytic transglycosylase after MltC.
+// Atomic printer: MltD membrane LT anhydro path after MltC.
 // Cube is SoT. Free energy must flow.
-# Continuum ...->nagb->pfka->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd
+// Continuum ...->mura->murb->murc->murd->mure->murf->mray->murg->murj->mtga->uppp->ldtd->mltg->ldta->ldtb->ldtc->ldte->ldtf->daca->dacb->dacc->dacd->amph->mlta->mltb->mltc->mltd
 
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
