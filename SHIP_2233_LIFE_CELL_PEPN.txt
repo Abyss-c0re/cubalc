@@ -1,0 +1,5 @@
+LIFE_CELL_PEPN MI2233
+PepN aminopeptidase N recycling gate after PepD
+Proof PASS asserts_fail:0 asserts_ok:197 stmts:15137
+Continuum ...->ycjg->pepd->pepn
+Cube is SoT. Free energy must flow.
