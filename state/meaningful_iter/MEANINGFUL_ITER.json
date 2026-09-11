@@ -28,11 +28,11 @@
   "cube": "SoT",
   "free_energy": "must_flow",
   "asserts_ok": {
-    "life": 148,
-    "atomic_printer": 60,
-    "smx": 48,
+    "life": 149,
+    "atomic_printer": 57,
+    "smx": 47,
     "flagship_1620": 12,
-    "sum": 268
+    "sum": 265
   },
   "asserts_fail": 0,
   "unity": 1.0,
