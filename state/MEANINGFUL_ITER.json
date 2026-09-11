@@ -41,9 +41,14 @@
   "prior_feature": "LIFE_CELL_DACA",
   "sealed": true,
   "anti_bloat": true,
-  "summary": "LIFE_CELL_DACB MI2218 PASS asserts_ok=248 asserts_fail:0",
+  "summary": "LIFE_CELL_DACB MI2218 PASS asserts_ok=248 asserts_fail:0 tip==pin sealed ship=a291a499007",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "method_name": "dacb",
   "domain": "DacB PBP4 DD-carboxypeptidase/endopeptidase after DacA",
-  "gift": "PBP4 remodel after DacA PBP5 DD-CPase so 4-3 cross-links open and sacculus peptide balance holds"
+  "gift": "PBP4 remodel after DacA PBP5 DD-CPase so 4-3 cross-links open and sacculus peptide balance holds",
+  "head": "a291a499007ef89e93d614bb81b7db1dbce41e0c",
+  "tip": "a291a499007ef89e93d614bb81b7db1dbce41e0c",
+  "pin": "a291a499007ef89e93d614bb81b7db1dbce41e0c",
+  "sha": "a291a499007ef89e93d614bb81b7db1dbce41e0c",
+  "pinned_sha": "a291a499007ef89e93d614bb81b7db1dbce41e0c"
 }
