@@ -43,5 +43,8 @@
   "anti_bloat": true,
   "pass_": true,
   "summary": "LIFE_CELL_UPPP MI2208 PASS asserts_ok life=184 atomic=53 smx=49 flagship_1620=12 sum=298 asserts_fail:0",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
+  "head": "658f143e604626033c793bd362a688c33c85a83b",
+  "tip": "658f143e604626033c793bd362a688c33c85a83b",
+  "git_head": "658f143e604626033c793bd362a688c33c85a83b"
 }
