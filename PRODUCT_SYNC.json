@@ -1,10 +1,10 @@
 {
   "product": "cubalc-flow",
-  "meaningful_iter": 2240,
-  "version": "1.15.1738-usability",
+  "meaningful_iter": 2241,
+  "version": "1.15.1739-usability",
   "head": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
   "short": "bf5b09e7f92a",
-  "feature": "LIFE_CELL_PEPF",
+  "feature": "LIFE_CELL_PDF",
   "proof_status": "PASS",
   "tip_eq_pin": true,
   "pin": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
@@ -18,5 +18,5 @@
   "sha": "bf5b09e7f92a8b0d60bfb57c9229ace30514c2a4",
   "mi": 2178,
   "feat": "LIFE_CELL_FISPAY",
-  "method": "fispay n"
+  "method": "pdf n"
 }

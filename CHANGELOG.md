@@ -1,3 +1,13 @@
+# Changelog
+
+## 1.15.1739-usability — MI2241 LIFE_CELL_PDF (pdf n)
+
+- feat(life): PDF peptide deformylase after PepF on life_cell
+- Continuum ...->pepe->pept->pepf->pdf
+- Proof programs/proof/2241_life_cell_pdf.cubalc asserts_ok=240 fail=0
+- Science atomic_printer_life_pdf + smx_mesh_vesicle_pdf_life (84+72)
+- Flagship 1620 regression PASS; free energy must flow
+
 ## MI 2240 — LIFE_CELL_PEPF (pepf n)
 
 - **Method:** `pepf n` — PepF oligopeptidase F after PepT tripeptidase

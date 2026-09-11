@@ -14441,4 +14441,80 @@ CLASS Cell
 
 
 
+
+  # PepDF / PDF: peptide deformylase after PepF oligopeptidase F.
+  # PDF (peptide deformylase, def) hydrolyzes the N-formyl group from initiator
+  # N-formylmethionine on nascent and recycled peptides once PepF has opened the
+  # oligopeptide gate. Formyl removal is obligatory before methionine aminopeptidase
+  # can expose mature N-termini; without PDF, fMet stalls, MAP is blocked, and free
+  # formate/Met nitrogen cannot re-enter one-carbon and amino-acid pools under
+  # translation + murein turnover stress.
+  # Distinct from PepF (oligopeptidase F), PepT (tripeptidase), PepE (Asp-Xaa
+  # dipeptidase), PepA/B/D/N/P/Q, IF2 (fMet-tRNA delivery), translate (elongation),
+  # cleave (ER signal peptidase) — PDF is the deformylase free-energy gate on the
+  # post-PepF continuum that unlocks N-terminal maturation.
+  # Domain: post-PepF peptide deformylase / N-formyl hydrolase
+  # (not PepF, not PepT, not IF2, not MAP, not translate, not cleave).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf
+  #   (PepF oligopeptidase F -> PDF peptide deformylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Fe2+-PDF catalytic cycle + formate release.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pdf life-force.
+  # Usability: AGI models post-PepF PDF deformylase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pdf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
