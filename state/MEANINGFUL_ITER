@@ -38,5 +38,15 @@
   "note": "PepP after PepQ; Xaa-Pro aminopeptidase P recycling path PASS asserts_fail:0 sum=394",
   "methods": 229,
   "prev_feature": "LIFE_CELL_PEPQ",
-  "prev_mi": 2234
+  "prev_mi": 2234,
+  "feat_head": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "FEAT_HEAD": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "head_before": "4965802bd",
+  "commit": "798ef62d4",
+  "head": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "head_short": "798ef62d4",
+  "HEAD": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "tip": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "pin": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c",
+  "pinned_head": "798ef62d4ba96e29e78bead5a38b2494d2b2f00c"
 }
