@@ -14000,7 +14000,7 @@ CLASS Cell
   # continuum loses its aminopeptidase-P free-energy release branch.
   # Domain: post-PepQ PepP Xaa-Pro aminopeptidase P / oligopeptide hydrolase
   # (not PepQ, not PepN, not PepD, not YcjG, not MpaA, not LdcA, not Mpl).
-  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa
   #   (PepQ Xaa-Pro dipeptidase / prolidase -> PepP Xaa-Pro aminopeptidase P).
   # Pay take=min(n,atp,energy) - ATP stand-in for PepP catalytic cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
@@ -14060,6 +14060,82 @@ CLASS Cell
     RET take
   END
 
+
+
+
+  # PepA: leucyl aminopeptidase A after PepP Xaa-Pro aminopeptidase P.
+  # PepA (aminopeptidase A / PepA) is a broad-specificity zinc metallopeptidase
+  # that cleaves remaining N-terminal residues from oligopeptides after the
+  # proline-specialized PepQ/PepP gates finish Xaa-Pro stems. PepP frees Xaa
+  # when Pro sits at P1' on longer fragments; residual non-Pro N-termini still
+  # need a general leucyl aminopeptidase so free AA fully re-enter metabolism.
+  # Distinct from PepP (Xaa-Pro aminopeptidase P), PepQ (Xaa-Pro dipeptidase /
+  # prolidase), PepN (aminopeptidase N), PepD (L-Ala-L-Glu dipeptidase), YcjG,
+  # MpaA, LdcA, Mpl — PepA is the broad leucyl aminopeptidase gate downstream
+  # of PepP on the murein peptide recycling continuum.
+  # Without PepA after PepP, residual non-Pro N-termini stall and the recycling
+  # continuum loses its general aminopeptidase-A free-energy release branch.
+  # Domain: post-PepP PepA leucyl aminopeptidase A / broad N-terminal hydrolase
+  # (not PepP, not PepQ, not PepN, not PepD, not YcjG, not MpaA, not LdcA, not Mpl).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa
+  #   (PepP Xaa-Pro aminopeptidase P -> PepA leucyl aminopeptidase A).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepA catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepa life-force.
+  # Usability: AGI models post-PepP PepA leucyl aminopeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 
 END
