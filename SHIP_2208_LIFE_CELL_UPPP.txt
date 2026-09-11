@@ -3,4 +3,4 @@ UppP/BacA C55-PP phosphatase after MurJ; carrier recycle after lipid-II flip.
 Continuum ...->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp
 Proof 2208 + atomic_printer_life_uppp + smx_mesh_vesicle_uppp_life
 asserts_ok life=184 atomic=53 smx=49 flagship_1620=12 sum=298 asserts_fail=0
-feat 9aa379794c16110437641600c592c3835795706e
+feat b8770f693c6739de59350a990b57277e8d88879e
