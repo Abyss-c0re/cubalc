@@ -1,4 +1,4 @@
-## 1.15.1705-usability — LIFE_CELL_LDTF MI2218
+## 1.15.1703-usability — LIFE_CELL_LDTF MI2218
 
 - Cell.ldtf LdtF/YafK L,D-carboxypeptidase/endopeptidase after LdtE on continuum
   ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp->mltg->ldtd->ldta->ldtb->ldtc->ldte->ldtf
