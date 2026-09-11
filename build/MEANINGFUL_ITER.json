@@ -19,19 +19,21 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2208_life_cell_uppp.cubalc",
     "programs/science/integration/atomic_printer_life_uppp.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_uppp_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_uppp_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd->mure->murf->mray->murg->murj->uppp",
   "asserts_ok": {
     "life": 184,
     "atomic_printer": 53,
     "smx": 49,
-    "sum": 286
+    "flagship_1620": 12,
+    "sum": 298
   },
   "asserts_fail": 0,
   "item": "life cell uppp BacA/UppP C55-PP phosphatase after murj continuum free-energy spark-safe",
   "item_id": "mi_life_cell_uppp",
-  "note": "UppP/BacA undecaprenyl-PP phosphatase after MurJ; recycles C55 carrier for MraY; CUBALC continuum PG membrane carrier recycle",
+  "note": "UppP/BacA undecaprenyl-PP phosphatase after MurJ; recycles C55-PP to C55-P carrier for MraY; CUBALC continuum PG membrane carrier recycle",
   "status": "sealed",
   "hold_flash": 1,
   "pass": true,
@@ -40,16 +42,18 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_UPPP MI2208 PASS asserts_ok=286",
+  "summary": "LIFE_CELL_UPPP MI2208 tip==pin sealed PASS asserts_ok=298",
   "ts": "2026-09-11T03:18:02Z",
   "methods": 191,
   "host_finish": true,
-  "HEAD": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "head": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "tip": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "pin": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "pinned_head": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "feat_head": "26778fee8c46c3c970d97dc90e41b8fda13569c7",
-  "commit": "699dda2ed34d",
-  "short": "699dda2ed34d"
+  "HEAD": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "head": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "tip": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "pin": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "pinned_head": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "feat_head": "df4ee0830b0ab0f751e4d4d1f9786f6742419e69",
+  "commit": "58b50a5f7f32",
+  "short": "58b50a5f7f32",
+  "git_head": "58b50a5f7f32d4494cea225cd32be616f38852e0",
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
