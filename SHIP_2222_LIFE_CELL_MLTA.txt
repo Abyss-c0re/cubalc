@@ -1,0 +1,4 @@
+LIFE_CELL_MLTA MI2222
+METHOD mlta n: post-AmpH membrane lytic transglycosylase A (OM-anchored LT).
+Proof 2222 + atomic_printer + smx_mesh PASS asserts_fail:0 sum life+ap+smx.
+Continuum ...->daca->dacb->dacc->dacd->amph->mlta
