@@ -170,6 +170,8 @@
 #   rf1 n                post-efg class-I release factor GGQ ester hydrolysis peptide release — pay min(n,energy) → heat +n + energy -n + reserve +n; age/pmf/sp/thr/atp/pcr held; ready recompute
 #   rf3 n                post-rf1 class-II RF3·GTP release-factor ejectase / termination recycle — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n; age/reserve/pmf/sp/thr held; ready recompute
 #   rrf n                post-rf3 ribosome recycling factor RRF·EF-G·GTP 70S split / IF3 mRNA release — pay min(n,atp,energy,pcr) → heat +n + energy -n + atp -n + pcr -n + reserve +n; age/pmf/sp/thr held; ready recompute
+#   murg n               post-mray MurG lipid-II GlcNAc transferase — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
+#   murj n               post-murg MurJ lipid-II flippase / inner→periplasmic leaflet flip — pay min(n,atp,energy) → heat +n + atp -n + energy -n; age/pcr/reserve/pmf/sp/thr held; ready recompute
 
 CLASS Cell
   FIELD alive 0
