@@ -23,16 +23,16 @@
   ],
   "continuum": "...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd",
   "asserts_ok": {
-    "life": 137,
-    "atomic_printer": 32,
-    "smx": 26,
+    "life": 133,
+    "atomic_printer": 36,
+    "smx": 30,
     "flagship_1620": 12,
-    "sum": 207
+    "sum": 211
   },
   "asserts_fail": 0,
   "item": "life_cell murd post-murc UDP-MurNAc-L-Ala:D-Glu ligase continuum free-energy MurD D-Glu stem ligation spark-safe",
   "item_id": "mi_life_cell_murd",
-  "note": "METHOD murd n after murc; PASS life=137 atomic=32 smx=26 flag=12 sum=207",
+  "note": "METHOD murd n after murc; PASS life=133 atomic=36 smx=30 flag=12 sum=211",
   "status": "sealed",
   "hold_flash": 1,
   "pass": true,
@@ -41,13 +41,14 @@
   "sealed": true,
   "anti_bloat": true,
   "pass_": true,
-  "summary": "LIFE_CELL_MURD MI2202 tip==pin 03f48a3eb PASS sum=207",
+  "summary": "LIFE_CELL_MURD MI2202 tip==pin 894b7e8be PASS sum=211",
+  "head": "894b7e8bea4acf392031af021b38c18513a50d2b",
+  "HEAD": "894b7e8bea4acf392031af021b38c18513a50d2b",
+  "tip": "894b7e8bea4acf392031af021b38c18513a50d2b",
+  "pin": "894b7e8bea4acf392031af021b38c18513a50d2b",
+  "short": "894b7e8be",
   "cube_law": "cube is SoT; free energy must flow",
   "method_signature": "heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held",
   "also_added": "METHOD murc n (UDP-MurNAc:L-Ala ligase) enabling MurD continuum",
-  "head": "03f48a3ebf5fa05e871f0ee825c547d341ffbc87",
-  "HEAD": "03f48a3ebf5fa05e871f0ee825c547d341ffbc87",
-  "tip": "03f48a3ebf5fa05e871f0ee825c547d341ffbc87",
-  "pin": "03f48a3ebf5fa05e871f0ee825c547d341ffbc87",
-  "short": "03f48a3eb"
+  "feat_commit": "4fb5a6aac35a4aca97ffa56e67515d8464c5a666"
 }

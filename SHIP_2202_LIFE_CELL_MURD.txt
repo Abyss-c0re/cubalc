@@ -2,6 +2,7 @@ LIFE_CELL_MURD MI2202
 METHOD murd on life_cell after murc (MurC also shipped as continuum gate)
 Continuum ...->meph->slt->ampg->nagz->ampd->anmk->murq->mura->murb->murc->murd
 Proof 2202 + atomic_printer_life_murd + smx_mesh_vesicle_murd_life
-asserts_ok life=137 atomic=32 smx=26 flagship_1620=12 sum=207 asserts_fail=0
+asserts_ok life=133 atomic=36 smx=30 flagship_1620=12 sum=211 asserts_fail=0
 VERSION=1.15.1689-usability
-HEAD=03f48a3ebf5fa05e871f0ee825c547d341ffbc87
+HEAD=894b7e8bea4acf392031af021b38c18513a50d2b
+FEAT=4fb5a6aac35a4aca97ffa56e67515d8464c5a666
