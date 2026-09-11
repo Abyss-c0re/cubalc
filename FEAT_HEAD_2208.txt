@@ -1,1 +1,1 @@
-pending
+$(git rev-parse HEAD)

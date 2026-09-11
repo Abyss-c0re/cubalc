@@ -45,11 +45,12 @@
   "methods": 191,
   "host_finish": true,
   "HEAD": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "head": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
-  "tip": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
+  "head": "$(git rev-parse HEAD)",
+  "tip": "$(git rev-parse HEAD)",
   "pin": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
   "pinned_head": "699dda2ed34dcea913a3485dc0d7f478f9c6e43d",
   "feat_head": "26778fee8c46c3c970d97dc90e41b8fda13569c7",
   "commit": "699dda2ed34d",
-  "short": "699dda2ed34d"
+  "short": "699dda2ed34d",
+  "git_head": "$(git rev-parse HEAD)"
 }
