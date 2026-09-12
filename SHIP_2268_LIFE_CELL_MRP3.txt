@@ -1,6 +1,1 @@
-MI 2268 LIFE_CELL_MRP3
-method: mrp3 n
-Mrp3 ABCC3/cMOAT2 basolateral organic-anion / bile-salt overflow after Mrp2
-continuum ...->oatp1b1->mrp2->mrp3
-proofs asserts_fail:0 life+atomic+smx+flagship
-Cube is SoT. Free energy must flow.
+LIFE_CELL_MRP3 MI2268 PASS asserts_fail:0 sum=589 HEAD=4c449fece2ffbaf476321be28b8a952b3b73c2be feat=021934a111acd566049a79f3782f1112f4153a33
