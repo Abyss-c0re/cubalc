@@ -16784,4 +16784,86 @@ CLASS Cell
   END
 
 
+
+  # Fxr: farnesoid X receptor (NR1H4 / BAR) after Fabp6.
+  # Fxr (NR1H4 / bile acid receptor) is the nuclear receptor that senses
+  # conjugated bile salts delivered by Fabp6/IBABP and transcriptionally
+  # gates bile-acid synthesis, transport, and enterohepatic free-energy
+  # recirculation after cytosolic shuttle completes epithelial transit.
+  # After Fabp6 opens the cytosolic IBABP carrier, Fxr commits ligand-activated
+  # nuclear sensing so mitosis energy budgets gain a bile-salt transcription
+  # governor instead of an unsignaled cytosolic sink that never feeds back
+  # onto Cyp7a1/Bsep/Ost/Ibabp expression limbs.
+  # Distinct from Fabp6 (IBABP cytosolic bile-acid shuttle), Asbt (SLC10A2
+  # apical Na+-bile-acid symport), Ost (SLC51A/B basolateral exit),
+  # Bsep (ABCB11 canalicular export), Ntcp (SLC10A1 hepatocyte uptake),
+  # Mrp3 (ABCC3 basolateral overflow) - Fxr is the NR1H4 nuclear bile-acid
+  # sensor that closes the enterohepatic sensing limb after Fabp6 delivery.
+  # Without Fxr after Fabp6, shuttled bile salts stay unsensed; life_cell
+  # enterohepatic free-energy loop never finishes nuclear feedback after
+  # cytosolic IBABP opens the intracellular carrier limb.
+  # Domain: post-Fabp6 Fxr nuclear bile-acid sensing /
+  #   bound FABP6 bile salt -> NR1H4 transcriptional gate (nuclear receptor)
+  # (not Fabp6, not Asbt, not Ost, not Bsep, not Ntcp, not Mrp3).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr
+  #   (Fabp6 cytosolic bile-acid shuttle -> Fxr nuclear bile-acid receptor).
+  # Gift: NR1H4 nuclear sensing after Fabp6 so reclaimed acids
+  #   gate synthesis/transport and close enterohepatic free-energy feedback.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fxr life-force.
+  # Usability: AGI models post-Fabp6 Fxr nuclear bile-salt sensing under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fxr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
