@@ -19862,4 +19862,76 @@ CLASS Cell
   END
 
 
+  # Hmgcr: 3-hydroxy-3-methylglutaryl-CoA reductase (HMGCR) after HMGCS1 limb.
+  # HMGCR is the committed mevalonate-entry reductase: it reduces cytosolic
+  # HMG-CoA (minted by HMGCS1 from AACS-derived acetoacetyl-CoA + acetyl-CoA)
+  # into mevalonate so MVK can open the isoprenoid/sterol limb and free energy
+  # reclaimed from circulating ketones builds membrane mass under ASSERT.
+  # After Hmgcs1 condenses acetoacetyl-CoA + acetyl-CoA into HMG-CoA in cytosol,
+  # Hmgcr spends that HMG-CoA pool under ASSERT to open the mevalonate limb
+  # toward MVK/PMVK/MVD (rate-limiting statin-sensitive reductase gate).
+  # Distinct from Hmgcs1 cytosolic HMG-CoA synthase, Hmgcs2 mitochondrial
+  # ketogenic synthase, Hmgcl lyase, and Aacs ketone activation - Hmgcr is the
+  # HMG-CoA reductase (HMGCR) mevalonate committed step.
+  # Domain: post-HMGCS1 HMG-CoA reductase (HMGCR) mevalonate gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr
+  # Gift: post-HMGCS1 HMGCR so BA/odd-chain free-energy path can reduce
+  #   HMG-CoA into mevalonate under ASSERT after HMGCS1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hmgcr.
+  # Usability: AGI models post-HMGCS1 HMGCR mevalonate commit under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hmgcr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
