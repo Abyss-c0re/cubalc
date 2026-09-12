@@ -1,7 +1,6 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "MI": 2264,
-  "FEATURE": "LIFE_CELL_BSEP",
+  "mi": 2264,
+  "feature": "LIFE_CELL_BSEP",
   "method": "bsep n",
   "version": "1.15.1762-usability",
   "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep",
@@ -14,8 +13,7 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2264_life_cell_bsep.cubalc",
+  "HEAD": "1b13720aaa6065efc48413a882c887865d75e449",
   "feat": "b6c92fb5b00497da0f4a66d01339717f2fac7e7b",
-  "HEAD": "e92b03b655126223ded6c6a39e977f066e7fe86b",
-  "tip": "e92b03b655126223ded6c6a39e977f066e7fe86b",
-  "HEAD_tip": "e92b03b655126223ded6c6a39e977f066e7fe86b"
+  "law": "cube_is_sot; free_energy_must_flow"
 }
