@@ -1,0 +1,220 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle LIFE_FORCE MI2305: HMGCS2 after OXCT1 on ketogenic limb.
+# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1->acat1->acat1->hmgcs2 (HMGCS2 after HMGCS2)
+# Gift: HMGCS2 opens mitochondrial ketogenic HMG-CoA synthase gate under ASSERT after HMGCS2 open.
+# Domain: post-HMGCS2 mitochondrial HMG-CoA synthase (HMGCS2) ketogenic gate.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY vesicle OF Cell 1 55 0
+ENTITY cargo OF Cell 1 36 0
+ENTITY lysed OF Cell 0 12 0
+
+SEND vesicle set_threshold 9
+SEND cargo set_threshold 11
+
+SEND vesicle pulse 3
+SEND vesicle photosynth 28
+SEND vesicle glycolyse 20
+SEND vesicle charge 26
+SEND vesicle feed 20
+GETF vesicle energy
+ASSERT LAST_N >= 16 "vesicle energy"
+GETF vesicle atp
+ASSERT LAST_N >= 16 "vesicle atp"
+
+SEND vesicle pcca 2
+ASSERT LAST_N == 2 "vesicle pcca"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle mcee 2
+ASSERT LAST_N == 2 "vesicle mcee"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle mut 2
+ASSERT LAST_N == 2 "vesicle mut"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle suclg1 2
+ASSERT LAST_N == 2 "vesicle suclg1"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle sdha 2
+ASSERT LAST_N == 2 "vesicle sdha"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle fh 2
+ASSERT LAST_N == 2 "vesicle fh"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle mdh 2
+ASSERT LAST_N == 2 "vesicle mdh"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle cs 2
+ASSERT LAST_N == 2 "vesicle cs"
+SEND vesicle photosynth 14
+SEND vesicle charge 14
+SEND vesicle feed 12
+SEND vesicle aco2 1
+ASSERT LAST_N == 1 "vesicle aco2 open"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle idh2 2
+ASSERT LAST_N == 2 "vesicle idh2 isocitrate to aKG"
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle ogdh 1
+ASSERT LAST_N == 1 "vesicle ogdh open"
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle scs 1
+ASSERT LAST_N == 1 "vesicle scs prior"
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle dld 1
+ASSERT LAST_N == 1 "vesicle dld open before hmgcs2"
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle photosynth 8
+SEND vesicle charge 8
+SEND vesicle feed 6
+SEND vesicle dlst 1
+ASSERT LAST_N == 1 "vesicle dlst open before hmgcs2"
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle oxct1 1
+ASSERT LAST_N == 1 "vesicle oxct1 open before hmgcs2"
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle acat1 1
+ASSERT LAST_N == 1 "vesicle acat1 open before hmgcs2"
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+SEND vesicle hmgcs2 3
+ASSERT LAST_N == 3 "vesicle hmgcs2 3"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "vesicle hmgcs2 heat+3"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "vesicle hmgcs2 energy-3"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "vesicle hmgcs2 atp-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "vesicle alive post-hmgcs2"
+
+SEND cargo photosynth 18
+SEND cargo charge 16
+SEND cargo feed 14
+SEND cargo mdh 1
+ASSERT LAST_N == 1 "cargo mdh open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo cs 1
+ASSERT LAST_N == 1 "cargo cs open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo aco2 1
+ASSERT LAST_N == 1 "cargo aco2 open"
+SEND cargo photosynth 12
+SEND cargo charge 12
+SEND cargo feed 10
+SEND cargo idh2 2
+ASSERT LAST_N == 2 "cargo idh2 isocitrate to aKG"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo ogdh 1
+ASSERT LAST_N == 1 "cargo ogdh open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo scs 1
+ASSERT LAST_N == 1 "cargo scs prior"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dld 1
+ASSERT LAST_N == 1 "cargo dld open before hmgcs2"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dlst 1
+ASSERT LAST_N == 1 "cargo dlst open before hmgcs2"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo oxct1 1
+ASSERT LAST_N == 1 "cargo oxct1 open before hmgcs2"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo acat1 1
+ASSERT LAST_N == 1 "cargo acat1 open before hmgcs2"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+GETF cargo heat
+LET ch = LAST_N
+GETF cargo energy
+LET ce = LAST_N
+GETF cargo atp
+LET ca = LAST_N
+SEND cargo hmgcs2 2
+ASSERT LAST_N == 2 "cargo hmgcs2 2"
+GETF cargo heat
+ASSERT LAST_N == ch + 2 "cargo hmgcs2 heat+2"
+GETF cargo energy
+ASSERT LAST_N == ce - 2 "cargo hmgcs2 energy-2"
+GETF cargo atp
+ASSERT LAST_N == ca - 2 "cargo hmgcs2 atp-2"
+GETF cargo alive
+ASSERT LAST_N == 1 "cargo alive post-hmgcs2"
+
+SEND lysed hmgcs2 3
+ASSERT LAST_N == 0 "lysed hmgcs2 refused"
+GETF lysed alive
+ASSERT LAST_N == 0 "lysed stays dead"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_hmgcs2_life PASS"
