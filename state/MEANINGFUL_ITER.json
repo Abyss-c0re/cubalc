@@ -8,7 +8,7 @@
   "MI": 2291,
   "version": "1.15.1790-usability",
   "VERSION": "1.15.1790-usability",
-  "feature": "LIFE_CELL_MUT",
+  "feature": "life_cell_mut",
   "FEATURE": "LIFE_CELL_MUT",
   "name": "LIFE_CELL_MUT",
   "title": "MUT methylmalonyl-CoA mutase after MCEE on life_cell continuum",
@@ -23,9 +23,9 @@
     "programs/science/integration/smx_mesh_vesicle_mut_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut",
-  "domain": "post-MCEE methylmalonyl-CoA mutase (MUT) succinyl-CoA anaplerotic gate",
-  "gift": "MUT after MCEE so classical BA/odd-chain free-energy path can rearrange L-methylmalonyl-CoA to succinyl-CoA under ASSERT after epimerase open.",
+  "continuum": "...->scp2->acot8->pcca->mcee->mut",
+  "domain": "post-MCEE methylmalonyl-CoA mutase (MUT/MMUT) anaplerotic gate",
+  "gift": "MUT after MCEE so classic BA free-energy path can isomerize L-methylmalonyl-CoA to succinyl-CoA under ASSERT after epimerase open.",
   "proof_sum": {
     "life": 72,
     "atomic": 23,
@@ -36,15 +36,10 @@
   },
   "asserts_fail": 0,
   "asserts_ok_sum": 125,
-  "asserts_ok": {
-    "life": 72,
-    "atomic_printer": 23,
-    "smx": 18,
-    "flagship_1620": 12,
-    "sum": 125
-  },
-  "HEAD": "382780c371e2f1c17025637124dd5b3e9cc5db47",
+  "asserts_ok": 125,
+  "HEAD": "77a1951899cf145be91d318a11ca48dc89bb33ea",
   "feat": "f78f4aa34ec18a4e19135780fed53808b4f3d1a8",
-  "tip": "382780c371e2f1c17025637124dd5b3e9cc5db47",
-  "pin": "382780c371e2f1c17025637124dd5b3e9cc5db47"
+  "head": "77a1951899cf145be91d318a11ca48dc89bb33ea",
+  "pinned_head": "77a1951899cf145be91d318a11ca48dc89bb33ea",
+  "law": "cube_is_sot; free_energy_must_flow"
 }
