@@ -16300,5 +16300,85 @@ CLASS Cell
     RET take
   END
 
+  # Oatp1b1: basolateral organic anion transporting polypeptide (SLCO1B1) after Ntcp.
+  # Oatp1b1 (OATP1B1 / SLCO1B1 / LST-1) is the basolateral organic anion
+  # uptake transporter that imports bilirubin glucuronides, steroid conjugates,
+  # drugs, and other organic anions (including some bile-salt species) into the
+  # hepatocyte after Ntcp opens Na+-coupled taurocholate reclaim — broadening
+  # basolateral anion traffic beyond strict bile-salt symport.
+  # After Ntcp reclaims Bsep-exported taurocholate with Na+, Oatp1b1 commits
+  # Na+-independent organic-anion uptake so mitosis energy budgets gain a
+  # general basolateral anion inlet instead of Ntcp-only bile-salt bottleneck
+  # on the glutathione free-energy shield.
+  # Distinct from Ntcp (Na+-taurocholate cotransport SLC10A1), Bsep (canalicular
+  # ABC export), Baat (taurine N-acyltransferase), Fmo1/Csad/Cdo1/Dug1/Nat8
+  # (Cys-disposal limb), Gst/Gpx/Gor (GSH cycle) - Oatp1b1 is the basolateral
+  # SLCO1B1 carrier for broad organic-anion uptake and drug/bilirubin clearance.
+  # Without Oatp1b1 after Ntcp, basolateral anion traffic stays bile-salt-narrow;
+  # life_cell organic-anion uptake budgets stay open-loop and free-energy shield
+  # never finishes enterohepatic return into multi-anion clearance.
+  # Domain: post-Ntcp Oatp1b1 basolateral organic anion uptake /
+  #   extracellular organic anion -> cytosolic anion (facilitated/exchange)
+  # (not Ntcp, not Bsep, not Baat, not Fmo1, not Csad, not Cdo1, not Dug1).
+  # Continuum: ...->fmo1->baat->bsep->ntcp->oatp1b1
+  #   (Ntcp basolateral Na+-TC uptake -> Oatp1b1 basolateral organic anion uptake).
+  # Gift: broad basolateral organic-anion inlet after Ntcp so bilirubin/drug
+  #   conjugates and multi-anion clearance close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - oatp1b1 life-force.
+  # Usability: AGI models post-Ntcp Oatp1b1 organic-anion uptake under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD oatp1b1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

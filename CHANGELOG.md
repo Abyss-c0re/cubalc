@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.15.1764-usability — MI 2266 LIFE_CELL_OATP1B1 (PASS)
+
+- feat(life): Oatp1b1 basolateral organic anion uptake (SLCO1B1) after Ntcp on life_cell
+- Continuum: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1
+- Proof: `programs/proof/2266_life_cell_oatp1b1.cubalc` asserts_fail:0 life=319 ap=99 smx=66 flagship_1620=12 sum=496
+- Cube is SoT. Free energy must flow.
+
+## 1.15.1764-usability — MI 2266 LIFE_CELL_OATP1B1 (PASS)
+
+- feat(life): Oatp1b1 basolateral organic anion uptake (SLCO1B1) after Ntcp on life_cell
+- Continuum: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1
+- Proof: `programs/proof/2266_life_cell_oatp1b1.cubalc` asserts_fail:0 asserts_ok life=319 ap=99 smx=66 flagship_1620=12 sum=496
+- Cube is SoT. Free energy must flow.
+
 ## MI 2264 — LIFE_CELL_BSEP (1.15.1762-usability)
 
 - **feat(life):** `bsep n` — Bsep (BSEP/ABCB11) canalicular bile-salt export pump after Baat taurocholate conjugation on `life_cell`.

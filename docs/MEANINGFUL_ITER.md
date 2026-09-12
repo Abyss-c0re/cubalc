@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2264
-- **FEATURE**: LIFE_CELL_BSEP
-- **method**: bsep n
-- **version**: 1.15.1762-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+- **MI**: 2266
+- **FEATURE**: LIFE_CELL_OATP1B1
+- **method**: oatp1b1 n
+- **version**: 1.15.1764-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1
 - **asserts_fail**: 0
-- **asserts_ok sum**: 415 (life=258 atomic_printer=79 smx=66 flagship_1620=12)
-- **proof**: programs/proof/2264_life_cell_bsep.cubalc
-- **HEAD**: 1b13720aaa6065efc48413a882c887865d75e449
-- **feat**: b6c92fb5b00497da0f4a66d01339717f2fac7e7b
+- **asserts_ok sum**: 496 (life=319 atomic_printer=99 smx=66 flagship_1620=12)
+- **proof**: programs/proof/2266_life_cell_oatp1b1.cubalc
+- **HEAD**: PENDING
+- **feat**: PENDING
 - Cube is SoT. Free energy must flow.
