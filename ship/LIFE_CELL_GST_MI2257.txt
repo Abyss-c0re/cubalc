@@ -1,8 +1,9 @@
 LIFE_CELL_GST MI 2257
 asserts_fail: 0
-asserts_ok_sum: 140
+asserts_ok_sum: 233
+life=140 atomic_printer=44 smx=37 flagship_1620=12
 feat: 3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418
-HEAD/tip: fdcf384c36bf0be6b78b978809449c333d47921e
+HEAD/tip: d6b6f132610df9889226eecc565ddad719cd9a60
 branch: life-cell-gpx-mi2256
 sealed: true
 PASS True
