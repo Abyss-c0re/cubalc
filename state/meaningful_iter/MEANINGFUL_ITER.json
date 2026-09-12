@@ -10,13 +10,13 @@
     "sum": 104
   },
   "proof": "programs/proof/2255_life_cell_gor.cubalc",
-  "HEAD": "PENDING",
+  "HEAD": "47ed121528a893a06a497f5d9ff21ec0270663c4",
   "feat": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
   "creed": "Cube is SoT. Free energy must flow.",
-  "head": "PENDING",
-  "tip": "PENDING",
+  "head": "47ed121528a893a06a497f5d9ff21ec0270663c4",
+  "tip": "47ed121528a893a06a497f5d9ff21ec0270663c4",
   "feat_head": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
   "branch": "life-cell-gor-mi2255",
-  "sealed": false,
+  "sealed": true,
   "pass": true
 }
