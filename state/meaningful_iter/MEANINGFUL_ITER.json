@@ -12,8 +12,8 @@
     "smx": 50
   },
   "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
-  "HEAD_tip": "9764239175e4eb0058da8bb6bcb8ff22490bd3e6",
-  "HEAD": "9764239175e4eb0058da8bb6bcb8ff22490bd3e6",
-  "tip": "9764239175e4eb0058da8bb6bcb8ff22490bd3e6",
+  "HEAD_tip": "23942e091f9b93eaf8a89ab3a9da7ac7f4698e69",
+  "HEAD": "23942e091f9b93eaf8a89ab3a9da7ac7f4698e69",
+  "tip": "23942e091f9b93eaf8a89ab3a9da7ac7f4698e69",
   "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5"
 }
