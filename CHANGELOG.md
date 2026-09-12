@@ -1,3 +1,22 @@
+## 1.15.1792-usability — MI 2293 LIFE_CELL_SDHA
+
+- **feat(life):** SDHA succinate dehydrogenase after SUCLG1 on BA continuum
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha` (succinate → fumarate Complex II gate)
+- Proof: `programs/proof/2293_life_cell_sdha.cubalc` (asserts_ok=69)
+- Atomic: `programs/science/integration/atomic_printer_life_sdha.cubalc` (25)
+- SMX: `programs/science/integration/smx_mesh_vesicle_sdha_life.cubalc` (18)
+- asserts_fail: 0 · life 69 · atomic 25 · smx 18 · flagship 12
+
+## 1.15.1791-usability — MI 2292 LIFE_CELL_SUCLG1
+
+- **feat(life):** SUCLG1 succinyl-CoA ligase after MUT on BA continuum
+- Continuum: `...->pcca->mcee->mut->suclg1` (succinyl-CoA → succinate TCA gate)
+- Proof: `programs/proof/2292_life_cell_suclg1.cubalc` (asserts_ok=64)
+- Atomic: `programs/science/integration/atomic_printer_life_suclg1.cubalc` (24)
+- SMX: `programs/science/integration/smx_mesh_vesicle_suclg1_life.cubalc` (19)
+- Runtime: CUBALC_MAX_METHODS 384→512 so Cell continuum can keep growing
+- asserts_fail: 0 · life 64 · atomic 24 · smx 19 · flagship 12
+
 ## 1.15.1788-usability — MI 2289 LIFE_CELL_PCCA
 
 - feat(life): PCCA propionyl-CoA carboxylase after ACOT8 on BA continuum
