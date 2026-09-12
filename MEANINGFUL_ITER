@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2271
-- **FEATURE**: LIFE_CELL_FABP6
-- **method**: fabp6 n
-- **version**: 1.15.1770-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6
+- **MI**: 2274
+- **FEATURE**: LIFE_CELL_FGFR4
+- **method**: fgfr4 n
+- **version**: 1.15.1773-usability
+- **continuum**: ...->ost->asbt->fabp6->fxr->fgf19->fgfr4
 - **asserts_fail**: 0
-- **asserts_ok sum**: 686 (life=457 atomic_printer=125 smx=92 flagship_1620=12)
-- **proof**: programs/proof/2271_life_cell_fabp6.cubalc
-- **HEAD**: 8b2074dfa3eef6e5db114ff754d51140ec42a508
-- **feat**: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
+- **asserts_ok sum**: 774 (life=535 atomic_printer=130 smx=97 flagship_1620=12)
+- **proof**: programs/proof/2274_life_cell_fgfr4.cubalc
+- **HEAD**: PENDING
+- **feat**: PENDING
 - **law**: cube_is_sot; free_energy_must_flow
