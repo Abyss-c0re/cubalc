@@ -25,10 +25,8 @@
     "fail": 0
   },
   "continuum": "...->emb->aacs->hmgcs1->hmgcr->mvk",
-  "feat": "307138f0bfdf5542127d73fd23cc662a67bae6f9",
-  "feat_head": "307138f0bfdf5542127d73fd23cc662a67bae6f9",
+  "feat": "2254b6b3da0a9a0b2a5b2f4f14cb3c3464a76c6b",
+  "feat_head": "2254b6b3da0a9a0b2a5b2f4f14cb3c3464a76c6b",
   "status": "PASS",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "pin_head": "a00dec17f5c15518b3d5d154a1d1f2ceb2101e3e",
-  "head_tip": "a00dec17f5c15518b3d5d154a1d1f2ceb2101e3e"
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
