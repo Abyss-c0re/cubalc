@@ -3,7 +3,7 @@
 ## 1.15.1784-usability — MI 2285 LIFE_CELL_ACOX2
 
 - feat(life): ACOX2 peroxisomal branched acyl-CoA oxidase after AMACR on life_cell continuum
-- proof programs/proof/2285_life_cell_acox2.cubalc asserts_fail=0 (life=965 sum=1298)
+- proof programs/proof/2285_life_cell_acox2.cubalc asserts_fail=0 (life=969 sum=1292)
 - continuum ...->slc27a5->amacr->acox2
 - law: cube_is_sot; free_energy_must_flow
 
