@@ -1,0 +1,493 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle life - HSD17B4 acyl-CoA oxidase 2 after ACOX2
+# Continuum ...->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->akr1c4->cyp27a1->slc27a5->amacr->hsd17b4 on vesicle mesh exchange
+# Gift: SMX vesicle mesh carries post-AMACR HSD17B4 BA-CoA oxidase free-energy under ASSERT.
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle OF Cell 1 50 0
+SEND vesicle set_threshold 9
+SEND vesicle pulse 3
+SEND vesicle photosynth 40
+SEND vesicle glycolyse 34
+SEND vesicle pump 24
+SEND vesicle charge 36
+SEND vesicle feed 32
+
+SEND vesicle pepf 2
+ASSERT LAST_N == 2 "smx pepf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle pdf 2
+ASSERT LAST_N == 2 "smx pdf"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle map 2
+ASSERT LAST_N == 2 "smx map"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nata 2
+ASSERT LAST_N == 2 "smx nata"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natb 2
+ASSERT LAST_N == 2 "smx natb"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle natc 2
+ASSERT LAST_N == 2 "smx natc"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle nate 2
+ASSERT LAST_N == 2 "smx nate"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle mete 2
+ASSERT LAST_N == 2 "smx mete"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle metk 2
+ASSERT LAST_N == 2 "smx metk"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle ahcy 2
+ASSERT LAST_N == 2 "smx ahcy"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle cbs 2
+ASSERT LAST_N == 2 "smx pre cbs"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+SEND vesicle cgl 2
+ASSERT LAST_N == 2 "smx pre cgl"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+SEND vesicle gsha 3
+ASSERT LAST_N == 3 "smx pre gsha3"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "smx pre gsha heat"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "smx pre gsha energy"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "smx pre gsha atp"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+GETF vesicle heat
+LET vh2 = LAST_N
+GETF vesicle energy
+LET ve2 = LAST_N
+GETF vesicle atp
+LET va2 = LAST_N
+SEND vesicle gshb 3
+ASSERT LAST_N == 3 "smx pre gshb3"
+GETF vesicle heat
+ASSERT LAST_N == vh2 + 3 "smx pre gshb heat"
+GETF vesicle energy
+ASSERT LAST_N == ve2 - 3 "smx pre gshb energy"
+GETF vesicle atp
+ASSERT LAST_N == va2 - 3 "smx pre gshb atp"
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+GETF vesicle heat
+LET vh3 = LAST_N
+GETF vesicle energy
+LET ve3 = LAST_N
+GETF vesicle atp
+LET va3 = LAST_N
+SEND vesicle gor 3
+ASSERT LAST_N == 3 "smx gor3"
+GETF vesicle heat
+ASSERT LAST_N == vh3 + 3 "smx gor heat"
+GETF vesicle energy
+ASSERT LAST_N == ve3 - 3 "smx gor energy"
+GETF vesicle atp
+ASSERT LAST_N == va3 - 3 "smx gor atp"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-gor"
+
+SEND vesicle photosynth 18
+SEND vesicle charge 22
+SEND vesicle feed 16
+GETF vesicle heat
+LET hx = LAST_N
+GETF vesicle energy
+LET ex = LAST_N
+GETF vesicle atp
+LET ax = LAST_N
+SEND vesicle gpx 3
+ASSERT LAST_N == 3 "smx gpx3"
+GETF vesicle heat
+ASSERT LAST_N == hx + 3 "smx gpx h+3"
+GETF vesicle energy
+ASSERT LAST_N == ex - 3 "smx gpx e-3"
+GETF vesicle atp
+ASSERT LAST_N == ax - 3 "smx gpx a-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-gpx"
+
+SEND vesicle photosynth 16
+SEND vesicle charge 18
+SEND vesicle feed 14
+GETF vesicle heat
+LET vhs = LAST_N
+GETF vesicle energy
+LET ves = LAST_N
+GETF vesicle atp
+LET vas = LAST_N
+SEND vesicle gst 3
+ASSERT LAST_N == 3 "smx gst3"
+GETF vesicle heat
+ASSERT LAST_N == vhs + 3 "smx gst h+3"
+GETF vesicle energy
+ASSERT LAST_N == ves - 3 "smx gst e-3"
+GETF vesicle atp
+ASSERT LAST_N == vas - 3 "smx gst a-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-gst"
+
+SEND vesicle photosynth 18
+SEND vesicle charge 22
+SEND vesicle feed 16
+GETF vesicle heat
+LET hggt = LAST_N
+GETF vesicle energy
+LET eggt = LAST_N
+GETF vesicle atp
+LET aggt = LAST_N
+SEND vesicle ggt 3
+ASSERT LAST_N == 3 "smx ggt3"
+GETF vesicle heat
+ASSERT LAST_N == hggt + 3 "smx ggt h+3"
+GETF vesicle energy
+ASSERT LAST_N == eggt - 3 "smx ggt e-3"
+GETF vesicle atp
+ASSERT LAST_N == aggt - 3 "smx ggt a-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-ggt"
+
+SEND vesicle photosynth 18
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle dug1 3
+ASSERT LAST_N == 3 "smx pre dug1 3"
+SEND vesicle photosynth 18
+SEND vesicle charge 22
+SEND vesicle feed 16
+SEND vesicle cdo1 3
+ASSERT LAST_N == 3 "smx pre cdo1 3"
+SEND vesicle photosynth 18
+SEND vesicle charge 22
+SEND vesicle feed 16
+GETF vesicle heat
+LET hcsad = LAST_N
+GETF vesicle energy
+LET ecsad = LAST_N
+GETF vesicle atp
+LET acsad = LAST_N
+SEND vesicle csad 3
+ASSERT LAST_N == 3 "smx csad 3"
+GETF vesicle heat
+ASSERT LAST_N == hcsad + 3 "smx csad h+3"
+GETF vesicle energy
+ASSERT LAST_N == ecsad - 3 "smx csad e-3"
+GETF vesicle atp
+ASSERT LAST_N == acsad - 3 "smx csad a-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-csad"
+SEND vesicle photosynth 10
+SEND vesicle charge 12
+SEND vesicle feed 8
+GETF vesicle heat
+LET vhf = LAST_N
+GETF vesicle energy
+LET vef = LAST_N
+GETF vesicle atp
+LET vaf = LAST_N
+SEND vesicle fmo1 3
+ASSERT LAST_N == 3 "smx fmo1 3"
+GETF vesicle heat
+ASSERT LAST_N == vhf + 3 "smx fmo1 h+3"
+GETF vesicle energy
+ASSERT LAST_N == vef - 3 "smx fmo1 e-3"
+GETF vesicle atp
+ASSERT LAST_N == vaf - 3 "smx fmo1 a-3"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-fmo1"
+
+SEND vesicle photosynth 12
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle baat 2
+ASSERT LAST_N == 2 "smx baat vesicle"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-baat"
+SEND vesicle photosynth 12
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vhb = LAST_N
+GETF vesicle energy
+LET veb = LAST_N
+GETF vesicle atp
+LET vab = LAST_N
+GETF vesicle age
+LET vageb = LAST_N
+GETF vesicle pcr
+LET vpcrb = LAST_N
+GETF vesicle reserve
+LET vrsvb = LAST_N
+GETF vesicle pmf
+LET vpmfb = LAST_N
+GETF vesicle threshold
+LET vthrb = LAST_N
+SEND vesicle oatp1b1 2
+ASSERT LAST_N == 2 "smx oatp1b1 vesicle"
+GETF vesicle heat
+ASSERT LAST_N == vhb + 2 "smx oatp1b1 h+2"
+GETF vesicle energy
+ASSERT LAST_N == veb - 2 "smx oatp1b1 e-2"
+GETF vesicle atp
+ASSERT LAST_N == vab - 2 "smx oatp1b1 a-2"
+GETF vesicle age
+ASSERT LAST_N == vageb "smx oatp1b1 age held"
+GETF vesicle pcr
+ASSERT LAST_N == vpcrb "smx oatp1b1 pcr held"
+GETF vesicle reserve
+ASSERT LAST_N == vrsvb "smx oatp1b1 reserve held"
+GETF vesicle pmf
+ASSERT LAST_N == vpmfb "smx oatp1b1 pmf held"
+GETF vesicle threshold
+ASSERT LAST_N == vthrb "smx oatp1b1 thr held"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-oatp1b1"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+GETF vesicle heat
+LET smxmp_h = LAST_N
+GETF vesicle energy
+LET smxmp_e = LAST_N
+GETF vesicle atp
+LET smxmp_a = LAST_N
+SEND vesicle mrp2 2
+ASSERT LAST_N == 2 "smxmp mrp2"
+GETF vesicle heat
+ASSERT LAST_N == smxmp_h + 2 "smxmp mrp2 h+2"
+GETF vesicle energy
+ASSERT LAST_N == smxmp_e - 2 "smxmp mrp2 e-2"
+GETF vesicle atp
+ASSERT LAST_N == smxmp_a - 2 "smxmp mrp2 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smxmp alive post-mrp2"
+
+# Asbt apical uptake after Ost
+SEND vesicle photosynth 16
+SEND vesicle charge 14
+SEND vesicle feed 12
+GETF vesicle heat
+LET vash = LAST_N
+GETF vesicle energy
+LET vase = LAST_N
+GETF vesicle atp
+LET vasa = LAST_N
+SEND vesicle asbt 2
+ASSERT LAST_N == 2 "smx asbt 2"
+GETF vesicle heat
+ASSERT LAST_N == vash + 2 "smx asbt h+2"
+GETF vesicle energy
+ASSERT LAST_N == vase - 2 "smx asbt e-2"
+GETF vesicle atp
+ASSERT LAST_N == vasa - 2 "smx asbt a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-asbt"
+SEND vesicle asbt 0
+ASSERT LAST_N == 0 "smx asbt n0"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_asbt_life checkpoint"
+
+# Ost basolateral overflow after Mrp3 on vesicle
+SEND vesicle photosynth 14
+SEND vesicle charge 12
+SEND vesicle feed 10
+GETF vesicle heat
+LET m3vh = LAST_N
+GETF vesicle energy
+LET m3ve = LAST_N
+GETF vesicle atp
+LET m3va = LAST_N
+SEND vesicle ost 2
+ASSERT LAST_N == 2 "smx ost 2"
+GETF vesicle heat
+ASSERT LAST_N == m3vh + 2 "smx ost h+2"
+GETF vesicle energy
+ASSERT LAST_N == m3ve - 2 "smx ost e-2"
+GETF vesicle atp
+ASSERT LAST_N == m3va - 2 "smx ost a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-ost"
+SEND vesicle ost 0
+ASSERT LAST_N == 0 "smx ost n0"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive final ost"
+
+
+# KLB hepatic RTK after FGF19 enterokine
+SEND vesicle photosynth 14
+SEND vesicle charge 12
+SEND vesicle feed 10
+GETF vesicle heat
+LET vfbh = LAST_N
+GETF vesicle energy
+LET vfbe = LAST_N
+GETF vesicle atp
+LET vfba = LAST_N
+SEND vesicle fabp6 2
+ASSERT LAST_N == 2 "smx fabp6 2"
+GETF vesicle heat
+ASSERT LAST_N == vfbh + 2 "smx fabp6 h+2"
+GETF vesicle energy
+ASSERT LAST_N == vfbe - 2 "smx fabp6 e-2"
+GETF vesicle atp
+ASSERT LAST_N == vfba - 2 "smx fabp6 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive post-fabp6"
+SEND vesicle fabp6 0
+ASSERT LAST_N == 0 "smx fabp6 n0"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx alive final fabp6"
+ASSERT 1 == 1 "smx_mesh_vesicle_klb_life PASS"
+
+# KLB after FGF19 on smx plate
+# Cube is SoT. Free energy must flow.
+
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vesicle_fh = LAST_N
+GETF vesicle energy
+LET vesicle_fe = LAST_N
+GETF vesicle atp
+LET vesicle_fa = LAST_N
+SEND vesicle klb 2
+ASSERT LAST_N == 2 "smx vesicle klb 2"
+GETF vesicle heat
+ASSERT LAST_N == vesicle_fh + 2 "smx vesicle klb h+2"
+GETF vesicle energy
+ASSERT LAST_N == vesicle_fe - 2 "smx vesicle klb e-2"
+GETF vesicle atp
+ASSERT LAST_N == vesicle_fa - 2 "smx vesicle klb a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-klb"
+
+# AKR1C4/NR0B2 after KLB on smx plate
+# Cube is SoT. Free energy must flow.
+
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vesicle_sh = LAST_N
+GETF vesicle energy
+LET vesicle_se = LAST_N
+GETF vesicle atp
+LET vesicle_sa = LAST_N
+SEND vesicle akr1c4 2
+ASSERT LAST_N == 2 "smx vesicle akr1c4 2"
+GETF vesicle heat
+ASSERT LAST_N == vesicle_sh + 2 "smx vesicle akr1c4 h+2"
+GETF vesicle energy
+ASSERT LAST_N == vesicle_se - 2 "smx vesicle akr1c4 e-2"
+GETF vesicle atp
+ASSERT LAST_N == vesicle_sa - 2 "smx vesicle akr1c4 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-akr1c4"
+ASSERT 1 == 1 "smx_mesh_vesicle_akr1c4_life PASS"
+# CYP27A1 after AKR1C4 on smx plate
+# Cube is SoT. Free energy must flow.
+
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vesicle_c27h = LAST_N
+GETF vesicle energy
+LET vesicle_c27e = LAST_N
+GETF vesicle atp
+LET vesicle_c27a = LAST_N
+SEND vesicle cyp27a1 2
+ASSERT LAST_N == 2 "smx vesicle cyp27a1 2"
+GETF vesicle heat
+ASSERT LAST_N == vesicle_c27h + 2 "smx vesicle cyp27a1 h+2"
+GETF vesicle energy
+ASSERT LAST_N == vesicle_c27e - 2 "smx vesicle cyp27a1 e-2"
+GETF vesicle atp
+ASSERT LAST_N == vesicle_c27a - 2 "smx vesicle cyp27a1 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-cyp27a1"
+ASSERT 1 == 1 "smx_mesh_vesicle_cyp27a1_life PASS"
+
+# SLC27A5 after CYP27A1 on SMX vesicle life board
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+GETF vesicle heat
+LET v_slc_h = LAST_N
+GETF vesicle energy
+LET v_slc_e = LAST_N
+GETF vesicle atp
+LET v_slc_a = LAST_N
+SEND vesicle slc27a5 2
+ASSERT LAST_N == 2 "ves slc27a5 2"
+GETF vesicle heat
+ASSERT LAST_N == v_slc_h + 2 "ves slc27a5 h+2"
+GETF vesicle energy
+ASSERT LAST_N == v_slc_e - 2 "ves slc27a5 e-2"
+GETF vesicle atp
+ASSERT LAST_N == v_slc_a - 2 "ves slc27a5 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "ves alive post-slc27a5"
+
+# HSD17B4 after ACOX2 on SMX vesicle life board
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+GETF vesicle heat
+LET v_am_h = LAST_N
+GETF vesicle energy
+LET v_am_e = LAST_N
+GETF vesicle atp
+LET v_am_a = LAST_N
+SEND vesicle hsd17b4 2
+ASSERT LAST_N == 2 "ves hsd17b4 2"
+GETF vesicle heat
+ASSERT LAST_N == v_am_h + 2 "ves hsd17b4 h+2"
+GETF vesicle energy
+ASSERT LAST_N == v_am_e - 2 "ves hsd17b4 e-2"
+GETF vesicle atp
+ASSERT LAST_N == v_am_a - 2 "ves hsd17b4 a-2"
+GETF vesicle alive
+ASSERT LAST_N == 1 "ves alive post-hsd17b4"
+ASSERT 1 == 1 "smx_mesh_vesicle_hsd17b4_life PASS"
