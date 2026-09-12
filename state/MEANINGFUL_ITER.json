@@ -14,9 +14,9 @@
   },
   "proof": "programs/proof/2257_life_cell_gst.cubalc",
   "feat": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "HEAD": "62c4d365649fd0a1ba4247ab1d45ff212c1bac33",
-  "head": "62c4d365649fd0a1ba4247ab1d45ff212c1bac33",
-  "tip": "62c4d365649fd0a1ba4247ab1d45ff212c1bac33",
+  "HEAD": "9eb5c92047c25548f10832603fddbdc65766d777",
+  "head": "9eb5c92047c25548f10832603fddbdc65766d777",
+  "tip": "9eb5c92047c25548f10832603fddbdc65766d777",
   "feat_head": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
   "sealed": true,
   "note": "Gst GSH S-transferase after Gpx on glutathione free-energy continuum"
