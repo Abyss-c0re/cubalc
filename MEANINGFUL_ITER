@@ -9,5 +9,5 @@
 - **asserts_ok sum**: 1150 (life=1099 atomic_printer=21 smx=18 flagship_1620=12)
 - **proof**: programs/proof/2288_life_cell_acot8.cubalc
 - **HEAD**: PENDING
-- **feat**: PENDING
+- **feat**: f76336e7fe78536617eb0b6a620ea9035fbadad9
 - **law**: cube_is_sot; free_energy_must_flow
