@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_sdhb_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->sdhb",
+  "continuum": "...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->sdhb",
   "domain": "post-SCS succinate dehydrogenase subunit B (SDHB) Fe-S TCA-progression gate",
   "gift": "SDHB after SCS so BA/odd-chain free-energy path can transfer electrons from succinate through Fe-S centers under ASSERT after SCS open.",
   "proof_sum": {
@@ -48,14 +48,14 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell sdhb",
-  "HEAD": "dc448682359c03908a7c3fad09ae521a573f7409",
-  "head": "dc448682359c03908a7c3fad09ae521a573f7409",
-  "tip": "dc448682359c03908a7c3fad09ae521a573f7409",
-  "pin": "dc448682359c03908a7c3fad09ae521a573f7409",
-  "pinned_head": "dc448682359c03908a7c3fad09ae521a573f7409",
+  "HEAD": "35175f717141237735c9d84968352288284490f6",
+  "head": "35175f717141237735c9d84968352288284490f6",
+  "tip": "35175f717141237735c9d84968352288284490f6",
+  "pin": "35175f717141237735c9d84968352288284490f6",
+  "pinned_head": "35175f717141237735c9d84968352288284490f6",
   "law": "cube_is_sot; free_energy_must_flow",
-  "git_head": "dc448682359c03908a7c3fad09ae521a573f7409",
-  "commit": "dc448682359c",
-  "short": "dc448682359c",
-  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=dc448682359c"
+  "git_head": "35175f717141237735c9d84968352288284490f6",
+  "commit": "35175f717141",
+  "short": "35175f717141",
+  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=35175f717141"
 }
