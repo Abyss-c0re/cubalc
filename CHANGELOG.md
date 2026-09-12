@@ -1,3 +1,10 @@
+## 1.15.1761-usability — MI2263 LIFE_CELL_BAAT
+
+- feat(life): Baat taurine N-acyltransferase after Fmo1 on life_cell
+- continuum ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat
+- METHOD baat n: taurine + bile acid-CoA -> taurocholate after Fmo1
+- proof programs/proof/2263_life_cell_baat.cubalc asserts_fail:0 sum=361
+
 ## 1.15.1760-usability — MI2262 LIFE_CELL_FMO1
 
 - feat(life): Fmo1 hypotaurine monooxygenase after Csad on life_cell
