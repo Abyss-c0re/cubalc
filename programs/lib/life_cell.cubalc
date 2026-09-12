@@ -20077,4 +20077,77 @@ CLASS Cell
   END
 
 
+
+  # Mvd: mevalonate diphosphate decarboxylase (MVD/MVD1) after PMVK limb.
+  # MVD is the committed decarboxylase of the isoprenoid limb: it converts
+  # mevalonate-5-diphosphate (minted by PMVK from MVK mevalonate-5-phosphate)
+  # into isopentenyl diphosphate (IPP) so IDI1/FDPS can build sterol and
+  # prenyl membrane mass under ASSERT from BA/odd-chain free energy.
+  # After Pmvk diphosphorylates mevalonate-5-phosphate into mevalonate-5-diphosphate,
+  # Mvd spends that MVAPP pool under ASSERT to open the ATP-dependent
+  # decarboxylase gate toward IDI1/FDPS (committed IPP step).
+  # Distinct from Pmvk phosphomevalonate kinase, Mvk mevalonate kinase, Hmgcr
+  # HMG-CoA reductase, and Idi1 isomerase - Mvd is the mevalonate diphosphate
+  # decarboxylase (MVD) mevalonate-5-diphosphate -> IPP gate.
+  # Domain: post-PMVK mevalonate diphosphate decarboxylase (MVD) IPP gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr->mvk->pmvk->mvd
+  # Gift: post-PMVK MVD so BA/odd-chain free-energy path can decarboxylate
+  #   mevalonate-5-diphosphate into IPP under ASSERT after PMVK open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mvd.
+  # Usability: AGI models post-PMVK MVD mevalonate diphosphate decarboxylase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mvd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

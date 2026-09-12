@@ -1,3 +1,10 @@
+## 1.15.1815-usability — LIFE_CELL_MVD (MI 2316)
+
+- feat(life): MVD mevalonate diphosphate decarboxylase after PMVK on life_cell continuum
+- proof: programs/proof/2316_life_cell_mvd.cubalc (187 asserts)
+- science: atomic_printer_life_mvd + smx_mesh_vesicle_mvd_life
+- continuum: ...->hmgcs1->hmgcr->mvk->pmvk->mvd
+
 ## 1.15.1812-usability — MI 2313 LIFE_CELL_HMGCR
 - feat(life): HMGCR HMG-CoA reductase after HMGCS1 on life_cell continuum
 - Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr
