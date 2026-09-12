@@ -1,3 +1,19 @@
+## 1.15.1817-usability — LIFE_CELL_FDPS (MI 2318)
+
+- feat(life): FDPS farnesyl diphosphate synthase after IDI1 on life_cell continuum
+- proof: programs/proof/2318_life_cell_fdps.cubalc (197 asserts)
+- science: atomic_printer_life_fdps + smx_mesh_vesicle_fdps_life
+- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps
+- Proofs asserts_fail:0 — life 197 · atomic 72 · smx 68 · flagship 12 · sum 349
+- METHOD fdps n — DMAPP+IPP -> FPP prenyltransferase gate
+
+## 1.15.1816-usability — LIFE_CELL_IDI1 (MI 2317)
+
+- feat(life): IDI1 IPP/DMAPP isomerase after MVD on life_cell continuum
+- proof: programs/proof/2317_life_cell_idi1.cubalc (192 asserts)
+- science: atomic_printer_life_idi1 + smx_mesh_vesicle_idi1_life
+- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1
+
 ## 1.15.1815-usability — LIFE_CELL_MVD (MI 2316)
 
 - feat(life): MVD mevalonate diphosphate decarboxylase after PMVK on life_cell continuum
