@@ -17331,5 +17331,78 @@ CLASS Cell
   END
 
 
+  # Hsd3b7: 3beta-hydroxy-Delta5-C27-steroid dehydrogenase after CYP8B1 CA-branch gate.
+  # HSD3B7 converts 7alpha-hydroxycholesterol intermediates toward 3-oxo-Delta4 sterols
+  # in the classical bile-acid cascade; after Cyp8b1 marks the 12a-CA branch, Hsd3b7
+  # supplies the next oxidoreductase plate so free-energy budgets gain a measurable
+  # 3beta-HSD step under ASSERT instead of a silent CYP8B1 terminus.
+  # Distinct from Cyp8b1 (sterol 12a-hydroxylase), Cyp7a1 (rate-limiting 7a),
+  # Shp (NR0B2 repressor), Klb/Fgfr4/Fgf19/Fxr - Hsd3b7 is the SDR family enzyme
+  # that oxidizes the 3beta-OH and isomerizes Delta5->Delta4 on C27 sterol BA precursors.
+  # Without Hsd3b7 after Cyp8b1, classical BA continuum stalls after 12a-hydroxylase
+  # without the 3beta-HSD/Delta5-4 isomerase limb required for CA/CDCA maturation.
+  # Domain: post-CYP8B1 hepatic HSD3B7 3beta-HSD / Delta5-4 isomerase gate
+  #   -> HSD3B7 free-energy (ATP stand-in for NAD+ oxidoreductase turnover)
+  # (not Cyp8b1, not Cyp7a1, not Shp, not Klb).
+  # Continuum: ...->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7
+  #   (CYP8B1 CA-branch -> HSD3B7 3beta-HSD classical BA).
+  # Gift: post-CYP8B1 HSD3B7 so classical BA free-energy can authorize 3beta-HSD
+  #   / Delta5-4 isomerization under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hsd3b7 life-force.
+  # Usability: AGI models post-CYP8B1 hepatic HSD3B7 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hsd3b7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

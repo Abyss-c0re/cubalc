@@ -1,5 +1,11 @@
 # Changelog
 
+## MI 2279 — LIFE_CELL_HSD3B7 (1.15.1778-usability)
+- Feature: `hsd3b7 n` 3beta-HSD/Delta5-4 isomerase after CYP8B1 on life_cell
+- Continuum: ...->klb->shp->cyp7a1->cyp8b1->hsd3b7
+- Gift: post-CYP8B1 HSD3B7 so classical BA free-energy can authorize 3beta-HSD under ASSERT
+- Proofs: 2279 life 728/0; AP 154/0; SMX 103/0; flagship 1620 12/0
+
 ## MI 2278 — LIFE_CELL_CYP8B1 (1.15.1777-usability)
 - Feature: `cyp8b1 n` sterol 12-alpha-hydroxylase after CYP7A1 on life_cell
 - Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1
