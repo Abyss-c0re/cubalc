@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5",
+  "continuum": "...->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5",
   "asserts_ok": {
     "life": 886,
     "atomic_printer": 183,
@@ -34,7 +34,7 @@
   "asserts_fail": 0,
   "flagship": 12,
   "law": "cube_is_sot; free_energy_must_flow",
-  "HEAD": "1a2da3e7694d8bf7f9647bd7730c97aec626a313",
-  "head": "1a2da3e7694d8bf7f9647bd7730c97aec626a313",
-  "feat": "1a2da3e7694d8bf7f9647bd7730c97aec626a313"
+  "HEAD": "20abe772b8b07644934713c107fec2f324ef3124",
+  "head": "20abe772b8b07644934713c107fec2f324ef3124",
+  "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
 }
