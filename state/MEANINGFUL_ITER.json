@@ -11,7 +11,7 @@
   "feature": "life_cell_klb",
   "FEATURE": "LIFE_CELL_KLB",
   "name": "LIFE_CELL_KLB",
-  "title": "KLB beta-Klotho co-receptor after FGFR4 hepatic RTK on life_cell",
+  "title": "beta-Klotho co-receptor after FGFR4 on life_cell continuum",
   "label": "LIFE_CELL_KLB",
   "method": "klb n",
   "ship": "2275_life_cell_klb",
@@ -24,8 +24,8 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb",
-  "domain": "KLB beta-Klotho co-receptor after FGFR4 -> ternary FGF19/FGFR4/KLB hepatic BA feedback close",
-  "gift": "KLB beta-Klotho co-receptor after FGFR4 so ternary FGF19/FGFR4/KLB complex can authorize BA-synthesis repression under ASSERT.",
+  "domain": "beta-Klotho co-receptor after FGFR4 hepatic RTK -> FGF19 holoreceptor close",
+  "gift": "beta-Klotho after FGFR4 so FGF19 holoreceptor can authorize hepatic BA-synthesis repression under ASSERT.",
   "proof_sum": {
     "life": 574,
     "atomic": 139,
@@ -42,11 +42,11 @@
     "smx": 97,
     "flagship_1620": 12
   },
-  "HEAD": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
-  "head": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
-  "feat": "66fea588c66d0c752c7639c4472136e58569e889",
-  "FEAT_HEAD": "66fea588c66d0c752c7639c4472136e58569e889",
-  "tip": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
-  "pin": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
+  "HEAD": "bbd629f57eb58b1f8b21f3d88004108c31dbfd89",
+  "head": "bbd629f57eb58b1f8b21f3d88004108c31dbfd89",
+  "feat": "be8bba65ee5bc596307846f14a96bd4e738c64b0",
+  "FEAT_HEAD": "be8bba65ee5bc596307846f14a96bd4e738c64b0",
+  "tip": "bbd629f57eb58b1f8b21f3d88004108c31dbfd89",
+  "pin": "bbd629f57eb58b1f8b21f3d88004108c31dbfd89",
   "law": "cube_is_sot; free_energy_must_flow"
 }

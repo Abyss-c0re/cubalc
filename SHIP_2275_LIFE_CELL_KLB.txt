@@ -1,0 +1,8 @@
+MI 2275 LIFE_CELL_KLB
+method: klb n
+beta-Klotho (KLB) co-receptor after FGFR4 hepatic RTK
+continuum ...->asbt->fabp6->fxr->fgf19->fgfr4->klb
+proofs asserts_fail:0 life=574 atomic=139 smx=97 flagship=12 sum=822
+feat: be8bba65ee5bc596307846f14a96bd4e738c64b0
+HEAD: bbd629f57eb58b1f8b21f3d88004108c31dbfd89
+Cube is SoT. Free energy must flow.
