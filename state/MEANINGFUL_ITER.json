@@ -42,11 +42,11 @@
     "smx": 97,
     "flagship_1620": 12
   },
-  "HEAD": "PENDING",
-  "head": "PENDING",
-  "feat": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING",
+  "HEAD": "aa90e90c1fc6258328733214a41ef606b2240c69",
+  "head": "aa90e90c1fc6258328733214a41ef606b2240c69",
+  "feat": "aa90e90c1fc6258328733214a41ef606b2240c69",
+  "FEAT_HEAD": "aa90e90c1fc6258328733214a41ef606b2240c69",
+  "tip": "aa90e90c1fc6258328733214a41ef606b2240c69",
+  "pin": "aa90e90c1fc6258328733214a41ef606b2240c69",
   "law": "cube_is_sot; free_energy_must_flow"
 }
