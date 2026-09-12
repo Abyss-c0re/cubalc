@@ -17950,4 +17950,73 @@ CLASS Cell
   END
 
 
+
+  # Scp2: sterol carrier protein-2 / SCPx thiolase after HSD17B4.
+  # SCP2/SCPx performs peroxisomal 3-ketoacyl-CoA thiolase cleavage of the
+  # HSD17B4 product so classic BA free-energy completes one beta-oxidation
+  # shortening cycle under ASSERT (propionyl-CoA + shortened BA-CoA stand-in).
+  # After Hsd17b4 hydrates/dehydrogenates enoyl-BA-CoA to 3-keto-BA-CoA,
+  # Scp2 is the thiolase plate so mitosis energy budgets gain explicit
+  # carbon-chain shortening instead of a silent 3-keto-BA-CoA pool.
+  # Distinct from Hsd17b4 DBP, Acox2 oxidase, Amacr racemase, Slc27a5.
+  # Domain: post-HSD17B4 peroxisomal SCP2/SCPx thiolase gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2
+  # Gift: post-HSD17B4 SCP2 so BA path can thiolyse 3-keto-BA-CoA under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - scp2.
+  # Usability: AGI models post-HSD17B4 SCP2/SCPx thiolase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD scp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
