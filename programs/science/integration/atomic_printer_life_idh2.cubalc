@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_FORCE MI2298 atomic printer: ACO2 after CS on BA/odd-chain limb.
+# LIFE_FORCE MI2298 atomic printer: IDH2 after ACO2 on BA/odd-chain limb.
 # Place cells, bond metabolism, energize, then open BA beta-ox + propionyl gate:
 #   amacr -> acox2 -> hsd17b4 -> scp2 -> acot8 -> pcca -> mcee -> mut -> suclg1 -> sdha -> fh -> mdh -> cs -> aco2 -> idh2.
-# Wonder: AGI sees ASSERT heat+n atp-n energy-n on aco2 after CS open.
+# Wonder: AGI sees ASSERT heat+n atp-n energy-n on idh2 after ACO2 open.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY printer OF Cell 1 60 0
@@ -103,7 +103,7 @@ LET e0 = LAST_N
 GETF printer atp
 LET a0 = LAST_N
 SEND printer idh2 3
-ASSERT LAST_N == 3 "printer idh2 aconitase 3"
+ASSERT LAST_N == 3 "printer idh2 dehydrogenase 3"
 GETF printer heat
 ASSERT LAST_N == h0 + 3 "printer idh2 heat+3"
 GETF printer energy

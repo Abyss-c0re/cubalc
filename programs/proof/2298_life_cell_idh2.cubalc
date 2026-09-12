@@ -2,7 +2,7 @@ REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
 # LIFE_CELL_IDH2 — isocitrate dehydrogenase IDH2 after ACO2 on BA continuum
-# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->idh2->idh2 (isocitrate to aKG for TCA)
+# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2 (isocitrate to aKG for TCA)
 # Gift: IDH2 opens TCA-progression aKG gate under ASSERT after ACO2 isocitrate.
 # Domain: post-ACO2 isocitrate dehydrogenase 2 (IDH2) aKG TCA-progression gate.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
@@ -100,7 +100,7 @@ ASSERT LAST_N == 1 "mito cs open"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
-SEND mito idh2 1
+SEND mito aco2 1
 ASSERT LAST_N == 1 "mito aco2 open"
 SEND mito photosynth 10
 SEND mito charge 10
@@ -122,7 +122,7 @@ LET f_pmf = LAST_N
 GETF mito threshold
 LET f_thr = LAST_N
 SEND mito idh2 3
-ASSERT LAST_N == 3 "mito IDH2 isocitrate dehydrogenase 3"
+ASSERT LAST_N == 3 "mito ACO2 aconitase 3"
 GETF mito heat
 ASSERT LAST_N == f_h + 3 "mito idh2 heat+3"
 GETF mito energy
@@ -152,7 +152,7 @@ ASSERT LAST_N == 1 "mito cs open"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
-SEND mito idh2 1
+SEND mito aco2 1
 ASSERT LAST_N == 1 "mito aco2 open"
 SEND mito photosynth 10
 SEND mito charge 10
@@ -246,7 +246,7 @@ ASSERT LAST_N == 1 "peri cs open"
 SEND peri photosynth 10
 SEND peri charge 10
 SEND peri feed 8
-SEND peri idh2 1
+SEND peri aco2 1
 ASSERT LAST_N == 1 "peri aco2 open"
 SEND peri photosynth 10
 SEND peri charge 10
@@ -316,7 +316,7 @@ ASSERT LAST_N == 1 "nest cs open"
 SEND nest photosynth 10
 SEND nest charge 10
 SEND nest feed 8
-SEND nest idh2 1
+SEND nest aco2 1
 ASSERT LAST_N == 1 "nest aco2 open"
 SEND nest photosynth 10
 SEND nest charge 10
@@ -371,6 +371,11 @@ ASSERT LAST_N == 1 "mito cs open"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
+SEND mito aco2 1
+ASSERT LAST_N == 1 "mito aco2 open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
 GETF mito atp
 LET p_a = LAST_N
 GETF mito energy
@@ -388,4 +393,4 @@ GETF mito alive
 ASSERT LAST_N == 1 "mito sealed alive for TCA"
 GETF peri alive
 ASSERT LAST_N == 1 "peri sealed alive for TCA"
-ASSERT 1 == 1 "LIFE_CELL_ACO2 PASS"
+ASSERT 1 == 1 "LIFE_CELL_IDH2 PASS"

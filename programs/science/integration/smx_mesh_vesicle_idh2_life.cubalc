@@ -3,7 +3,7 @@ INCLUDE life_cell
 
 # LIFE_FORCE MI2298 SMX mesh vesicle: IDH2 after ACO2 on sealed BA limb.
 # Vesicle cells exchange free energy under SMX-stable metabolism path:
-#   pcca -> mcee -> mut -> suclg1 -> sdha -> fh -> mdh -> cs -> aco2 -> idh2 -> idh2 opens aKG TCA progression on the vesicle wall.
+#   pcca -> mcee -> mut -> suclg1 -> sdha -> fh -> mdh -> cs -> aco2 -> idh2 opens aKG TCA progression on the vesicle wall.
 # Wonder: ASSERT heat+n atp-n energy-n IDH2 after ACO2; dead refused.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
