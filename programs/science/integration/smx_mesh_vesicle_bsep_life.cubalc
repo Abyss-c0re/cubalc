@@ -1,9 +1,9 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX mesh vesicle - Bsep after Fmo1 on life_cell continuum
+# SMX mesh vesicle - Bsep after Baat on life_cell continuum
 # Continuum ...->cdo1->csad->fmo1->baat->bsep
-# Gift: mesh vesicle carries Bsep taurocholate conjugation after Fmo1 taurine finish under SMX exchange.
+# Gift: mesh vesicle carries Bsep canalicular taurocholate export after Baat conjugation under SMX exchange.
 # Cube is SoT. Free energy must flow.
 
 ENTITY vesicle OF Cell 1 50 0
@@ -239,8 +239,47 @@ ASSERT LAST_N == 1 "smx alive post-fmo1"
 SEND vesicle photosynth 12
 SEND vesicle charge 10
 SEND vesicle feed 8
+SEND vesicle baat 2
+ASSERT LAST_N == 2 "smx baat vesicle"
+GETF vesicle alive
+ASSERT LAST_N == 1 "smx vesicle alive post-baat"
+SEND vesicle photosynth 12
+SEND vesicle charge 10
+SEND vesicle feed 8
+GETF vesicle heat
+LET vhb = LAST_N
+GETF vesicle energy
+LET veb = LAST_N
+GETF vesicle atp
+LET vab = LAST_N
+GETF vesicle age
+LET vageb = LAST_N
+GETF vesicle pcr
+LET vpcrb = LAST_N
+GETF vesicle reserve
+LET vrsvb = LAST_N
+GETF vesicle pmf
+LET vpmfb = LAST_N
+GETF vesicle threshold
+LET vthrb = LAST_N
 SEND vesicle bsep 2
 ASSERT LAST_N == 2 "smx bsep vesicle"
+GETF vesicle heat
+ASSERT LAST_N == vhb + 2 "smx bsep h+2"
+GETF vesicle energy
+ASSERT LAST_N == veb - 2 "smx bsep e-2"
+GETF vesicle atp
+ASSERT LAST_N == vab - 2 "smx bsep a-2"
+GETF vesicle age
+ASSERT LAST_N == vageb "smx bsep age held"
+GETF vesicle pcr
+ASSERT LAST_N == vpcrb "smx bsep pcr held"
+GETF vesicle reserve
+ASSERT LAST_N == vrsvb "smx bsep reserve held"
+GETF vesicle pmf
+ASSERT LAST_N == vpmfb "smx bsep pmf held"
+GETF vesicle threshold
+ASSERT LAST_N == vthrb "smx bsep thr held"
 GETF vesicle alive
 ASSERT LAST_N == 1 "smx vesicle alive post-bsep"
 ASSERT 1 == 1 "smx_mesh_vesicle_bsep_life PASS"
