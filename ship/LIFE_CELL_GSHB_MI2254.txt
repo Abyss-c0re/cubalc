@@ -2,6 +2,6 @@ LIFE_CELL_GSHB MI 2254
 asserts_fail: 0
 asserts_ok_sum: 419
 feat: e2ac56058c3bb6614436359d5913a2eab8151a2e
-HEAD/tip: e0810df546bfe3662d32e27918e7c75369adadf2
+HEAD/tip: cc20e3710d8daf358048b80884299e83c8ed9c27
 branch: life-cell-gshb-mi2254
 sealed: true
