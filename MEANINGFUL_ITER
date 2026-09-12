@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2297
-- **FEATURE**: LIFE_CELL_ACO2
-- **method**: aco2 n
-- **version**: 1.15.1796-usability
-- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2
+- **MI**: 2298
+- **FEATURE**: LIFE_CELL_IDH2
+- **method**: idh2 n
+- **version**: 1.15.1797-usability
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2
 - **asserts_fail**: 0
-- **asserts_ok sum**: 154 (life=85 atomic_printer=31 smx=26 flagship_1620=12)
-- **proof**: programs/proof/2297_life_cell_aco2.cubalc
-- **HEAD**: 7229dd29bb93bb44ed95c1280b72723ea8c2f7ba
-- **feat**: 6d395e299335f677f47ec3762490963ead8228e6
+- **asserts_ok sum**: 199 (life=112 atomic_printer=40 smx=35 flagship_1620=12)
+- **proof**: programs/proof/2298_life_cell_idh2.cubalc
+- **HEAD**: PENDING
+- **feat**: 877be688bde0e09943f0a8836b9d96ed7a0c545a
 - **law**: cube_is_sot; free_energy_must_flow

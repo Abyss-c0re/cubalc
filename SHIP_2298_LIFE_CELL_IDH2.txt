@@ -1,0 +1,1 @@
+LIFE_CELL_IDH2 MI=2298 PASS feat=877be688bde0e09943f0a8836b9d96ed7a0c545a continuum=...->cs->aco2->idh2 proofs_sum=199
