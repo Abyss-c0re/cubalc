@@ -4,10 +4,10 @@
 - **FEATURE**: LIFE_CELL_KLB
 - **method**: klb n
 - **version**: 1.15.1774-usability
-- **continuum**: ...->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb
 - **asserts_fail**: 0
 - **asserts_ok sum**: 822 (life=574 atomic_printer=139 smx=97 flagship_1620=12)
 - **proof**: programs/proof/2275_life_cell_klb.cubalc
-- **HEAD**: b56f3bfbc7e26c37423d2b9e05a27ba0135d5cd6
+- **HEAD**: 8adb73cdae32507b63174827c258a6f5fb45f81d
 - **feat**: be8bba65ee5bc596307846f14a96bd4e738c64b0
 - **law**: cube_is_sot; free_energy_must_flow
