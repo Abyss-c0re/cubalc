@@ -53,5 +53,5 @@
   "note": "METHOD slc16a7 n ships post-SLC16A1 MCT2 ketone import; heat+n atp-n energy-n; parent SLC16A1 lives; free energy flows into peripheral ketolysis",
   "ts": "2026-09-13T00:15:00Z",
   "summary": "LIFE_CELL_SLC16A7 MI2309 tip pin sealed PASS asserts_fail=0 sum=261",
-  "HEAD": "PENDING_TIP"
+  "HEAD": "a219a863915dc3e8682bc354c5cc0c5ef8f3bce7"
 }
