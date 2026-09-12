@@ -48,13 +48,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell scs",
-  "HEAD": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "head": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "tip": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "pin": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "pinned_head": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "git_head": "26daf7bec27d515d73fa0801ac5b069c642a0b94",
-  "commit": "26daf7bec27d",
-  "short": "26daf7bec27d",
-  "summary": "LIFE_CELL_SCS MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=26daf7bec27d"
+  "HEAD": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "head": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "tip": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "pin": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "pinned_head": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "git_head": "191b3dd4627ea2d88bd1ee89214b6719a61dfbba",
+  "commit": "191b3dd4627e",
+  "short": "191b3dd4627e",
+  "summary": "LIFE_CELL_SCS MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=191b3dd4627e"
 }
