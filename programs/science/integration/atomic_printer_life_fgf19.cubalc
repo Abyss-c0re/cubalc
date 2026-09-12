@@ -1,0 +1,554 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# Atomic printer life force - FGF19-after-FXR ileal bile-acid binding protein after Asbt
+# Extends printer continuum: ...->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19
+# Gift: FGF19-after-FXR opens cytosolic IBABP bile-salt shuttle on the printer board so reclaimed acids transit epithelium after Asbt apical uptake.
+# Cube is SoT. Free energy must flow.
+
+ENTITY printer OF Cell 1 60 0
+SEND printer set_threshold 8
+SEND printer pulse 4
+SEND printer photosynth 48
+SEND printer glycolyse 40
+SEND printer pump 30
+SEND printer photophos 28
+SEND printer charge 44
+SEND printer feed 40
+
+SEND printer pepf 2
+ASSERT LAST_N == 2 "ap pepf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer pdf 2
+ASSERT LAST_N == 2 "ap pdf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer map 2
+ASSERT LAST_N == 2 "ap map"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nata 2
+ASSERT LAST_N == 2 "ap nata"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natb 2
+ASSERT LAST_N == 2 "ap natb"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natc 2
+ASSERT LAST_N == 2 "ap natc"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nate 2
+ASSERT LAST_N == 2 "ap nate"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer mete 2
+ASSERT LAST_N == 2 "ap mete"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer metk 2
+ASSERT LAST_N == 2 "ap metk"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer ahcy 2
+ASSERT LAST_N == 2 "ap ahcy"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+
+SEND printer cbs 3
+ASSERT LAST_N == 3 "ap pre cbs3"
+GETF printer heat
+ASSERT LAST_N == h0 + 3 "ap pre cbs heat"
+GETF printer energy
+ASSERT LAST_N == e0 - 3 "ap pre cbs energy"
+GETF printer atp
+ASSERT LAST_N == a0 - 3 "ap pre cbs atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET a1 = LAST_N
+
+SEND printer cgl 3
+ASSERT LAST_N == 3 "ap pre cgl3"
+GETF printer heat
+ASSERT LAST_N == h1 + 3 "ap pre cgl heat"
+GETF printer energy
+ASSERT LAST_N == e1 - 3 "ap pre cgl energy"
+GETF printer atp
+ASSERT LAST_N == a1 - 3 "ap pre cgl atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h2 = LAST_N
+GETF printer energy
+LET e2 = LAST_N
+GETF printer atp
+LET a2 = LAST_N
+
+SEND printer gsha 3
+ASSERT LAST_N == 3 "ap pre gsha3"
+GETF printer heat
+ASSERT LAST_N == h2 + 3 "ap pre gsha heat"
+GETF printer energy
+ASSERT LAST_N == e2 - 3 "ap pre gsha energy"
+GETF printer atp
+ASSERT LAST_N == a2 - 3 "ap pre gsha atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h3 = LAST_N
+GETF printer energy
+LET e3 = LAST_N
+GETF printer atp
+LET a3 = LAST_N
+
+SEND printer gshb 3
+ASSERT LAST_N == 3 "ap gshb3"
+GETF printer heat
+ASSERT LAST_N == h3 + 3 "ap gshb heat"
+GETF printer energy
+ASSERT LAST_N == e3 - 3 "ap gshb energy"
+GETF printer atp
+ASSERT LAST_N == a3 - 3 "ap gshb atp"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gshb"
+
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hg = LAST_N
+GETF printer energy
+LET eg = LAST_N
+GETF printer atp
+LET ag = LAST_N
+SEND printer gor 3
+ASSERT LAST_N == 3 "ap gor3"
+GETF printer heat
+ASSERT LAST_N == hg + 3 "ap gor h+3"
+GETF printer energy
+ASSERT LAST_N == eg - 3 "ap gor e-3"
+GETF printer atp
+ASSERT LAST_N == ag - 3 "ap gor a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gor"
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hx = LAST_N
+GETF printer energy
+LET ex = LAST_N
+GETF printer atp
+LET ax = LAST_N
+SEND printer gpx 3
+ASSERT LAST_N == 3 "ap gpx3"
+GETF printer heat
+ASSERT LAST_N == hx + 3 "ap gpx h+3"
+GETF printer energy
+ASSERT LAST_N == ex - 3 "ap gpx e-3"
+GETF printer atp
+ASSERT LAST_N == ax - 3 "ap gpx a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gpx"
+
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hs = LAST_N
+GETF printer energy
+LET es = LAST_N
+GETF printer atp
+LET as = LAST_N
+SEND printer gst 3
+ASSERT LAST_N == 3 "ap gst3"
+GETF printer heat
+ASSERT LAST_N == hs + 3 "ap gst h+3"
+GETF printer energy
+ASSERT LAST_N == es - 3 "ap gst e-3"
+GETF printer atp
+ASSERT LAST_N == as - 3 "ap gst a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gst"
+
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hggt = LAST_N
+GETF printer energy
+LET eggt = LAST_N
+GETF printer atp
+LET aggt = LAST_N
+SEND printer ggt 3
+ASSERT LAST_N == 3 "ap ggt3"
+GETF printer heat
+ASSERT LAST_N == hggt + 3 "ap ggt h+3"
+GETF printer energy
+ASSERT LAST_N == eggt - 3 "ap ggt e-3"
+GETF printer atp
+ASSERT LAST_N == aggt - 3 "ap ggt a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-ggt"
+
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+SEND printer dug1 3
+ASSERT LAST_N == 3 "ap pre dug1 3"
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+SEND printer cdo1 3
+ASSERT LAST_N == 3 "ap pre cdo1 3"
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hcsad = LAST_N
+GETF printer energy
+LET ecsad = LAST_N
+GETF printer atp
+LET acsad = LAST_N
+SEND printer csad 3
+ASSERT LAST_N == 3 "ap csad 3"
+GETF printer heat
+ASSERT LAST_N == hcsad + 3 "ap csad h+3"
+GETF printer energy
+ASSERT LAST_N == ecsad - 3 "ap csad e-3"
+GETF printer atp
+ASSERT LAST_N == acsad - 3 "ap csad a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-csad"
+ASSERT 1 == 1 "ATOMIC_PRINTER_LIFE_CSAD PASS"
+SEND printer photosynth 14
+SEND printer charge 16
+SEND printer feed 12
+GETF printer heat
+LET fm_ap_h = LAST_N
+GETF printer energy
+LET fm_ap_e = LAST_N
+GETF printer atp
+LET fm_ap_a = LAST_N
+GETF printer age
+LET fm_ap_age = LAST_N
+GETF printer pcr
+LET fm_ap_pcr = LAST_N
+GETF printer reserve
+LET fm_ap_rsv = LAST_N
+GETF printer pmf
+LET fm_ap_pmf = LAST_N
+GETF printer threshold
+LET fm_ap_thr = LAST_N
+SEND printer fmo1 2
+ASSERT LAST_N == 2 "ap fmo1"
+GETF printer heat
+ASSERT LAST_N == fm_ap_h + 2 "ap fmo1 h+2"
+GETF printer energy
+ASSERT LAST_N == fm_ap_e - 2 "ap fmo1 e-2"
+GETF printer atp
+ASSERT LAST_N == fm_ap_a - 2 "ap fmo1 a-2"
+GETF printer age
+ASSERT LAST_N == fm_ap_age "ap fmo1 age held"
+GETF printer pcr
+ASSERT LAST_N == fm_ap_pcr "ap fmo1 pcr held"
+GETF printer reserve
+ASSERT LAST_N == fm_ap_rsv "ap fmo1 reserve held"
+GETF printer pmf
+ASSERT LAST_N == fm_ap_pmf "ap fmo1 pmf held"
+GETF printer threshold
+ASSERT LAST_N == fm_ap_thr "ap fmo1 thr held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-fmo1"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer baat 2
+ASSERT LAST_N == 2 "ap baat"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-baat"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET bs_ap_h = LAST_N
+GETF printer energy
+LET bs_ap_e = LAST_N
+GETF printer atp
+LET bs_ap_a = LAST_N
+GETF printer age
+LET bs_ap_age = LAST_N
+GETF printer pcr
+LET bs_ap_pcr = LAST_N
+GETF printer reserve
+LET bs_ap_rsv = LAST_N
+GETF printer pmf
+LET bs_ap_pmf = LAST_N
+GETF printer threshold
+LET bs_ap_thr = LAST_N
+SEND printer bsep 2
+ASSERT LAST_N == 2 "ap bsep"
+GETF printer heat
+ASSERT LAST_N == bs_ap_h + 2 "ap bsep h+2"
+GETF printer energy
+ASSERT LAST_N == bs_ap_e - 2 "ap bsep e-2"
+GETF printer atp
+ASSERT LAST_N == bs_ap_a - 2 "ap bsep a-2"
+GETF printer age
+ASSERT LAST_N == bs_ap_age "ap bsep age held"
+GETF printer pcr
+ASSERT LAST_N == bs_ap_pcr "ap bsep pcr held"
+GETF printer reserve
+ASSERT LAST_N == bs_ap_rsv "ap bsep reserve held"
+GETF printer pmf
+ASSERT LAST_N == bs_ap_pmf "ap bsep pmf held"
+GETF printer threshold
+ASSERT LAST_N == bs_ap_thr "ap bsep thr held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-bsep"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET nt_ap_h = LAST_N
+GETF printer energy
+LET nt_ap_e = LAST_N
+GETF printer atp
+LET nt_ap_a = LAST_N
+GETF printer age
+LET nt_ap_age = LAST_N
+GETF printer pcr
+LET nt_ap_pcr = LAST_N
+GETF printer reserve
+LET nt_ap_rsv = LAST_N
+GETF printer pmf
+LET nt_ap_pmf = LAST_N
+GETF printer threshold
+LET nt_ap_thr = LAST_N
+SEND printer ntcp 2
+ASSERT LAST_N == 2 "ap ntcp"
+GETF printer heat
+ASSERT LAST_N == nt_ap_h + 2 "ap ntcp h+2"
+GETF printer energy
+ASSERT LAST_N == nt_ap_e - 2 "ap ntcp e-2"
+GETF printer atp
+ASSERT LAST_N == nt_ap_a - 2 "ap ntcp a-2"
+GETF printer age
+ASSERT LAST_N == nt_ap_age "ap ntcp age held"
+GETF printer pcr
+ASSERT LAST_N == nt_ap_pcr "ap ntcp pcr held"
+GETF printer reserve
+ASSERT LAST_N == nt_ap_rsv "ap ntcp reserve held"
+GETF printer pmf
+ASSERT LAST_N == nt_ap_pmf "ap ntcp pmf held"
+GETF printer threshold
+ASSERT LAST_N == nt_ap_thr "ap ntcp thr held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-ntcp"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET oa_ap_h = LAST_N
+GETF printer energy
+LET oa_ap_e = LAST_N
+GETF printer atp
+LET oa_ap_a = LAST_N
+GETF printer age
+LET oa_ap_age = LAST_N
+GETF printer pcr
+LET oa_ap_pcr = LAST_N
+GETF printer reserve
+LET oa_ap_rsv = LAST_N
+GETF printer pmf
+LET oa_ap_pmf = LAST_N
+GETF printer threshold
+LET oa_ap_thr = LAST_N
+SEND printer oatp1b1 2
+ASSERT LAST_N == 2 "ap oatp1b1"
+GETF printer heat
+ASSERT LAST_N == oa_ap_h + 2 "ap oatp1b1 h+2"
+GETF printer energy
+ASSERT LAST_N == oa_ap_e - 2 "ap oatp1b1 e-2"
+GETF printer atp
+ASSERT LAST_N == oa_ap_a - 2 "ap oatp1b1 a-2"
+GETF printer age
+ASSERT LAST_N == oa_ap_age "ap oatp1b1 age held"
+GETF printer pcr
+ASSERT LAST_N == oa_ap_pcr "ap oatp1b1 pcr held"
+GETF printer reserve
+ASSERT LAST_N == oa_ap_rsv "ap oatp1b1 reserve held"
+GETF printer pmf
+ASSERT LAST_N == oa_ap_pmf "ap oatp1b1 pmf held"
+GETF printer threshold
+ASSERT LAST_N == oa_ap_thr "ap oatp1b1 thr held"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-oatp1b1"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+GETF printer heat
+LET apmp_h = LAST_N
+GETF printer energy
+LET apmp_e = LAST_N
+GETF printer atp
+LET apmp_a = LAST_N
+SEND printer mrp2 2
+ASSERT LAST_N == 2 "apmp mrp2"
+GETF printer heat
+ASSERT LAST_N == apmp_h + 2 "apmp mrp2 h+2"
+GETF printer energy
+ASSERT LAST_N == apmp_e - 2 "apmp mrp2 e-2"
+GETF printer atp
+ASSERT LAST_N == apmp_a - 2 "apmp mrp2 a-2"
+GETF printer alive
+ASSERT LAST_N == 1 "apmp alive post-mrp2"
+
+# Asbt apical Na+-bile-acid uptake after Ost
+SEND printer photosynth 16
+SEND printer charge 14
+SEND printer feed 12
+GETF printer heat
+LET ash = LAST_N
+GETF printer energy
+LET ase = LAST_N
+GETF printer atp
+LET asa = LAST_N
+SEND printer asbt 2
+ASSERT LAST_N == 2 "ap asbt 2"
+GETF printer heat
+ASSERT LAST_N == ash + 2 "ap asbt h+2"
+GETF printer energy
+ASSERT LAST_N == ase - 2 "ap asbt e-2"
+GETF printer atp
+ASSERT LAST_N == asa - 2 "ap asbt a-2"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-asbt"
+SEND printer asbt 0
+ASSERT LAST_N == 0 "ap asbt n0"
+
+ASSERT 1 == 1 "atomic_printer_life_asbt checkpoint"
+
+# Ost basolateral overflow after Mrp3
+SEND printer photosynth 16
+SEND printer charge 14
+SEND printer feed 12
+GETF printer heat
+LET m3h = LAST_N
+GETF printer energy
+LET m3e = LAST_N
+GETF printer atp
+LET m3a = LAST_N
+SEND printer ost 2
+ASSERT LAST_N == 2 "ap ost 2"
+GETF printer heat
+ASSERT LAST_N == m3h + 2 "ap ost h+2"
+GETF printer energy
+ASSERT LAST_N == m3e - 2 "ap ost e-2"
+GETF printer atp
+ASSERT LAST_N == m3a - 2 "ap ost a-2"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-ost"
+SEND printer ost 0
+ASSERT LAST_N == 0 "ap ost n0"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive final ost"
+
+
+# FGF19-after-FXR cytosolic IBABP shuttle after Asbt
+SEND printer photosynth 16
+SEND printer charge 14
+SEND printer feed 12
+GETF printer heat
+LET fbh = LAST_N
+GETF printer energy
+LET fbe = LAST_N
+GETF printer atp
+LET fba = LAST_N
+SEND printer fabp6 2
+ASSERT LAST_N == 2 "ap fabp6 2"
+GETF printer heat
+ASSERT LAST_N == fbh + 2 "ap fabp6 h+2"
+GETF printer energy
+ASSERT LAST_N == fbe - 2 "ap fabp6 e-2"
+GETF printer atp
+ASSERT LAST_N == fba - 2 "ap fabp6 a-2"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-fabp6"
+SEND printer fabp6 0
+ASSERT LAST_N == 0 "ap fabp6 n0"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive final fabp6"
+ASSERT 1 == 1 "atomic_printer_life_fgf19 PASS"
+
+# FGF19 after FXR on ap plate
+# Cube is SoT. Free energy must flow.
+
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+GETF printer heat
+LET printer_fh = LAST_N
+GETF printer energy
+LET printer_fe = LAST_N
+GETF printer atp
+LET printer_fa = LAST_N
+SEND printer fgf19 2
+ASSERT LAST_N == 2 "ap printer fgf19 2"
+GETF printer heat
+ASSERT LAST_N == printer_fh + 2 "ap printer fgf19 h+2"
+GETF printer energy
+ASSERT LAST_N == printer_fe - 2 "ap printer fgf19 e-2"
+GETF printer atp
+ASSERT LAST_N == printer_fa - 2 "ap printer fgf19 a-2"
+GETF printer alive
+ASSERT LAST_N == 1 "ap printer alive post-fgf19"
+
