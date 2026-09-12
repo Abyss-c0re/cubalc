@@ -19642,4 +19642,150 @@ CLASS Cell
   END
 
 
+
+
+  # Emb: embigin (EMB) MCT2 accessory glycoprotein after SLC16A7 limb.
+  # Embigin is the preferred plasma-membrane chaperone that escorts MCT2/SLC16A7
+  # to the cell surface of neurons and other high-affinity ketone consumers so
+  # imported D-beta-hydroxybutyrate / acetoacetate can reach peripheral
+  # BDH1-reverse / OXCT1-ACAT1 ketolysis under fasting flux.
+  # After Slc16a7 opens high-affinity MCT2 import, Emb spends ATP/energy under
+  # ASSERT to dock embigin with MCT2 and stabilize the import gate at the
+  # plasma membrane (distinct from basigin/CD147 which prefers MCT1/MCT3/MCT4).
+  # Distinct from Slc16a7 MCT2 import, Slc16a1 MCT1 export, Bdh1 dehydrogenase,
+  # and Oxct1 SCOT - Emb is the embigin/EMB MCT2 trafficking chaperone gate.
+  # Domain: post-SLC16A7 plasma-membrane embigin (EMB) MCT2 accessory chaperone gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->emb
+  # Gift: post-SLC16A7 EMB so BA/odd-chain free-energy path can chaperone
+  #   MCT2/SLC16A7 import under ASSERT after SLC16A7 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - emb.
+  # Usability: AGI models post-SLC16A7 embigin/EMB MCT2 chaperone under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD emb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Aacs: acetoacetyl-CoA synthetase (AACS) after SLC16A7 limb.
+  # AACS is the cytosolic ketone-activation gate: it ligates acetoacetate
+  # (imported by peripheral MCT2/SLC16A7) to CoA forming acetoacetyl-CoA with ATP,
+  # feeding cytosolic ACAT/HMGCR mevalonate and de novo lipogenesis so free energy
+  # reclaimed from circulating ketones can build membrane and sterol mass.
+  # After Slc16a7 imports BHB/AcAc under ketogenic flux, Aacs spends that
+  # cytosolic monocarboxylate pool under ASSERT to open AACS activation toward
+  # cytosolic lipid/sterol anabolism (distinct from mitochondrial OXCT1 SCOT).
+  # Distinct from Slc16a7 plasma-membrane MCT2 ketone import, Oxct1 mitochondrial
+  # SCOT ketolysis, Acat1 mitochondrial thiolase, and Bdh1 dehydrogenase -
+  # Aacs is the cytosolic acetoacetyl-CoA synthetase (AACS) ketone-activation gate.
+  # Domain: post-SLC16A7 cytosolic acetoacetyl-CoA synthetase (AACS) ketolytic anabolic gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->aacs
+  # Gift: post-SLC16A7 AACS so BA/odd-chain free-energy path can activate
+  #   acetoacetate to acetoacetyl-CoA under ASSERT after SLC16A7 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - aacs.
+  # Usability: AGI models post-SLC16A7 AACS cytosolic ketone activation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD aacs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
