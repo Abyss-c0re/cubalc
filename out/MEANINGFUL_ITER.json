@@ -13,10 +13,10 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2268_life_cell_mrp3.cubalc",
-  "HEAD": "5cd9b1455457efa8bd27ad7164c7cd09eebaf291",
+  "HEAD": "3a9a24923ea340c14ac372753ccfbb900d9113c7",
   "feat": "021934a111acd566049a79f3782f1112f4153a33",
   "law": "cube_is_sot; free_energy_must_flow",
   "FEAT_HEAD": "021934a111acd566049a79f3782f1112f4153a33",
-  "tip": "5cd9b1455457efa8bd27ad7164c7cd09eebaf291",
-  "HEAD_PIN": "5cd9b1455457efa8bd27ad7164c7cd09eebaf291"
+  "tip": "3a9a24923ea340c14ac372753ccfbb900d9113c7",
+  "HEAD_PIN": "3a9a24923ea340c14ac372753ccfbb900d9113c7"
 }
