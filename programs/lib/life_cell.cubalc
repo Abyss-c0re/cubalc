@@ -16623,4 +16623,84 @@ CLASS Cell
     RET take
   END
 
+
+  # Asbt: apical Na+-dependent bile-acid transporter (SLC10A2 / IBAT) after Ost.
+  # Asbt (ASBT / IBAT / SLC10A2) is the apical brush-border sodium-bile-acid
+  # cotransporter that reclaims lumenal conjugated bile salts into enterocytes
+  # (and cholangiocytes) after Ost finishes basolateral facilitated exit.
+  # After Ost opens basolateral bile-salt exit into blood, Asbt commits apical
+  # Na+-coupled uptake from the gut lumen so mitosis energy budgets gain a
+  # closed intestinal reclaim inlet instead of an open-loop lumenal bile-salt
+  # sink on the enterohepatic free-energy circuit.
+  # Distinct from Ost (SLC51A/B basolateral facilitated exit), Ntcp (SLC10A1
+  # hepatocyte basolateral Na+-TC uptake), Bsep (ABCB11 canalicular export),
+  # Mrp3 (ABCC3 basolateral ABC overflow), Mrp2 (ABCC2 canalicular OA export),
+  # Oatp1b1 (SLCO1B1 basolateral OA uptake) - Asbt is the apical SLC10A2
+  # Na+-bile-acid symporter that starts intestinal bile-salt reclaim.
+  # Without Asbt after Ost, lumenal bile salts stay unreclaimed; life_cell
+  # enterohepatic free-energy loop never finishes apical intestinal uptake
+  # after basolateral Ost exit closes the epithelial transit limb.
+  # Domain: post-Ost Asbt apical Na+-bile-acid uptake /
+  #   lumenal bile salt + Na+ -> cytosolic bile salt (secondary active symport)
+  # (not Ost, not Ntcp, not Bsep, not Mrp3, not Mrp2, not Oatp1b1).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt
+  #   (Ost basolateral bile-salt exit -> Asbt apical Na+-bile-acid uptake).
+  # Gift: apical Na+-coupled bile-salt reclaim after Ost so lumenal acids
+  #   re-enter epithelium and close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - asbt life-force.
+  # Usability: AGI models post-Ost Asbt apical bile-salt uptake under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD asbt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
