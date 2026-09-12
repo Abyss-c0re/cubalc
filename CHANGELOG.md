@@ -1,3 +1,9 @@
+## 1.15.1807-usability — MI 2308 LIFE_CELL_SLC16A1
+- feat(life): SLC16A1/MCT1 plasma-membrane monocarboxylate ketone export after BDH1 on life_cell continuum
+- Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1
+- Proofs asserts_fail:0 — life 140 · atomic 52 · smx 48 · flagship 12 · sum 252
+- METHOD slc16a1 n — ketogenic MCT1 monocarboxylate export gate (BHB/AcAc export)
+
 ## 1.15.1805-usability — MI 2306 LIFE_CELL_HMGCL
 - feat(life): HMGCL mitochondrial HMG-CoA lyase after HMGCS2 on life_cell continuum
 - Continuum: ...->oxct1->acat1->hmgcs2->hmgcl
