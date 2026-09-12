@@ -1,0 +1,10 @@
+SHIP LIFE_CELL_MVD MI 2316
+FEATURE: MVD mevalonate diphosphate decarboxylase after PMVK
+method: mvd n
+proof: programs/proof/2316_life_cell_mvd.cubalc
+asserts_fail: 0
+asserts_ok: life=187 atomic_printer=68 smx=64 flagship=12 sum=331
+continuum: ...->hmgcs1->hmgcr->mvk->pmvk->mvd
+HEAD: PLACEHOLDER
+feat: 893df7b00399b919fb8b140debf8d342adb82ac0
+law: cube_is_sot; free_energy_must_flow

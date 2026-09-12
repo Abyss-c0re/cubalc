@@ -11,3 +11,9 @@
 - **HEAD**: 4f8d8d6f9e16216db897fb20b396b1c47a4d8e9f
 - **feat**: 32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9
 - **law**: cube_is_sot; free_energy_must_flow
+
+## MI 2316 LIFE_CELL_MVD PASS
+- method: `mvd n` after PMVK
+- continuum: ...->hmgcr->mvk->pmvk->mvd
+- asserts: life=187 ap=68 smx=64 flagship=12 sum=331
+- VERSION: 1.15.1815-usability

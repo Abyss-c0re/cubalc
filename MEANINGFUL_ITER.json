@@ -4,16 +4,16 @@
   "MEANINGFUL_ITER": 2315,
   "iter": 2315,
   "n": 2315,
-  "mi": 2315,
+  "mi": 2316,
   "MI": 2315,
-  "version": "1.15.1814-usability",
+  "version": "1.15.1815-usability",
   "VERSION": "1.15.1814-usability",
   "feature": "LIFE_CELL_PMVK",
   "FEATURE": "LIFE_CELL_PMVK",
-  "name": "LIFE_CELL_PMVK",
+  "name": "LIFE_CELL_MVD",
   "title": "phosphomevalonate kinase after MVK on life_cell continuum",
   "label": "LIFE_CELL_PMVK",
-  "method": "pmvk n",
+  "method": "mvd n",
   "ship": "2315_life_cell_pmvk",
   "proof": "programs/proof/2315_life_cell_pmvk.cubalc",
   "proofs": {
@@ -24,11 +24,12 @@
     "sum": 322,
     "fail": 0
   },
-  "continuum": "...->emb->aacs->hmgcs1->hmgcr->mvk->pmvk",
+  "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd",
   "feat": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "feat_head": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "status": "PASS",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "pin_head": "4f8d8d6f9e16216db897fb20b396b1c47a4d8e9f",
-  "head_tip": "4f8d8d6f9e16216db897fb20b396b1c47a4d8e9f"
+  "head_tip": "4f8d8d6f9e16216db897fb20b396b1c47a4d8e9f",
+  "asserts_ok": 331
 }
