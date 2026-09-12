@@ -4,18 +4,18 @@
   "MEANINGFUL_ITER": 2265,
   "iter": 2265,
   "n": 2265,
-  "mi": 2265,
+  "mi": 2266,
   "MI": 2265,
-  "version": "1.15.1763-usability",
+  "version": "1.15.1764-usability",
   "VERSION": "1.15.1763-usability",
-  "feature": "life_cell_ntcp",
+  "feature": "LIFE_CELL_OATP1B1",
   "FEATURE": "LIFE_CELL_NTCP",
   "name": "LIFE_CELL_NTCP",
   "title": "Ntcp Na+-taurocholate cotransporting polypeptide after Bsep on life_cell",
   "label": "LIFE_CELL_NTCP",
-  "method": "ntcp n",
+  "method": "oatp1b1 n",
   "ship": "2265_life_cell_ntcp",
-  "proof": "programs/proof/2265_life_cell_ntcp.cubalc",
+  "proof": "programs/proof/2266_life_cell_oatp1b1.cubalc",
   "proofs": [
     "programs/lib/life_cell.cubalc",
     "programs/proof/2265_life_cell_ntcp.cubalc",
@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_ntcp_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp",
+  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1",
   "domain": "Ntcp SLC10A1 basolateral bile-salt uptake after Bsep / 2 Na+ + taurocholate in",
   "gift": "Ntcp reclaims Bsep-exported taurocholate so enterohepatic free-energy recirculation closes the Cys-disposal bile loop",
   "proof_sum": {
@@ -35,19 +35,19 @@
     "asserts_fail": 0
   },
   "asserts_fail": 0,
-  "asserts_ok_sum": 459,
+  "asserts_ok_sum": 496,
   "asserts_ok": {
-    "life": 292,
-    "atomic_printer": 84,
-    "smx": 71,
+    "life": 319,
+    "atomic_printer": 99,
+    "smx": 66,
     "flagship_1620": 12
   },
-  "HEAD": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
+  "HEAD": "ba7a5114d2b40bc1d8c3879a934a6e6e6cb58fbe",
   "head": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
-  "feat": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
+  "feat": "2b1372a2dfe1e231f1b2c78bc9e92c162de6df14",
   "FEAT_HEAD": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
   "tip": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
   "pin": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
   "HEAD_tip": "e23d0d97365ce7785cbc64e41e3050c43dc3a17d",
-  "law": "Cube is SoT. Free energy must flow."
+  "law": "cube_is_sot; free_energy_must_flow"
 }
