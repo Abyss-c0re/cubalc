@@ -43,9 +43,9 @@
     "flagship_1620": 12,
     "sum": 192
   },
-  "HEAD": "",
-  "feat": "",
-  "head": "",
+  "HEAD": "2f6d2da55cd753d6ee53cfbee11a49456bdf1893",
+  "feat": "2f6d2da55cd753d6ee53cfbee11a49456bdf1893",
+  "head": "2f6d2da55cd753d6ee53cfbee11a49456bdf1893",
   "law": "cube_is_sot; free_energy_must_flow",
   "status": "PASS"
 }
