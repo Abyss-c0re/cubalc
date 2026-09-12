@@ -99,3 +99,11 @@ Continuum:
 {"ok":true,"cmd":"run","file":"/root/cubalc-flow-1.5/programs/proof/1620_atomic_printer_life_force.cubalc","stmts":661,"asserts_ok":12,"asserts_fail":0,"n":7,"unity":0.797,"language":"CubalC","version":"1.15.1676-usability","err":"","last_err":"","err_line":0,"err_src":"","why_hint":"ok — no sticky LAST_ERR","quiet":true,"strict":false,"timeout_ms":0,"timed_out":false,"remain_ms":-1,"wall_ms":235,"preload_n":0,"preload":[],"preload_ok":true,"preload_miss_n":0,"preload_miss":[],"include_path_n":0,"require_version":"","require_forms":"","require_fns":"","require_classes":"","require_doctor":false,"require_ready":false,"includes_n":1,"includes":["programs/lib/life_cell.cubalc"],"include_stems_n":1,"include_stems":["life_cell"],"vars_n":85,"vars_max":1024,"vars_full":false,"exit_code":0,"halted":false}
 
 Proof: asserts_fail=0 · life=965 · atomic_printer=195 · smx=126 · flagship 1620 12/0 · MEANINGFUL_ITER=2285
+
+## MI 2285 LIFE_CELL_ACOX2
+
+- method: acox2 n after amacr
+- continuum: ...->slc27a5->amacr->acox2
+- asserts_ok sum: 1292 fail:0
+- Cube is SoT. Free energy must flow.
+
