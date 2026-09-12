@@ -1,11 +1,8 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2258
-- **FEATURE**: LIFE_CELL_GGT
-- **method**: ggt n
-- **version**: 1.15.1756-usability
-- **continuum**: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt
-- **asserts_fail**: 0
-- **asserts_ok sum**: 267 (life=164 atomic_printer=49 smx=42 flagship_1620=12)
-- **proof**: programs/proof/2258_life_cell_ggt.cubalc
-- Cube is SoT. Free energy must flow.
+- **MI**: 2259
+- **FEATURE**: LIFE_CELL_DUG1
+- **method**: dug1 n
+- **proof**: programs/proof/2259_life_cell_dug1.cubalc
+- **continuum**: ...->gpx->gst->ggt->dug1
+- **HEAD**: 6731d945a7a1d0019f0cc39d8f1580cba415823a
