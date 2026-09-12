@@ -5,18 +5,15 @@
   "version": "1.15.1766-usability",
   "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3",
   "asserts_fail": 0,
-  "asserts_ok_sum": 588,
+  "asserts_ok_sum": 589,
   "asserts_ok": {
-    "life": 387,
+    "life": 388,
     "atomic_printer": 111,
     "smx": 78,
     "flagship_1620": 12
   },
   "proof": "programs/proof/2268_life_cell_mrp3.cubalc",
-  "HEAD": "bbbc7c651a785d5219523c275763235cb0b5883b",
+  "HEAD": "021934a111acd566049a79f3782f1112f4153a33",
   "feat": "021934a111acd566049a79f3782f1112f4153a33",
-  "law": "cube_is_sot; free_energy_must_flow",
-  "FEAT_HEAD": "021934a111acd566049a79f3782f1112f4153a33",
-  "tip": "bbbc7c651a785d5219523c275763235cb0b5883b",
-  "HEAD_PIN": "bbbc7c651a785d5219523c275763235cb0b5883b"
+  "law": "cube_is_sot; free_energy_must_flow"
 }
