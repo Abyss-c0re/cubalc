@@ -19569,4 +19569,77 @@ CLASS Cell
   END
 
 
+
+  # Slc16a7: monocarboxylate transporter 2 (MCT2/SLC16A7) after SLC16A1 limb.
+  # SLC16A7/MCT2 is the high-affinity peripheral ketone import gate: it imports
+  # D-beta-hydroxybutyrate and acetoacetate (exported by hepatic MCT1/SLC16A1)
+  # across neuronal and other high-affinity plasma membranes so peripheral
+  # OXCT1-ACAT1 ketolysis can reclaim free energy when fasting ketones circulate.
+  # After Slc16a1 exports BHB/AcAc under ketogenic flux, Slc16a7 spends that
+  # circulating monocarboxylate pool under ASSERT to open MCT2 import toward
+  # peripheral BDH1-reverse / OXCT1-ACAT1 ketolytic recycle.
+  # Distinct from Slc16a1 plasma-membrane MCT1 ketone export, Slc16a3/MCT4
+  # lactate export, Bdh1 mitochondrial dehydrogenase, and Oxct1 SCOT -
+  # Slc16a7 is the high-affinity MCT2/SLC16A7 peripheral ketone import gate.
+  # Domain: post-SLC16A1 plasma-membrane monocarboxylate transporter 2 (MCT2/SLC16A7) ketogenic import gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7
+  # Gift: post-SLC16A1 SLC16A7 so BA/odd-chain free-energy path can import
+  #   D-beta-hydroxybutyrate / acetoacetate under ASSERT after SLC16A1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc16a7.
+  # Usability: AGI models post-SLC16A1 MCT2/SLC16A7 ketone import under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc16a7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
