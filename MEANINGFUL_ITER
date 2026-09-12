@@ -8,6 +8,6 @@
 - **asserts_fail**: 0
 - **asserts_ok sum**: 163 (life=90 atomic_printer=33 smx=28 flagship_1620=12)
 - **proof**: programs/proof/2298_life_cell_idh2.cubalc
-- **HEAD**: e35a4e2db07415dbb44bf70fd235321a585fc884
+- **HEAD**: 9a904880ec569ac91edccfa09390b97c554d39ff
 - **feat**: 877be688bde0e09943f0a8836b9d96ed7a0c545a
 - **law**: cube_is_sot; free_energy_must_flow
