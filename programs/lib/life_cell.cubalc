@@ -18788,4 +18788,74 @@ CLASS Cell
   END
 
 
+
+  # Ogdh: oxoglutarate dehydrogenase (OGDH/alpha-ketoglutarate dehydrogenase complex) after IDH2 aKG limb.
+  # OGDH is the TCA-cycle oxidative decarboxylase that converts alpha-ketoglutarate (product of
+  # IDH2 isocitrate decarboxylation) to succinyl-CoA + CO2 + NADH so free energy can
+  # proceed toward SUCLG1 on the BA/odd-chain TCA path.
+  # After Idh2 opens isocitrate to aKG, Ogdh opens the next TCA gate so
+  # aKG is not a silent pool trapped before succinyl-CoA synthetase.
+  # Distinct from Idh2 isocitrate DH, Aco2 aconitase, Cs citrate synthase, Mdh oxidoreductase,
+  # and Suclg1 succinyl-CoA synthetase - Ogdh is the aKG dehydrogenase / succinyl-CoA gate.
+  # Domain: post-IDH2 oxoglutarate dehydrogenase (OGDH) succinyl-CoA TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh
+  # Gift: post-IDH2 OGDH so BA/odd-chain free-energy path can oxidatively decarboxylate aKG to succinyl-CoA under ASSERT after IDH2 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ogdh.
+  # Usability: AGI models post-gate ogdh under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ogdh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END

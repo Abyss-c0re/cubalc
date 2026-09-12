@@ -1,3 +1,13 @@
+## 1.15.1798-usability — LIFE_CELL_OGDH (MI 2299)
+
+### Life continuum
+- **LIFE_CELL_OGDH**: `METHOD ogdh n` — oxoglutarate dehydrogenase after IDH2 on BA/odd-chain limb.
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh`
+- Domain: post-IDH2 oxoglutarate dehydrogenase (OGDH) succinyl-CoA TCA-progression gate.
+- Gift: oxidatively decarboxylate aKG to succinyl-CoA under ASSERT after IDH2 open so free energy proceeds toward SUCLG1.
+- Proofs PASS: life=91 atomic_printer=33 smx=28 flagship_1620=12 sum=164 fail=0.
+- Files: `programs/lib/life_cell.cubalc`, `programs/proof/2299_life_cell_ogdh.cubalc`, `programs/science/integration/atomic_printer_life_ogdh.cubalc`, `programs/science/integration/smx_mesh_vesicle_ogdh_life.cubalc`.
+
 ## 1.15.1797-usability — MI 2298 LIFE_CELL_IDH2
 
 - **feat(life):** IDH2 isocitrate dehydrogenase after ACO2 on BA continuum
