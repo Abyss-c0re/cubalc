@@ -1,20 +1,19 @@
 {
-  "MI": 2261,
-  "FEATURE": "LIFE_CELL_CSAD",
-  "method": "csad n",
-  "version": "1.15.1759-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad",
+  "MI": 2262,
+  "FEATURE": "LIFE_CELL_FMO1",
+  "method": "fmo1 n",
+  "version": "1.15.1760-usability",
+  "continuum": "...->dug1->nat8->cdo1->csad->fmo1",
   "asserts_fail": 0,
-  "asserts_ok_sum": 272,
+  "asserts_ok_sum": 296,
   "asserts_ok": {
-    "life": 155,
-    "atomic_printer": 56,
-    "smx": 49,
-    "flagship_1620": 12
+    "life": 189,
+    "atomic_printer": 57,
+    "smx": 50
   },
-  "proof": "programs/proof/2261_life_cell_csad.cubalc",
-  "HEAD_tip": "cc3bb05d510ac50a9c3a0141e7446ef6723b4e33",
-  "HEAD": "cc3bb05d510ac50a9c3a0141e7446ef6723b4e33",
-  "tip": "cc3bb05d510ac50a9c3a0141e7446ef6723b4e33",
+  "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
+  "HEAD_tip": "dadc11784f938b72c79f26cf317da060c18f2b77",
+  "HEAD": "dadc11784f938b72c79f26cf317da060c18f2b77",
+  "tip": "dadc11784f938b72c79f26cf317da060c18f2b77",
   "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5"
 }
