@@ -23,9 +23,12 @@
     "programs/science/integration/smx_mesh_vesicle_hmgcr_life.cubalc"
   ],
   "continuum": "...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr",
+  "domain": "post-HMGCS1 HMG-CoA reductase (HMGCR) mevalonate committed gate",
+  "gift": "HMGCR after HMGCS1 so BA/odd-chain free-energy path can reduce HMG-CoA into mevalonate under ASSERT after HMGCS1 open.",
   "status": "PASS",
   "asserts_fail": 0,
   "anti_bloat": true,
-  "commit": "9af3d6bf8",
-  "commit_full": "9af3d6bf87f70fbe70e21390ef1cf055602f6dcc"
+  "commit": "84db2683e",
+  "feat": "73515fcbf2e47b1a226db01741f623e232b6c974",
+  "HEAD": "84db2683eedef301fd87f35138fe7f0a5cf3a1e7"
 }

@@ -1,3 +1,9 @@
+## 1.15.1812-usability — MI 2313 LIFE_CELL_HMGCR
+- feat(life): HMGCR HMG-CoA reductase after HMGCS1 on life_cell continuum
+- Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr
+- Proofs asserts_fail:0 — life 172 · atomic 62 · smx 58 · flagship 12 · sum 304
+- METHOD hmgcr n — mevalonate committed HMG-CoA reductase gate
+
 ## 1.15.1808-usability — MI 2309 LIFE_CELL_SLC16A7
 - feat(life): SLC16A7/MCT2 high-affinity plasma-membrane monocarboxylate ketone import after SLC16A1 on life_cell continuum
 - Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7
