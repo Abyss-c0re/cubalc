@@ -16460,4 +16460,86 @@ CLASS Cell
     RET take
   END
 
+
+  # Mrp3: basolateral organic-anion / bile-salt efflux (ABCC3 / cMOAT2) after Mrp2.
+  # Mrp3 (ABCC3 / MRP3 / cMOAT2) is the basolateral ATP-binding-cassette exporter
+  # that pumps bilirubin glucuronides, glutathione conjugates, and bile-salt
+  # species back toward sinusoidal blood when canalicular Mrp2 flux is saturated
+  # or blocked — the compensatory basolateral overflow after Mrp2 commits
+  # apical multi-anion export into bile.
+  # After Mrp2 clears organic anions canalicularly, Mrp3 opens a basolateral
+  # ABC overflow so mitosis energy budgets gain a sinusoidal rescue outlet
+  # instead of a single-point canalicular choke on the glutathione free-energy
+  # shield and enterohepatic return loop.
+  # Distinct from Mrp2 (ABCC2 canalicular export), Bsep (ABCB11 bile-salt
+  # export), Oatp1b1 (SLCO1B1 basolateral uptake), Ntcp (SLC10A1 Na+-TC uptake),
+  # Baat/Fmo1/Csad/Cdo1/Dug1/Nat8 (Cys-disposal limb), Gst/Gpx/Gor (GSH cycle) -
+  # Mrp3 is the basolateral ABCC3 carrier for organic-anion / bile-salt overflow
+  # and conjugated-bilirubin rescue into blood when canalicular export lags.
+  # Without Mrp3 after Mrp2, basolateral anion rescue stays closed; life_cell
+  # organic-anion export budgets stay canalicular-only and free-energy shield
+  # never finishes compensatory sinusoidal clearance after apical ABC export.
+  # Domain: post-Mrp2 Mrp3 basolateral organic anion / bile-salt efflux /
+  #   cytosolic organic anion + ATP -> sinusoidal organic anion (ABC export)
+  # (not Mrp2, not Bsep, not Oatp1b1, not Ntcp, not Baat, not Fmo1, not Csad).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
+  #   (Mrp2 canalicular organic anion export -> Mrp3 basolateral overflow export).
+  # Gift: basolateral ABC overflow after Mrp2 so bilirubin/drug conjugates and
+  #   bile-salt rescue close enterohepatic free-energy flow when bile lags.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mrp3 life-force.
+  # Usability: AGI models post-Mrp2 Mrp3 organic-anion overflow under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mrp3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END

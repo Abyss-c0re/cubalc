@@ -1,3 +1,12 @@
+## 1.15.1766-usability — MI 2268 LIFE_CELL_MRP3 (PASS)
+
+- feat(life): LIFE_CELL_MRP3 METHOD mrp3 n after Mrp2
+- Mrp3 (ABCC3/cMOAT2) basolateral organic-anion / bile-salt overflow export
+- continuum ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
+- proof 2268 + atomic_printer_life_mrp3 + smx_mesh_vesicle_mrp3_life asserts_fail:0
+- gift: basolateral ABC overflow after canalicular Mrp2 so detox free energy finishes when bile lags
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1765-usability — MI 2267 LIFE_CELL_MRP2 (PASS)
