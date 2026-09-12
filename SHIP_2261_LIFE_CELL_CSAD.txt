@@ -1,10 +1,1 @@
-SHIP LIFE_CELL_CSAD MI 2261
-feat: 4fd5aefceb429644c7049592e6ae63c3df0ba26f
-tip: 6b9dea04596bd69e25217f33b2abe8f2cc93ce83
-proof: programs/proof/2261_life_cell_csad.cubalc asserts_ok=155 asserts_fail=0
-atomic_printer_life_csad asserts_ok=56 asserts_fail=0
-smx_mesh_vesicle_csad_life asserts_ok=49 asserts_fail=0
-flagship 1620 asserts_ok=12 asserts_fail=0
-sum asserts_ok=272 asserts_fail=0
-continuum: ...->dug1->nat8->cdo1->csad
-Cube is SoT. Free energy must flow.
+MEANINGFUL_ITER=2261 FEATURE=LIFE_CELL_CSAD version=1.15.1759-usability feat=4fd5aefceb429644c7049592e6ae63c3df0ba26f tip=73773497ef3e9d953bcc3642df33e8b1de21bc14 asserts_fail=0 asserts_ok_sum=272

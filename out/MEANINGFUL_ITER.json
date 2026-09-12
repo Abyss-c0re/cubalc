@@ -3,7 +3,7 @@
   "FEATURE": "LIFE_CELL_CSAD",
   "method": "csad n",
   "version": "1.15.1759-usability",
-  "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad",
+  "continuum": "...->dug1->nat8->cdo1->csad",
   "asserts_fail": 0,
   "asserts_ok_sum": 272,
   "asserts_ok": {
@@ -13,7 +13,8 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2261_life_cell_csad.cubalc",
-  "HEAD_tip": "6b9dea04596bd69e25217f33b2abe8f2cc93ce83",
-  "feat": "4fd5aefceb429644c7049592e6ae63c3df0ba26f",
-  "law": "Cube is SoT. Free energy must flow."
+  "HEAD_tip": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
+  "HEAD": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
+  "tip": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
+  "feat": "4fd5aefceb429644c7049592e6ae63c3df0ba26f"
 }

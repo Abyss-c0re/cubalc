@@ -13,6 +13,8 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2261_life_cell_csad.cubalc",
-  "HEAD_tip": "515cba75479c987e9a98c459da8b9c0e9ac0a8ac",
+  "HEAD_tip": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
+  "HEAD": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
+  "tip": "73773497ef3e9d953bcc3642df33e8b1de21bc14",
   "feat": "4fd5aefceb429644c7049592e6ae63c3df0ba26f"
 }
