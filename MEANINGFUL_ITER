@@ -3,9 +3,11 @@
 - **MI**: 2298
 - **FEATURE**: LIFE_CELL_IDH2
 - **method**: idh2 n
-- **VERSION**: 1.15.1797-usability
-- **continuum**: ...->sdha->fh->mdh->cs->aco2->idh2
+- **version**: 1.15.1797-usability
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2
+- **asserts_fail**: 0
+- **asserts_ok sum**: 163 (life=90 atomic_printer=33 smx=28 flagship_1620=12)
+- **proof**: programs/proof/2298_life_cell_idh2.cubalc
+- **HEAD**: 5714cb5bf41cbe25edb19371c8dcf2fe879aac18
 - **feat**: 877be688bde0e09943f0a8836b9d96ed7a0c545a
-- **HEAD**: 63a018aa342b87aecda3cb542a9d4fa0b9fe2454
-- **proofs**: life=90 atomic=33 smx=28 flag=12 sum=163 fail=0
-- **status**: PASS
+- **law**: cube_is_sot; free_energy_must_flow
