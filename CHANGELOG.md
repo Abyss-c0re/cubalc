@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.1755-usability — MI2257 LIFE_CELL_GST
+
+- feat(life): Gst glutathione S-transferase after Gpx on life_cell
+- continuum ...->gsha->gshb->gor->gpx->gst
+- METHOD gst n: GSH+RX->GS-R electrophile conjugation on GSH free-energy shield after Gpx
+- proof programs/proof/2257_life_cell_gst.cubalc asserts_ok=140 fail=0
+- atomic_printer_life_gst + smx_mesh_vesicle_gst_life + flagship 1620 PASS (sum 233)
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1746-usability — MI2248 LIFE_CELL_METK
 
 - feat(life): MetK SAM synthetase after MetE on life_cell

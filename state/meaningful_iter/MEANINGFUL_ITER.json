@@ -7,17 +7,13 @@
   "asserts_fail": 0,
   "asserts_ok": {
     "life": 140,
-    "atomic_printer": 44,
-    "smx": 37,
-    "flagship_1620": 12,
-    "sum": 233
+    "sum": 140
   },
   "proof": "programs/proof/2257_life_cell_gst.cubalc",
   "feat": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "HEAD": "9eb5c92047c25548f10832603fddbdc65766d777",
-  "head": "9eb5c92047c25548f10832603fddbdc65766d777",
-  "tip": "9eb5c92047c25548f10832603fddbdc65766d777",
-  "feat_head": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
+  "HEAD": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
+  "head": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
+  "tip": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
   "sealed": true,
-  "note": "Gst GSH S-transferase after Gpx on glutathione free-energy continuum"
+  "note": "Gst GSH S-transferase after Gpx \u2014 conjugation detox on GSH free-energy shield"
 }
