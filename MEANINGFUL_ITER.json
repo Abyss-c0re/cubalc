@@ -34,10 +34,11 @@
   "asserts_fail": 0,
   "flagship": 12,
   "law": "cube_is_sot; free_energy_must_flow",
-  "HEAD": "2d4462c62cc836d8e9105215e7ab9ffba91d6b91",
-  "head": "2d4462c62cc836d8e9105215e7ab9ffba91d6b91",
+  "HEAD": "c204e5d6017fe8aa265e12ceaef4810decf987dc",
+  "head": "c204e5d6017fe8aa265e12ceaef4810decf987dc",
   "tip": "2d4462c62cc836d8e9105215e7ab9ffba91d6b91",
   "HEAD_tip": "2d4462c62cc836d8e9105215e7ab9ffba91d6b91",
   "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
-  "status": "PASS"
+  "status": "PASS",
+  "FEAT": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
 }
