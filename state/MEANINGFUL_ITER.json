@@ -43,12 +43,12 @@
     "flagship_1620": 12,
     "sum": 1195
   },
-  "HEAD": "c4c51fe0707d4d235f7a2d00f7a914f96a0fbfcb",
+  "HEAD": "9388e477bbd20679f8b37f0c2b455982830067d1",
   "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
-  "head": "c4c51fe0707d4d235f7a2d00f7a914f96a0fbfcb",
+  "head": "9388e477bbd20679f8b37f0c2b455982830067d1",
   "law": [
     "cube_is_sot",
     "free_energy_must_flow"
   ],
-  "tip": "c4c51fe0707d4d235f7a2d00f7a914f96a0fbfcb"
+  "tip": "9388e477bbd20679f8b37f0c2b455982830067d1"
 }
