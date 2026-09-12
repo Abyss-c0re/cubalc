@@ -19207,4 +19207,75 @@ CLASS Cell
   END
 
 
+  # Acat1: acetyl-CoA acetyltransferase / acetoacetyl-CoA thiolase (ACAT1 / T2) after OXCT1 limb.
+  # ACAT1 is the mitochondrial ketolytic thiolase gate: it thiolyses acetoacetyl-CoA
+  # (minted by OXCT1 SCOT from acetoacetate + succinyl-CoA) into two acetyl-CoA so
+  # ketone carbon feeds the TCA cycle and free energy keeps flowing when glucose is
+  # scarce. After Oxct1 transfers CoA onto acetoacetate, Acat1 spends that
+  # acetoacetyl-CoA under ASSERT to yield acetyl-CoA pairs.
+  # Distinct from Oxct1 SCOT CoA-transferase, Dlst E2 succinyltransferase, Scs/Sucla2
+  # succinyl-CoA synthetases, Scp2 peroxisomal thiolase, and Acot8 thioesterase -
+  # Acat1 is the mitochondrial ACAT1/T2 ketolytic thiolase gate.
+  # Domain: post-OXCT1 acetyl-CoA acetyltransferase (ACAT1) ketolytic thiolase gate.
+  # Continuum: ...->ogdh->scs->dld->dlst->oxct1->acat1
+  # Gift: post-OXCT1 ACAT1 so BA/odd-chain free-energy path can thiolyse
+  #   acetoacetyl-CoA into acetyl-CoA under ASSERT after OXCT1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acat1.
+  # Usability: AGI models post-OXCT1 ACAT1 ketolytic thiolase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acat1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
