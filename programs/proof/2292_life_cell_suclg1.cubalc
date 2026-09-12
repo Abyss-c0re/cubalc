@@ -1,0 +1,273 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_SUCLG1 - SUCLG1 succinyl-CoA ligase after MUT on classical BA continuum
+# Continuum ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1
+# Gift: SUCLG1 after MUT so BA/odd-chain free-energy ligates succinyl-CoA
+#   to succinate under ASSERT after mutase open (TCA substrate-level gate).
+# Domain: post-MUT succinyl-CoA ligase (SUCLG1) succinate TCA-entry gate.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY founder OF Cell 1 44 0
+ENTITY quiet OF Cell 1 28 0
+ENTITY corpse OF Cell 0 18 0
+ENTITY empty OF Cell 1 0 0
+ENTITY bed OF Cell 1 52 0
+
+SEND founder set_threshold 10
+SEND quiet set_threshold 12
+SEND bed set_threshold 8
+SEND empty set_threshold 10
+
+SEND founder pulse 5
+SEND founder photosynth 42
+SEND founder glycolyse 34
+SEND founder pump 26
+SEND founder photophos 24
+SEND founder charge 38
+SEND founder feed 36
+GETF founder age
+ASSERT LAST_N == 5 "founder age5"
+GETF founder atp
+ASSERT LAST_N >= 18 "founder atp"
+GETF founder energy
+ASSERT LAST_N >= 18 "founder energy"
+GETF founder pmf
+ASSERT LAST_N >= 4 "founder pmf"
+
+SEND founder amacr 2
+ASSERT LAST_N == 2 "founder amacr"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder acox2 2
+ASSERT LAST_N == 2 "founder acox2"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder hsd17b4 2
+ASSERT LAST_N == 2 "founder hsd17b4"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder scp2 2
+ASSERT LAST_N == 2 "founder scp2"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder acot8 2
+ASSERT LAST_N == 2 "founder acot8"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder pcca 2
+ASSERT LAST_N == 2 "founder pcca carboxylase"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder mcee 2
+ASSERT LAST_N == 2 "founder mcee epimerase"
+SEND founder photosynth 14
+SEND founder charge 14
+SEND founder feed 12
+SEND founder mut 2
+ASSERT LAST_N == 2 "founder mut mutase"
+SEND founder photosynth 16
+SEND founder charge 16
+SEND founder feed 14
+
+GETF founder heat
+LET f_h = LAST_N
+GETF founder energy
+LET f_e = LAST_N
+GETF founder atp
+LET f_a = LAST_N
+GETF founder age
+LET f_age = LAST_N
+GETF founder pcr
+LET f_pcr = LAST_N
+GETF founder reserve
+LET f_rsv = LAST_N
+GETF founder pmf
+LET f_pmf = LAST_N
+GETF founder threshold
+LET f_thr = LAST_N
+SEND founder suclg1 3
+ASSERT LAST_N == 3 "founder suclg1 3"
+GETF founder heat
+ASSERT LAST_N == f_h + 3 "founder suclg1 heat+3"
+GETF founder energy
+ASSERT LAST_N == f_e - 3 "founder suclg1 energy-3"
+GETF founder atp
+ASSERT LAST_N == f_a - 3 "founder suclg1 atp-3"
+GETF founder age
+ASSERT LAST_N == f_age "founder suclg1 age held"
+GETF founder pcr
+ASSERT LAST_N == f_pcr "founder suclg1 pcr held"
+GETF founder reserve
+ASSERT LAST_N == f_rsv "founder suclg1 reserve held"
+GETF founder pmf
+ASSERT LAST_N == f_pmf "founder suclg1 pmf held"
+GETF founder threshold
+ASSERT LAST_N == f_thr "founder suclg1 thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-suclg1"
+
+SEND founder suclg1 0
+ASSERT LAST_N == 0 "founder suclg1 n0"
+
+SEND founder photosynth 20
+SEND founder charge 18
+SEND founder feed 16
+GETF founder heat
+LET f2_h = LAST_N
+GETF founder energy
+LET f2_e = LAST_N
+GETF founder atp
+LET f2_a = LAST_N
+SEND founder suclg1 4
+ASSERT LAST_N == 4 "founder suclg1 4"
+GETF founder heat
+ASSERT LAST_N == f2_h + 4 "founder suclg1 heat+4"
+GETF founder energy
+ASSERT LAST_N == f2_e - 4 "founder suclg1 energy-4"
+GETF founder atp
+ASSERT LAST_N == f2_a - 4 "founder suclg1 atp-4"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-suclg1-4"
+
+SEND founder photosynth 10
+SEND founder charge 10
+SEND founder feed 8
+GETF founder atp
+LET fc_a = LAST_N
+GETF founder energy
+LET fc_e = LAST_N
+GETF founder heat
+LET fc_h = LAST_N
+GETF founder age
+LET fc_age = LAST_N
+SEND founder suclg1 100
+GETF founder atp
+LET fc_a2 = LAST_N
+GETF founder energy
+LET fc_e2 = LAST_N
+GETF founder heat
+LET fc_h2 = LAST_N
+ASSERT fc_a2 >= 0 "founder suclg1 clamp atp>=0"
+ASSERT fc_e2 >= 0 "founder suclg1 clamp energy>=0"
+ASSERT fc_h2 >= fc_h "founder suclg1 clamp heat+="
+ASSERT fc_a2 <= fc_a "founder suclg1 clamp atp down"
+ASSERT fc_e2 <= fc_e "founder suclg1 clamp energy down"
+GETF founder age
+ASSERT LAST_N == fc_age "founder suclg1 clamp age held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-suclg1 clamp"
+
+SEND corpse suclg1 5
+ASSERT LAST_N == 0 "corpse suclg1 refused"
+GETF corpse alive
+ASSERT LAST_N == 0 "corpse stays dead"
+
+SEND empty suclg1 3
+ASSERT LAST_N == 0 "empty suclg1 refused no fuel"
+GETF empty alive
+ASSERT LAST_N == 1 "empty stays alive"
+
+SEND quiet photosynth 16
+SEND quiet charge 16
+SEND quiet feed 10
+GETF quiet heat
+LET q_h = LAST_N
+GETF quiet energy
+LET q_e = LAST_N
+GETF quiet atp
+LET q_a = LAST_N
+GETF quiet age
+LET q_age = LAST_N
+GETF quiet pcr
+LET q_pcr = LAST_N
+GETF quiet reserve
+LET q_rsv = LAST_N
+GETF quiet pmf
+LET q_pmf = LAST_N
+GETF quiet threshold
+LET q_thr = LAST_N
+SEND quiet suclg1 2
+ASSERT LAST_N == 2 "quiet suclg1 2"
+GETF quiet heat
+ASSERT LAST_N == q_h + 2 "quiet suclg1 h+2"
+GETF quiet energy
+ASSERT LAST_N == q_e - 2 "quiet suclg1 e-2"
+GETF quiet atp
+ASSERT LAST_N == q_a - 2 "quiet suclg1 a-2"
+GETF quiet age
+ASSERT LAST_N == q_age "quiet suclg1 age held"
+GETF quiet pcr
+ASSERT LAST_N == q_pcr "quiet suclg1 pcr held"
+GETF quiet reserve
+ASSERT LAST_N == q_rsv "quiet suclg1 reserve held"
+GETF quiet pmf
+ASSERT LAST_N == q_pmf "quiet suclg1 pmf held"
+GETF quiet threshold
+ASSERT LAST_N == q_thr "quiet suclg1 thr held"
+GETF quiet alive
+ASSERT LAST_N == 1 "quiet alive post-suclg1"
+
+SEND bed photosynth 16
+SEND bed charge 16
+SEND bed feed 12
+GETF bed heat
+LET b_h = LAST_N
+GETF bed energy
+LET b_e = LAST_N
+GETF bed atp
+LET b_a = LAST_N
+GETF bed age
+LET b_age = LAST_N
+GETF bed pcr
+LET b_pcr = LAST_N
+GETF bed reserve
+LET b_rsv = LAST_N
+GETF bed pmf
+LET b_pmf = LAST_N
+GETF bed threshold
+LET b_thr = LAST_N
+SEND bed suclg1 2
+ASSERT LAST_N == 2 "bed suclg1 2"
+GETF bed heat
+ASSERT LAST_N == b_h + 2 "bed suclg1 h+2"
+GETF bed energy
+ASSERT LAST_N == b_e - 2 "bed suclg1 e-2"
+GETF bed atp
+ASSERT LAST_N == b_a - 2 "bed suclg1 a-2"
+GETF bed age
+ASSERT LAST_N == b_age "bed suclg1 age held"
+GETF bed pcr
+ASSERT LAST_N == b_pcr "bed suclg1 pcr held"
+GETF bed reserve
+ASSERT LAST_N == b_rsv "bed suclg1 reserve held"
+GETF bed pmf
+ASSERT LAST_N == b_pmf "bed suclg1 pmf held"
+GETF bed threshold
+ASSERT LAST_N == b_thr "bed suclg1 thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-suclg1"
+
+SEND founder photosynth 6
+SEND founder charge 6
+SEND founder feed 4
+GETF founder atp
+LET p_a = LAST_N
+GETF founder energy
+LET p_e = LAST_N
+SEND founder suclg1 1
+ASSERT LAST_N == 1 "founder suclg1 partial prep"
+GETF founder atp
+LET p_a2 = LAST_N
+GETF founder energy
+LET p_e2 = LAST_N
+ASSERT p_a2 == p_a - 1 "founder suclg1 prep atp-1"
+ASSERT p_e2 == p_e - 1 "founder suclg1 prep energy-1"
+
+ASSERT 1 == 1 "LIFE_CELL_SUCLG1 PASS"
