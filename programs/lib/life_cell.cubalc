@@ -15620,5 +15620,79 @@ CLASS Cell
     RET take
   END
 
+  # Ggt: gamma-glutamyltransferase after Gst glutathione S-transferase.
+  # Ggt (Ggt / gamma-glutamyltransferase / CD224) cleaves the gamma-glutamyl bond of
+  # GSH and GS-conjugates: GS-R -> Cys-Gly-R + Glu, releasing glutamate and a cysteinylglycine
+  # conjugate that dipeptidases convert toward mercapturic-acid export. After Gst conjugates
+  # electrophiles onto GSH, Ggt starts extracellular/lytic processing so adducts leave the
+  # free-energy shield instead of stalling as trapped GS-R.
+  # Distinct from Gst (GSH+RX->GS-R S-transferase), Gpx (2GSH+ROOH->GSSG), Gor (GSSG->2GSH),
+  # GshB/GshA (GSH synthesis), PepN/PepD (peptidases), Mrp/ABC exporters — Ggt is the
+  # gamma-glutamyl cleavage limb that opens GS-conjugates after Gst conjugation.
+  # Without Ggt after Gst, GS-conjugates accumulate; the glutathione free-energy shield never
+  # engages its mercapturic export limb and conjugate stall wins.
+  # Domain: post-Gst Ggt gamma-glutamyltransferase / GS-R -> Cys-Gly-R + Glu
+  # (not Gst, not Gpx, not Gor, not GshB, not GshA, not PepN, not Mrp).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt
+  #   (Gst glutathione S-transferase -> Ggt gamma-glutamyltransferase / conjugate cleavage).
+  # Pay take=min(n,atp,energy) - energy stand-in for gamma-glutamyl cleavage work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ggt life-force.
+  # Usability: AGI models post-Gst Ggt conjugate-cleavage under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ggt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
+
