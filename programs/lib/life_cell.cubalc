@@ -15986,4 +15986,83 @@ CLASS Cell
   END
 
 
+  # Fmo1: flavin monooxygenase hypotaurine oxidase after Csad CSA decarboxylase.
+  # Fmo1 (FMO1 / flavin-containing monooxygenase 1 stand-in) oxidizes hypotaurine
+  # from Csad -> taurine + H2O, finishing the oxidative cysteine-disposal limb
+  # into the taurine osmolyte/bile-conjugate pool after Csad opens CSA -> hypotaurine.
+  # After Csad decarboxylates Cdo1 product CSA, Fmo1 commits the sulfur pool to
+  # taurine so mitosis energy budgets gain the finished osmolyte reserve instead
+  # of stalling as hypotaurine backlog on the glutathione shield edge.
+  # Distinct from Csad (CSA->hypotaurine decarboxylase), Cdo1 (Cys+O2->CSA),
+  # Dug1 (Cys-Gly dipeptidase), Nat8 (mercapturic N-acetyl), Gst/Gpx/Gor (GSH
+  # cycle), GshA/GshB (GSH build), Cbs/Cgl (trans-sulfuration) - Fmo1 is the
+  # FAD-dependent monooxygenase that turns Csad product hypotaurine into taurine.
+  # Without Fmo1 after Csad, hypotaurine accumulates even with open decarboxylase
+  # gates; the glutathione free-energy shield never finishes Cys disposal into
+  # taurine and life_cell osmolyte budgets stay sulfur-choked.
+  # Domain: post-Csad Fmo1 hypotaurine monooxygenase / hypotaurine + O2 -> taurine
+  # (not Csad, not Cdo1, not Dug1, not Nat8, not Gst, not Gpx, not Gor, not Cbs).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1
+  #   (Csad CSA decarboxylase -> Fmo1 hypotaurine oxidase / taurine finish).
+  # Pay take=min(n,atp,energy) - energy stand-in for FAD monooxygenase O2 work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fmo1 life-force.
+  # Usability: AGI models post-Csad Fmo1 hypotaurine->taurine under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fmo1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
 END
