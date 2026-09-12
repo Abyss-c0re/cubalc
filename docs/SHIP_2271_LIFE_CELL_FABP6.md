@@ -1,11 +1,13 @@
-SHIP MI 2271 LIFE_CELL_FABP6
-method: fabp6 n
-continuum: ...->ost->asbt->fabp6
-proof: programs/proof/2271_life_cell_fabp6.cubalc asserts_fail:0
-life=457 ap=125 smx=92 flagship_1620=12 sum=686
-integration: atomic_printer_life_fabp6.cubalc, smx_mesh_vesicle_fabp6_life.cubalc
-gift: cytosolic IBABP/FABP6 shuttle after Asbt closes enterohepatic free-energy transit
-law: cube_is_sot; free_energy_must_flow
-version: 1.15.1770-usability
-HEAD: 2933c4bbc02fba0c289c268b97c1ffdfa267ff7f
-feat: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
+# SHIP_2271_LIFE_CELL_FABP6
+
+MI 2271 LIFE_CELL_FABP6 shipped.
+
+- method: fabp6 n
+- proof: programs/proof/2271_life_cell_fabp6.cubalc
+- asserts_fail: 0
+- asserts_ok life=457 atomic_printer=125 smx=92 flagship_1620=12 sum=686
+- continuum: ...->mrp2->mrp3->ost->asbt->fabp6
+- feat: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
+- HEAD: 542e427bd0101c1c08441001959bb191b6532d8a
+
+Cube is SoT. Free energy must flow.
