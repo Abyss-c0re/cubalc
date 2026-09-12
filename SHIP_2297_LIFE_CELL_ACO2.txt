@@ -1,0 +1,5 @@
+MEANINGFUL_ITER=2297 FEATURE=LIFE_CELL_ACO2 version=1.15.1796-usability
+method=aco2 n continuum=...->suclg1->sdha->fh->mdh->cs->aco2
+asserts_fail=0 life=85 atomic=31 smx=26 sum=142
+proof=programs/proof/2297_life_cell_aco2.cubalc
+law=cube_is_sot; free_energy_must_flow
