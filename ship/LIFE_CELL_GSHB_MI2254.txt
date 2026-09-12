@@ -1,1 +1,7 @@
-LIFE_CELL_GSHB MI2254 PASS asserts_fail:0 sum:419 HEAD=172f1e2b1e3102c99ffbd82aacf35eac2f047725 feat=e2ac56058c3bb6614436359d5913a2eab8151a2e continuum gsha->gshb
+LIFE_CELL_GSHB MI 2254
+asserts_fail: 0
+asserts_ok_sum: 419
+feat: e2ac56058c3bb6614436359d5913a2eab8151a2e
+HEAD/tip: e44ae5d72a78db86a5697a0e1e334795ffc1a498
+branch: life-cell-gshb-mi2254
+sealed: true
