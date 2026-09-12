@@ -1,3 +1,12 @@
+## 1.15.1799-usability — MI 2300 LIFE_CELL_SUCLA2
+
+- **feat(life):** SUCLA2 succinate-CoA ligase ADP-forming after OGDH on BA continuum
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->sucla2` (succinyl-CoA to succinate+ATP TCA gate)
+- Proof: `programs/proof/2300_life_cell_sucla2.cubalc` (asserts_ok=98)
+- Atomic: `programs/science/integration/atomic_printer_life_sucla2.cubalc` (36)
+- SMX: `programs/science/integration/smx_mesh_vesicle_sucla2_life.cubalc` (32)
+- asserts_fail: 0 · life 98 · atomic 36 · smx 32 · flagship 12 · sum=178
+
 ## 1.15.1798-usability — LIFE_CELL_OGDH (MI 2299)
 
 ### Life continuum
