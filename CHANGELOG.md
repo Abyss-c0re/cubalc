@@ -1,3 +1,13 @@
+## 1.15.1801-usability — MI 2302 LIFE_CELL_DLST
+
+- **feat(life):** DLST dihydrolipoamide succinyltransferase after DLD on BA continuum (OGDHC-E2 limb)
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst`
+- Method: `METHOD dlst n` — OGDHC E2 succinyltransferase / lipoyl-core gate after DLD E3
+- Proof: `programs/proof/2302_life_cell_dlst.cubalc` (asserts_ok=104)
+- Atomic: `programs/science/integration/atomic_printer_life_dlst.cubalc` (40)
+- SMX: `programs/science/integration/smx_mesh_vesicle_dlst_life.cubalc` (36)
+- asserts_fail: 0 · life 104 · atomic 40 · smx 36 · flagship 12 · sum=192
+
 ## 1.15.1799-usability — MI 2300 LIFE_CELL_SCS
 
 - **feat(life):** SCS succinyl-CoA synthetase after OGDH on BA continuum (SUCLA2-family limb)

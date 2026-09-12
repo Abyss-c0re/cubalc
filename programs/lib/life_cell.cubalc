@@ -19065,4 +19065,75 @@ CLASS Cell
   END
 
 
+
+
+  # Dlst: dihydrolipoamide succinyltransferase (DLST / OGDHC-E2) after DLD limb.
+  # DLST is the E2 core of oxoglutarate dehydrogenase complex: it accepts the
+  # decarboxylation product from OGDH E1 onto its lipoyl domains, then transfers
+  # the succinyl group to CoA, yielding succinyl-CoA for SCS. After Dld reoxidizes
+  # dihydrolipoamide (E3), Dlst can again load lipoyl arms so OGDHC turns over
+  # without E2-core stall on BA/odd-chain free-energy path.
+  # Distinct from Ogdh E1 decarboxylase, Dld E3 dehydrogenase, Scs synthetase,
+  # Sucla2 ligase, and Idh2 - Dlst is the E2 succinyltransferase / lipoyl-core gate.
+  # Domain: post-DLD dihydrolipoamide succinyltransferase (DLST) OGDHC-E2 gate.
+  # Continuum: ...->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst
+  # Gift: post-DLD DLST so BA/odd-chain free-energy path can succinylate CoA on
+  #   the OGDHC E2 core under ASSERT after DLD open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dlst.
+  # Usability: AGI models post-DLD DLST E2 succinyltransferase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dlst n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
