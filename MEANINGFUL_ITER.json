@@ -48,13 +48,13 @@
   "feat": "a0a9588007b6c3d0314bcb39cbccc5eeeff3222a",
   "feat_head": "a0a9588007b6c3d0314bcb39cbccc5eeeff3222a",
   "FEAT_HEAD": "a0a9588007b6c3d0314bcb39cbccc5eeeff3222a",
-  "HEAD": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "head": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "tip": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "pin": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "pinned_head": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "git_head": "ac6bd6e8f32c3c73d14d9ff805c595c3316a4171",
-  "commit": "ac6bd6e8f32c",
-  "short": "ac6bd6e8f32c",
-  "summary": "LIFE_CELL_SUCLA2 MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=ac6bd6e8f32c"
+  "HEAD": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "head": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "tip": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "pin": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "pinned_head": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "git_head": "aef4eab0e4f2a8e5b95a6017f89003d2c5cefcea",
+  "commit": "aef4eab0e4f2",
+  "short": "aef4eab0e4f2",
+  "summary": "LIFE_CELL_SUCLA2 MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=aef4eab0e4f2"
 }
