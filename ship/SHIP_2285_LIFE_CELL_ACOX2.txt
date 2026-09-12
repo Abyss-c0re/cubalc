@@ -6,6 +6,5 @@ SHIP LIFE_CELL_ACOX2 MI2285
 - asserts_ok sum: 1292 (life=969 atomic_printer=190 smx=121 flagship_1620=12)
 - flagship_1620: PASS 12/0
 - version: 1.15.1784-usability
-- law: cube_is_sot; free_energy_must_flow
 - feat: 12eb08fcbb44993a7c7cde1fd94476b21649755d
 - HEAD: 27ac7f0f0a556836a92208081f56b3ec08f90b7e
