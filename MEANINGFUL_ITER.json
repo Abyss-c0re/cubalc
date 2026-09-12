@@ -48,10 +48,10 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell sdhb",
-  "HEAD": "293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd",
-  "head": "293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd",
-  "tip": "293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd",
-  "pin": "293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd",
-  "pinned_head": "293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd",
+  "HEAD": "8709d720a07c66d55671efd23a0d6c8a9242b1a6",
+  "head": "8709d720a07c66d55671efd23a0d6c8a9242b1a6",
+  "tip": "8709d720a07c66d55671efd23a0d6c8a9242b1a6",
+  "pin": "8709d720a07c66d55671efd23a0d6c8a9242b1a6",
+  "pinned_head": "8709d720a07c66d55671efd23a0d6c8a9242b1a6",
   "law": "cube_is_sot; free_energy_must_flow"
 }
