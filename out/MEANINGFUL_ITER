@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2289
-- **FEATURE**: LIFE_CELL_PCCA
-- **method**: pcca n
-- **version**: 1.15.1788-usability
-- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
+- **MI**: 2291
+- **FEATURE**: LIFE_CELL_MUT
+- **method**: mut n
+- **version**: 1.15.1790-usability
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut
 - **asserts_fail**: 0
-- **asserts_ok sum**: 1199 (life=1147 atomic_printer=22 smx=18 flagship_1620=12)
-- **proof**: programs/proof/2289_life_cell_pcca.cubalc
-- **HEAD**: 9037dbf0da5bde23c43391dc9f219cce9b59563a
-- **feat**: 9b068560a9049f960851e25a54a770bd0df1ecdd
+- **asserts_ok sum**: 1290 (life=1235 atomic_printer=24 smx=19 flagship_1620=12)
+- **proof**: programs/proof/2291_life_cell_mut.cubalc
+- **HEAD**: f3d124fe6908a6ed4d022f80b4a4b988c0ada7a1
+- **feat**: be65ada43dd9df2c40ed6d9d6516f44e276983a7
 - **law**: cube_is_sot; free_energy_must_flow
