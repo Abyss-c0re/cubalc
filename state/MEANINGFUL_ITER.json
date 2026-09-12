@@ -49,8 +49,8 @@
   "feat_head": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "FEAT_HEAD": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "feat_short": "73515fcbf2e",
-  "HEAD": "daabd489a37f2d347a061e82c25fb70ff91541a3",
-  "commit": "daabd489a",
-  "commit_full": "daabd489a37f2d347a061e82c25fb70ff91541a3",
+  "HEAD": "2254b6b3da0a9a0b2a5b2f4f14cb3c3464a76c6b",
+  "commit": "2254b6b3d",
+  "commit_full": "2254b6b3da0a9a0b2a5b2f4f14cb3c3464a76c6b",
   "pure_c": "programs/lib/life_cell.cubalc"
 }
