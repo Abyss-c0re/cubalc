@@ -4,7 +4,7 @@
 - **FEATURE**: LIFE_CELL_IDH2
 - **method**: idh2 n
 - **VERSION**: 1.15.1797-usability
-- **HEAD**: ab31be26a63c94979ede7e70f05e96b3027258be
+- **HEAD**: abcded368063cd29cfcf3141c4f1facd921d3310
 - **feat**: 877be688bde0e09943f0a8836b9d96ed7a0c545a
 - **proof**: programs/proof/2298_life_cell_idh2.cubalc
 - **continuum**: ...->cs->aco2->idh2
