@@ -1,54 +1,20 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2281,
-  "MEANINGFUL_ITER": 2281,
-  "iter": 2281,
-  "n": 2281,
+  "schema": "cubalc.meaningful_iter.v1",
   "mi": 2281,
-  "MI": 2281,
-  "version": "1.15.1780-usability",
-  "VERSION": "1.15.1780-usability",
   "feature": "LIFE_CELL_AKR1C4",
-  "FEATURE": "LIFE_CELL_AKR1C4",
-  "name": "LIFE_CELL_AKR1C4",
-  "title": "AKR1C4 3-alpha-hydroxysteroid dehydrogenase after AKR1D1 on life_cell continuum",
-  "label": "LIFE_CELL_AKR1C4",
   "method": "akr1c4 n",
-  "ship": "2281_life_cell_akr1c4",
+  "version": "1.15.1780-usability",
   "proof": "programs/proof/2281_life_cell_akr1c4.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2281_life_cell_akr1c4.cubalc",
-    "programs/science/integration/atomic_printer_life_akr1c4.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_akr1c4_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
-  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4",
-  "domain": "post-AKR1D1 hepatic AKR1C4 3a-hydroxysteroid dehydrogenase / 3-oxo gate",
-  "gift": "AKR1C4 after AKR1D1 so classic BA free-energy path can install 3a-OH under ASSERT after ring-A saturation.",
-  "proof_sum": {
-    "life": 807,
-    "atomic": 170,
-    "smx": 103,
-    "flagship": 12,
-    "sum": 1092,
-    "asserts_fail": 0
-  },
+  "head": "7d63f21780596c08bd97edef8080f35c59e75b6f",
+  "feat": "7d63f21780596c08bd97edef8080f35c59e75b6f",
   "asserts_fail": 0,
   "asserts_ok_sum": 1092,
   "asserts_ok": {
     "life": 807,
     "atomic_printer": 170,
     "smx": 103,
-    "flagship_1620": 12,
-    "sum": 1092
+    "flagship_1620": 12
   },
-  "HEAD": "270c45347f3ba33d97db3f1926a7731aafb91157",
-  "feat": "edbe2d8b63bc204d8a4b11de0b1ce3faf3c7a0ea",
-  "head": "270c45347f3ba33d97db3f1926a7731aafb91157",
-  "law": [
-    "cube_is_sot",
-    "free_energy_must_flow"
-  ],
-  "tip": "270c45347f3ba33d97db3f1926a7731aafb91157"
+  "continuum_tail": "hsd3b7->akr1d1->akr1c4",
+  "ok": true
 }
