@@ -16381,4 +16381,83 @@ CLASS Cell
   END
 
 
+
+  # Mrp2: multidrug resistance-associated protein 2 (ABCC2) after Oatp1b1 uptake.
+  # Mrp2 (MRP2 / ABCC2 / cMOAT) is the canalicular ATP-binding cassette exporter that
+  # secretes Oatp1b1-imported organic anions (bilirubin diglucuronide, glutathione
+  # conjugates, sulfated bile salts and related OA-) into bile, closing the basolateral
+  # uptake -> canalicular export organic-anion limb after enterohepatic Ntcp/Oatp reclaim.
+  # After Oatp1b1 broadens basolateral organic-anion traffic beyond Na+-taurocholate,
+  # Mrp2 commits those conjugates across the canaliculus so mitosis energy budgets gain
+  # an exported OA sink instead of intracellular anion backlog on the free-energy shield.
+  # Distinct from Oatp1b1 (SLCO1B1 basolateral OA uptake), Ntcp (SLC10A1 Na+-TC symport),
+  # Bsep (ABCB11 bile-salt export), Baat (taurine N-acyltransferase), Fmo1/Csad/Cdo1
+  # (Cys->taurine limb), Gst/Gpx/Gor (GSH cycle) - Mrp2 is the canalicular ABCC2 pump
+  # that exports organic anions after Oatp1b1 has imported them basolaterally.
+  # Without Mrp2 after Oatp1b1, organic anions accumulate even with open basolateral
+  # gates; life_cell OA-export budgets stay open-loop and multi-substrate detox never
+  # finishes into canalicular flux beside Bsep bile-salt export.
+  # Domain: post-Oatp1b1 Mrp2 canalicular organic-anion export / OA- + ATP
+  #   -> extracellular bile OA- + ADP + Pi
+  # (not Oatp1b1, not Ntcp, not Bsep, not Baat, not Fmo1, not Gst).
+  # Continuum: ...->fmo1->baat->bsep->ntcp->oatp1b1->mrp2
+  #   (Oatp1b1 basolateral OA uptake -> Mrp2 canalicular OA export).
+  # Pay take=min(n,atp,energy) - energy stand-in for ABC ATPase / ABCC2 work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mrp2 life-force.
+  # Usability: AGI models post-Oatp1b1 Mrp2 organic-anion export under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mrp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
