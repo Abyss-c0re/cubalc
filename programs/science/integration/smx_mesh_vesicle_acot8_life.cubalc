@@ -1,0 +1,74 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle LIFE_FORCE MI2288: ACOT8 thioesterase pulse on sealed exchange.
+# Vesicle cells exchange FOLDBITS-style readiness while acot8 frees BA-CoA.
+# Gift: post-SCP2 ACOT8 gate visible on SMX neighbor pair under ASSERT.
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle_a OF Cell 1 48 0
+ENTITY vesicle_b OF Cell 1 48 0
+ENTITY ghost OF Cell 0 8 0
+
+SEND vesicle_a set_threshold 9
+SEND vesicle_b set_threshold 9
+
+SEND vesicle_a photosynth 26
+SEND vesicle_a glycolyse 18
+SEND vesicle_a charge 24
+SEND vesicle_a feed 20
+SEND vesicle_b photosynth 26
+SEND vesicle_b glycolyse 18
+SEND vesicle_b charge 24
+SEND vesicle_b feed 20
+
+SEND vesicle_a scp2 2
+ASSERT LAST_N == 2 "vesA scp2"
+SEND vesicle_a photosynth 10
+SEND vesicle_a charge 10
+SEND vesicle_a feed 8
+GETF vesicle_a heat
+LET ah = LAST_N
+GETF vesicle_a energy
+LET ae = LAST_N
+GETF vesicle_a atp
+LET aa = LAST_N
+SEND vesicle_a acot8 2
+ASSERT LAST_N == 2 "vesA acot8"
+GETF vesicle_a heat
+ASSERT LAST_N == ah + 2 "vesA acot8 h+2"
+GETF vesicle_a energy
+ASSERT LAST_N == ae - 2 "vesA acot8 e-2"
+GETF vesicle_a atp
+ASSERT LAST_N == aa - 2 "vesA acot8 a-2"
+GETF vesicle_a ready
+ASSERT LAST_N >= 0 "vesA ready defined"
+
+GETF vesicle_b heat
+LET bh = LAST_N
+GETF vesicle_b energy
+LET be = LAST_N
+GETF vesicle_b atp
+LET ba = LAST_N
+SEND vesicle_b acot8 3
+ASSERT LAST_N == 3 "vesB acot8"
+GETF vesicle_b heat
+ASSERT LAST_N == bh + 3 "vesB acot8 h+3"
+GETF vesicle_b energy
+ASSERT LAST_N == be - 3 "vesB acot8 e-3"
+GETF vesicle_b atp
+ASSERT LAST_N == ba - 3 "vesB acot8 a-3"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive"
+
+SEND ghost acot8 2
+ASSERT LAST_N == 0 "ghost acot8 0"
+GETF ghost alive
+ASSERT LAST_N == 0 "ghost dead"
+
+GETF vesicle_a alive
+ASSERT LAST_N == 1 "vesA alive final"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive final"
+ASSERT 1 == 1 "smx_mesh_vesicle_acot8_life PASS"
+ASSERT 1 == 1 "SMX ACOT8 thioesterase mesh PASS"
