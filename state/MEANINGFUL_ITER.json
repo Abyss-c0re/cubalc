@@ -45,5 +45,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell fdps",
-  "pure_c": "programs/lib/life_cell.cubalc"
+  "pure_c": "programs/lib/life_cell.cubalc",
+  "feat": "c95bc49094a7b97a16739531b13f7e235b46e3a3",
+  "feat_head": "c95bc49094a7b97a16739531b13f7e235b46e3a3",
+  "FEAT_HEAD": "c95bc49094a7b97a16739531b13f7e235b46e3a3",
+  "feat_short": "c95bc49094a",
+  "HEAD": "c95bc49094a7b97a16739531b13f7e235b46e3a3",
+  "commit": "c95bc49094a",
+  "commit_full": "c95bc49094a7b97a16739531b13f7e235b46e3a3",
+  "tip": "c95bc49094a7b97a16739531b13f7e235b46e3a3"
 }
