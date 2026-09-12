@@ -42,11 +42,11 @@
     "smx": 97,
     "flagship_1620": 12
   },
-  "HEAD": "c417bf446beda2340305b282de224e4eed66150d",
-  "head": "c417bf446beda2340305b282de224e4eed66150d",
-  "feat": "c417bf446beda2340305b282de224e4eed66150d",
-  "FEAT_HEAD": "c417bf446beda2340305b282de224e4eed66150d",
-  "tip": "c417bf446beda2340305b282de224e4eed66150d",
-  "pin": "c417bf446beda2340305b282de224e4eed66150d",
+  "HEAD": "405c7466e3bd854c2507540361dd41c5b1cbf799",
+  "head": "405c7466e3bd854c2507540361dd41c5b1cbf799",
+  "feat": "66fea588c66d0c752c7639c4472136e58569e889",
+  "FEAT_HEAD": "66fea588c66d0c752c7639c4472136e58569e889",
+  "tip": "405c7466e3bd854c2507540361dd41c5b1cbf799",
+  "pin": "405c7466e3bd854c2507540361dd41c5b1cbf799",
   "law": "cube_is_sot; free_energy_must_flow"
 }
