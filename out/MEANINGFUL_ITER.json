@@ -35,19 +35,19 @@
     "asserts_fail": 0
   },
   "asserts_fail": 0,
-  "asserts_ok_sum": 329,
+  "asserts_ok_sum": 316,
   "asserts_ok": {
-    "life": 197,
-    "atomic_printer": 66,
+    "life": 189,
+    "atomic_printer": 61,
     "smx": 54,
     "flagship_1620": 12
   },
-  "HEAD": "6ffb60272e5bf8425a8deb12501de53b38959861",
+  "HEAD": "5a41af5db5ff3033c5f9558990c6d1754857dcdd",
   "head": "6ffb60272e5bf8425a8deb12501de53b38959861",
-  "feat": "6ffb60272e5bf8425a8deb12501de53b38959861",
+  "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5",
   "FEAT_HEAD": "6ffb60272e5bf8425a8deb12501de53b38959861",
-  "tip": "6ffb60272e5bf8425a8deb12501de53b38959861",
+  "tip": "5a41af5db5ff3033c5f9558990c6d1754857dcdd",
   "pin": "6ffb60272e5bf8425a8deb12501de53b38959861",
-  "HEAD_tip": "6ffb60272e5bf8425a8deb12501de53b38959861",
+  "HEAD_tip": "5a41af5db5ff3033c5f9558990c6d1754857dcdd",
   "law": "Cube is SoT. Free energy must flow."
 }
