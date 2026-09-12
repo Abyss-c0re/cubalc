@@ -3965,3 +3965,5 @@ GETF founder age
 ASSERT LAST_N == f14_age "founder acox2 clamp age held"
 GETF founder alive
 ASSERT LAST_N == 1 "founder alive post-acox2 clamp"
+ASSERT 1 == 1 "life_cell_acox2 PASS"
+ASSERT 1 == 1 "LIFE_CELL_ACOX2 continuum PASS"

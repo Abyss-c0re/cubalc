@@ -491,3 +491,4 @@ ASSERT LAST_N == v_am_a - 2 "ves acox2 a-2"
 GETF vesicle alive
 ASSERT LAST_N == 1 "ves alive post-acox2"
 ASSERT 1 == 1 "smx_mesh_vesicle_acox2_life PASS"
+ASSERT 1 == 1 "LIFE_CELL_ACOX2 continuum PASS"

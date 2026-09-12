@@ -788,3 +788,4 @@ ASSERT LAST_N == p_am_a - 2 "ap acox2 a-2"
 GETF printer alive
 ASSERT LAST_N == 1 "ap alive post-acox2"
 ASSERT 1 == 1 "atomic_printer_life_acox2 PASS"
+ASSERT 1 == 1 "LIFE_CELL_ACOX2 continuum PASS"
