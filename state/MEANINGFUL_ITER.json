@@ -37,9 +37,9 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 129,
   "asserts_ok": 129,
-  "HEAD": "PENDING",
+  "HEAD": "cad790fe29c6f27daecacf29fcf698711b88ddf9",
   "feat": "468348969f21a0d9f2ab2c413fa4ba75063fcb78",
-  "head": "PENDING",
+  "head": "cad790fe29c6f27daecacf29fcf698711b88ddf9",
   "law": "cube_is_sot; free_energy_must_flow",
   "status": "PASS"
 }
