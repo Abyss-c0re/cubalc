@@ -52,7 +52,9 @@
   "host_finish": true,
   "note": "METHOD emb n ships post-SLC16A7 embigin MCT2 chaperone; heat+n atp-n energy-n; parent SLC16A7 lives; free energy flows into peripheral ketolysis",
   "ts": "2026-09-12T21:20:34Z",
-  "summary": "LIFE_CELL_EMB MI2310 tip pin sealed PASS asserts_ok=270",
-  "tip": null,
-  "HEAD": null
+  "summary": "LIFE_CELL_EMB MI2310 tip pin sealed PASS asserts_ok=270 HEAD==tip",
+  "tip": "46febd032bae706c91eb5c5085d1f28d42c71bf4",
+  "HEAD": "46febd032bae706c91eb5c5085d1f28d42c71bf4",
+  "head": "46febd032bae706c91eb5c5085d1f28d42c71bf4",
+  "self_pin": "46febd032bae706c91eb5c5085d1f28d42c71bf4"
 }
