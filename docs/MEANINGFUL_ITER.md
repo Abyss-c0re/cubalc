@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2267
-- **FEATURE**: LIFE_CELL_MRP2
-- **method**: mrp2 n
-- **version**: 1.15.1765-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2
+- **MI**: 2268
+- **FEATURE**: LIFE_CELL_MRP3
+- **method**: mrp3 n
+- **version**: 1.15.1766-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
 - **asserts_fail**: 0
-- **asserts_ok sum**: 540 (life=353 atomic_printer=104 smx=71 flagship_1620=12)
-- **proof**: programs/proof/2267_life_cell_mrp2.cubalc
-- **HEAD**: d0004deb1ba0dd684efc9381c5c044f25a0c26be
-- **feat**: 7a582b4492872c18dedf3cf17ec37484b546c9f0
+- **asserts_ok sum**: 588 (life=387 atomic_printer=111 smx=78 flagship_1620=12)
+- **proof**: programs/proof/2268_life_cell_mrp3.cubalc
+- **HEAD**: (pinned on commit)
+- **feat**: 021934a111acd566049a79f3782f1112f4153a33
 - **law**: cube_is_sot; free_energy_must_flow
