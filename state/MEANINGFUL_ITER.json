@@ -44,5 +44,8 @@
   "proof_status": "PASS",
   "anti_bloat": true,
   "hold_flash": 1,
-  "item": "life cell sdhc"
+  "item": "life cell sdhc",
+  "feat": "909aace57dc9cfbdf031065847e090b6dbd8ecdc",
+  "feat_head": "909aace57dc9cfbdf031065847e090b6dbd8ecdc",
+  "FEAT_HEAD": "909aace57dc9cfbdf031065847e090b6dbd8ecdc"
 }
