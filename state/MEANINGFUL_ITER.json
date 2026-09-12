@@ -15,7 +15,7 @@
   },
   "proof": "programs/proof/2264_life_cell_bsep.cubalc",
   "feat": "b6c92fb5b00497da0f4a66d01339717f2fac7e7b",
-  "HEAD": "a387a6b1d7189f2c7c282cf78a7f029bbdb47824",
-  "tip": "a387a6b1d7189f2c7c282cf78a7f029bbdb47824",
-  "HEAD_tip": "a387a6b1d7189f2c7c282cf78a7f029bbdb47824"
+  "HEAD": "dbf18e80465189ed0b09cff5b173b1e802fd9ac5",
+  "tip": "dbf18e80465189ed0b09cff5b173b1e802fd9ac5",
+  "HEAD_tip": "dbf18e80465189ed0b09cff5b173b1e802fd9ac5"
 }
