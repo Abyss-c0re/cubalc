@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.1767-usability — MI 2269 LIFE_CELL_OST (PASS)
+
+- feat(life): `ost n` — Ostα/β (SLC51A/B) basolateral bile-salt facilitated exit after Mrp3 on `life_cell`.
+- Continuum: `...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost`
+- Proof: `programs/proof/2269_life_cell_ost.cubalc` asserts_fail:0 life=388 ap=111 smx=78 flagship_1620=12 sum=589
+- Integration: `atomic_printer_life_ost.cubalc` (111), `smx_mesh_vesicle_ost_life.cubalc` (78); flagship_1620=12
+- Gift: facilitated basolateral bile-salt outlet after Mrp3 closes enterohepatic free-energy return.
+
 ## 1.15.1766-usability — MI 2268 LIFE_CELL_MRP3 (PASS)
 
 - feat(life): `mrp3 n` — Mrp3 (ABCC3/cMOAT2) basolateral organic-anion / bile-salt overflow export after Mrp2 on `life_cell`.

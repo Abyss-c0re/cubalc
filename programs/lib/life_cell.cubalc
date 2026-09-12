@@ -16542,4 +16542,85 @@ CLASS Cell
     RET take
   END
 
+
+
+  # Ostα/β: heteromeric organic solute transporter (SLC51A/B) after Mrp3.
+  # Ostα-Ostβ (OST / SLC51A-SLC51B) is the basolateral bile-acid facilitator that
+  # exports reclaimed bile salts from enterocytes and cholangiocytes into blood,
+  # completing the enterohepatic return limb after canalicular Bsep/Mrp2 export
+  # and basolateral Mrp3 overflow. After Mrp3 opens ABCC3 sinusoidal rescue,
+  # Ost finishes the basolateral bile-salt outlet so intestinally and biliary-
+  # reclaimed acids re-enter portal/systemic free-energy circulation instead of
+  # trapping inside the epithelium.
+  # Distinct from Mrp3 (ABCC3 OA/bile-salt ABC overflow), Mrp2 (ABCC2 canalicular
+  # OA export), Bsep (ABCB11 canalicular bile-salt export), Oatp1b1 (SLCO1B1
+  # basolateral OA uptake), Ntcp (SLC10A1 Na+-TC uptake), Baat (bile-acid-CoA:amino
+  # acid N-acyltransferase) — Ostα/β is the facilitated basolateral bile-salt
+  # exit that closes enterohepatic recirculation after ABC limbs.
+  # Without Ost after Mrp3, basolateral bile-salt return stays ABC-only; life_cell
+  # enterohepatic free-energy loop never finishes facilitated sinusoidal exit
+  # after compensatory Mrp3 overflow.
+  # Domain: post-Mrp3 Ostα/β basolateral bile-salt efflux /
+  #   cytosolic bile salt -> sinusoidal bile salt (facilitated heteromer)
+  # (not Mrp3, not Mrp2, not Bsep, not Oatp1b1, not Ntcp, not Baat).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost
+  #   (Mrp3 basolateral ABC overflow -> Ostα/β basolateral bile-salt exit).
+  # Gift: facilitated basolateral bile-salt outlet after Mrp3 so reclaimed acids
+  #   re-enter blood and close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ost life-force.
+  # Usability: AGI models post-Mrp3 Ostα/β bile-salt exit under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ost n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
