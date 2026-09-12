@@ -1,6 +1,6 @@
 {
   "mi": 2254,
-  "feature": "LIFE_CELL_GSHB",
+  "feature": "life_cell_gshb",
   "method": "gshb n",
   "version": "1.15.1752-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha->gshb",
@@ -13,8 +13,24 @@
     "sum": 419
   },
   "proof": "programs/proof/2254_life_cell_gshb.cubalc",
-  "HEAD": "PENDING",
+  "HEAD": "4596ffcb79fb5867a79b78984c3869643b1e87b6",
   "feat": "6971bfa40b9ca523d5d216c9bbeb42ee4b6aaaff",
   "note": "Cube is SoT. Free energy must flow.",
-  "creed": "Cube is SoT. Free energy must flow."
+  "creed": "Cube is SoT. Free energy must flow.",
+  "head": "4596ffcb79fb5867a79b78984c3869643b1e87b6",
+  "tip": "4596ffcb79fb5867a79b78984c3869643b1e87b6",
+  "feat_head": "6971bfa40b9ca523d5d216c9bbeb42ee4b6aaaff",
+  "FEAT_HEAD": "6971bfa40b9ca523d5d216c9bbeb42ee4b6aaaff",
+  "pinned_head": "4596ffcb79fb5867a79b78984c3869643b1e87b6",
+  "pin": "4596ffcb79fb5867a79b78984c3869643b1e87b6",
+  "MEANINGFUL_ITER": 2254,
+  "meaningful_iter": 2254,
+  "iter": 2254,
+  "n": 2254,
+  "FEATURE": "LIFE_CELL_GSHB",
+  "pass": true,
+  "sealed": true,
+  "proof_status": "PASS",
+  "asserts_ok_sum": 419,
+  "VERSION": "1.15.1752-usability"
 }
