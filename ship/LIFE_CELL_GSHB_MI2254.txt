@@ -4,5 +4,5 @@ continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->
 proof: PASS asserts_ok=419 asserts_fail=0 (life=245 atomic=87 smx=75 flagship=12)
 version: 1.15.1752-usability
 feat: e2ac56058c3bb6614436359d5913a2eab8151a2e
-HEAD/tip: 9a5a66d83d174f0d1478beaffb46c32b47bc6f09
+HEAD/tip: f30bc8672ae8111d47572148c60bd4f0a4500795
 Cube is SoT. Free energy must flow.
