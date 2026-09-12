@@ -16784,4 +16784,86 @@ CLASS Cell
   END
 
 
+
+  # Fxr: farnesoid X receptor FXR/NR1H4 after Fabp6 ileal BA shuttle.
+  # FXR is the nuclear bile-acid sensor that binds reclaimed BA in the enterocyte
+  # after Fabp6/IBABP has shuttled luminal ASBT cargo through the cytosol — the
+  # ligand-activated transcription factor that turns enterohepatic free energy into
+  # a nuclear decision plate (FGF19 induction, SHP partners, BA homeostasis genes).
+  # After Fabp6 delivers BA to the nuclear compartment stand-in, FXR opens the
+  # principal BA-sensing gate so mitosis energy budgets regain a gut endocrine
+  # feedback path instead of silent cytosolic BA after ASBT uptake and IBABP shuttle
+  # on the life_cell plate.
+  # Distinct from Fabp6 (IBABP cytosolic BA binding/shuttle), Asbt (SLC10A2 apical
+  # ileal Na+-BA uptake), Ost (SLC51A/B basolateral facilitated BA efflux), Ntcp
+  # (SLC10A1 hepatic uptake), Bsep (ABCB11 canalicular export) — FXR is the NR1H4
+  # nuclear BA receptor that reads Fabp6-delivered ligand and commits the enterocyte
+  # free-energy story toward endocrine FGF19-class feedback.
+  # Without FXR after Fabp6, nuclear BA sensing stays dark even with open ASBT/IBABP
+  # gates; life_cell gut free-energy finish cannot authorize FGF19-class repression
+  # signals back to hepatic BA synthesis.
+  # Domain: post-Fabp6 FXR/NR1H4 nuclear bile-acid sensing / cytosolic BA
+  #   -> nuclear BA-FXR decision (ATP stand-in for receptor/coactivator work)
+  # (not Fabp6, not Asbt, not Ost, not Ntcp, not Bsep, not Mrp3).
+  # Continuum: ...->mrp2->mrp3->ost->asbt->fabp6->fxr
+  #   (Fabp6 cytosolic BA shuttle -> FXR nuclear BA receptor decision).
+  # Pay take=min(n,atp,energy) - energy stand-in for nuclear receptor work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fxr life-force.
+  # Usability: AGI models post-Fabp6 FXR nuclear BA sensing under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fxr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
