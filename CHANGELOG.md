@@ -1,3 +1,12 @@
+## 1.15.1762-usability — MI2264 LIFE_CELL_BSEP
+
+- feat(life): Bsep canalicular bile salt export pump (ABCB11) after Baat on life_cell
+- continuum ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+- METHOD bsep n: taurocholate + ATP -> extracellular bile salt after Baat
+- proof programs/proof/2264_life_cell_bsep.cubalc asserts_ok=258 fail=0
+- atomic_printer_life_bsep + smx_mesh_vesicle_bsep_life + flagship 1620 PASS (sum 415)
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1761-usability — MI2263 LIFE_CELL_BAAT
 
 - feat(life): Baat taurine N-acyltransferase after Fmo1 on life_cell

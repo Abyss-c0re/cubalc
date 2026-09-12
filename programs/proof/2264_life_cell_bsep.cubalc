@@ -1,0 +1,1199 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_BSEP - Bsep canalicular bile salt export pump (ABCB11) after Baat
+# Continuum ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+# Gift: Bsep exports Baat taurocholate across the canaliculus so Cys-disposal finishes into bile salt flux.
+# Cube is SoT. Free energy must flow.
+
+ENTITY founder OF Cell 1 44 0
+ENTITY quiet OF Cell 1 28 0
+ENTITY corpse OF Cell 0 18 0
+ENTITY empty OF Cell 1 0 0
+ENTITY bed OF Cell 1 52 0
+
+SEND founder set_threshold 10
+SEND quiet set_threshold 12
+SEND bed set_threshold 8
+SEND empty set_threshold 10
+
+SEND founder pulse 5
+SEND founder photosynth 42
+SEND founder glycolyse 34
+SEND founder pump 26
+SEND founder photophos 24
+SEND founder charge 38
+SEND founder feed 36
+GETF founder age
+ASSERT LAST_N == 5 "founder age5"
+GETF founder atp
+ASSERT LAST_N >= 18 "founder atp"
+GETF founder energy
+ASSERT LAST_N >= 18 "founder energy"
+GETF founder pmf
+ASSERT LAST_N >= 4 "founder pmf"
+
+SEND founder pepf 3
+ASSERT LAST_N == 3 "pre pepf"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 26
+SEND founder feed 18
+SEND founder pdf 3
+ASSERT LAST_N == 3 "pre pdf"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 26
+SEND founder feed 18
+SEND founder map 3
+ASSERT LAST_N == 3 "pre map"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder nata 3
+ASSERT LAST_N == 3 "pre nata"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder natb 3
+ASSERT LAST_N == 3 "pre natb"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder natc 3
+ASSERT LAST_N == 3 "pre natc"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder nate 3
+ASSERT LAST_N == 3 "pre nate"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder mete 3
+ASSERT LAST_N == 3 "pre mete"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder metk 3
+ASSERT LAST_N == 3 "pre metk"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+
+SEND founder ahcy 3
+ASSERT LAST_N == 3 "pre ahcy"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+
+GETF founder heat
+LET h0 = LAST_N
+GETF founder energy
+LET e0 = LAST_N
+GETF founder atp
+LET a0 = LAST_N
+
+SEND founder cbs 4
+ASSERT LAST_N == 4 "pre cbs take4"
+GETF founder heat
+ASSERT LAST_N == h0 + 4 "pre cbs heat+4"
+GETF founder energy
+ASSERT LAST_N == e0 - 4 "pre cbs energy-4"
+GETF founder atp
+ASSERT LAST_N == a0 - 4 "pre cbs atp-4"
+SEND founder photosynth 20
+SEND founder charge 24
+SEND founder feed 18
+GETF founder heat
+LET fhc = LAST_N
+GETF founder energy
+LET fec = LAST_N
+GETF founder atp
+LET fac = LAST_N
+GETF founder age
+LET age0 = LAST_N
+GETF founder pcr
+LET pcr0 = LAST_N
+GETF founder reserve
+LET rsv0 = LAST_N
+GETF founder pmf
+LET pmf0 = LAST_N
+GETF founder threshold
+LET thr0 = LAST_N
+SEND founder cgl 4
+ASSERT LAST_N == 4 "founder pre cgl4"
+GETF founder heat
+ASSERT LAST_N == fhc + 4 "founder pre cgl h+4"
+GETF founder energy
+ASSERT LAST_N == fec - 4 "founder pre cgl e-4"
+GETF founder atp
+ASSERT LAST_N == fac - 4 "founder pre cgl a-4"
+SEND founder photosynth 22
+SEND founder charge 26
+SEND founder feed 18
+GETF founder heat
+LET fhg = LAST_N
+GETF founder energy
+LET feg = LAST_N
+GETF founder atp
+LET fag = LAST_N
+SEND founder gsha 4
+ASSERT LAST_N == 4 "founder pre gsha4"
+GETF founder heat
+ASSERT LAST_N == fhg + 4 "founder pre gsha h+4"
+GETF founder energy
+ASSERT LAST_N == feg - 4 "founder pre gsha e-4"
+GETF founder atp
+ASSERT LAST_N == fag - 4 "founder pre gsha a-4"
+SEND founder photosynth 22
+SEND founder charge 26
+SEND founder feed 18
+GETF founder heat
+LET fgs_h = LAST_N
+GETF founder energy
+LET fgs_e = LAST_N
+GETF founder atp
+LET fgs_a = LAST_N
+SEND founder gshb 4
+ASSERT LAST_N == 4 "founder pre gshb4"
+SEND founder photosynth 18
+SEND founder charge 22
+SEND founder feed 16
+GETF founder heat
+LET fgs_h = LAST_N
+GETF founder energy
+LET fgs_e = LAST_N
+GETF founder atp
+LET fgs_a = LAST_N
+GETF founder age
+LET age0 = LAST_N
+GETF founder pcr
+LET pcr0 = LAST_N
+GETF founder reserve
+LET rsv0 = LAST_N
+GETF founder pmf
+LET pmf0 = LAST_N
+GETF founder threshold
+LET thr0 = LAST_N
+SEND founder gor 4
+ASSERT LAST_N == 4 "founder gor4"
+GETF founder heat
+ASSERT LAST_N == fgs_h + 4 "founder gor h+4"
+GETF founder energy
+ASSERT LAST_N == fgs_e - 4 "founder gor e-4"
+GETF founder atp
+ASSERT LAST_N == fgs_a - 4 "founder gor a-4"
+GETF founder age
+ASSERT LAST_N == age0 "gor age held"
+GETF founder pcr
+ASSERT LAST_N == pcr0 "gor pcr held"
+GETF founder reserve
+ASSERT LAST_N == rsv0 "gor reserve held"
+GETF founder pmf
+ASSERT LAST_N == pmf0 "gor pmf held"
+GETF founder threshold
+ASSERT LAST_N == thr0 "gor thr held"
+
+SEND founder photosynth 18
+SEND founder charge 20
+SEND founder feed 14
+
+# pre-gpx/gst continuum steps so Ggt sits after Gst on the glutathione shield
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder gpx 3
+ASSERT LAST_N == 3 "pre gpx"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder gst 3
+ASSERT LAST_N == 3 "pre gst"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+SEND founder ggt 3
+ASSERT LAST_N == 3 "pre ggt"
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+
+
+GETF founder heat
+LET csad_h = LAST_N
+GETF founder energy
+LET csad_e = LAST_N
+GETF founder atp
+LET csad_a = LAST_N
+GETF founder age
+LET csad_age = LAST_N
+GETF founder pcr
+LET csad_pcr = LAST_N
+GETF founder reserve
+LET csad_rsv = LAST_N
+GETF founder pmf
+LET csad_pmf = LAST_N
+GETF founder threshold
+LET csad_thr = LAST_N
+SEND founder dug1 4
+ASSERT LAST_N == 4 "pre dug1 founder"
+SEND founder photosynth 16
+SEND founder charge 18
+SEND founder feed 12
+SEND founder cdo1 4
+ASSERT LAST_N == 4 "pre cdo1 founder"
+SEND founder photosynth 16
+SEND founder charge 18
+SEND founder feed 12
+GETF founder heat
+LET csad_h = LAST_N
+GETF founder energy
+LET csad_e = LAST_N
+GETF founder atp
+LET csad_a = LAST_N
+GETF founder age
+LET csad_age = LAST_N
+GETF founder pcr
+LET csad_pcr = LAST_N
+GETF founder reserve
+LET csad_rsv = LAST_N
+GETF founder pmf
+LET csad_pmf = LAST_N
+GETF founder threshold
+LET csad_thr = LAST_N
+SEND founder csad 4
+ASSERT LAST_N == 4 "founder csad 4"
+GETF founder heat
+ASSERT LAST_N == csad_h + 4 "founder csad h+4"
+GETF founder energy
+ASSERT LAST_N == csad_e - 4 "founder csad e-4"
+GETF founder atp
+ASSERT LAST_N == csad_a - 4 "founder csad a-4"
+GETF founder age
+ASSERT LAST_N == csad_age "founder csad age held"
+GETF founder pcr
+ASSERT LAST_N == csad_pcr "founder csad pcr held"
+GETF founder reserve
+ASSERT LAST_N == csad_rsv "founder csad reserve held"
+GETF founder pmf
+ASSERT LAST_N == csad_pmf "founder csad pmf held"
+GETF founder threshold
+ASSERT LAST_N == csad_thr "founder csad thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-csad"
+
+SEND founder photosynth 12
+SEND founder charge 14
+SEND founder feed 10
+GETF founder heat
+LET fm_founder_h = LAST_N
+GETF founder energy
+LET fm_founder_e = LAST_N
+GETF founder atp
+LET fm_founder_a = LAST_N
+GETF founder age
+LET fm_founder_age = LAST_N
+GETF founder pcr
+LET fm_founder_pcr = LAST_N
+GETF founder reserve
+LET fm_founder_rsv = LAST_N
+GETF founder pmf
+LET fm_founder_pmf = LAST_N
+GETF founder threshold
+LET fm_founder_thr = LAST_N
+SEND founder fmo1 4
+ASSERT LAST_N == 4 "founder fmo1 4"
+GETF founder heat
+ASSERT LAST_N == fm_founder_h + 4 "founder fmo1 h+4"
+GETF founder energy
+ASSERT LAST_N == fm_founder_e - 4 "founder fmo1 e-4"
+GETF founder atp
+ASSERT LAST_N == fm_founder_a - 4 "founder fmo1 a-4"
+GETF founder age
+ASSERT LAST_N == fm_founder_age "founder fmo1 age held"
+GETF founder pcr
+ASSERT LAST_N == fm_founder_pcr "founder fmo1 pcr held"
+GETF founder reserve
+ASSERT LAST_N == fm_founder_rsv "founder fmo1 reserve held"
+GETF founder pmf
+ASSERT LAST_N == fm_founder_pmf "founder fmo1 pmf held"
+GETF founder threshold
+ASSERT LAST_N == fm_founder_thr "founder fmo1 thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-fmo1"
+SEND corpse cbs 3
+ASSERT LAST_N == 0 "dead pre cbs0"
+SEND corpse cgl 3
+ASSERT LAST_N == 0 "dead pre cgl0"
+SEND corpse gshb 3
+ASSERT LAST_N == 0 "corpse pre gshb0"
+SEND corpse gor 3
+ASSERT LAST_N == 0 "corpse gor0"
+SEND corpse dug1 3
+SEND corpse cdo1 3
+ASSERT LAST_N == 0 "corpse dug1 0"
+SEND corpse csad 3
+ASSERT LAST_N == 0 "corpse csad 0"
+SEND corpse fmo1 3
+ASSERT LAST_N == 0 "corpse fmo1 0"
+SEND empty cbs 2
+ASSERT LAST_N == 0 "empty pre cbs0"
+SEND empty cgl 2
+ASSERT LAST_N == 0 "empty pre cgl0"
+SEND empty gshb 2
+ASSERT LAST_N == 0 "empty pre gshb0"
+SEND empty gor 2
+ASSERT LAST_N == 0 "empty gor0"
+
+SEND empty dug1 2
+SEND empty cdo1 2
+ASSERT LAST_N == 0 "empty dug1 0"
+SEND empty csad 2
+ASSERT LAST_N == 0 "empty csad 0"
+SEND empty fmo1 2
+ASSERT LAST_N == 0 "empty fmo1 0"
+SEND quiet pulse 4
+SEND quiet photosynth 36
+SEND quiet glycolyse 30
+SEND quiet charge 32
+SEND quiet feed 28
+SEND quiet map 2
+ASSERT LAST_N == 2 "quiet pre map"
+SEND quiet photosynth 20
+SEND quiet charge 24
+SEND quiet feed 16
+SEND quiet nata 2
+ASSERT LAST_N == 2 "quiet pre nata"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet natb 2
+ASSERT LAST_N == 2 "quiet pre natb"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet natc 2
+ASSERT LAST_N == 2 "quiet pre natc"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet nate 2
+ASSERT LAST_N == 2 "quiet pre nate"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet mete 2
+ASSERT LAST_N == 2 "quiet pre mete"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet metk 2
+ASSERT LAST_N == 2 "quiet pre metk"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet ahcy 2
+ASSERT LAST_N == 2 "quiet pre ahcy"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+GETF quiet heat
+LET qh = LAST_N
+GETF quiet energy
+LET qe = LAST_N
+GETF quiet atp
+LET qa = LAST_N
+SEND quiet cbs 3
+ASSERT LAST_N == 3 "quiet pre cbs3"
+GETF quiet heat
+ASSERT LAST_N == qh + 3 "quiet pre cbs h+3"
+GETF quiet energy
+ASSERT LAST_N == qe - 3 "quiet pre cbs e-3"
+GETF quiet atp
+ASSERT LAST_N == qa - 3 "quiet pre cbs a-3"
+SEND quiet photosynth 20
+SEND quiet charge 24
+SEND quiet feed 18
+GETF quiet heat
+LET qhc = LAST_N
+GETF quiet energy
+LET qec = LAST_N
+GETF quiet atp
+LET qac = LAST_N
+SEND quiet cgl 3
+ASSERT LAST_N == 3 "quiet pre cgl3"
+GETF quiet heat
+ASSERT LAST_N == qhc + 3 "quiet pre cgl h+3"
+GETF quiet energy
+ASSERT LAST_N == qec - 3 "quiet pre cgl e-3"
+GETF quiet atp
+ASSERT LAST_N == qac - 3 "quiet pre cgl a-3"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+GETF quiet heat
+LET qhg = LAST_N
+GETF quiet energy
+LET qeg = LAST_N
+GETF quiet atp
+LET qag = LAST_N
+SEND quiet gsha 3
+ASSERT LAST_N == 3 "quiet pre gsha3"
+GETF quiet heat
+ASSERT LAST_N == qhg + 3 "quiet pre gsha h+3"
+GETF quiet energy
+ASSERT LAST_N == qeg - 3 "quiet pre gsha e-3"
+GETF quiet atp
+ASSERT LAST_N == qag - 3 "quiet pre gsha a-3"
+SEND quiet photosynth 18
+SEND quiet charge 22
+SEND quiet feed 16
+GETF quiet heat
+LET qgs_h = LAST_N
+GETF quiet energy
+LET qgs_e = LAST_N
+GETF quiet atp
+LET qgs_a = LAST_N
+SEND quiet gshb 3
+ASSERT LAST_N == 3 "quiet pre gshb3"
+SEND quiet photosynth 18
+SEND quiet charge 22
+SEND quiet feed 16
+GETF quiet heat
+LET qgs_h = LAST_N
+GETF quiet energy
+LET qgs_e = LAST_N
+GETF quiet atp
+LET qgs_a = LAST_N
+SEND quiet gor 3
+ASSERT LAST_N == 3 "quiet gor3"
+GETF quiet heat
+ASSERT LAST_N == qgs_h + 3 "quiet gor h+3"
+GETF quiet energy
+ASSERT LAST_N == qgs_e - 3 "quiet gor e-3"
+GETF quiet atp
+ASSERT LAST_N == qgs_a - 3 "quiet gor a-3"
+
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet gpx 2
+ASSERT LAST_N == 2 "quiet pre gpx"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+SEND quiet gst 2
+ASSERT LAST_N == 2 "quiet pre gst"
+SEND quiet photosynth 18
+SEND quiet charge 20
+SEND quiet feed 14
+GETF quiet heat
+LET csad_h = LAST_N
+GETF quiet energy
+LET csad_e = LAST_N
+GETF quiet atp
+LET csad_a = LAST_N
+GETF quiet age
+LET csad_age = LAST_N
+GETF quiet pcr
+LET csad_pcr = LAST_N
+GETF quiet reserve
+LET csad_rsv = LAST_N
+GETF quiet pmf
+LET csad_pmf = LAST_N
+GETF quiet threshold
+LET csad_thr = LAST_N
+SEND quiet dug1 3
+ASSERT LAST_N == 3 "pre dug1 quiet"
+SEND quiet photosynth 16
+SEND quiet charge 18
+SEND quiet feed 12
+SEND quiet cdo1 3
+ASSERT LAST_N == 3 "pre cdo1 quiet"
+SEND quiet photosynth 16
+SEND quiet charge 18
+SEND quiet feed 12
+GETF quiet heat
+LET csad_h = LAST_N
+GETF quiet energy
+LET csad_e = LAST_N
+GETF quiet atp
+LET csad_a = LAST_N
+GETF quiet age
+LET csad_age = LAST_N
+GETF quiet pcr
+LET csad_pcr = LAST_N
+GETF quiet reserve
+LET csad_rsv = LAST_N
+GETF quiet pmf
+LET csad_pmf = LAST_N
+GETF quiet threshold
+LET csad_thr = LAST_N
+SEND quiet csad 3
+ASSERT LAST_N == 3 "quiet csad 3"
+GETF quiet heat
+ASSERT LAST_N == csad_h + 3 "quiet csad h+3"
+GETF quiet energy
+ASSERT LAST_N == csad_e - 3 "quiet csad e-3"
+GETF quiet atp
+ASSERT LAST_N == csad_a - 3 "quiet csad a-3"
+GETF quiet age
+ASSERT LAST_N == csad_age "quiet csad age held"
+GETF quiet pcr
+ASSERT LAST_N == csad_pcr "quiet csad pcr held"
+GETF quiet reserve
+ASSERT LAST_N == csad_rsv "quiet csad reserve held"
+GETF quiet pmf
+ASSERT LAST_N == csad_pmf "quiet csad pmf held"
+GETF quiet threshold
+ASSERT LAST_N == csad_thr "quiet csad thr held"
+GETF quiet alive
+ASSERT LAST_N == 1 "quiet alive post-csad"
+
+SEND quiet photosynth 12
+SEND quiet charge 14
+SEND quiet feed 10
+GETF quiet heat
+LET fm_quiet_h = LAST_N
+GETF quiet energy
+LET fm_quiet_e = LAST_N
+GETF quiet atp
+LET fm_quiet_a = LAST_N
+GETF quiet age
+LET fm_quiet_age = LAST_N
+GETF quiet pcr
+LET fm_quiet_pcr = LAST_N
+GETF quiet reserve
+LET fm_quiet_rsv = LAST_N
+GETF quiet pmf
+LET fm_quiet_pmf = LAST_N
+GETF quiet threshold
+LET fm_quiet_thr = LAST_N
+SEND quiet fmo1 3
+ASSERT LAST_N == 3 "quiet fmo1 3"
+GETF quiet heat
+ASSERT LAST_N == fm_quiet_h + 3 "quiet fmo1 h+3"
+GETF quiet energy
+ASSERT LAST_N == fm_quiet_e - 3 "quiet fmo1 e-3"
+GETF quiet atp
+ASSERT LAST_N == fm_quiet_a - 3 "quiet fmo1 a-3"
+GETF quiet age
+ASSERT LAST_N == fm_quiet_age "quiet fmo1 age held"
+GETF quiet pcr
+ASSERT LAST_N == fm_quiet_pcr "quiet fmo1 pcr held"
+GETF quiet reserve
+ASSERT LAST_N == fm_quiet_rsv "quiet fmo1 reserve held"
+GETF quiet pmf
+ASSERT LAST_N == fm_quiet_pmf "quiet fmo1 pmf held"
+GETF quiet threshold
+ASSERT LAST_N == fm_quiet_thr "quiet fmo1 thr held"
+GETF quiet alive
+ASSERT LAST_N == 1 "quiet alive post-fmo1"
+SEND bed pulse 6
+SEND bed photosynth 44
+SEND bed glycolyse 36
+SEND bed pump 24
+SEND bed charge 40
+SEND bed feed 36
+SEND bed pdf 2
+ASSERT LAST_N == 2 "bed pdf"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed map 2
+ASSERT LAST_N == 2 "bed map"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed nata 2
+ASSERT LAST_N == 2 "bed nata"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed natb 2
+ASSERT LAST_N == 2 "bed natb"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed natc 2
+ASSERT LAST_N == 2 "bed natc"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed nate 2
+ASSERT LAST_N == 2 "bed nate"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed mete 2
+ASSERT LAST_N == 2 "bed mete"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed metk 2
+ASSERT LAST_N == 2 "bed metk"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+SEND bed ahcy 2
+ASSERT LAST_N == 2 "bed pre ahcy"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+GETF bed heat
+LET bh = LAST_N
+GETF bed energy
+LET be = LAST_N
+GETF bed atp
+LET ba = LAST_N
+SEND bed cbs 5
+ASSERT LAST_N == 5 "bed pre cbs5"
+GETF bed heat
+ASSERT LAST_N == bh + 5 "bed pre cbs h+5"
+GETF bed energy
+ASSERT LAST_N == be - 5 "bed pre cbs e-5"
+GETF bed atp
+ASSERT LAST_N == ba - 5 "bed pre cbs a-5"
+SEND bed photosynth 20
+SEND bed charge 24
+SEND bed feed 18
+GETF bed heat
+LET bhc = LAST_N
+GETF bed energy
+LET bec = LAST_N
+GETF bed atp
+LET bac = LAST_N
+SEND bed cgl 5
+ASSERT LAST_N == 5 "bed pre cgl5"
+GETF bed heat
+ASSERT LAST_N == bhc + 5 "bed pre cgl h+5"
+GETF bed energy
+ASSERT LAST_N == bec - 5 "bed pre cgl e-5"
+GETF bed atp
+ASSERT LAST_N == bac - 5 "bed pre cgl a-5"
+SEND bed photosynth 22
+SEND bed charge 26
+SEND bed feed 20
+GETF bed heat
+LET bhg = LAST_N
+GETF bed energy
+LET beg = LAST_N
+GETF bed atp
+LET bag = LAST_N
+SEND bed gsha 5
+ASSERT LAST_N == 5 "bed pre gsha5"
+GETF bed heat
+ASSERT LAST_N == bhg + 5 "bed pre gsha h+5"
+GETF bed energy
+ASSERT LAST_N == beg - 5 "bed pre gsha e-5"
+GETF bed atp
+ASSERT LAST_N == bag - 5 "bed pre gsha a-5"
+SEND bed photosynth 22
+SEND bed charge 26
+SEND bed feed 20
+GETF bed heat
+LET bgs_h = LAST_N
+GETF bed energy
+LET bgs_e = LAST_N
+GETF bed atp
+LET bgs_a = LAST_N
+SEND bed gshb 5
+ASSERT LAST_N == 5 "bed pre gshb5"
+SEND bed photosynth 18
+SEND bed charge 22
+SEND bed feed 16
+GETF bed heat
+LET bgs_h = LAST_N
+GETF bed energy
+LET bgs_e = LAST_N
+GETF bed atp
+LET bgs_a = LAST_N
+SEND bed gor 5
+ASSERT LAST_N == 5 "bed gor5"
+GETF bed heat
+ASSERT LAST_N == bgs_h + 5 "bed gor h+5"
+GETF bed energy
+ASSERT LAST_N == bgs_e - 5 "bed gor e-5"
+GETF bed atp
+ASSERT LAST_N == bgs_a - 5 "bed gor a-5"
+GETF bed energy
+LET e_fin = LAST_N
+GETF bed threshold
+LET thr_fin = LAST_N
+GETF bed ready
+LET rd = LAST_N
+IF e_fin >= thr_fin THEN
+  ASSERT rd == 1 "bed ready when e>=thr"
+END
+IF e_fin < thr_fin THEN
+  ASSERT rd == 0 "bed unready when e<thr"
+END
+
+SEND bed photosynth 18
+SEND bed charge 20
+SEND bed feed 14
+SEND bed gpx 3
+ASSERT LAST_N == 3 "bed pre gpx"
+SEND bed photosynth 18
+SEND bed charge 20
+SEND bed feed 14
+SEND bed gst 3
+ASSERT LAST_N == 3 "bed pre gst"
+SEND bed photosynth 18
+SEND bed charge 20
+SEND bed feed 14
+GETF bed heat
+LET csad_h = LAST_N
+GETF bed energy
+LET csad_e = LAST_N
+GETF bed atp
+LET csad_a = LAST_N
+GETF bed age
+LET csad_age = LAST_N
+GETF bed pcr
+LET csad_pcr = LAST_N
+GETF bed reserve
+LET csad_rsv = LAST_N
+GETF bed pmf
+LET csad_pmf = LAST_N
+GETF bed threshold
+LET csad_thr = LAST_N
+SEND bed dug1 5
+ASSERT LAST_N == 5 "pre dug1 bed"
+SEND bed photosynth 16
+SEND bed charge 18
+SEND bed feed 12
+SEND bed cdo1 5
+ASSERT LAST_N == 5 "pre cdo1 bed"
+SEND bed photosynth 16
+SEND bed charge 18
+SEND bed feed 12
+GETF bed heat
+LET csad_h = LAST_N
+GETF bed energy
+LET csad_e = LAST_N
+GETF bed atp
+LET csad_a = LAST_N
+GETF bed age
+LET csad_age = LAST_N
+GETF bed pcr
+LET csad_pcr = LAST_N
+GETF bed reserve
+LET csad_rsv = LAST_N
+GETF bed pmf
+LET csad_pmf = LAST_N
+GETF bed threshold
+LET csad_thr = LAST_N
+SEND bed csad 5
+ASSERT LAST_N == 5 "bed csad 5"
+GETF bed heat
+ASSERT LAST_N == csad_h + 5 "bed csad h+5"
+GETF bed energy
+ASSERT LAST_N == csad_e - 5 "bed csad e-5"
+GETF bed atp
+ASSERT LAST_N == csad_a - 5 "bed csad a-5"
+GETF bed age
+ASSERT LAST_N == csad_age "bed csad age held"
+GETF bed pcr
+ASSERT LAST_N == csad_pcr "bed csad pcr held"
+GETF bed reserve
+ASSERT LAST_N == csad_rsv "bed csad reserve held"
+GETF bed pmf
+ASSERT LAST_N == csad_pmf "bed csad pmf held"
+GETF bed threshold
+ASSERT LAST_N == csad_thr "bed csad thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-csad"
+
+SEND bed photosynth 12
+SEND bed charge 14
+SEND bed feed 10
+GETF bed heat
+LET fm_bed_h = LAST_N
+GETF bed energy
+LET fm_bed_e = LAST_N
+GETF bed atp
+LET fm_bed_a = LAST_N
+GETF bed age
+LET fm_bed_age = LAST_N
+GETF bed pcr
+LET fm_bed_pcr = LAST_N
+GETF bed reserve
+LET fm_bed_rsv = LAST_N
+GETF bed pmf
+LET fm_bed_pmf = LAST_N
+GETF bed threshold
+LET fm_bed_thr = LAST_N
+SEND bed fmo1 5
+ASSERT LAST_N == 5 "bed fmo1 5"
+GETF bed heat
+ASSERT LAST_N == fm_bed_h + 5 "bed fmo1 h+5"
+GETF bed energy
+ASSERT LAST_N == fm_bed_e - 5 "bed fmo1 e-5"
+GETF bed atp
+ASSERT LAST_N == fm_bed_a - 5 "bed fmo1 a-5"
+GETF bed age
+ASSERT LAST_N == fm_bed_age "bed fmo1 age held"
+GETF bed pcr
+ASSERT LAST_N == fm_bed_pcr "bed fmo1 pcr held"
+GETF bed reserve
+ASSERT LAST_N == fm_bed_rsv "bed fmo1 reserve held"
+GETF bed pmf
+ASSERT LAST_N == fm_bed_pmf "bed fmo1 pmf held"
+GETF bed threshold
+ASSERT LAST_N == fm_bed_thr "bed fmo1 thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-fmo1"
+SEND founder photosynth 16
+SEND founder charge 12
+SEND founder feed 10
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder gshb 2
+  ASSERT LAST_N == 2 "drain pre gshb2"
+END
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder gor 2
+  ASSERT LAST_N == 2 "drain pre gor2"
+END
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder gpx 2
+  ASSERT LAST_N == 2 "drain pre gpx2"
+END
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder gst 2
+  ASSERT LAST_N == 2 "drain pre gst2"
+END
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  SEND founder csad 2
+  ASSERT LAST_N == 2 "drain csad 2"
+END
+SEND founder photosynth 10
+SEND founder charge 12
+SEND founder feed 8
+GETF founder atp
+LET sa = LAST_N
+GETF founder energy
+LET se = LAST_N
+IF sa > 3 THEN
+  GETF founder heat
+  LET fmd_h = LAST_N
+  GETF founder energy
+  LET fmd_e = LAST_N
+  GETF founder atp
+  LET fmd_a = LAST_N
+  SEND founder fmo1 2
+  ASSERT LAST_N == 2 "drain fmo1 2"
+  GETF founder heat
+  ASSERT LAST_N == fmd_h + 2 "drain fmo1 h+2"
+  GETF founder energy
+  ASSERT LAST_N == fmd_e - 2 "drain fmo1 e-2"
+  GETF founder atp
+  ASSERT LAST_N == fmd_a - 2 "drain fmo1 a-2"
+END
+GETF founder atp
+LET sa2 = LAST_N
+GETF founder energy
+LET se2 = LAST_N
+ASSERT sa2 <= sa "drain atp not up"
+ASSERT se2 <= se "drain energy not up"
+
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-csad"
+SEND founder photosynth 10
+SEND founder charge 12
+SEND founder feed 8
+GETF founder heat
+LET fm2_h = LAST_N
+GETF founder energy
+LET fm2_e = LAST_N
+GETF founder atp
+LET fm2_a = LAST_N
+SEND founder fmo1 2
+ASSERT LAST_N == 2 "founder fmo1 2"
+GETF founder heat
+ASSERT LAST_N == fm2_h + 2 "founder fmo1 h+2b"
+GETF founder energy
+ASSERT LAST_N == fm2_e - 2 "founder fmo1 e-2b"
+GETF founder atp
+ASSERT LAST_N == fm2_a - 2 "founder fmo1 a-2b"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-fmo1b"
+
+SEND founder gor 0
+ASSERT LAST_N == 0 "founder gor n0"
+
+SEND founder csad 0
+ASSERT LAST_N == 0 "founder csad n0"
+SEND founder fmo1 0
+ASSERT LAST_N == 0 "founder fmo1 n0"
+# --- Baat after Fmo1: taurocholate conjugation limb ---
+SEND founder photosynth 16
+SEND founder charge 14
+SEND founder feed 12
+GETF founder heat
+LET bt_h = LAST_N
+GETF founder energy
+LET bt_e = LAST_N
+GETF founder atp
+LET bt_a = LAST_N
+GETF founder age
+LET bt_age = LAST_N
+GETF founder pcr
+LET bt_pcr = LAST_N
+GETF founder reserve
+LET bt_rsv = LAST_N
+GETF founder pmf
+LET bt_pmf = LAST_N
+GETF founder threshold
+LET bt_thr = LAST_N
+SEND founder baat 2
+ASSERT LAST_N == 2 "founder baat 2"
+GETF founder heat
+ASSERT LAST_N == bt_h + 2 "founder baat h+2"
+GETF founder energy
+ASSERT LAST_N == bt_e - 2 "founder baat e-2"
+GETF founder atp
+ASSERT LAST_N == bt_a - 2 "founder baat a-2"
+GETF founder age
+ASSERT LAST_N == bt_age "founder baat age held"
+GETF founder pcr
+ASSERT LAST_N == bt_pcr "founder baat pcr held"
+GETF founder reserve
+ASSERT LAST_N == bt_rsv "founder baat reserve held"
+GETF founder pmf
+ASSERT LAST_N == bt_pmf "founder baat pmf held"
+GETF founder threshold
+ASSERT LAST_N == bt_thr "founder baat thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-baat"
+SEND founder baat 0
+ASSERT LAST_N == 0 "founder baat n0"
+SEND bed photosynth 14
+SEND bed charge 12
+SEND bed feed 10
+GETF bed heat
+LET bb_h = LAST_N
+GETF bed energy
+LET bb_e = LAST_N
+GETF bed atp
+LET bb_a = LAST_N
+GETF bed age
+LET bb_age = LAST_N
+GETF bed pcr
+LET bb_pcr = LAST_N
+GETF bed reserve
+LET bb_rsv = LAST_N
+GETF bed pmf
+LET bb_pmf = LAST_N
+GETF bed threshold
+LET bb_thr = LAST_N
+SEND bed baat 2
+ASSERT LAST_N == 2 "bed baat 2"
+GETF bed heat
+ASSERT LAST_N == bb_h + 2 "bed baat h+2"
+GETF bed energy
+ASSERT LAST_N == bb_e - 2 "bed baat e-2"
+GETF bed atp
+ASSERT LAST_N == bb_a - 2 "bed baat a-2"
+GETF bed age
+ASSERT LAST_N == bb_age "bed baat age held"
+GETF bed pcr
+ASSERT LAST_N == bb_pcr "bed baat pcr held"
+GETF bed reserve
+ASSERT LAST_N == bb_rsv "bed baat reserve held"
+GETF bed pmf
+ASSERT LAST_N == bb_pmf "bed baat pmf held"
+GETF bed threshold
+ASSERT LAST_N == bb_thr "bed baat thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-baat"
+SEND bed baat 0
+ASSERT LAST_N == 0 "bed baat n0"
+SEND founder photosynth 12
+SEND founder charge 12
+SEND founder feed 10
+GETF founder atp
+LET sa = LAST_N
+IF sa > 3 THEN
+  GETF founder heat
+  LET bd_h = LAST_N
+  GETF founder energy
+  LET bd_e = LAST_N
+  GETF founder atp
+  LET bd_a = LAST_N
+  SEND founder baat 2
+  ASSERT LAST_N == 2 "drain baat 2"
+  GETF founder heat
+  ASSERT LAST_N == bd_h + 2 "drain baat h+2"
+  GETF founder energy
+  ASSERT LAST_N == bd_e - 2 "drain baat e-2"
+  GETF founder atp
+  ASSERT LAST_N == bd_a - 2 "drain baat a-2"
+END
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-baat-drain"
+
+# --- Bsep after Baat: canalicular bile salt export limb ---
+SEND founder photosynth 16
+SEND founder charge 14
+SEND founder feed 12
+GETF founder heat
+LET bs_h = LAST_N
+GETF founder energy
+LET bs_e = LAST_N
+GETF founder atp
+LET bs_a = LAST_N
+GETF founder age
+LET bs_age = LAST_N
+GETF founder pcr
+LET bs_pcr = LAST_N
+GETF founder reserve
+LET bs_rsv = LAST_N
+GETF founder pmf
+LET bs_pmf = LAST_N
+GETF founder threshold
+LET bs_thr = LAST_N
+SEND founder bsep 2
+ASSERT LAST_N == 2 "founder bsep 2"
+GETF founder heat
+ASSERT LAST_N == bs_h + 2 "founder bsep h+2"
+GETF founder energy
+ASSERT LAST_N == bs_e - 2 "founder bsep e-2"
+GETF founder atp
+ASSERT LAST_N == bs_a - 2 "founder bsep a-2"
+GETF founder age
+ASSERT LAST_N == bs_age "founder bsep age held"
+GETF founder pcr
+ASSERT LAST_N == bs_pcr "founder bsep pcr held"
+GETF founder reserve
+ASSERT LAST_N == bs_rsv "founder bsep reserve held"
+GETF founder pmf
+ASSERT LAST_N == bs_pmf "founder bsep pmf held"
+GETF founder threshold
+ASSERT LAST_N == bs_thr "founder bsep thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-bsep"
+SEND founder bsep 0
+ASSERT LAST_N == 0 "founder bsep n0"
+SEND bed photosynth 14
+SEND bed charge 12
+SEND bed feed 10
+GETF bed heat
+LET bsb_h = LAST_N
+GETF bed energy
+LET bsb_e = LAST_N
+GETF bed atp
+LET bsb_a = LAST_N
+GETF bed age
+LET bsb_age = LAST_N
+GETF bed pcr
+LET bsb_pcr = LAST_N
+GETF bed reserve
+LET bsb_rsv = LAST_N
+GETF bed pmf
+LET bsb_pmf = LAST_N
+GETF bed threshold
+LET bsb_thr = LAST_N
+SEND bed bsep 2
+ASSERT LAST_N == 2 "bed bsep 2"
+GETF bed heat
+ASSERT LAST_N == bsb_h + 2 "bed bsep h+2"
+GETF bed energy
+ASSERT LAST_N == bsb_e - 2 "bed bsep e-2"
+GETF bed atp
+ASSERT LAST_N == bsb_a - 2 "bed bsep a-2"
+GETF bed age
+ASSERT LAST_N == bsb_age "bed bsep age held"
+GETF bed pcr
+ASSERT LAST_N == bsb_pcr "bed bsep pcr held"
+GETF bed reserve
+ASSERT LAST_N == bsb_rsv "bed bsep reserve held"
+GETF bed pmf
+ASSERT LAST_N == bsb_pmf "bed bsep pmf held"
+GETF bed threshold
+ASSERT LAST_N == bsb_thr "bed bsep thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-bsep"
+SEND bed bsep 0
+ASSERT LAST_N == 0 "bed bsep n0"
+SEND founder photosynth 12
+SEND founder charge 12
+SEND founder feed 10
+GETF founder atp
+LET sa = LAST_N
+IF sa > 3 THEN
+  GETF founder heat
+  LET bsd_h = LAST_N
+  GETF founder energy
+  LET bsd_e = LAST_N
+  GETF founder atp
+  LET bsd_a = LAST_N
+  SEND founder bsep 2
+  ASSERT LAST_N == 2 "drain bsep 2"
+  GETF founder heat
+  ASSERT LAST_N == bsd_h + 2 "drain bsep h+2"
+  GETF founder energy
+  ASSERT LAST_N == bsd_e - 2 "drain bsep e-2"
+  GETF founder atp
+  ASSERT LAST_N == bsd_a - 2 "drain bsep a-2"
+END
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-bsep-drain"
+SEND quiet photosynth 10
+SEND quiet charge 10
+SEND quiet feed 8
+GETF quiet heat
+LET q_h = LAST_N
+GETF quiet energy
+LET q_e = LAST_N
+GETF quiet atp
+LET q_a = LAST_N
+SEND quiet bsep 1
+ASSERT LAST_N == 1 "quiet bsep 1"
+GETF quiet heat
+ASSERT LAST_N == q_h + 1 "quiet bsep h+1"
+GETF quiet energy
+ASSERT LAST_N == q_e - 1 "quiet bsep e-1"
+GETF quiet atp
+ASSERT LAST_N == q_a - 1 "quiet bsep a-1"
+GETF quiet alive
+ASSERT LAST_N == 1 "quiet alive post-bsep"
+SEND corpse bsep 3
+ASSERT LAST_N == 0 "corpse bsep dead0"
+SEND empty bsep 3
+ASSERT LAST_N == 0 "empty bsep nofuel0"
+ASSERT 1 == 1 "LIFE_CELL_BSEP continuum PASS"
+

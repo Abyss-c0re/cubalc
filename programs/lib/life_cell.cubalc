@@ -16141,6 +16141,88 @@ CLASS Cell
     RET take
   END
 
+  # Bsep: canalicular bile salt export pump (ABCB11) after Baat taurocholate.
+  # Bsep (BSEP / ABCB11 / bile salt export pump) is the ATP-binding cassette
+  # transporter that exports Baat product taurocholate (and other conjugated
+  # bile salts) across the canalicular membrane into bile, closing the
+  # Cys-disposal -> taurine -> taurocholate limb into true extracellular
+  # bile-salt flux after N-acyltransferase finishes conjugation.
+  # After Baat couples Fmo1 taurine to bile acid-CoA -> taurocholate + CoA,
+  # Bsep commits that conjugate out of the cytosol so mitosis energy budgets
+  # gain an exported bile-salt sink instead of intracellular taurocholate
+  # backlog on the glutathione free-energy shield.
+  # Distinct from Baat (taurine N-acyltransferase), Fmo1 (hypotaurine
+  # monooxygenase), Csad (CSA decarboxylase), Cdo1 (Cys dioxygenase), Dug1
+  # (Cys-Gly dipeptidase), Nat8 (mercapturic N-acetyl), Gst/Gpx/Gor (GSH
+  # cycle) - Bsep is the canalicular ABC transporter that pumps Baat
+  # taurocholate into bile for lipid/sterol traffic and enterohepatic return.
+  # Without Bsep after Baat, taurocholate accumulates even with open
+  # conjugation gates; life_cell bile-export budgets stay open-loop and the
+  # free-energy shield never finishes Cys disposal into canalicular flux.
+  # Domain: post-Baat Bsep canalicular bile salt export / taurocholate + ATP
+  #   -> extracellular bile salt + ADP + Pi
+  # (not Baat, not Fmo1, not Csad, not Cdo1, not Dug1, not Nat8, not Gst).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+  #   (Baat taurine N-acyltransferase -> Bsep canalicular bile salt export).
+  # Gift: exported taurocholate sink after conjugation so sterol/lipid traffic
+  #   and mitosis budgets close the Cys-disposal loop into bile.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - bsep life-force.
+  # Usability: AGI models post-Baat Bsep taurocholate export under ASSERT.
+
+  METHOD bsep n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 
 
