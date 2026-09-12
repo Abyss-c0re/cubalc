@@ -16703,4 +16703,85 @@ CLASS Cell
     RET take
   END
 
+
+  # Fabp6: ileal bile-acid binding protein (IBABP / ILBP / Gastrotropin) after Asbt.
+  # Fabp6 (FABP6 / IBABP / ILBP) is the cytosolic ileal lipid-binding protein that
+  # shuttles conjugated bile salts from the apical Asbt inlet across the enterocyte
+  # cytosol toward basolateral Ost exit, completing the epithelial transit limb of
+  # enterohepatic circulation after Asbt reclaims lumenal acids.
+  # After Asbt opens apical Na+-bile-acid uptake, Fabp6 commits cytosolic buffering
+  # and vectorial handoff so mitosis energy budgets gain an intracellular bile-salt
+  # carrier instead of an unbuffered apical sink that never reaches Ost.
+  # Distinct from Asbt (SLC10A2 apical Na+-bile-acid symport), Ost (SLC51A/B
+  # basolateral facilitated exit), Ntcp (SLC10A1 hepatocyte Na+-TC uptake),
+  # Bsep (ABCB11 canalicular export), Mrp3 (ABCC3 basolateral ABC overflow),
+  # Mrp2 (ABCC2 canalicular OA export) - Fabp6 is the cytosolic FABP family
+  # bile-acid binder that bridges apical reclaim to basolateral exit.
+  # Without Fabp6 after Asbt, reclaimed bile salts stay unshuttled; life_cell
+  # enterohepatic free-energy loop never finishes cytosolic transit after apical
+  # Asbt uptake opens the intestinal reclaim inlet.
+  # Domain: post-Asbt Fabp6 cytosolic bile-acid binding / shuttle /
+  #   cytosolic bile salt -> bound FABP6 complex (intracellular carrier)
+  # (not Asbt, not Ost, not Ntcp, not Bsep, not Mrp3, not Mrp2).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6
+  #   (Asbt apical Na+-bile-acid uptake -> Fabp6 cytosolic bile-acid shuttle).
+  # Gift: cytosolic IBABP shuttle after Asbt so reclaimed lumenal acids
+  #   cross epithelium and close enterohepatic free-energy flow toward Ost.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fabp6 life-force.
+  # Usability: AGI models post-Asbt Fabp6 cytosolic bile-salt shuttle under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fabp6 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
