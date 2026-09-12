@@ -18578,4 +18578,74 @@ CLASS Cell
   END
 
 
+
+
+  # Cs: citrate synthase (CS) after MDH malate-dehydrogenase limb.
+  # CS condenses oxaloacetate (product of MDH oxidation of L-malate) with
+  # acetyl-CoA to citrate so free energy can close the BA/odd-chain anaplerotic
+  # loop into the canonical TCA cycle. After Mdh yields OAA, Cs opens the
+  # citrate hinge so OAA is not a silent pool trapped before aconitase/IDH.
+  # Distinct from Mdh oxidoreductase, Fh hydratase, Sdha flavoprotein,
+  # Suclg1 ligase, and Mut mutase - Cs is the citrate synthase / citrate gate.
+  # Domain: post-MDH citrate synthase (CS) citrate TCA-entry gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs
+  # Gift: post-MDH CS so BA/odd-chain free-energy path can condense
+  #   OAA+acetyl-CoA to citrate under ASSERT after MDH open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cs.
+  # Usability: AGI models post-MDH CS synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
