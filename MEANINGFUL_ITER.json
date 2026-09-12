@@ -20,17 +20,21 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2283_life_cell_slc27a5.cubalc",
     "programs/science/integration/atomic_printer_life_slc27a5.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "asserts_fail": 0,
-  "asserts_ok_life": 886,
-  "asserts_ok_atomic_printer": 183,
-  "asserts_ok_smx": 114,
+  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5",
+  "asserts_ok": {
+    "life": 886,
+    "atomic_printer": 183,
+    "smx": 114,
+    "flagship_1620": 12
+  },
   "asserts_ok_sum": 1195,
-  "HEAD": "2bc2964c10f8bec99072a84f4e4849513f8ab6a0",
-  "head": "2bc2964c10f8bec99072a84f4e4849513f8ab6a0",
-  "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
-  "FEAT": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "asserts_fail": 0,
+  "flagship": 12,
+  "law": "cube_is_sot; free_energy_must_flow",
+  "HEAD": "70da9101350d97d57cb211434a4813bb72912a3a",
+  "head": "70da9101350d97d57cb211434a4813bb72912a3a",
+  "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
 }

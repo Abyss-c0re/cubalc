@@ -8,7 +8,7 @@
   "MI": 2283,
   "version": "1.15.1782-usability",
   "VERSION": "1.15.1782-usability",
-  "feature": "LIFE_CELL_SLC27A5",
+  "feature": "life_cell_slc27a5",
   "FEATURE": "LIFE_CELL_SLC27A5",
   "name": "LIFE_CELL_SLC27A5",
   "label": "LIFE_CELL_SLC27A5",
@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->akr1c4->cyp27a1->slc27a5",
+  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5",
   "asserts_ok": {
     "life": 886,
     "atomic_printer": 183,
@@ -34,7 +34,7 @@
   "asserts_fail": 0,
   "flagship": 12,
   "law": "cube_is_sot; free_energy_must_flow",
-  "HEAD": "b73b7e6342ff00f1ca4b05a04161f9aee2e0315b",
-  "head": "b73b7e6342ff00f1ca4b05a04161f9aee2e0315b",
+  "HEAD": "70da9101350d97d57cb211434a4813bb72912a3a",
+  "head": "70da9101350d97d57cb211434a4813bb72912a3a",
   "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
 }
