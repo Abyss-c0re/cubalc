@@ -40,14 +40,13 @@
     "life": 574,
     "atomic_printer": 139,
     "smx": 97,
-    "flagship_1620": 12,
-    "sum": 822
+    "flagship_1620": 12
   },
-  "HEAD": "848638017305aae7985717a8992b3b7fb52db1f2",
-  "head": "848638017305aae7985717a8992b3b7fb52db1f2",
+  "HEAD": "b56f3bfbc7e26c37423d2b9e05a27ba0135d5cd6",
+  "head": "b56f3bfbc7e26c37423d2b9e05a27ba0135d5cd6",
   "feat": "be8bba65ee5bc596307846f14a96bd4e738c64b0",
   "FEAT_HEAD": "be8bba65ee5bc596307846f14a96bd4e738c64b0",
-  "tip": "848638017305aae7985717a8992b3b7fb52db1f2",
-  "pin": "848638017305aae7985717a8992b3b7fb52db1f2",
+  "tip": "b56f3bfbc7e26c37423d2b9e05a27ba0135d5cd6",
+  "pin": "b56f3bfbc7e26c37423d2b9e05a27ba0135d5cd6",
   "law": "cube_is_sot; free_energy_must_flow"
 }
