@@ -37,13 +37,13 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 1201,
   "asserts_ok": 1199,
-  "HEAD": "f479cf7060a89032c40ef47e622d4b8867d84beb",
+  "HEAD": "c5b99d43cc9bf4dc4f9bfe27992dccdbbaf857c2",
   "feat": "9f8698d0feb830e383baadefc1a2d7efc083c458",
   "asserts_ok_life": 1147,
   "asserts_ok_atomic_printer": 22,
   "asserts_ok_smx": 18,
   "asserts_ok_flagship_1620": 12,
-  "head": "f479cf7060a89032c40ef47e622d4b8867d84beb",
-  "pinned_head": "f479cf7060a89032c40ef47e622d4b8867d84beb",
+  "head": "c5b99d43cc9bf4dc4f9bfe27992dccdbbaf857c2",
+  "pinned_head": "c5b99d43cc9bf4dc4f9bfe27992dccdbbaf857c2",
   "law": "cube_is_sot; free_energy_must_flow"
 }
