@@ -28,5 +28,7 @@
   "feat": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "feat_head": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "status": "PASS",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
+  "pin_head": "ef0acbb2931e942cb95fc64d45c5d24672a131c6",
+  "head_tip": "ef0acbb2931e942cb95fc64d45c5d24672a131c6"
 }
