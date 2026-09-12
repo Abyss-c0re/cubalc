@@ -24,7 +24,7 @@
   ],
   "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8",
   "domain": "Nat8 Cys-S-conjugate N-acetyltransferase after Dug1 / Cys-R + AcCoA -> NAc-Cys-R + CoA",
-  "gift": "Nat8 seals Cys-S conjugates into mercapturic acids so the glutathione free-energy shield finishes export after Dug1",
+  "gift": "Nat8 seals Cys-R + AcCoA into mercapturic acid so the glutathione free-energy shield finishes mercapturic export after Dug1",
   "proof_sum": {
     "life": 152,
     "atomic": 55,
@@ -41,12 +41,9 @@
     "flagship_1620": 12,
     "sum": 267
   },
-  "HEAD": "556e059e43d9de19d3a21ae79d13a320d5404649",
-  "head": "556e059e43d9de19d3a21ae79d13a320d5404649",
+  "HEAD": "2fb4afe3c79bdab668678c01efd5d093494617af",
+  "head": "2fb4afe3c79bdab668678c01efd5d093494617af",
   "feat": "3ec79bada0b6f545428eed37acfbf1aac034683a",
   "FEAT_HEAD": "3ec79bada0b6f545428eed37acfbf1aac034683a",
-  "tip": "556e059e43d9de19d3a21ae79d13a320d5404649",
-  "TIP": "3ec79bada0b6f545428eed37acfbf1aac034683a",
-  "pinned_head": "3ec79bada0b6f545428eed37acfbf1aac034683a",
-  "PINNED_HEAD": "3ec79bada0b6f545428eed37acfbf1aac034683a"
+  "tip": "2fb4afe3c79bdab668678c01efd5d093494617af"
 }
