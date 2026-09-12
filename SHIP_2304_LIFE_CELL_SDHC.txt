@@ -1,0 +1,1 @@
+LIFE_CELL_SDHC MI=2304 PASS continuum=...->scs->sdhb->sdhc proofs_sum=200 asserts_fail=0

@@ -1,3 +1,13 @@
+## 1.15.1802-usability — LIFE_CELL_SDHC (MI 2304)
+
+### Life continuum
+- **LIFE_CELL_SDHC**: `METHOD sdhc n` — succinate dehydrogenase subunit C (membrane/Q-pool) after SDHB on BA/odd-chain limb.
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->sdhb->sdhc`
+- Domain: post-SDHB succinate dehydrogenase subunit C (SDHC) Q-pool TCA-progression gate.
+- Gift: reduce ubiquinone at the membrane under ASSERT after SDHB Fe-S open so free energy proceeds into the Q-pool.
+- Proofs PASS: life 112 + atomic 40 + smx 36 + flagship 12 = 200 · asserts_fail:0
+- Files: `programs/lib/life_cell.cubalc`, `programs/proof/2304_life_cell_sdhc.cubalc`, `programs/science/integration/atomic_printer_life_sdhc.cubalc`, `programs/science/integration/smx_mesh_vesicle_sdhc_life.cubalc`.
+
 ## 1.15.1801-usability — LIFE_CELL_SDHB (MI 2303)
 
 ### Life continuum
