@@ -1,3 +1,10 @@
+## MI 2257 LIFE_CELL_GST
+
+- Gst glutathione S-transferase after Gpx on life_cell
+- proof PASS asserts_fail=0 sum=233
+- feat 3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418
+- HEAD 46a59863305db2d908dbd6f7f54c9c348ff5c238
+
 # Changelog
 
 ## 1.15.1755-usability — MI2257 LIFE_CELL_GST
