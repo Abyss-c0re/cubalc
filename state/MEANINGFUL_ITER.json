@@ -4,18 +4,18 @@
   "MEANINGFUL_ITER": 2278,
   "iter": 2278,
   "n": 2278,
-  "mi": 2278,
+  "mi": 2280,
   "MI": 2278,
-  "version": "1.15.1777-usability",
+  "version": "1.15.1779-usability",
   "VERSION": "1.15.1777-usability",
-  "feature": "life_cell_cyp8b1",
+  "feature": "LIFE_CELL_AKR1D1",
   "FEATURE": "LIFE_CELL_CYP8B1",
   "name": "LIFE_CELL_CYP8B1",
   "title": "CYP8B1 sterol 12-alpha-hydroxylase after CYP7A1 on life_cell continuum",
   "label": "LIFE_CELL_CYP8B1",
-  "method": "cyp8b1 n",
+  "method": "akr1d1 n",
   "ship": "2278_life_cell_cyp8b1",
-  "proof": "programs/proof/2278_life_cell_cyp8b1.cubalc",
+  "proof": "programs/proof/2280_life_cell_akr1d1.cubalc",
   "proofs": [
     "programs/lib/life_cell.cubalc",
     "programs/proof/2278_life_cell_cyp8b1.cubalc",
@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_cyp8b1_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1",
+  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1",
   "domain": "post-CYP7A1 hepatic CYP8B1 sterol 12-alpha-hydroxylase CA-branch gate",
   "gift": "CYP8B1 after CYP7A1 so classic BA free-energy path can choose the cholic-acid branch under ASSERT.",
   "proof_sum": {
@@ -37,12 +37,17 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 959,
   "asserts_ok": {
-    "life": 690,
+    "life": 767,
     "atomic_printer": 154,
-    "smx": 103,
-    "flagship_1620": 12
+    "smx": 109,
+    "flagship_1620": 12,
+    "sum": 1042
   },
   "HEAD": "b131e26950dd83340d190f10736d73e4e6369566",
   "feat": "b131e26950dd83340d190f10736d73e4e6369566",
-  "head": "b131e26950dd83340d190f10736d73e4e6369566"
+  "head": "b131e26950dd83340d190f10736d73e4e6369566",
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ]
 }

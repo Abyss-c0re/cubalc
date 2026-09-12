@@ -1,5 +1,12 @@
 # Changelog
 
+## MI 2280 — LIFE_CELL_AKR1D1 (1.15.1779-usability)
+- Feature: `akr1d1 n` delta4-3-oxosteroid 5b-reductase after HSD3B7 on life_cell
+- Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1
+- Gift: post-HSD3B7 AKR1D1 so classic BA free-energy path can saturate ring A under ASSERT
+- Proof: programs/proof/2280_life_cell_akr1d1.cubalc (767/0); AP 154/0; SMX 109/0; flagship 12/0
+
+
 ## MI 2279 — LIFE_CELL_HSD3B7 (1.15.1778-usability)
 - Feature: `hsd3b7 n` 3beta-HSD/Delta5-4 isomerase after CYP8B1 on life_cell
 - Continuum: ...->klb->shp->cyp7a1->cyp8b1->hsd3b7

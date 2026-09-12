@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2278
-- **FEATURE**: LIFE_CELL_CYP8B1
-- **method**: cyp8b1 n
-- **version**: 1.15.1777-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1
+- **MI**: 2280
+- **FEATURE**: LIFE_CELL_AKR1D1
+- **method**: akr1d1 n
+- **version**: 1.15.1779-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1
 - **asserts_fail**: 0
-- **asserts_ok sum**: 959 (life=690 atomic_printer=154 smx=103 flagship_1620=12)
-- **proof**: programs/proof/2278_life_cell_cyp8b1.cubalc
-- **HEAD**: 2058875a6047caf39a738779bc4ff52e23b90381
-- **feat**: b131e26950dd83340d190f10736d73e4e6369566
+- **asserts_ok sum**: 1042 (life=767 atomic_printer=154 smx=109 flagship_1620=12)
+- **proof**: programs/proof/2280_life_cell_akr1d1.cubalc
+- **HEAD**: PLACEHOLDER
+- **feat**: PLACEHOLDER
 - **law**: cube_is_sot; free_energy_must_flow
