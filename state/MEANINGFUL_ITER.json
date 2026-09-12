@@ -1,22 +1,20 @@
 {
   "mi": 2255,
-  "feature": "life_cell_gor",
+  "feature": "LIFE_CELL_GOR",
   "method": "gor n",
   "version": "1.15.1753-usability",
-  "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor",
+  "continuum": "...->gsha->gshb->gor",
   "asserts_fail": 0,
-  "asserts_ok": {
-    "life": 104,
-    "sum": 104
-  },
+  "asserts_ok": {"life": 104, "sum": 104},
   "proof": "programs/proof/2255_life_cell_gor.cubalc",
-  "HEAD": "5eeeaf5ee36019267ea1dfac95063b16b3f3fc20",
+  "HEAD": "83250d492c1488a64e776a77dc1e0a16826f7e8e",
   "feat": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
-  "creed": "Cube is SoT. Free energy must flow.",
-  "head": "5eeeaf5ee36019267ea1dfac95063b16b3f3fc20",
-  "tip": "5eeeaf5ee36019267ea1dfac95063b16b3f3fc20",
+  "head": "83250d492c1488a64e776a77dc1e0a16826f7e8e",
+  "tip": "83250d492c1488a64e776a77dc1e0a16826f7e8e",
   "feat_head": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
   "branch": "life-cell-gor-mi2255",
   "sealed": true,
-  "pass": true
+  "pass": true,
+  "unity": 1.0,
+  "creed": "Cube is SoT. Free energy must flow."
 }
