@@ -33,8 +33,8 @@
   "asserts_ok_sum": 1292,
   "asserts_fail": 0,
   "flagship_1620": "PASS 12/0",
-  "HEAD": "08d2745894ca2ab2f9f10f39fb3fbed2b40ab8c0",
-  "feat": "12eb08fcbb44993a7c7cde1fd94476b21649755d",
+  "HEAD": "b7b556e0d8b1f7b3de5e4e0601801b5f24bbe246",
+  "feat": "b7b556e0d8b1f7b3de5e4e0601801b5f24bbe246",
   "head": "08d2745894ca2ab2f9f10f39fb3fbed2b40ab8c0",
   "law": [
     "cube_is_sot",
