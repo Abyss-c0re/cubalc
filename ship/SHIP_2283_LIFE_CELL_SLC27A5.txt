@@ -8,4 +8,4 @@ SHIP LIFE_CELL_SLC27A5 MI2283
 - version: 1.15.1782-usability
 - law: cube_is_sot; free_energy_must_flow
 - feat: 558d020b3640163cbe07fb83dc9d462a8cdd3ab4
-- HEAD: e7644733448c0c271419b886a8a722945075a0e1
+- HEAD: 2bc2964c10f8bec99072a84f4e4849513f8ab6a0
