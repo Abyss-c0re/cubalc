@@ -1,19 +1,51 @@
 {
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2262,
+  "MEANINGFUL_ITER": 2262,
+  "iter": 2262,
+  "n": 2262,
+  "mi": 2262,
   "MI": 2262,
-  "FEATURE": "LIFE_CELL_FMO1",
-  "method": "fmo1 n",
   "version": "1.15.1760-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1",
+  "VERSION": "1.15.1760-usability",
+  "feature": "life_cell_fmo1",
+  "FEATURE": "LIFE_CELL_FMO1",
+  "name": "LIFE_CELL_FMO1",
+  "title": "Fmo1 hypotaurine monooxygenase after Csad on life_cell",
+  "label": "LIFE_CELL_FMO1",
+  "method": "fmo1 n",
+  "ship": "2262_life_cell_fmo1",
+  "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2262_life_cell_fmo1.cubalc",
+    "programs/science/integration/atomic_printer_life_fmo1.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_fmo1_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1",
+  "domain": "Fmo1 hypotaurine monooxygenase after Csad / hypotaurine + O2 -> taurine",
+  "gift": "Fmo1 oxidizes hypotaurine after Csad so the glutathione free-energy shield finishes oxidative Cys disposal into taurine",
+  "proof_sum": {
+    "life": 197,
+    "atomic": 66,
+    "smx": 54,
+    "flagship": 12,
+    "sum": 329,
+    "asserts_fail": 0
+  },
   "asserts_fail": 0,
-  "asserts_ok_sum": 296,
+  "asserts_ok_sum": 316,
   "asserts_ok": {
     "life": 189,
-    "atomic_printer": 57,
-    "smx": 50
+    "atomic_printer": 61,
+    "smx": 54,
+    "flagship_1620": 12
   },
-  "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
-  "HEAD_tip": "09742c68d0b40fbd757a55a1017a51823cc8312f",
-  "HEAD": "09742c68d0b40fbd757a55a1017a51823cc8312f",
-  "tip": "09742c68d0b40fbd757a55a1017a51823cc8312f",
-  "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5"
+  "HEAD": "aa7844635c5eb047d9d8690b4bae353d12319cea",
+  "head": "aa7844635c5eb047d9d8690b4bae353d12319cea",
+  "tip": "aa7844635c5eb047d9d8690b4bae353d12319cea",
+  "HEAD_tip": "aa7844635c5eb047d9d8690b4bae353d12319cea",
+  "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5",
+  "status": "PASS"
 }
