@@ -1,3 +1,15 @@
+# Changelog
+
+## 1.15.1783-usability — MI 2284 LIFE_CELL_AMACR
+
+- feat(life): AMACR alpha-methylacyl-CoA racemase after SLC27A5 on classical BA continuum
+- method `amacr n` on life_cell (25R->25S BA-CoA racemase / peroxisomal gate)
+- proof `programs/proof/2284_life_cell_amacr.cubalc` asserts_fail:0 asserts_ok:925
+- boards: atomic_printer_life_amacr + smx_mesh_vesicle_amacr_life
+- flagship 1620 PASS 12/0; sum asserts_ok 1244
+- continuum ...->cyp27a1->slc27a5->amacr
+- law: cube_is_sot; free_energy_must_flow
+
 ## 1.15.1782-usability — MI 2283 LIFE_CELL_SLC27A5
 
 - feat(life): METHOD slc27a5 n after cyp27a1 (BACS bile acyl-CoA synthetase classical BA plate)
