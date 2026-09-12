@@ -16062,6 +16062,86 @@ CLASS Cell
     RET take
   END
 
+  # Baat: bile acid-CoA:amino acid N-acyltransferase after Fmo1 taurine finish.
+  # Baat (BAAT / bile acid-CoA:amino acid N-acyltransferase) conjugates Fmo1
+  # product taurine with bile acid-CoA -> taurocholate + CoA, committing the
+  # finished osmolyte into the bile-salt export pool after hypotaurine oxidase
+  # closes Cys disposal into taurine.
+  # After Fmo1 oxidizes Csad hypotaurine -> taurine, Baat N-acylates cholyl-CoA
+  # (or other bile acid-CoA) with that taurine so mitosis energy budgets gain a
+  # conjugated bile-salt reserve instead of free taurine backlog on the shield.
+  # Distinct from Fmo1 (hypotaurine monooxygenase), Csad (CSA decarboxylase),
+  # Cdo1 (Cys dioxygenase), Dug1 (Cys-Gly dipeptidase), Nat8 (mercapturic
+  # N-acetyl), Gst/Gpx/Gor (GSH cycle), GshA/GshB (GSH build), Cbs/Cgl
+  # (trans-sulfuration) - Baat is the cytosolic N-acyltransferase that couples
+  # Fmo1 taurine into tauro-conjugated bile salts for lipid/sterol traffic.
+  # Without Baat after Fmo1, taurine accumulates even with open monooxygenase
+  # gates; the glutathione free-energy shield never finishes Cys disposal into
+  # exportable taurocholate and life_cell bile-conjugate budgets stay open-loop.
+  # Domain: post-Fmo1 Baat taurine N-acyltransferase / bile acid-CoA + taurine
+  #   -> taurocholate + CoA
+  # (not Fmo1, not Csad, not Cdo1, not Dug1, not Nat8, not Gst, not Gpx, not Gor).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat
+  #   (Fmo1 hypotaurine oxidase -> Baat taurine N-acyltransferase / taurocholate).
+  # Pay take=min(n,atp,energy) - energy stand-in for CoA-thioester N-acyl work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - baat life-force.
+  # Usability: AGI models post-Fmo1 Baat taurine->taurocholate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD baat n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 
 
