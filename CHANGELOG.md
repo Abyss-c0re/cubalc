@@ -7,6 +7,13 @@
 
 # Changelog
 
+## 1.15.1789-usability — MI 2290 LIFE_CELL_MCEE
+
+- feat(life): MCEE methylmalonyl-CoA epimerase after PCCA on life_cell continuum
+- proof programs/proof/2290_life_cell_mcee.cubalc asserts_fail=0 (life=1195 sum=1251)
+- continuum ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee
+- law: cube_is_sot; free_energy_must_flow
+
 ## 1.15.1784-usability — MI 2285 LIFE_CELL_ACOX2
 
 - feat(life): ACOX2 peroxisomal branched acyl-CoA oxidase after AMACR on life_cell continuum
