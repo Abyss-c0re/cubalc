@@ -7,11 +7,11 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 686,
   "life": 457,
+  "proof": "programs/proof/2271_life_cell_fabp6.cubalc",
+  "HEAD": "8d9fbc04ffb915f90279d9b23cc625c2ce38efbc",
+  "feat": "bcadff541353e0ab4b0d374ac5603cf5e9fc9778",
+  "law": "cube_is_sot; free_energy_must_flow",
   "atomic_printer": 125,
   "smx": 92,
-  "flagship_1620": 12,
-  "proof": "programs/proof/2271_life_cell_fabp6.cubalc",
-  "HEAD": "607d34f1228226373e31c5faf32e07ef50ada04d",
-  "feat": "bcadff541353e0ab4b0d374ac5603cf5e9fc9778",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "flagship_1620": 12
 }

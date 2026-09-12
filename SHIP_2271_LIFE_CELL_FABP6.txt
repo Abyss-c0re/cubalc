@@ -7,5 +7,5 @@ integration: atomic_printer_life_fabp6.cubalc, smx_mesh_vesicle_fabp6_life.cubal
 gift: cytosolic IBABP/FABP6 shuttle after Asbt closes enterohepatic free-energy transit
 law: cube_is_sot; free_energy_must_flow
 version: 1.15.1770-usability
-HEAD: 249443c36e92ae219b5bd2ff2ffe176b0c699d6e
+HEAD: 8d9fbc04ffb915f90279d9b23cc625c2ce38efbc
 feat: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
