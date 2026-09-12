@@ -25,7 +25,7 @@
   ],
   "continuum": "...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->sdhb",
   "domain": "post-SCS succinate dehydrogenase subunit B (SDHB) Fe-S TCA-progression gate",
-  "gift": "SDHB after SCS so BA/odd-chain free-energy path can transfer electrons from succinate through Fe-S centers under ASSERT after SCS open.",
+  "gift": "SDHB after SCS so BA/odd-chain free-energy path can transfer succinate electrons through Fe-S centers under ASSERT after SCS open.",
   "proof_sum": {
     "life": 105,
     "atomic": 38,
@@ -48,14 +48,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell sdhb",
-  "HEAD": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "head": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "tip": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "pin": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "pinned_head": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "law": "cube_is_sot; free_energy_must_flow",
-  "git_head": "db71a189f555024e10362a4bcdf059d5096e839b",
-  "commit": "db71a189f555",
-  "short": "db71a189f555",
-  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=db71a189f555"
+  "HEAD": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "head": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "tip": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "pin": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "pinned_head": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "git_head": "7f53d378e2919dad7ec15229564cee51de486ec1",
+  "commit": "7f53d378e291",
+  "short": "7f53d378e291",
+  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=7f53d378e291"
 }
