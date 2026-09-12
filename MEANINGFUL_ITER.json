@@ -1,18 +1,18 @@
 {
   "schema": "cubalc.meaningful_iter/v1",
+  "MI": 2283,
+  "mi": 2283,
   "meaningful_iter": 2283,
   "MEANINGFUL_ITER": 2283,
   "iter": 2283,
   "n": 2283,
-  "mi": 2283,
-  "MI": 2283,
   "version": "1.15.1782-usability",
   "VERSION": "1.15.1782-usability",
   "feature": "life_cell_slc27a5",
   "FEATURE": "LIFE_CELL_SLC27A5",
   "name": "LIFE_CELL_SLC27A5",
-  "label": "LIFE_CELL_SLC27A5",
   "title": "SLC27A5/BACS bile acyl-CoA synthetase after CYP27A1 on life_cell continuum",
+  "label": "LIFE_CELL_SLC27A5",
   "method": "slc27a5 n",
   "ship": "2283_life_cell_slc27a5",
   "proof": "programs/proof/2283_life_cell_slc27a5.cubalc",
@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5",
+  "continuum": "...->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5",
   "asserts_ok": {
     "life": 886,
     "atomic_printer": 183,
@@ -34,7 +34,11 @@
   "asserts_fail": 0,
   "flagship": 12,
   "law": "cube_is_sot; free_energy_must_flow",
-  "HEAD": "d7aaeef16580609f0ee05c2e42e1a37478f11cf0",
-  "head": "d7aaeef16580609f0ee05c2e42e1a37478f11cf0",
-  "feat": "d7aaeef16580609f0ee05c2e42e1a37478f11cf0"
+  "HEAD": "32d2c95d8a388447c4020a158f24754c97494c99",
+  "head": "32d2c95d8a388447c4020a158f24754c97494c99",
+  "tip": "32d2c95d8a388447c4020a158f24754c97494c99",
+  "HEAD_tip": "32d2c95d8a388447c4020a158f24754c97494c99",
+  "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "status": "PASS",
+  "FEAT": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
 }

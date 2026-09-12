@@ -1,5 +1,5 @@
 SHIP LIFE_CELL_SLC27A5 MI2283
-- method: slc27a5 n (BACS after CYP27A1)
+- method: slc27a5 n (BACS bile acyl-CoA synthetase after CYP27A1)
 - continuum: ...->akr1c4->cyp27a1->slc27a5
 - proof: programs/proof/2283_life_cell_slc27a5.cubalc
 - asserts_fail: 0
@@ -8,3 +8,4 @@ SHIP LIFE_CELL_SLC27A5 MI2283
 - version: 1.15.1782-usability
 - law: cube_is_sot; free_energy_must_flow
 - feat: 558d020b3640163cbe07fb83dc9d462a8cdd3ab4
+- HEAD: 32d2c95d8a388447c4020a158f24754c97494c99
