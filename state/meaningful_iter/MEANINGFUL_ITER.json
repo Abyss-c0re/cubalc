@@ -53,8 +53,9 @@
   "note": "METHOD aacs n ships post-EMB AACS cytosolic ketone activation; heat+n atp-n energy-n; parent EMB lives; free energy flows into lipid/sterol anabolism",
   "ts": "2026-09-12T21:27:26Z",
   "summary": "LIFE_CELL_AACS MI2311 tip pin sealed PASS asserts_fail=0 sum=280",
-  "tip": "e97e595c92352be1f3e53631b08a17e3ecb61da2",
-  "HEAD": "PENDING_TIP",
+  "tip": "6c972691b724213ef83cad417af699e197a37efa",
+  "HEAD": "6c972691b724213ef83cad417af699e197a37efa",
   "head": "e97e595c92352be1f3e53631b08a17e3ecb61da2",
-  "self_pin": "e97e595c92352be1f3e53631b08a17e3ecb61da2"
+  "self_pin": "e97e595c92352be1f3e53631b08a17e3ecb61da2",
+  "TIP": "6c972691b"
 }
