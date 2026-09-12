@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_idh2_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2",
+  "continuum": "...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2",
   "domain": "post-ACO2 isocitrate dehydrogenase 2 (IDH2) aKG TCA-progression gate",
   "gift": "IDH2 after ACO2 so BA/odd-chain free-energy path can oxidatively decarboxylate isocitrate to aKG and progress TCA under ASSERT after ACO2 open.",
   "proof_sum": {
@@ -43,11 +43,15 @@
     "flagship_1620": 12,
     "sum": 163
   },
-  "HEAD": "87a2ea3423712b93099e000fac913380c50369a6",
+  "HEAD": "d4f8c968622062871361e85aeae9fd57a0e78d2c",
   "feat": "877be688bde0e09943f0a8836b9d96ed7a0c545a",
-  "head": "87a2ea3423712b93099e000fac913380c50369a6",
+  "head": "d4f8c968622062871361e85aeae9fd57a0e78d2c",
   "law": "cube_is_sot; free_energy_must_flow",
   "status": "PASS",
   "pin": "87a2ea3423712b93099e000fac913380c50369a6",
-  "tip": "87a2ea3423712b93099e000fac913380c50369a6"
+  "tip": "87a2ea3423712b93099e000fac913380c50369a6",
+  "life": 90,
+  "atomic": 33,
+  "smx": 28,
+  "flag": 12
 }
