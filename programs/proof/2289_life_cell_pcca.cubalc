@@ -3,7 +3,7 @@ INCLUDE life_cell
 
 # LIFE_CELL_PCCA - PCCA propionyl-CoA carboxylase after ACOT8 on classical BA continuum
 # Continuum ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca
-# Gift: PCCA after ACOT8 so classical BA/odd-chain free-energy can carboxylate propionyl-CoA to D-methylmalonyl-CoA under ASSERT after thioesterase open.
+# Gift: PCCA after ACOT8 so classic BA free-energy can carboxylate propionyl-CoA under ASSERT after thioesterase open.
 # Cube is SoT. Free energy must flow.
 
 ENTITY founder OF Cell 1 44 0
@@ -4295,7 +4295,7 @@ GETF founder alive
 ASSERT LAST_N == 1 "founder alive post-scp2 clamp"
 
 # --- ACOT8 thioesterase after SCP2 ---
-# Continuum ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
+# Continuum ...->amacr->acox2->hsd17b4->scp2->acot8
 SEND founder photosynth 22
 SEND founder glycolyse 18
 SEND founder charge 28
@@ -4474,10 +4474,11 @@ ASSERT LAST_N == f17b_age "founder acot8 clamp age held"
 GETF founder alive
 ASSERT LAST_N == 1 "founder alive post-acot8 clamp"
 
-ASSERT 1 == 1 "life_cell_acot8 PASS"
-ASSERT 1 == 1 "LIFE_CELL_PCCA continuum PASS"
-# --- PCCA after PCCA --- thioesterase after SCP2 ---
-# Continuum ...->amacr->acox2->hsd17b4->scp2->pcca
+ASSERT 1 == 1 "life_cell_acot8 prior PASS"
+ASSERT 1 == 1 "LIFE_CELL_ACOT8 prior continuum PASS"
+
+# --- PCCA propionyl-CoA carboxylase after ACOT8 ---
+# Continuum ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
 SEND founder photosynth 22
 SEND founder glycolyse 18
 SEND founder charge 28

@@ -1,3 +1,10 @@
+## 1.15.1788-usability — MI 2289 LIFE_CELL_PCCA
+
+- feat(life): PCCA propionyl-CoA carboxylase after ACOT8 on BA continuum
+- METHOD pcca n: biotin carboxylase plate (ATP/energy stand-in) heat+n atp-n energy-n
+- Continuum ...->scp2->acot8->pcca; proofs life+atomic+smx asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1784-usability — MI 2285 LIFE_CELL_ACOX2

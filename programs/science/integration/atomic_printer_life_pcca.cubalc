@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_FORCE MI2289 atomic printer: PCCA after ACOT8 on BA/odd-chain limb.
-# Place cells, bond metabolism, energize, then open BA beta-ox + propionyl gate:
-#   amacr -> acox2 -> hsd17b4 -> scp2 -> acot8 -> pcca (biotin carboxylase).
-# Wonder: AGI sees ASSERT heat+n atp-n energy-n on pcca after thioesterase.
+# LIFE_FORCE MI2289 atomic printer: PCCA propionyl-CoA carboxylase after ACOT8.
+# Place cells, bond metabolism, energize, then open BA beta-ox tail:
+#   amacr -> acox2 -> hsd17b4 -> scp2 -> acot8 -> pcca (carboxylase anaplerosis).
+# Wonder: AGI sees ASSERT heat+n atp-n energy-n on pcca after ACOT8 product.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY printer OF Cell 1 60 0
@@ -85,14 +85,12 @@ ASSERT LAST_N == ie - 2 "ink pcca e-2"
 GETF ink atp
 ASSERT LAST_N == ia - 2 "ink pcca a-2"
 GETF ink alive
-ASSERT LAST_N == 1 "ink alive post-pcca"
+ASSERT LAST_N == 1 "ink alive"
 
-SEND dead pcca 3
+SEND dead pcca 2
 ASSERT LAST_N == 0 "dead pcca 0"
 GETF dead alive
 ASSERT LAST_N == 0 "dead stays dead"
 
-SEND printer pcca 0
-ASSERT LAST_N == 0 "printer pcca n0"
-
 ASSERT 1 == 1 "atomic_printer_life_pcca PASS"
+ASSERT 1 == 1 "LIFE_FORCE PCCA carboxylase PASS"

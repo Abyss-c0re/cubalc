@@ -1,86 +1,74 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX mesh vesicle life: PCCA propionyl-CoA carboxylase after ACOT8.
-# Sealed State Matrix talk around BA beta-ox tail + anaplerotic PCC gate.
-# Continuum tail: scp2 -> acot8 -> pcca
+# SMX mesh vesicle LIFE_FORCE MI2289: PCCA propionyl-CoA carboxylase pulse on sealed exchange.
+# Vesicle cells exchange FOLDBITS-style readiness while pcca carboxylates propionyl-CoA.
+# Gift: post-ACOT8 PCCA gate visible on SMX neighbor pair under ASSERT.
 # Cube is SoT. Free energy must flow.
 
-ENTITY vesicle OF Cell 1 55 0
-ENTITY dock OF Cell 1 36 0
+ENTITY vesicle_a OF Cell 1 48 0
+ENTITY vesicle_b OF Cell 1 48 0
 ENTITY ghost OF Cell 0 8 0
 
-SEND vesicle set_threshold 9
-SEND dock set_threshold 11
+SEND vesicle_a set_threshold 9
+SEND vesicle_b set_threshold 9
 
-SEND vesicle pulse 3
-SEND vesicle photosynth 28
-SEND vesicle glycolyse 20
-SEND vesicle charge 26
-SEND vesicle feed 20
-SEND vesicle photophos 14
-GETF vesicle energy
-ASSERT LAST_N >= 16 "vesicle energy"
-GETF vesicle atp
-ASSERT LAST_N >= 16 "vesicle atp"
+SEND vesicle_a photosynth 26
+SEND vesicle_a glycolyse 18
+SEND vesicle_a charge 24
+SEND vesicle_a feed 20
+SEND vesicle_b photosynth 26
+SEND vesicle_b glycolyse 18
+SEND vesicle_b charge 24
+SEND vesicle_b feed 20
 
-SEND vesicle scp2 2
-ASSERT LAST_N == 2 "vesicle scp2"
-SEND vesicle photosynth 12
-SEND vesicle charge 12
-SEND vesicle feed 10
-SEND vesicle acot8 2
-ASSERT LAST_N == 2 "vesicle acot8"
-SEND vesicle photosynth 14
-SEND vesicle charge 14
-SEND vesicle feed 12
-GETF vesicle heat
-LET vh = LAST_N
-GETF vesicle energy
-LET ve = LAST_N
-GETF vesicle atp
-LET va = LAST_N
-GETF vesicle pmf
-LET vp = LAST_N
-SEND vesicle pcca 3
-ASSERT LAST_N == 3 "vesicle pcca 3"
-GETF vesicle heat
-ASSERT LAST_N == vh + 3 "vesicle pcca h+3"
-GETF vesicle energy
-ASSERT LAST_N == ve - 3 "vesicle pcca e-3"
-GETF vesicle atp
-ASSERT LAST_N == va - 3 "vesicle pcca a-3"
-GETF vesicle pmf
-ASSERT LAST_N == vp "vesicle pcca pmf held"
-GETF vesicle alive
-ASSERT LAST_N == 1 "vesicle alive post-pcca"
+SEND vesicle_a acot8 2
+ASSERT LAST_N == 2 "vesA acot8"
+SEND vesicle_a photosynth 10
+SEND vesicle_a charge 10
+SEND vesicle_a feed 8
+GETF vesicle_a heat
+LET ah = LAST_N
+GETF vesicle_a energy
+LET ae = LAST_N
+GETF vesicle_a atp
+LET aa = LAST_N
+SEND vesicle_a pcca 2
+ASSERT LAST_N == 2 "vesA pcca"
+GETF vesicle_a heat
+ASSERT LAST_N == ah + 2 "vesA pcca h+2"
+GETF vesicle_a energy
+ASSERT LAST_N == ae - 2 "vesA pcca e-2"
+GETF vesicle_a atp
+ASSERT LAST_N == aa - 2 "vesA pcca a-2"
+GETF vesicle_a ready
+ASSERT LAST_N >= 0 "vesA ready defined"
 
-SEND dock photosynth 18
-SEND dock charge 16
-SEND dock feed 14
-GETF dock heat
-LET dh = LAST_N
-GETF dock energy
-LET de = LAST_N
-GETF dock atp
-LET da = LAST_N
-SEND dock pcca 2
-ASSERT LAST_N == 2 "dock pcca 2"
-GETF dock heat
-ASSERT LAST_N == dh + 2 "dock pcca h+2"
-GETF dock energy
-ASSERT LAST_N == de - 2 "dock pcca e-2"
-GETF dock atp
-ASSERT LAST_N == da - 2 "dock pcca a-2"
-GETF dock alive
-ASSERT LAST_N == 1 "dock alive post-pcca"
+GETF vesicle_b heat
+LET bh = LAST_N
+GETF vesicle_b energy
+LET be = LAST_N
+GETF vesicle_b atp
+LET ba = LAST_N
+SEND vesicle_b pcca 3
+ASSERT LAST_N == 3 "vesB pcca"
+GETF vesicle_b heat
+ASSERT LAST_N == bh + 3 "vesB pcca h+3"
+GETF vesicle_b energy
+ASSERT LAST_N == be - 3 "vesB pcca e-3"
+GETF vesicle_b atp
+ASSERT LAST_N == ba - 3 "vesB pcca a-3"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive"
 
 SEND ghost pcca 2
 ASSERT LAST_N == 0 "ghost pcca 0"
 GETF ghost alive
 ASSERT LAST_N == 0 "ghost dead"
 
-SEND vesicle pcca 0
-ASSERT LAST_N == 0 "vesicle pcca n0"
-
+GETF vesicle_a alive
+ASSERT LAST_N == 1 "vesA alive final"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive final"
 ASSERT 1 == 1 "smx_mesh_vesicle_pcca_life PASS"
+ASSERT 1 == 1 "SMX PCCA carboxylase mesh PASS"

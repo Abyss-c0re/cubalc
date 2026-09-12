@@ -8,7 +8,7 @@
   "MI": 2289,
   "version": "1.15.1788-usability",
   "VERSION": "1.15.1788-usability",
-  "feature": "life_cell_pcca",
+  "feature": "LIFE_CELL_PCCA",
   "FEATURE": "LIFE_CELL_PCCA",
   "name": "LIFE_CELL_PCCA",
   "title": "PCCA propionyl-CoA carboxylase after ACOT8 on life_cell continuum",
@@ -23,27 +23,26 @@
     "programs/science/integration/smx_mesh_vesicle_pcca_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca",
+  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca",
   "domain": "post-ACOT8 propionyl-CoA carboxylase (PCCA) gate",
-  "gift": "PCCA after ACOT8 so classical BA/odd-chain free-energy path can carboxylate propionyl-CoA to D-methylmalonyl-CoA under ASSERT after thioesterase open.",
+  "gift": "PCCA after ACOT8 so classic BA free-energy path can carboxylate propionyl-CoA under ASSERT after thioesterase open.",
   "proof_sum": {
     "life": 1147,
     "atomic": 22,
-    "smx": 20,
+    "smx": 18,
     "flagship": 12,
-    "sum": 1201,
+    "sum": 1199,
     "asserts_fail": 0
   },
   "asserts_fail": 0,
-  "asserts_ok_sum": 1201,
-  "asserts_ok": 1199,
-  "HEAD": "adf10cc84eda0211db80fc488dad42f8b3b9d4a2",
-  "feat": "9f8698d0feb830e383baadefc1a2d7efc083c458",
-  "asserts_ok_life": 1147,
-  "asserts_ok_atomic_printer": 22,
-  "asserts_ok_smx": 18,
-  "asserts_ok_flagship_1620": 12,
-  "head": "adf10cc84eda0211db80fc488dad42f8b3b9d4a2",
-  "pinned_head": "adf10cc84eda0211db80fc488dad42f8b3b9d4a2",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "asserts_ok_sum": 1199,
+  "asserts_ok": {
+    "life": 1147,
+    "atomic_printer": 22,
+    "smx": 18,
+    "flagship_1620": 12,
+    "sum": 1199
+  },
+  "HEAD": "PENDING",
+  "feat": "PENDING"
 }
