@@ -1,6 +1,6 @@
 {
   "mi": 2254,
-  "feature": "life_cell_gshb",
+  "feature": "LIFE_CELL_GSHB",
   "method": "gshb n",
   "version": "1.15.1752-usability",
   "continuum": "...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha->gshb",
@@ -13,7 +13,8 @@
     "sum": 419
   },
   "proof": "programs/proof/2254_life_cell_gshb.cubalc",
-  "HEAD": "568a3e4868e7fb0d53dfc28fc9769b72ed3c50d5",
-  "feat": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
-  "note": "Cube is SoT. Free energy must flow."
+  "HEAD": "PENDING",
+  "feat": "6971bfa40b9ca523d5d216c9bbeb42ee4b6aaaff",
+  "note": "Cube is SoT. Free energy must flow.",
+  "creed": "Cube is SoT. Free energy must flow."
 }
