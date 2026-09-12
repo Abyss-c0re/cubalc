@@ -18087,4 +18087,76 @@ CLASS Cell
   END
 
 
+  # Pcca: propionyl-CoA carboxylase (PCCA/PCCB) after ACOT8 / SCPx propionyl limb.
+  # PCCA is the biotin-dependent mitochondrial carboxylase that converts propionyl-CoA
+  # (released by SCPx thiolase on the classical BA beta-oxidation shortening cycle,
+  # and from odd-chain / Ile / Val / Met / Thr / cholesterol side-chain paths) into
+  # D-methylmalonyl-CoA so free energy can enter the succinyl-CoA anaplerotic gate.
+  # After Acot8 frees shortened BA-CoA / CoA, Pcca commits the companion propionyl-CoA
+  # product so mitosis energy budgets gain explicit CO2-fixation into C4 instead of
+  # a silent propionyl-CoA pool.
+  # Distinct from Acot8 thioesterase, Scp2 thiolase, Hsd17b4 DBP, Acox2 oxidase,
+  # Amacr racemase, Baat conjugation - Pcca is the biotin PCC alpha/beta carboxylase.
+  # Domain: post-ACOT8 propionyl-CoA carboxylase (PCCA) anaplerotic gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
+  # Gift: post-ACOT8 PCCA so BA/odd-chain free-energy path can carboxylate
+  #   propionyl-CoA to D-methylmalonyl-CoA under ASSERT after thioesterase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pcca.
+  # Usability: AGI models post-ACOT8 PCCA carboxylase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pcca n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
