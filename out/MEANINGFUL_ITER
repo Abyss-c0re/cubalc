@@ -1,1 +1,13 @@
-2262
+# MEANINGFUL_ITER
+
+- **MI**: 2262
+- **FEATURE**: LIFE_CELL_FMO1
+- **method**: fmo1 n
+- **version**: 1.15.1760-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1
+- **asserts_fail**: 0
+- **asserts_ok sum**: 316 (life=189 atomic_printer=61 smx=54 flagship_1620=12)
+- **proof**: programs/proof/2262_life_cell_fmo1.cubalc
+- **HEAD**: 09742c68d0b40fbd757a55a1017a51823cc8312f
+- **feat**: c430cd3d661f9caf9c55bf662ed973342bb92da5
+- Cube is SoT. Free energy must flow.
