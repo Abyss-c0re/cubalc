@@ -119,6 +119,14 @@
 
 # Changelog
 
+## 1.15.1809-usability — MI 2310 LIFE_CELL_EMB
+
+- feat(life): METHOD emb n — embigin/EMB MCT2 accessory chaperone after SLC16A7
+- continuum: ...->bdh1->slc16a1->slc16a7->emb
+- proofs: life 150 + atomic 56 + smx 52 + flagship 12 = 270 asserts_fail:0
+- feat: e33b9a943161a750ce600d41bc56e9fadcfa5efa
+
+
 ## 1.15.1789-usability — MI 2290 LIFE_CELL_MCEE
 
 - feat(life): MCEE methylmalonyl-CoA epimerase after PCCA on life_cell continuum
