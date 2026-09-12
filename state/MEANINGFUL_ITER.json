@@ -13,7 +13,7 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2266_life_cell_oatp1b1.cubalc",
-  "HEAD": "bd8b1c31ade0113a35f7589adee219c4d1187c17",
-  "feat": "fcedecd9145c732d082d113dd16bd3eec071f1a0",
+  "HEAD": "5f00fff95c0f1f4e3083485faf2ad46b2be26790",
+  "feat": "2b1372a2dfe1e231f1b2c78bc9e92c162de6df14",
   "law": "cube_is_sot; free_energy_must_flow"
 }
