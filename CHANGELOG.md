@@ -1,3 +1,14 @@
+# Changelog
+
+## MI 2264 — LIFE_CELL_BSEP (1.15.1762-usability)
+
+- **feat(life):** `bsep n` — Bsep (BSEP/ABCB11) canalicular bile-salt export pump after Baat taurocholate conjugation on `life_cell`.
+- Continuum: `...->dug1->nat8->cdo1->csad->fmo1->baat->bsep`
+- Proof: `programs/proof/2264_life_cell_bsep.cubalc` — asserts_ok=258, fail=0
+- Integration: `atomic_printer_life_bsep.cubalc` (79), `smx_mesh_vesicle_bsep_life.cubalc` (61); flagship_1620=12
+- Signature: heat+n atp-n energy-n; age/pcr/reserve/pmf/thr held
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1762-usability — MI2264 LIFE_CELL_BSEP
 
 - feat(life): Bsep canalicular bile salt export pump (ABCB11) after Baat on life_cell
