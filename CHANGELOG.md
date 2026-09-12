@@ -1,3 +1,10 @@
+## 1.15.1752-usability — MI 2254 LIFE_CELL_GSHB
+
+- **feat**: GshB glutathione synthetase after GshA on life_cell continuum `…→cgl→gsha→gshb`
+- **proof**: `programs/proof/2254_life_cell_gshb.cubalc` asserts_fail:0 sum 419 (life=245 atomic_printer=87 smx=75 flagship_1620=12)
+- **note**: ATP-dependent glycine + gamma-GC → GSH; free-energy thiol buffer completion
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1751-usability — MI2253 LIFE_CELL_GSHA (gsha)
 
 - **LIFE_CELL_GSHA**: GshA glutamate-cysteine ligase after Cgl on life_cell continuum.

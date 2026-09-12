@@ -1,6 +1,7 @@
 /* CubalC lang — lang_run.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
 #include <ctype.h>
+#include <stdlib.h>
 
 /* Parse "line N" from err/last_err and copy that source line into out->err_src. */
 static void fill_err_src(cubalc_run_result *out, const char *src, size_t n) {
@@ -71,7 +72,18 @@ int cubalc_lang_exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *
 
 static int run_source_inner(const char *src, size_t n, const char *name,
                             cubalc_run_result *out, FILE *trace){
-  VM vm; memset(&vm,0,sizeof vm);
+  /* Heap VM: sizeof(VM)~7.2MB can exceed default 8MB stack with frames. */
+  VM *vmp = (VM*)calloc(1, sizeof(VM));
+  int rc_out = 0;
+  if (!vmp) {
+    if (out) {
+      memset(out, 0, sizeof *out);
+      out->ok = 0;
+      snprintf(out->err, sizeof out->err, "VM alloc failed");
+    }
+    return -1;
+  }
+#define vm (*vmp)
   vm.res=out; vm.trace=trace; vm.hold_flash=1;
   snprintf(vm.creed,sizeof vm.creed,"%s",CUBALC_CREED);
   cubalc_async_init(0);
@@ -212,9 +224,14 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     int ec = vm.exit_code;
     if (ec < 0) ec = 1;
     if (ec > 125) ec = 1;
-    return ec;
+    { rc_out = (ec); goto vm_done; }
   }
-  return out && out->ok ? 0 : 1;
+  { rc_out = (out && out->ok ? 0 : 1); goto vm_done; }
+
+#undef vm
+vm_done:
+  free(vmp);
+  return rc_out;
 }
 
 int cubalc_run_source(const char *src, size_t n, const char *name,
