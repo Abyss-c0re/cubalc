@@ -38,8 +38,8 @@
   "asserts_ok_sum": 322,
   "asserts_ok": 322,
   "prior_feature": "LIFE_CELL_MVK",
-  "status": "sealed",
-  "sealed": true,
+  "status": "PASS",
+  "sealed": false,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -49,9 +49,9 @@
   "feat_head": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "FEAT_HEAD": "32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9",
   "feat_short": "32ea8f014ae",
-  "HEAD": "54b0b1b6401c0e51e9966332825c31c1a682a7b3",
-  "commit": "54b0b1b64",
-  "commit_full": "54b0b1b6401c0e51e9966332825c31c1a682a7b3",
+  "HEAD": "067cfc33324cc4c8e1316d1e3139a06f2d28e267",
+  "commit": "067cfc333",
+  "commit_full": "067cfc33324cc4c8e1316d1e3139a06f2d28e267",
   "pure_c": "programs/lib/life_cell.cubalc",
   "tip": "54b0b1b6401c0e51e9966332825c31c1a682a7b3"
 }

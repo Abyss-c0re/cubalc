@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2313
-- **FEATURE**: LIFE_CELL_HMGCR
-- **method**: hmgcr n
-- **version**: 1.15.1812-usability
-- **continuum**: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr
+- **MI**: 2315
+- **FEATURE**: LIFE_CELL_PMVK
+- **method**: pmvk n
+- **version**: 1.15.1814-usability
+- **continuum**: ...->emb->aacs->hmgcs1->hmgcr->mvk->pmvk
 - **asserts_fail**: 0
-- **asserts_ok sum**: 304 (life=172 atomic_printer=62 smx=58 flagship_1620=12)
-- **proof**: programs/proof/2313_life_cell_hmgcr.cubalc
-- **HEAD**: 84db2683eedef301fd87f35138fe7f0a5cf3a1e7
-- **feat**: 73515fcbf2e47b1a226db01741f623e232b6c974
+- **asserts_ok sum**: 322 (life=182 atomic_printer=66 smx=62 flagship_1620=12)
+- **proof**: programs/proof/2315_life_cell_pmvk.cubalc
+- **HEAD**: 067cfc33324cc4c8e1316d1e3139a06f2d28e267
+- **feat**: 32ea8f014ae4cf59de38d05b2e7e3d25b448bdc9
 - **law**: cube_is_sot; free_energy_must_flow
