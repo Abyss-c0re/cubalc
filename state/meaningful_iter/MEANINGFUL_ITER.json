@@ -14,10 +14,9 @@
   },
   "proof": "programs/proof/2257_life_cell_gst.cubalc",
   "feat": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "HEAD": "6b795b0edabdbbdf31872fed05b81918ee72a941",
-  "head": "6b795b0edabdbbdf31872fed05b81918ee72a941",
-  "tip": "6b795b0edabdbbdf31872fed05b81918ee72a941",
-  "feat_head": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
+  "HEAD": "47709704d4213f537c344c3a4e0bd77a85e9d6e3",
+  "head": "47709704d4213f537c344c3a4e0bd77a85e9d6e3",
+  "tip": "47709704d4213f537c344c3a4e0bd77a85e9d6e3",
   "sealed": true,
-  "note": "Gst glutathione S-transferase after Gpx \u2014 electrophile conjugation on GSH free-energy shield"
+  "note": "Gst GSH S-transferase after Gpx"
 }
