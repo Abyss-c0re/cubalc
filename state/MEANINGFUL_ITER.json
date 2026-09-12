@@ -16,9 +16,9 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 274,
   "proof": "programs/proof/2261_life_cell_csad.cubalc",
-  "HEAD": "fe93edcb2dddc73a6f1e4c0b64550b2e23a7d92e",
-  "head": "fe93edcb2dddc73a6f1e4c0b64550b2e23a7d92e",
-  "tip": "fe93edcb2dddc73a6f1e4c0b64550b2e23a7d92e",
+  "HEAD": "282db7319ff8db756acca728ae466bb1e432ff0d",
+  "head": "282db7319ff8db756acca728ae466bb1e432ff0d",
+  "tip": "282db7319ff8db756acca728ae466bb1e432ff0d",
   "feat": "37a3da18a6b89ef47c83f64e45bb760875126290",
   "continuum": "...->dug1->nat8->cdo1->csad"
 }
