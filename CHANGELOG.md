@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.15.1765-usability — MI 2267 LIFE_CELL_MRP2 (PASS)
+
+- feat(life): mrp2 n — Mrp2 (ABCC2/cMOAT) canalicular organic-anion export after Oatp1b1 on life_cell.
+- Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2
+- Proof asserts_fail:0 sum=540 (life=353 ap=104 smx=71 flagship=12)
+- Cube is SoT. Free energy must flow.
+
+
 ## 1.15.1764-usability — MI 2266 LIFE_CELL_OATP1B1 (PASS)
 
 - feat(life): Oatp1b1 basolateral organic anion uptake (SLCO1B1) after Ntcp on life_cell
