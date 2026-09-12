@@ -7,11 +7,11 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 686,
   "proof": "programs/proof/2272_life_cell_fxr.cubalc",
-  "HEAD": "405c7466e3bd854c2507540361dd41c5b1cbf799",
+  "HEAD": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
   "feat": "66fea588c66d0c752c7639c4472136e58569e889",
   "law": "cube_is_sot; free_energy_must_flow",
-  "head": "405c7466e3bd854c2507540361dd41c5b1cbf799",
-  "tip": "405c7466e3bd854c2507540361dd41c5b1cbf799",
-  "pin": "405c7466e3bd854c2507540361dd41c5b1cbf799",
+  "head": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
+  "tip": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
+  "pin": "98a38206f3f6c9e9dfbd3a7e5efa10688647dac8",
   "FEAT_HEAD": "66fea588c66d0c752c7639c4472136e58569e889"
 }
