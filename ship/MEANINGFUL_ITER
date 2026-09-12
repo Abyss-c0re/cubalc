@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2253
-- **FEATURE**: LIFE_CELL_GSHA
-- **method**: gsha n
-- **version**: 1.15.1751-usability
-- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha
+- **MI**: 2254
+- **FEATURE**: LIFE_CELL_GSHB
+- **method**: gshb n
+- **version**: 1.15.1752-usability
+- **continuum**: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete->metf->ahcy->cbs->cgl->gsha->gshb
 - **asserts_fail**: 0
-- **asserts_ok sum**: 416 (life=244 atomic_printer=86 smx=74 flagship_1620=12)
-- **proof**: programs/proof/2253_life_cell_gsha.cubalc
-- **HEAD**: 85bb011ed387f5bc975a68db1ff327676c56ed00
-- **feat**: 98a43836ec41eb514f68bf7b78c0a8bdb1db2f6d
+- **asserts_ok sum**: 419 (life=245 atomic_printer=87 smx=75 flagship_1620=12)
+- **proof**: programs/proof/2254_life_cell_gshb.cubalc
+- **HEAD**: c19a0ca9b4130f7133a8da712996bf6400399498
+- **feat**: e2ac56058c3bb6614436359d5913a2eab8151a2e
 - Cube is SoT. Free energy must flow.

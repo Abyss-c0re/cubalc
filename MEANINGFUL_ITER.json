@@ -13,11 +13,11 @@
     "sum": 419
   },
   "proof": "programs/proof/2254_life_cell_gshb.cubalc",
-  "HEAD": "53b01f1d1c82da1e303731fdd1f569b34c0df890",
+  "HEAD": "c19a0ca9b4130f7133a8da712996bf6400399498",
   "feat": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
   "creed": "Cube is SoT. Free energy must flow.",
-  "head": "53b01f1d1c82da1e303731fdd1f569b34c0df890",
-  "tip": "53b01f1d1c82da1e303731fdd1f569b34c0df890",
+  "head": "c19a0ca9b4130f7133a8da712996bf6400399498",
+  "tip": "c19a0ca9b4130f7133a8da712996bf6400399498",
   "feat_head": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
   "feat_commit": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
   "FEAT_HEAD": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
@@ -26,7 +26,7 @@
   "iter": 2254,
   "n": 2254,
   "FEATURE": "LIFE_CELL_GSHB",
+  "pass": true,
   "sealed": true,
-  "asserts_ok_sum": 419,
-  "ok": true
+  "asserts_ok_sum": 419
 }
