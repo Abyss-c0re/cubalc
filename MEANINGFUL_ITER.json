@@ -1,20 +1,13 @@
 {
-  "MI": 2261,
-  "FEATURE": "LIFE_CELL_CSAD",
-  "method": "csad n",
-  "version": "1.15.1759-usability",
-  "continuum": "...->nat8->cdo1->csad",
+  "mi": 2262,
+  "feature": "LIFE_CELL_FMO1",
+  "title": "Fmo1 hypotaurine monooxygenase after Csad",
+  "continuum": "...->dug1->nat8->cdo1->csad->fmo1",
+  "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5",
+  "head": "f767591658d586b6bbf61846e8f1efe687fd852a",
+  "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
+  "asserts_ok": 189,
   "asserts_fail": 0,
-  "asserts_ok_sum": 272,
-  "asserts_ok": {
-    "life": 155,
-    "atomic_printer": 56,
-    "smx": 49,
-    "flagship_1620": 12
-  },
-  "proof": "programs/proof/2261_life_cell_csad.cubalc",
-  "HEAD_tip": "a426191de033574dfb0e393f58491c68d10a423a",
-  "HEAD": "fb9c3d30003cdf388bbed15431d6a64ebdd005ba",
-  "tip": "a426191de033574dfb0e393f58491c68d10a423a",
-  "feat": "4fd5aefceb429644c7049592e6ae63c3df0ba26f"
+  "sum_ok": 316,
+  "status": "PASS"
 }

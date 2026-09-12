@@ -1,3 +1,12 @@
+## 1.15.1760-usability — MI2262 LIFE_CELL_FMO1
+
+- feat(life): Fmo1 hypotaurine monooxygenase after Csad on life_cell
+- continuum ...->ggt->dug1->nat8->cdo1->csad->fmo1
+- METHOD fmo1 n: hypotaurine -> taurine after Csad
+- proof programs/proof/2262_life_cell_fmo1.cubalc asserts_ok=189 fail=0
+- atomic_printer_life_fmo1 + smx_mesh_vesicle_fmo1_life + flagship 1620 PASS (sum 316)
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1759-usability — MI2261 LIFE_CELL_CSAD
 
 - feat(life): Csad cysteine sulfinic acid decarboxylase after Cdo1 on life_cell
