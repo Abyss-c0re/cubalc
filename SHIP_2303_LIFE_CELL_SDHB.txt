@@ -1,1 +1,11 @@
-LIFE_CELL_SDHB MI=2303 PASS feat=6ed5fbe54d8d3d8e64554bd63298d3ef58c4776c continuum=...->ogdh->scs->sdhb proofs=105+38+34+12=189 asserts_fail=0
+# SHIP 2303 LIFE_CELL_SDHB
+
+MI 2303 LIFE_CELL_SDHB PASS
+method: sdhb n
+continuum: ...->ogdh->scs->sdhb
+proof: programs/proof/2303_life_cell_sdhb.cubalc
+asserts_fail: 0
+asserts_ok: life=105 atomic=38 smx=34 flagship=12 sum=189
+feat: 6ed5fbe54d8d3d8e64554bd63298d3ef58c4776c
+HEAD: 293a6d5f3ad1180e2e242c6da61ecf8bc4b690cd
+law: cube_is_sot; free_energy_must_flow
