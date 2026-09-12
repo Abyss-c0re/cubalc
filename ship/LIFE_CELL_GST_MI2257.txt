@@ -2,7 +2,7 @@ LIFE_CELL_GST MI 2257
 asserts_fail: 0
 asserts_ok_sum: 233
 feat: 3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418
-HEAD/tip: 770af926d0fd8a47aaa8d5e261197914a6d280b5
+HEAD/tip: d1c995913b55173a029be6ea57e7c457474212c5
 branch: life-cell-gpx-mi2256
 sealed: true
 method: gst n
