@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2277
-- **FEATURE**: LIFE_CELL_CYP7A1
-- **method**: cyp7a1 n
-- **version**: 1.15.1776-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1
+- **MI**: 2278
+- **FEATURE**: LIFE_CELL_CYP8B1
+- **method**: cyp8b1 n
+- **version**: 1.15.1777-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1
 - **asserts_fail**: 0
-- **asserts_ok sum**: 915 (life=651 atomic_printer=149 smx=103 flagship_1620=12)
-- **proof**: programs/proof/2277_life_cell_cyp7a1.cubalc
-- **HEAD**: c6ed01ecfe541b8ea586e6b92bf2a59495aa6a79
-- **feat**: c6ed01ecfe541b8ea586e6b92bf2a59495aa6a79
+- **asserts_ok sum**: 959 (life=690 atomic_printer=154 smx=103 flagship_1620=12)
+- **proof**: programs/proof/2278_life_cell_cyp8b1.cubalc
+- **HEAD**: PENDING
+- **feat**: PENDING
 - **law**: cube_is_sot; free_energy_must_flow

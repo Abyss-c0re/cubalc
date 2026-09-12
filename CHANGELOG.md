@@ -1,5 +1,11 @@
 # Changelog
 
+## MI 2278 — LIFE_CELL_CYP8B1 (1.15.1777-usability)
+- Feature: `cyp8b1 n` sterol 12-alpha-hydroxylase after CYP7A1 on life_cell
+- Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1
+- Gift: post-CYP7A1 CYP8B1 so classic BA free-energy path can choose the cholic-acid branch under ASSERT
+- Proof: programs/proof/2278_life_cell_cyp8b1.cubalc (690/0); AP 154/0; SMX 103/0; flagship 12/0
+
 ## MI 2276 — LIFE_CELL_SHP (1.15.1775-usability)
 - Feature: `shp n` small heterodimer partner (NR0B2) after KLB ternary FGFR4/FGF19/KLB on life_cell
 - Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp
