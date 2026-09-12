@@ -1,1 +1,9 @@
-MEANINGFUL_ITER=2264 FEATURE=LIFE_CELL_BSEP version=1.15.1762-usability feat=b6c92fb5b00497da0f4a66d01339717f2fac7e7b tip=6c57d76afecf1d0368bf1dac28b5b36f7ff3829a asserts_fail=0 asserts_ok_sum=415
+SHIP_2264_LIFE_CELL_BSEP
+MI=2264 FEATURE=LIFE_CELL_BSEP method=bsep n
+version=1.15.1762-usability
+continuum=...->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+asserts_fail=0 asserts_ok_sum=415 life=258 ap=79 smx=66 flagship_1620=12
+proof=programs/proof/2264_life_cell_bsep.cubalc
+feat=b6c92fb5b00497da0f4a66d01339717f2fac7e7b
+HEAD=c431b8095fc764de9b0c477360fcae2aff5830ed
+Cube is SoT. Free energy must flow.
