@@ -1,3 +1,13 @@
+# Changelog
+
+## 1.15.1766-usability — MI 2268 LIFE_CELL_MRP3 (PASS)
+
+- feat(life): `mrp3 n` — Mrp3 (ABCC3/cMOAT2) basolateral organic-anion / bile-salt overflow export after Mrp2 on `life_cell`.
+- Continuum: `...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3`
+- Proof: `programs/proof/2268_life_cell_mrp3.cubalc` asserts_fail:0 life=388 ap=111 smx=78 flagship_1620=12 sum=589
+- Integration: `atomic_printer_life_mrp3.cubalc` (111), `smx_mesh_vesicle_mrp3_life.cubalc` (78); flagship_1620=12
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1766-usability — MI 2268 LIFE_CELL_MRP3 (PASS)
 
 - feat(life): LIFE_CELL_MRP3 METHOD mrp3 n after Mrp2

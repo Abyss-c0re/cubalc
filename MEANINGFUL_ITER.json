@@ -13,9 +13,9 @@
     "sum": 589
   },
   "proof": "programs/proof/2268_life_cell_mrp3.cubalc",
-  "HEAD": "b3188a5305b13a015c6c72cb9be4b69cc093c1b6",
+  "HEAD": "68168f31c2e7d1edc83b0d1d401f753caf20825f",
   "feat": "021934a111acd566049a79f3782f1112f4153a33",
   "law": "cube_is_sot; free_energy_must_flow",
-  "tip": "b3188a5305b13a015c6c72cb9be4b69cc093c1b6",
+  "tip": "68168f31c2e7d1edc83b0d1d401f753caf20825f",
   "FEAT_HEAD": "021934a111acd566049a79f3782f1112f4153a33"
 }
