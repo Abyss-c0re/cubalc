@@ -38,11 +38,14 @@
   "asserts_ok_sum": 178,
   "asserts_ok": 178,
   "prior_feature": "LIFE_CELL_OGDH",
-  "status": "shipping",
+  "status": "pinned_feat",
   "sealed": false,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
   "hold_flash": 1,
-  "item": "life cell sucla2"
+  "item": "life cell sucla2",
+  "feat": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db",
+  "feat_head": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db",
+  "FEAT_HEAD": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db"
 }
