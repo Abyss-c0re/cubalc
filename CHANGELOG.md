@@ -1,3 +1,11 @@
+## 1.15.1791-usability — MI 2292 LIFE_CELL_SUCL (2026-09-12)
+
+- **feat(life): SUCL succinyl-CoA ligase energy harvest after MUT**
+- METHOD `sucl n` on Cell: post-MUT substrate-level phosphorylation; energy-n -> atp+n (heat held).
+- Continuum: `...->scp2->acot8->pcca->mcee->mut->sucl`
+- Proofs: life 1278 + atomic 25 + smx 19 + flagship 12 = 1334 asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1790-usability — MI 2291 LIFE_CELL_MUT
 
 - feat(life): MUT methylmalonyl-CoA mutase after MCEE on BA continuum
