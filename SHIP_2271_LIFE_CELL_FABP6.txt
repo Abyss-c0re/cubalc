@@ -1,8 +1,13 @@
-MI 2271 LIFE_CELL_FABP6
+SHIP_2271_LIFE_CELL_FABP6
+
+MI: 2271
+FEATURE: LIFE_CELL_FABP6
 method: fabp6 n
-Fabp6 FABP6/IBABP/ILBP cytosolic bile-acid shuttle after Asbt
-continuum ...->mrp2->mrp3->ost->asbt->fabp6
-proofs asserts_fail:0 life+atomic+smx+flagship sum=670
+proof: programs/proof/2271_life_cell_fabp6.cubalc
+asserts_fail: 0
+asserts_ok: 457
+continuum: ...->mrp3->ost->asbt->fabp6
+HEAD: c8297fdfcbe1e9616a50fce733a819cd2129bda6
 feat: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
-HEAD: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
+law: cube_is_sot; free_energy_must_flow
 Cube is SoT. Free energy must flow.

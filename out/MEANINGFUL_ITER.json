@@ -5,13 +5,10 @@
   "version": "1.15.1769-usability",
   "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6",
   "asserts_fail": 0,
-  "asserts_ok_sum": 458,
-  "life": 458,
-  "atomic_printer": 0,
-  "smx": 0,
-  "flagship_1620": 0,
+  "asserts_ok_sum": 457,
+  "life": 457,
   "proof": "programs/proof/2271_life_cell_fabp6.cubalc",
-  "HEAD": "379965ee75e37d98b3598e1fead2b378c3e70c16",
+  "HEAD": "c8297fdfcbe1e9616a50fce733a819cd2129bda6",
   "feat": "bcadff541353e0ab4b0d374ac5603cf5e9fc9778",
   "law": "cube_is_sot; free_energy_must_flow"
 }
