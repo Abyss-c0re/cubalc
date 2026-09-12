@@ -41,11 +41,20 @@
   "feat_head": "06ad512aa6cb4b39256eb62fa8088d14c6487ace",
   "FEAT_HEAD": "06ad512aa6cb4b39256eb62fa8088d14c6487ace",
   "prior_feature": "LIFE_CELL_OGDH",
-  "status": "pinned_feat",
-  "sealed": false,
+  "status": "sealed",
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
   "hold_flash": 1,
-  "item": "life cell scs"
+  "item": "life cell scs",
+  "HEAD": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "head": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "tip": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "pin": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "pinned_head": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "git_head": "4e1f2c9323c9fe0a71b939456bc770e276acb4f2",
+  "commit": "4e1f2c9323c9",
+  "short": "4e1f2c9323c9",
+  "summary": "LIFE_CELL_SCS MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=4e1f2c9323c9"
 }
