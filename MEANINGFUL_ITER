@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2284
-- **FEATURE**: LIFE_CELL_AMACR
-- **method**: amacr n
-- **version**: 1.15.1783-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr
+- **MI**: 2286
+- **FEATURE**: LIFE_CELL_HSD17B4
+- **method**: hsd17b4 n
+- **version**: 1.15.1785-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4
 - **asserts_fail**: 0
-- **asserts_ok sum**: 1246 (life=925 atomic_printer=189 smx=120 flagship_1620=12)
-- **proof**: programs/proof/2284_life_cell_amacr.cubalc
-- **HEAD**: 880ef8d27d7bbd9ae924218308119702d348d682
-- **feat**: ac167a627c19cd45f3a38409890ab7b2ccaebf22
+- **asserts_ok sum**: 1330 (life=1009 atomic_printer=189 smx=120 flagship_1620=12)
+- **proof**: programs/proof/2286_life_cell_hsd17b4.cubalc
+- **HEAD**: 821f0934fabcf87f3c9a6d900dabbe4801ec47b1
+- **feat**: 821f0934fabcf87f3c9a6d900dabbe4801ec47b1
 - **law**: cube_is_sot; free_energy_must_flow
