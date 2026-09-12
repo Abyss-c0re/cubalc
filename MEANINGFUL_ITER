@@ -6,6 +6,6 @@ CONTINUUM=...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mr
 ASSERTS_FAIL=0
 ASSERTS_OK_SUM=589
 PROOF=programs/proof/2268_life_cell_mrp3.cubalc
-HEAD=b7d7e77cb679002101b0310b6f14564cfd0a4004
+HEAD=5cd9b1455457efa8bd27ad7164c7cd09eebaf291
 FEAT=021934a111acd566049a79f3782f1112f4153a33
 LAW=cube_is_sot; free_energy_must_flow
