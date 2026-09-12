@@ -41,12 +41,12 @@
     "flagship_1620": 12,
     "sum": 249
   },
-  "HEAD": "49eb7248d731cb8e02cc00a35578e7dd00a36fc8",
-  "head": "49eb7248d731cb8e02cc00a35578e7dd00a36fc8",
+  "HEAD": "f7f821d6cd455cf62201eb706f3f05b278006de7",
+  "head": "f7f821d6cd455cf62201eb706f3f05b278006de7",
   "feat": "9148358b6420bead487d5a97050172b29a136e4c",
   "FEAT_HEAD": "9148358b6420bead487d5a97050172b29a136e4c",
-  "tip": "49eb7248d731cb8e02cc00a35578e7dd00a36fc8",
-  "pin": "49eb7248d731cb8e02cc00a35578e7dd00a36fc8",
+  "tip": "f7f821d6cd455cf62201eb706f3f05b278006de7",
+  "pin": "f7f821d6cd455cf62201eb706f3f05b278006de7",
   "sealed": true,
   "note": "Ggt gamma-glutamyltransferase after Gst"
 }
