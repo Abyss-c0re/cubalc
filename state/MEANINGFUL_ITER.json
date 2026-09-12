@@ -49,8 +49,8 @@
   "feat_head": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "FEAT_HEAD": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "feat_short": "73515fcbf2e",
-  "HEAD": "PENDING",
-  "commit": "PENDING",
-  "commit_full": "PENDING",
+  "HEAD": "daabd489a37f2d347a061e82c25fb70ff91541a3",
+  "commit": "daabd489a",
+  "commit_full": "daabd489a37f2d347a061e82c25fb70ff91541a3",
   "pure_c": "programs/lib/life_cell.cubalc"
 }
