@@ -8,6 +8,6 @@
 - **asserts_fail**: 0
 - **asserts_ok sum**: 458 (life=458 fabp6 proof)
 - **proof**: programs/proof/2271_life_cell_fabp6.cubalc
-- **HEAD**: fa4bd16e8fc3731dddb059843958085c55c480a0
+- **HEAD**: cb799b2ceb52965cbc36f7c1d7dd0313ee156286
 - **feat**: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
 - **law**: cube_is_sot; free_energy_must_flow
