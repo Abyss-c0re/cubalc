@@ -2,7 +2,7 @@ LIFE_CELL_GOR MI 2255
 asserts_fail: 0
 asserts_ok_sum: 104
 feat: 3b841431aacb88119b903a14ac3d9c04c3f833e7
-HEAD/tip: e534099b4dd0901a167e07f9daf1cec8e858475b
+HEAD/tip: 46004b8977b45fa92b5c4df2d52bebd360aab4ce
 branch: life-cell-gor-mi2255
 sealed: true
 method: gor n
