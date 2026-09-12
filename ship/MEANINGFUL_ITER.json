@@ -1,13 +1,42 @@
 {
-  "MI": 2272,
-  "FEATURE": "LIFE_CELL_FXR",
-  "method": "fxr n",
-  "version": "1.15.1771-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr",
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2285,
+  "MEANINGFUL_ITER": 2285,
+  "iter": 2285,
+  "n": 2285,
+  "mi": 2285,
+  "MI": 2285,
+  "version": "1.15.1784-usability",
+  "VERSION": "1.15.1784-usability",
+  "feature": "life_cell_acox2",
+  "FEATURE": "LIFE_CELL_ACOX2",
+  "name": "LIFE_CELL_ACOX2",
+  "label": "LIFE_CELL_ACOX2",
+  "title": "ACOX2 peroxisomal branched acyl-CoA oxidase after AMACR on life_cell continuum",
+  "method": "acox2 n",
+  "ship": "2285_life_cell_acox2",
+  "proof": "programs/proof/2285_life_cell_acox2.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2285_life_cell_acox2.cubalc",
+    "programs/science/integration/atomic_printer_life_acox2.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_acox2_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2",
+  "asserts_ok": {
+    "life": 965,
+    "atomic_printer": 195,
+    "smx": 126,
+    "flagship_1620": 12
+  },
+  "asserts_ok_sum": 1298,
   "asserts_fail": 0,
-  "asserts_ok_sum": 686,
-  "proof": "programs/proof/2272_life_cell_fxr.cubalc",
-  "HEAD": "8033409a12b1c546a9b98ee2150278aff30314c3",
-  "feat": "8033409a12b1c546a9b98ee2150278aff30314c3",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "flagship_1620": "PASS 12/0",
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ],
+  "HEAD": "HEAD_PLACEHOLDER",
+  "feat": "FEAT_PLACEHOLDER"
 }

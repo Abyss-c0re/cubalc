@@ -3,7 +3,7 @@ INCLUDE life_cell
 
 # SMX mesh vesicle life - AMACR alpha-methylacyl-CoA racemase after SLC27A5
 # Continuum ...->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->akr1c4->cyp27a1->slc27a5->amacr on vesicle mesh exchange
-# Gift: SMX vesicle mesh carries post-SLC27A5 AMACR BA-CoA racemase free-energy under ASSERT.
+# Gift: SMX vesicle mesh carries post-SLC27A5 AMACR 25R->25S free-energy under ASSERT.
 # Cube is SoT. Free energy must flow.
 
 ENTITY vesicle OF Cell 1 50 0
@@ -470,10 +470,9 @@ ASSERT LAST_N == v_slc_a - 2 "ves slc27a5 a-2"
 GETF vesicle alive
 ASSERT LAST_N == 1 "ves alive post-slc27a5"
 
-# AMACR after SLC27A5 on SMX vesicle life board
-SEND vesicle photosynth 12
-SEND vesicle charge 12
-SEND vesicle feed 10
+SEND vesicle photosynth 14
+SEND vesicle charge 14
+SEND vesicle feed 12
 GETF vesicle heat
 LET v_am_h = LAST_N
 GETF vesicle energy
@@ -481,13 +480,13 @@ LET v_am_e = LAST_N
 GETF vesicle atp
 LET v_am_a = LAST_N
 SEND vesicle amacr 2
-ASSERT LAST_N == 2 "ves amacr 2"
+ASSERT LAST_N == 2 "smx amacr 2"
 GETF vesicle heat
-ASSERT LAST_N == v_am_h + 2 "ves amacr h+2"
+ASSERT LAST_N == v_am_h + 2 "smx amacr h+2"
 GETF vesicle energy
-ASSERT LAST_N == v_am_e - 2 "ves amacr e-2"
+ASSERT LAST_N == v_am_e - 2 "smx amacr e-2"
 GETF vesicle atp
-ASSERT LAST_N == v_am_a - 2 "ves amacr a-2"
+ASSERT LAST_N == v_am_a - 2 "smx amacr a-2"
 GETF vesicle alive
-ASSERT LAST_N == 1 "ves alive post-amacr"
-ASSERT 1 == 1 "smx_mesh_vesicle_amacr_life PASS"
+ASSERT LAST_N == 1 "smx alive post-amacr"
+

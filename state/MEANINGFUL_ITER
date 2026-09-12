@@ -1,54 +1,13 @@
-{
-  "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2284,
-  "MEANINGFUL_ITER": 2284,
-  "iter": 2284,
-  "n": 2284,
-  "mi": 2284,
-  "MI": 2284,
-  "version": "1.15.1783-usability",
-  "VERSION": "1.15.1783-usability",
-  "feature": "LIFE_CELL_AMACR",
-  "FEATURE": "LIFE_CELL_AMACR",
-  "name": "LIFE_CELL_AMACR",
-  "title": "AMACR alpha-methylacyl-CoA racemase after SLC27A5 on life_cell continuum",
-  "label": "LIFE_CELL_AMACR",
-  "method": "amacr n",
-  "ship": "2284_life_cell_amacr",
-  "proof": "programs/proof/2284_life_cell_amacr.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2284_life_cell_amacr.cubalc",
-    "programs/science/integration/atomic_printer_life_amacr.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_amacr_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
-  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr",
-  "domain": "post-SLC27A5 peroxisomal/cytosolic AMACR BA-CoA racemase / 25S gate",
-  "gift": "AMACR after SLC27A5 so classic BA free-energy path can racemize (25R)->(25S) BA-CoA under ASSERT after BA-CoA open.",
-  "proof_sum": {
-    "life": 925,
-    "atomic": 189,
-    "smx": 120,
-    "flagship": 12,
-    "sum": 1246,
-    "asserts_fail": 0
-  },
-  "asserts_fail": 0,
-  "asserts_ok_sum": 1246,
-  "asserts_ok": {
-    "life": 925,
-    "atomic_printer": 189,
-    "smx": 120,
-    "flagship_1620": 12,
-    "sum": 1246
-  },
-  "HEAD": "880ef8d27d7bbd9ae924218308119702d348d682",
-  "feat": "ac167a627c19cd45f3a38409890ab7b2ccaebf22",
-  "head": "880ef8d27d7bbd9ae924218308119702d348d682",
-  "law": [
-    "cube_is_sot",
-    "free_energy_must_flow"
-  ],
-  "tip": "880ef8d27d7bbd9ae924218308119702d348d682"
-}
+# MEANINGFUL_ITER
+
+- **MI**: 2284
+- **FEATURE**: LIFE_CELL_AMACR
+- **method**: amacr n
+- **version**: 1.15.1783-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr
+- **asserts_fail**: 0
+- **asserts_ok sum**: 1244 (life=925 atomic_printer=188 smx=119 flagship_1620=12)
+- **proof**: programs/proof/2284_life_cell_amacr.cubalc
+- **HEAD**: 6c9a9f055961a043437b7ff603a2545cbcbee305
+- **feat**: 3d2a6c6faedbc810495baeaaa8520c72548985aa
+- **law**: cube_is_sot; free_energy_must_flow

@@ -1,13 +1,46 @@
 {
-  "MI": 2272,
-  "FEATURE": "LIFE_CELL_FXR",
-  "method": "fxr n",
-  "version": "1.15.1771-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr",
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2284,
+  "MEANINGFUL_ITER": 2284,
+  "iter": 2284,
+  "n": 2284,
+  "mi": 2284,
+  "MI": 2284,
+  "version": "1.15.1783-usability",
+  "VERSION": "1.15.1783-usability",
+  "feature": "life_cell_amacr",
+  "FEATURE": "LIFE_CELL_AMACR",
+  "name": "LIFE_CELL_AMACR",
+  "label": "LIFE_CELL_AMACR",
+  "title": "AMACR alpha-methylacyl-CoA racemase after SLC27A5 on life_cell continuum",
+  "method": "amacr n",
+  "ship": "2284_life_cell_amacr",
+  "proof": "programs/proof/2284_life_cell_amacr.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2284_life_cell_amacr.cubalc",
+    "programs/science/integration/atomic_printer_life_amacr.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_amacr_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5->amacr",
+  "asserts_ok": {
+    "life": 925,
+    "atomic_printer": 188,
+    "smx": 119,
+    "flagship_1620": 12
+  },
+  "asserts_ok_sum": 1244,
   "asserts_fail": 0,
-  "asserts_ok_sum": 686,
-  "proof": "programs/proof/2272_life_cell_fxr.cubalc",
-  "HEAD": "8033409a12b1c546a9b98ee2150278aff30314c3",
-  "feat": "8033409a12b1c546a9b98ee2150278aff30314c3",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "flagship_1620": "PASS 12/0",
+  "HEAD": "6c9a9f055961a043437b7ff603a2545cbcbee305",
+  "head": "6c9a9f055961a043437b7ff603a2545cbcbee305",
+  "tip": "6c9a9f055961a043437b7ff603a2545cbcbee305",
+  "feat": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
+  "FEAT": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
+  "feat_sha": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ]
 }

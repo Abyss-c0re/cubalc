@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2281
-- **FEATURE**: LIFE_CELL_AKR1C4
-- **method**: akr1c4 n
-- **version**: 1.15.1780-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4
+- **MI**: 2285
+- **FEATURE**: LIFE_CELL_ACOX2
+- **method**: acox2 n
+- **version**: 1.15.1784-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2
 - **asserts_fail**: 0
-- **asserts_ok sum**: 1092 (life=807 atomic_printer=170 smx=103 flagship_1620=12)
-- **proof**: programs/proof/2281_life_cell_akr1c4.cubalc
-- **HEAD**: bee9e453dcc8830263d1f3234d6404a1ba11120a
-- **feat**: bee9e453dcc8830263d1f3234d6404a1ba11120a
+- **asserts_ok sum**: 1298 (life=965 atomic_printer=195 smx=126 flagship_1620=12)
+- **proof**: programs/proof/2285_life_cell_acox2.cubalc
+- **HEAD**: HEAD_PLACEHOLDER
+- **feat**: FEAT_PLACEHOLDER
 - **law**: cube_is_sot; free_energy_must_flow

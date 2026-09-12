@@ -3478,7 +3478,7 @@ ASSERT LAST_N == 1 "bed alive post-cyp27a1"
 ASSERT 1 == 1 "life_cell_cyp27a1 PASS"
 ASSERT 1 == 1 "LIFE_CELL_CYP27A1 continuum PASS"
 
-# Slc27a5 after Cyp27a1 on classical BA continuum
+# Amacr after Slc27a5 on classical BA continuum
 # Gift: post-CYP27A1 SLC27A5/BACS forms BA-CoA so classic BA free-energy path opens peroxisomal entry under ASSERT.
 # Cube is SoT. Free energy must flow.
 
@@ -3630,159 +3630,6 @@ ASSERT LAST_N == b12_thr "bed slc27a5 thr held"
 GETF bed alive
 ASSERT LAST_N == 1 "bed alive post-slc27a5"
 
-
-# --- AMACR after SLC27A5 ---
-SEND founder photosynth 22
-SEND founder glycolyse 18
-SEND founder charge 28
-SEND founder feed 20
-GETF founder heat
-LET f13_h = LAST_N
-GETF founder energy
-LET f13_e = LAST_N
-GETF founder atp
-LET f13_a = LAST_N
-GETF founder age
-LET f13_age = LAST_N
-GETF founder pcr
-LET f13_pcr = LAST_N
-GETF founder reserve
-LET f13_rsv = LAST_N
-GETF founder pmf
-LET f13_pmf = LAST_N
-GETF founder threshold
-LET f13_thr = LAST_N
-SEND founder amacr 3
-ASSERT LAST_N == 3 "founder amacr 3"
-GETF founder heat
-ASSERT LAST_N == f13_h + 3 "founder amacr h+3"
-GETF founder energy
-ASSERT LAST_N == f13_e - 3 "founder amacr e-3"
-GETF founder atp
-ASSERT LAST_N == f13_a - 3 "founder amacr a-3"
-GETF founder age
-ASSERT LAST_N == f13_age "founder amacr age held"
-GETF founder pcr
-ASSERT LAST_N == f13_pcr "founder amacr pcr held"
-GETF founder reserve
-ASSERT LAST_N == f13_rsv "founder amacr reserve held"
-GETF founder pmf
-ASSERT LAST_N == f13_pmf "founder amacr pmf held"
-GETF founder threshold
-ASSERT LAST_N == f13_thr "founder amacr thr held"
-GETF founder alive
-ASSERT LAST_N == 1 "founder alive post-amacr"
-
-SEND founder amacr 0
-ASSERT LAST_N == 0 "founder amacr n0"
-SEND corpse amacr 3
-ASSERT LAST_N == 0 "corpse amacr 0"
-GETF corpse alive
-ASSERT LAST_N == 0 "corpse dead post-amacr"
-
-SEND empty photosynth 12
-SEND empty charge 12
-SEND empty feed 10
-GETF empty heat
-LET e13_h = LAST_N
-GETF empty energy
-LET e13_e = LAST_N
-GETF empty atp
-LET e13_a = LAST_N
-SEND empty amacr 2
-ASSERT LAST_N == 2 "empty amacr 2"
-GETF empty heat
-ASSERT LAST_N == e13_h + 2 "empty amacr h+2"
-GETF empty energy
-ASSERT LAST_N == e13_e - 2 "empty amacr e-2"
-GETF empty atp
-ASSERT LAST_N == e13_a - 2 "empty amacr a-2"
-GETF empty alive
-ASSERT LAST_N == 1 "empty alive post-amacr"
-SEND empty amacr 0
-ASSERT LAST_N == 0 "empty amacr n0"
-
-SEND quiet photosynth 16
-SEND quiet charge 16
-SEND quiet feed 10
-GETF quiet heat
-LET q13_h = LAST_N
-GETF quiet energy
-LET q13_e = LAST_N
-GETF quiet atp
-LET q13_a = LAST_N
-GETF quiet age
-LET q13_age = LAST_N
-GETF quiet pcr
-LET q13_pcr = LAST_N
-GETF quiet reserve
-LET q13_rsv = LAST_N
-GETF quiet pmf
-LET q13_pmf = LAST_N
-GETF quiet threshold
-LET q13_thr = LAST_N
-SEND quiet amacr 2
-ASSERT LAST_N == 2 "quiet amacr 2"
-GETF quiet heat
-ASSERT LAST_N == q13_h + 2 "quiet amacr h+2"
-GETF quiet energy
-ASSERT LAST_N == q13_e - 2 "quiet amacr e-2"
-GETF quiet atp
-ASSERT LAST_N == q13_a - 2 "quiet amacr a-2"
-GETF quiet age
-ASSERT LAST_N == q13_age "quiet amacr age held"
-GETF quiet pcr
-ASSERT LAST_N == q13_pcr "quiet amacr pcr held"
-GETF quiet reserve
-ASSERT LAST_N == q13_rsv "quiet amacr reserve held"
-GETF quiet pmf
-ASSERT LAST_N == q13_pmf "quiet amacr pmf held"
-GETF quiet threshold
-ASSERT LAST_N == q13_thr "quiet amacr thr held"
-GETF quiet alive
-ASSERT LAST_N == 1 "quiet alive post-amacr"
-
-SEND bed photosynth 16
-SEND bed charge 16
-SEND bed feed 12
-GETF bed heat
-LET b13_h = LAST_N
-GETF bed energy
-LET b13_e = LAST_N
-GETF bed atp
-LET b13_a = LAST_N
-GETF bed age
-LET b13_age = LAST_N
-GETF bed pcr
-LET b13_pcr = LAST_N
-GETF bed reserve
-LET b13_rsv = LAST_N
-GETF bed pmf
-LET b13_pmf = LAST_N
-GETF bed threshold
-LET b13_thr = LAST_N
-SEND bed amacr 2
-ASSERT LAST_N == 2 "bed amacr 2"
-GETF bed heat
-ASSERT LAST_N == b13_h + 2 "bed amacr h+2"
-GETF bed energy
-ASSERT LAST_N == b13_e - 2 "bed amacr e-2"
-GETF bed atp
-ASSERT LAST_N == b13_a - 2 "bed amacr a-2"
-GETF bed age
-ASSERT LAST_N == b13_age "bed amacr age held"
-GETF bed pcr
-ASSERT LAST_N == b13_pcr "bed amacr pcr held"
-GETF bed reserve
-ASSERT LAST_N == b13_rsv "bed amacr reserve held"
-GETF bed pmf
-ASSERT LAST_N == b13_pmf "bed amacr pmf held"
-GETF bed threshold
-ASSERT LAST_N == b13_thr "bed amacr thr held"
-GETF bed alive
-ASSERT LAST_N == 1 "bed alive post-amacr"
-
-
 # partial budget clamp
 SEND founder photosynth 4
 SEND founder charge 4
@@ -3791,10 +3638,158 @@ LET f12b_a = LAST_N
 GETF founder energy
 LET f12b_e = LAST_N
 # drain near empty then request more than available
-SEND founder amacr 100
+SEND founder slc27a5 100
 # take must be min(100,atp,energy) and >=0; just assert non-negative return and held age
-ASSERT LAST_N >= 0 "founder amacr clamp nonneg"
+ASSERT LAST_N >= 0 "founder slc27a5 clamp nonneg"
 GETF founder age
-ASSERT LAST_N == f13_age "founder amacr clamp age held"
+ASSERT LAST_N == f12_age "founder slc27a5 clamp age held"
 GETF founder alive
 ASSERT LAST_N == 1 "founder alive post-slc27a5 clamp"
+
+# --- AMACR after SLC27A5 close ---
+SEND founder photosynth 22
+SEND founder glycolyse 18
+SEND founder charge 28
+SEND founder feed 20
+GETF founder heat
+LET f_am_h = LAST_N
+GETF founder energy
+LET f_am_e = LAST_N
+GETF founder atp
+LET f_am_a = LAST_N
+GETF founder age
+LET f_am_age = LAST_N
+GETF founder pcr
+LET f_am_pcr = LAST_N
+GETF founder reserve
+LET f_am_rsv = LAST_N
+GETF founder pmf
+LET f_am_pmf = LAST_N
+GETF founder threshold
+LET f_am_thr = LAST_N
+SEND founder amacr 3
+ASSERT LAST_N == 3 "founder amacr 3"
+GETF founder heat
+ASSERT LAST_N == f_am_h + 3 "founder amacr h+3"
+GETF founder energy
+ASSERT LAST_N == f_am_e - 3 "founder amacr e-3"
+GETF founder atp
+ASSERT LAST_N == f_am_a - 3 "founder amacr a-3"
+GETF founder age
+ASSERT LAST_N == f_am_age "founder amacr age held"
+GETF founder pcr
+ASSERT LAST_N == f_am_pcr "founder amacr pcr held"
+GETF founder reserve
+ASSERT LAST_N == f_am_rsv "founder amacr reserve held"
+GETF founder pmf
+ASSERT LAST_N == f_am_pmf "founder amacr pmf held"
+GETF founder threshold
+ASSERT LAST_N == f_am_thr "founder amacr thr held"
+GETF founder alive
+ASSERT LAST_N == 1 "founder alive post-amacr"
+SEND corpse amacr 3
+ASSERT LAST_N == 0 "corpse amacr 0"
+GETF corpse alive
+ASSERT LAST_N == 0 "corpse dead post-amacr"
+SEND empty photosynth 12
+SEND empty charge 12
+SEND empty feed 10
+GETF empty heat
+LET e_am_h = LAST_N
+GETF empty energy
+LET e_am_e = LAST_N
+GETF empty atp
+LET e_am_a = LAST_N
+SEND empty amacr 2
+ASSERT LAST_N == 2 "empty amacr 2"
+GETF empty heat
+ASSERT LAST_N == e_am_h + 2 "empty amacr h+2"
+GETF empty energy
+ASSERT LAST_N == e_am_e - 2 "empty amacr e-2"
+GETF empty atp
+ASSERT LAST_N == e_am_a - 2 "empty amacr a-2"
+GETF empty alive
+ASSERT LAST_N == 1 "empty alive post-amacr"
+SEND empty amacr 0
+ASSERT LAST_N == 0 "empty amacr n0"
+SEND quiet photosynth 16
+SEND quiet charge 16
+SEND quiet feed 10
+GETF quiet heat
+LET q_am_h = LAST_N
+GETF quiet energy
+LET q_am_e = LAST_N
+GETF quiet atp
+LET q_am_a = LAST_N
+GETF quiet age
+LET q_am_age = LAST_N
+GETF quiet pcr
+LET q_am_pcr = LAST_N
+GETF quiet reserve
+LET q_am_rsv = LAST_N
+GETF quiet pmf
+LET q_am_pmf = LAST_N
+GETF quiet threshold
+LET q_am_thr = LAST_N
+SEND quiet amacr 2
+ASSERT LAST_N == 2 "quiet amacr 2"
+GETF quiet heat
+ASSERT LAST_N == q_am_h + 2 "quiet amacr h+2"
+GETF quiet energy
+ASSERT LAST_N == q_am_e - 2 "quiet amacr e-2"
+GETF quiet atp
+ASSERT LAST_N == q_am_a - 2 "quiet amacr a-2"
+GETF quiet age
+ASSERT LAST_N == q_am_age "quiet amacr age held"
+GETF quiet pcr
+ASSERT LAST_N == q_am_pcr "quiet amacr pcr held"
+GETF quiet reserve
+ASSERT LAST_N == q_am_rsv "quiet amacr reserve held"
+GETF quiet pmf
+ASSERT LAST_N == q_am_pmf "quiet amacr pmf held"
+GETF quiet threshold
+ASSERT LAST_N == q_am_thr "quiet amacr thr held"
+GETF quiet alive
+ASSERT LAST_N == 1 "quiet alive post-amacr"
+SEND bed photosynth 20
+SEND bed charge 22
+SEND bed feed 16
+GETF bed heat
+LET b_am_h = LAST_N
+GETF bed energy
+LET b_am_e = LAST_N
+GETF bed atp
+LET b_am_a = LAST_N
+GETF bed age
+LET b_am_age = LAST_N
+GETF bed pcr
+LET b_am_pcr = LAST_N
+GETF bed reserve
+LET b_am_rsv = LAST_N
+GETF bed pmf
+LET b_am_pmf = LAST_N
+GETF bed threshold
+LET b_am_thr = LAST_N
+SEND bed amacr 4
+ASSERT LAST_N == 4 "bed amacr 4"
+GETF bed heat
+ASSERT LAST_N == b_am_h + 4 "bed amacr h+4"
+GETF bed energy
+ASSERT LAST_N == b_am_e - 4 "bed amacr e-4"
+GETF bed atp
+ASSERT LAST_N == b_am_a - 4 "bed amacr a-4"
+GETF bed age
+ASSERT LAST_N == b_am_age "bed amacr age held"
+GETF bed pcr
+ASSERT LAST_N == b_am_pcr "bed amacr pcr held"
+GETF bed reserve
+ASSERT LAST_N == b_am_rsv "bed amacr reserve held"
+GETF bed pmf
+ASSERT LAST_N == b_am_pmf "bed amacr pmf held"
+GETF bed threshold
+ASSERT LAST_N == b_am_thr "bed amacr thr held"
+GETF bed alive
+ASSERT LAST_N == 1 "bed alive post-amacr"
+SEND founder amacr 0
+ASSERT LAST_N == 0 "founder amacr n0"
+

@@ -1,3 +1,37 @@
+# Changelog
+
+## 1.15.1784-usability — MI 2285 LIFE_CELL_ACOX2
+
+- feat(life): ACOX2 peroxisomal branched acyl-CoA oxidase after AMACR on life_cell continuum
+- proof programs/proof/2285_life_cell_acox2.cubalc asserts_fail=0 (life=965 sum=1298)
+- continuum ...->slc27a5->amacr->acox2
+- law: cube_is_sot; free_energy_must_flow
+
+## 1.15.1783-usability — MI 2284 LIFE_CELL_AMACR
+
+- feat(life): AMACR alpha-methylacyl-CoA racemase after SLC27A5 on classical BA continuum
+- method `amacr n` on life_cell (25R->25S BA-CoA racemase / peroxisomal gate)
+- proof `programs/proof/2284_life_cell_amacr.cubalc` asserts_fail:0 asserts_ok:925
+- boards: atomic_printer_life_amacr + smx_mesh_vesicle_amacr_life
+- flagship 1620 PASS 12/0; sum asserts_ok 1244
+- continuum ...->cyp27a1->slc27a5->amacr
+- law: cube_is_sot; free_energy_must_flow
+
+## 1.15.1782-usability — MI 2283 LIFE_CELL_SLC27A5
+
+- feat(life): METHOD slc27a5 n after cyp27a1 (BACS bile acyl-CoA synthetase classical BA plate)
+- proof: programs/proof/2283_life_cell_slc27a5.cubalc PASS asserts_ok=886 fail=0
+- AP 183/0; SMX 114/0; flagship 1620 12/0; sum=1195
+- continuum: ...->akr1c4->cyp27a1->slc27a5
+- Cube is SoT. Free energy must flow.
+
+## 1.15.1781-usability — MI 2282 LIFE_CELL_CYP27A1
+
+- feat(life): METHOD cyp27a1 n after akr1c4 (sterol 27-hydroxylase classical BA side-chain open)
+- proof: programs/proof/2282_life_cell_cyp27a1.cubalc PASS
+- continuum: ...->hsd3b7->akr1d1->akr1c4->cyp27a1
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1780-usability — MI 2281 LIFE_CELL_AKR1C4
 
 - feat(life): METHOD akr1c4 n after akr1d1 (3alpha-HSD classical BA plate)

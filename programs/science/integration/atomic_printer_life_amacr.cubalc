@@ -1,9 +1,9 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# Atomic printer life force - SLC27A5/BACS after SLC27A5 3a,5b close
+# Atomic printer life force - AMACR after SLC27A5 BA-CoA close
 # Extends printer continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr
-# Gift: SLC27A5 after AKR1C4 forms BA-CoA on printer board under ASSERT.
+# Gift: AMACR after SLC27A5 racemizes BA-CoA on printer board under ASSERT.
 # Cube is SoT. Free energy must flow.
 
 ENTITY printer OF Cell 1 60 0
@@ -766,11 +766,10 @@ ASSERT LAST_N == p_slc_a - 2 "ap slc27a5 a-2"
 GETF printer alive
 ASSERT LAST_N == 1 "ap alive post-slc27a5"
 
-# AMACR after SLC27A5 on printer board
 SEND printer photosynth 18
 SEND printer glycolyse 14
-SEND printer charge 20
-SEND printer feed 14
+SEND printer charge 22
+SEND printer feed 16
 GETF printer heat
 LET p_am_h = LAST_N
 GETF printer energy
@@ -787,4 +786,4 @@ GETF printer atp
 ASSERT LAST_N == p_am_a - 2 "ap amacr a-2"
 GETF printer alive
 ASSERT LAST_N == 1 "ap alive post-amacr"
-ASSERT 1 == 1 "atomic_printer_life_amacr PASS"
+

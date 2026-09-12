@@ -17794,7 +17794,6 @@ CLASS Cell
     RET take
   END
 
-
   # Acox2: acyl-CoA oxidase 2 after AMACR (25S)-BA-CoA.
   # ACOX2 oxidizes (25S)-BA-CoA after Amacr locks 25S chirality for
   # FAD-dependent desaturation so
