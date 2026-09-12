@@ -1,6 +1,9 @@
 SHIP LIFE_CELL_CSAD MI 2261
 feat: 37a3da18a6b89ef47c83f64e45bb760875126290
-tip: 4165cb86d15510e3acb7685c3770d454c88520e1
+tip: afb62309c64bbb752d0706498f197bbe49da0b2c
+HEAD_NOW.txt
+PINNED_HEAD.txt
+SHIPPED_HEAD.txt
 proof: programs/proof/2261_life_cell_csad.cubalc asserts_ok=155 asserts_fail=0
 atomic_printer_life_csad asserts_ok=57 asserts_fail=0
 smx_mesh_vesicle_csad_life asserts_ok=50 asserts_fail=0
