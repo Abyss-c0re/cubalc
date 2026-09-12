@@ -1,43 +1,23 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2257,
-  "MEANINGFUL_ITER": 2257,
-  "iter": 2257,
-  "n": 2257,
   "mi": 2257,
-  "version": "1.15.1755-usability",
-  "VERSION": "1.15.1755-usability",
-  "feature": "life_cell_gst",
-  "FEATURE": "LIFE_CELL_GST",
-  "name": "LIFE_CELL_GST",
-  "title": "Gst glutathione S-transferase after Gpx on life_cell",
-  "label": "LIFE_CELL_GST",
+  "feature": "LIFE_CELL_GST",
   "method": "gst n",
-  "ship": "2257_life_cell_gst",
-  "proof": "programs/proof/2257_life_cell_gst.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2257_life_cell_gst.cubalc",
-    "programs/science/integration/atomic_printer_life_gst.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_gst_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
+  "version": "1.15.1755-usability",
   "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst",
-  "domain": "Gst glutathione S-transferase after Gpx / GSH+RX->GS-R electrophile conjugation",
-  "gift": "Gst conjugates GSH with electrophiles so the glutathione free-energy shield engages its transferase limb after Gpx",
-  "proof_sum": {
+  "asserts_fail": 0,
+  "asserts_ok": {
     "life": 140,
-    "atomic": 44,
+    "atomic_printer": 44,
     "smx": 37,
-    "flagship": 12,
-    "sum": 233,
-    "asserts_fail": 0
+    "flagship_1620": 12,
+    "sum": 233
   },
-  "HEAD": "0452094c9e669c8a191e23fb2877497bc46fa6de",
-  "head": "0452094c9e669c8a191e23fb2877497bc46fa6de",
+  "proof": "programs/proof/2257_life_cell_gst.cubalc",
   "feat": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "FEAT_HEAD": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "tip": "0452094c9e669c8a191e23fb2877497bc46fa6de",
-  "pin": "0452094c9e669c8a191e23fb2877497bc46fa6de",
-  "sealed": true
+  "HEAD": "6b795b0edabdbbdf31872fed05b81918ee72a941",
+  "head": "6b795b0edabdbbdf31872fed05b81918ee72a941",
+  "tip": "6b795b0edabdbbdf31872fed05b81918ee72a941",
+  "feat_head": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
+  "sealed": true,
+  "note": "Gst glutathione S-transferase after Gpx \u2014 electrophile conjugation on GSH free-energy shield"
 }

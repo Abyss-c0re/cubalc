@@ -6,8 +6,8 @@
 - **version**: 1.15.1755-usability
 - **continuum**: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst
 - **asserts_fail**: 0
-- **asserts_ok sum**: 233 (life=140 atomic=44 smx=37 flagship_1620=12)
+- **asserts_ok sum**: 233 (life=140 atomic_printer=44 smx=37 flagship_1620=12)
 - **proof**: programs/proof/2257_life_cell_gst.cubalc
-- **HEAD/tip**: 0452094c9e669c8a191e23fb2877497bc46fa6de
+- **HEAD/tip**: 6b795b0edabdbbdf31872fed05b81918ee72a941
 - **feat**: 3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418
 - Cube is SoT. Free energy must flow.

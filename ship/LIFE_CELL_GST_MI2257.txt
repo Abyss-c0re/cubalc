@@ -1,13 +1,10 @@
 LIFE_CELL_GST MI 2257
 asserts_fail: 0
 asserts_ok_sum: 233
+life=140 atomic_printer=44 smx=37 flagship_1620=12
 feat: 3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418
-HEAD/tip: 0452094c9e669c8a191e23fb2877497bc46fa6de
+HEAD/tip: 6b795b0edabdbbdf31872fed05b81918ee72a941
 branch: life-cell-gpx-mi2256
 sealed: true
-method: gst n
-continuum: ...->gsha->gshb->gor->gpx->gst
-proof: programs/proof/2257_life_cell_gst.cubalc
-version: 1.15.1755-usability
 PASS True
 Cube is SoT. Free energy must flow.
