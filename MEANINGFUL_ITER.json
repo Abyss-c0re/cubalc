@@ -13,7 +13,7 @@
     "sum": 589
   },
   "proof": "programs/proof/2268_life_cell_mrp3.cubalc",
-  "HEAD": "a7dd6b9428302ef13feb8a094292d3e409c5c1ed",
+  "HEAD": "81410d0e371a6d4e7024b119e3ec75721b341ee3",
   "feat": "021934a111acd566049a79f3782f1112f4153a33",
   "law": "cube_is_sot; free_energy_must_flow"
 }
