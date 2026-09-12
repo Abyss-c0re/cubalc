@@ -15620,27 +15620,25 @@ CLASS Cell
     RET take
   END
 
-
   # Ggt: gamma-glutamyltransferase after Gst glutathione S-transferase.
-  # Ggt (Ggt / gamma-glutamyltransferase) cleaves the gamma-Glu bond of GSH and GS-R
-  # conjugates -> Glu + Cys-Gly (or Cys-Gly-R), completing the mercapturic-acid
-  # salvage limb after Gst conjugates electrophiles. After Gst forms GS-R, Ggt
-  # opens the gamma-glutamyl gate so dipeptidases can free cysteine and route adducts
-  # toward excretion while recycling amino-acid free-energy into the GSH continuum.
-  # Distinct from Gst (GSH+RX->GS-R S-transferase), Gpx (2GSH+ROOH->GSSG),
-  # Gor (GSSG+NADPH->2GSH), GshB (gamma-Glu-Cys+Gly->GSH), GshA (Cys+Glu gamma-ligase),
-  # PepN/PepA (aminopeptidases), Dug1 (Cys-Gly dipeptidase) — Ggt is the
-  # gamma-glutamyl bond hydrolase/transferase that processes GSH/GS-R after Gst conjugation.
-  # Without Ggt after Gst, GS-conjugates stall even with active transferase work;
-  # the glutathione free-energy shield never engages its salvage/export limb and adduct backlog wins.
-  # Domain: post-Gst Ggt gamma-glutamyltransferase / GSH|GS-R gamma-Glu cleavage
-  # (not Gst, not Gpx, not Gor, not GshB, not GshA, not PepN, not Dug1).
+  # Ggt (Ggt / gamma-glutamyltransferase / CD224) cleaves the gamma-glutamyl bond of
+  # GSH and GS-conjugates: GS-R -> Cys-Gly-R + Glu, releasing glutamate and a cysteinylglycine
+  # conjugate that dipeptidases convert toward mercapturic-acid export. After Gst conjugates
+  # electrophiles onto GSH, Ggt starts extracellular/lytic processing so adducts leave the
+  # free-energy shield instead of stalling as trapped GS-R.
+  # Distinct from Gst (GSH+RX->GS-R S-transferase), Gpx (2GSH+ROOH->GSSG), Gor (GSSG->2GSH),
+  # GshB/GshA (GSH synthesis), PepN/PepD (peptidases), Mrp/ABC exporters — Ggt is the
+  # gamma-glutamyl cleavage limb that opens GS-conjugates after Gst conjugation.
+  # Without Ggt after Gst, GS-conjugates accumulate; the glutathione free-energy shield never
+  # engages its mercapturic export limb and conjugate stall wins.
+  # Domain: post-Gst Ggt gamma-glutamyltransferase / GS-R -> Cys-Gly-R + Glu
+  # (not Gst, not Gpx, not Gor, not GshB, not GshA, not PepN, not Mrp).
   # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt
-  #   (Gst glutathione S-transferase -> Ggt gamma-glutamyltransferase / mercapturic salvage).
-  # Pay take=min(n,atp,energy) - energy stand-in for gamma-glutamyl cleavage/transfer work.
+  #   (Gst glutathione S-transferase -> Ggt gamma-glutamyltransferase / conjugate cleavage).
+  # Pay take=min(n,atp,energy) - energy stand-in for gamma-glutamyl cleavage work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ggt life-force.
-  # Usability: AGI models post-Gst Ggt mercapturic-salvage under ASSERT.
+  # Usability: AGI models post-Gst Ggt conjugate-cleavage under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD ggt n
     GETF THIS alive
@@ -15696,27 +15694,22 @@ CLASS Cell
   END
 
 
-
-
-  # Dug1: Cys-Gly dipeptidase after Ggt gamma-glutamyltransferase.
-  # Dug1 (Dug1 / Cys-Gly dipeptidase) hydrolyzes Cys-Gly and Cys-Gly-R dipeptides
-  # left by Ggt gamma-Glu cleavage -> free Cys + Gly (or Cys + Gly-R), completing
-  # mercapturic-acid precursor breakdown and cysteine free-energy salvage into the
-  # GSH continuum after Ggt opens the gamma-glutamyl gate. After Ggt yields
-  # Cys-Gly from GSH/GS-R, Dug1 frees the amino acids so GshA/GshB can rebuild
-  # GSH and adduct tails route toward excretion without dipeptide backlog.
-  # Distinct from Ggt (GSH|GS-R gamma-Glu cleavage), Gst (GSH+RX->GS-R),
-  # Gpx (2GSH+ROOH->GSSG), Gor (GSSG+NADPH->2GSH), GshB (gamma-Glu-Cys+Gly->GSH),
-  # GshA (Cys+Glu gamma-ligase), PepN/PepA (broad aminopeptidases) — Dug1 is the
-  # Cys-Gly-specific dipeptidase that finishes mercapturic salvage after Ggt.
-  # Without Dug1 after Ggt, Cys-Gly stalls even with open gamma-glutamyl gates;
-  # the glutathione free-energy shield never engages its dipeptide-cleavage limb
-  # and cysteine salvage / adduct export backlog wins.
-  # Domain: post-Ggt Dug1 Cys-Gly dipeptidase / Cys-Gly -> Cys + Gly
-  # (not Ggt, not Gst, not Gpx, not Gor, not GshB, not GshA, not PepN).
+  # Dug1: cysteinylglycine dipeptidase after Ggt gamma-glutamyltransferase.
+  # Dug1 (Dug1 / Cys-Gly dipeptidase / DUG1) hydrolyzes the Cys-Gly peptide bond of
+  # cysteinylglycine conjugates left by Ggt: Cys-Gly-R -> Cys-R + Gly, releasing free
+  # glycine and a cysteine-S conjugate that N-acetyltransferases convert toward
+  # mercapturic-acid export. After Ggt cleaves GS-R into Cys-Gly-R + Glu, Dug1 finishes
+  # dipeptide breakdown so adducts do not stall as trapped Cys-Gly-R.
+  # Distinct from Ggt (GS-R -> Cys-Gly-R + Glu gamma-glutamyl cleavage), Gst (GSH+RX->GS-R),
+  # PepD/PepN (general peptidases), Gpx/Gor (GSH redox), GshA/GshB (GSH synthesis) - Dug1 is
+  # the Cys-Gly dipeptidase limb that opens Ggt products toward mercapturic completion.
+  # Without Dug1 after Ggt, Cys-Gly conjugates accumulate; the glutathione free-energy
+  # shield never finishes its mercapturic export limb and dipeptide stall wins.
+  # Domain: post-Ggt Dug1 cysteinylglycine dipeptidase / Cys-Gly-R -> Cys-R + Gly
+  # (not Ggt, not Gst, not PepD, not PepN, not Gpx, not Gor, not GshB).
   # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1
-  #   (Ggt gamma-glutamyltransferase -> Dug1 Cys-Gly dipeptidase / cysteine salvage).
-  # Pay take=min(n,atp,energy) - energy stand-in for dipeptide hydrolysis work.
+  #   (Ggt gamma-glutamyltransferase -> Dug1 Cys-Gly dipeptidase / conjugate dipeptide cleavage).
+  # Pay take=min(n,atp,energy) - energy stand-in for Cys-Gly dipeptide hydrolysis work.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dug1 life-force.
   # Usability: AGI models post-Ggt Dug1 Cys-Gly cleavage under ASSERT.
@@ -15775,30 +15768,171 @@ CLASS Cell
   END
 
 
-  # Cdo1: cysteine dioxygenase after Dug1 Cys-Gly dipeptidase.
-  # Cdo1 (CDO1 / cysteine dioxygenase type 1) oxygenates free L-cysteine with O2
-  # -> cysteine sulfinic acid (CSA) + heat-of-oxidation stand-in, opening the
-  # taurine/sulfate catabolic limb after Dug1 frees Cys from Cys-Gly. After Dug1
-  # hydrolyzes the dipeptide left by Ggt, Cdo1 commits salvage Cys into oxidative
-  # disposal so excess sulfur does not stall GSH rebuild or membrane thiol pools.
-  # Distinct from Dug1 (Cys-Gly -> Cys + Gly dipeptidase), Ggt (GSH|GS-R gamma-Glu
-  # cleavage), Gst (GSH+RX->GS-R), Gpx (2GSH+ROOH->GSSG), Gor (GSSG+NADPH->2GSH),
-  # GshA (Cys+Glu gamma-ligase), GshB (gamma-Glu-Cys+Gly->GSH), Cbs/Cgl (trans-
-  # sulfuration) — Cdo1 is the Fe(II)-dependent thiol dioxygenase that starts
-  # cysteine catabolism toward CSA / hypotaurine / taurine after Dug1 salvage.
-  # Without Cdo1 after Dug1, free Cys from dipeptide cleavage backlog wins even
-  # with open mercapturic gates; the glutathione free-energy shield never engages
-  # its oxidative cysteine-disposal limb and thiol overflow stalls mitosis budgets.
-  # Domain: post-Dug1 Cdo1 cysteine dioxygenase / Cys + O2 -> CSA
-  # (not Dug1, not Ggt, not Gst, not Gpx, not Gor, not GshA, not GshB, not Cbs).
-  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->cdo1
-  #   (Dug1 Cys-Gly dipeptidase -> Cdo1 cysteine dioxygenase / Cys oxidative disposal).
-  # Pay take=min(n,atp,energy) - energy stand-in for dioxygenase O2-activation work.
+  # Nat8: Cys-S-conjugate N-acetyltransferase after Dug1 cysteinylglycine dipeptidase.
+  # Nat8 (Nat8 / Cys-S-conjugate N-acetyltransferase / mercapturic NAT) transfers acetyl-CoA
+  # onto the free amino group of cysteine-S conjugates left by Dug1: Cys-R + AcCoA -> NAc-Cys-R
+  # (mercapturic acid) + CoA, sealing the adduct for export. After Dug1 cleaves Cys-Gly-R into
+  # Cys-R + Gly, Nat8 finishes N-acetylation so conjugates leave as mercapturates instead of
+  # stalling as free Cys-S adducts.
+  # Distinct from Dug1 (Cys-Gly-R -> Cys-R + Gly dipeptidase), Ggt (GS-R -> Cys-Gly-R + Glu),
+  # Gst (GSH+RX->GS-R), NatA/B/C/E (protein N-terminal acetyltransferases), Gpx/Gor (GSH redox),
+  # GshA/GshB (GSH synthesis) - Nat8 is the Cys-S-conjugate N-acetyltransferase limb that seals
+  # Dug1 products into mercapturic acids for export.
+  # Without Nat8 after Dug1, Cys-S conjugates accumulate; the glutathione free-energy shield
+  # never finishes its mercapturic export limb and free Cys-adduct stall wins.
+  # Domain: post-Dug1 Nat8 Cys-S-conjugate N-acetyltransferase / Cys-R + AcCoA -> NAc-Cys-R + CoA
+  # (not Dug1, not Ggt, not Gst, not NatA, not NatB, not NatC, not NatE, not Gpx, not Gor).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8
+  #   (Dug1 Cys-Gly dipeptidase -> Nat8 Cys-S-conjugate N-acetyltransferase / mercapturic seal).
+  # Pay take=min(n,atp,energy) - energy stand-in for acetyl-CoA Nat8 catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nat8 life-force.
+  # Usability: AGI models post-Dug1 Nat8 mercapturic N-acetylation under ASSERT.
+  # Cube is SoT. Free energy must flow.
+  METHOD nat8 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cdo1: cysteine dioxygenase after Nat8 mercapturic seal.
+  # Cdo1 (CDO1 / cysteine dioxygenase type 1) dioxygenates free L-cysteine:
+  # Cys + O2 -> cysteine sulfinic acid (CSA). Opens the taurine biosynthetic limb
+  # after the glutathione mercapturic export path sealed by Nat8. Without Cdo1,
+  # cysteine never commits to CSA and CSAD/hypotaurine/taurine free-energy flow stalls.
+  # Distinct from Nat8 (Cys-S-conjugate N-acetyltransferase), Cbs/Cgl (transsulfuration),
+  # GshA/GshB/Gor/Gpx/Gst/Ggt/Dug1 (GSH shield), AhcY (SAH hydrolase) — Cdo1 is the
+  # cysteine thiol dioxygenase that yields CSA for CSAD.
+  # Domain: post-Nat8 Cdo1 cysteine dioxygenase / Cys + O2 -> CSA
+  # (not Nat8, not Csad, not Cbs, not Cgl, not Gst).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1
+  #   (Nat8 mercapturic seal -> Cdo1 cysteine dioxygenase / CSA commitment).
+  # Pay take=min(n,atp,energy) - energy stand-in for O2/Fe2+ Cdo1 catalytic cycle.
   # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cdo1 life-force.
-  # Usability: AGI models post-Dug1 Cdo1 Cys dioxygenation under ASSERT.
-  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  # Usability: AGI models post-Nat8 Cdo1 cysteine->CSA under ASSERT.
+  # Cube is SoT. Free energy must flow.
   METHOD cdo1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Csad: cysteine sulfinic acid decarboxylase after Cdo1 cysteine dioxygenase.
+  # Csad (CSAD / cysteine sulfinic acid decarboxylase / CAD) decarboxylates CSA:
+  # cysteine sulfinic acid -> hypotaurine + CO2, committing the taurine biosynthetic
+  # limb after Cdo1. Hypotaurine is later oxidized to taurine; without Csad after Cdo1,
+  # CSA accumulates and taurine free-energy osmolyte/conjugate flow never opens.
+  # Distinct from Cdo1 (Cys->CSA dioxygenase), Nat8 (mercapturic NAT), Gad (Glu decarboxylase),
+  # SpeD (SAM decarboxylase), Cbs/Cgl (transsulfuration) — Csad is the CSA decarboxylase
+  # that yields hypotaurine after Cdo1.
+  # Domain: post-Cdo1 Csad CSA decarboxylase / CSA -> hypotaurine + CO2
+  # (not Cdo1, not Nat8, not Gad, not SpeD, not Cbs).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad
+  #   (Cdo1 cysteine dioxygenase -> Csad CSA decarboxylase / hypotaurine commitment).
+  # Pay take=min(n,atp,energy) - energy stand-in for PLP-dependent Csad catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - csad life-force.
+  # Usability: AGI models post-Cdo1 Csad CSA->hypotaurine under ASSERT.
+  # Cube is SoT. Free energy must flow.
+  METHOD csad n
     GETF THIS alive
     IF LAST_N == 0 THEN
       RET 0
