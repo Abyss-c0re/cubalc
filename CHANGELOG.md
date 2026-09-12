@@ -1,5 +1,13 @@
 # Changelog
 
+## MI 2270 — LIFE_CELL_ASBT (1.15.1769-usability)
+- Feature: `asbt n` apical Na+-dependent bile-acid transporter (SLC10A2/IBAT) after Ost on life_cell
+- Continuum: ...->mrp2->mrp3->ost->asbt
+- Proof: `programs/proof/2270_life_cell_asbt.cubalc` asserts_fail:0 life=423 ap=117 smx=84 flagship_1620=12 sum=636
+- Integration: `atomic_printer_life_asbt.cubalc` (117), `smx_mesh_vesicle_asbt_life.cubalc` (84); flagship_1620=12
+- Gift: apical ileal bile-salt reclaim closes enterohepatic free-energy inlet after basolateral Ost exit
+- Law: cube_is_sot; free_energy_must_flow
+
 ## 1.15.1767-usability — MI 2269 LIFE_CELL_OST (PASS)
 
 - feat(life): `ost n` — Ostα/β (SLC51A/B) basolateral bile-salt facilitated exit after Mrp3 on `life_cell`.

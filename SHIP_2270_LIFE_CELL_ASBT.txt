@@ -1,0 +1,6 @@
+MI 2270 LIFE_CELL_ASBT
+method: asbt n
+Asbt SLC10A2/IBAT apical Na+-bile-acid uptake after Ost
+continuum ...->mrp2->mrp3->ost->asbt
+proofs asserts_fail:0 life+atomic+smx+flagship sum=636
+Cube is SoT. Free energy must flow.
