@@ -17641,4 +17641,82 @@ CLASS Cell
   END
 
 
+  # Slc27a5: bile acyl-CoA synthetase (BACS / VLCS) after CYP27A1 C27-OH.
+  # SLC27A5 (BACS) is the hepatic ER/peroxisome-gate very-long-chain acyl-CoA
+  # synthetase that activates C27-OH BA precursors with CoA after Cyp27a1 opens
+  # side-chain oxidation - it locks BA-CoA formation so classic BA free-energy
+  # can proceed to peroxisomal beta-oxidation under ASSERT.
+  # After Cyp27a1 hydroxylates C27 on 3a,5b-tetrahydro sterols, Slc27a5 is the
+  # CoA-ligase plate so mitosis energy budgets gain an explicit BA-CoA step
+  # instead of a silent CYP27A1 product with no activation limb.
+  # Distinct from Cyp27a1 (sterol 27-hydroxylase), Akr1c4 (3a-HSD), Akr1d1
+  # (5b-reductase), Hsd3b7, Cyp8b1, Cyp7a1 - Slc27a5 is the BA-CoA synthetase
+  # of classic BA side-chain activation.
+  # Without Slc27a5 after Cyp27a1, classic BA free-energy flow stalls at C27-OH
+  # product without CoA-ligase catalytic close; life_cell gut-liver loop loses
+  # the BA-CoA activation decision plate.
+  # Domain: post-CYP27A1 hepatic SLC27A5/BACS bile acyl-CoA synthetase / BA-CoA gate
+  #   -> SLC27A5 free-energy (ATP stand-in for CoA-ligase turnover)
+  # (not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7, not Cyp8b1, not Cyp7a1).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5
+  #   (CYP27A1 sterol 27-hydroxylase -> SLC27A5/BACS BA-CoA synthetase close).
+  # Gift: post-CYP27A1 SLC27A5 so classic BA free-energy path can activate BA-CoA
+  #   under ASSERT after the C27-OH plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc27a5 life-force.
+  # Usability: AGI models post-CYP27A1 hepatic SLC27A5/BACS under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc27a5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
