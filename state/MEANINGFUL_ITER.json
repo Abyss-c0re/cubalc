@@ -5,8 +5,8 @@
   "method": "akr1c4 n",
   "version": "1.15.1780-usability",
   "proof": "programs/proof/2281_life_cell_akr1c4.cubalc",
-  "head": "7d63f21780596c08bd97edef8080f35c59e75b6f",
-  "feat": "7d63f21780596c08bd97edef8080f35c59e75b6f",
+  "head": "bee9e453dcc8830263d1f3234d6404a1ba11120a",
+  "feat": "bee9e453dcc8830263d1f3234d6404a1ba11120a",
   "asserts_fail": 0,
   "asserts_ok_sum": 1092,
   "asserts_ok": {
