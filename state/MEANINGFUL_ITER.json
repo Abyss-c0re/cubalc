@@ -53,10 +53,10 @@
   "note": "METHOD sdhd n ships post-SDHC Complex-II Q-completion; heat+n atp-n energy-n; parent SDHC lives; free energy flows into UQ pool",
   "ts": "2026-09-12T20:26:51Z",
   "summary": "LIFE_CELL_SDHD MI2307 tip==pin sealed PASS asserts_fail=0 sum=211",
-  "head": "8fae9095e8a0ab2decd6f45d29d5be11252e12e4",
-  "HEAD": "8fae9095e8a0ab2decd6f45d29d5be11252e12e4",
-  "pinned_head": "8fae9095e8a0ab2decd6f45d29d5be11252e12e4",
-  "tip": "8fae9095e8a0ab2decd6f45d29d5be11252e12e4",
-  "commit": "8fae9095e",
-  "short": "8fae9095e"
+  "head": "56947053dce46d2bf742040853296e693f23bd67",
+  "HEAD": "56947053dce46d2bf742040853296e693f23bd67",
+  "pinned_head": "56947053dce46d2bf742040853296e693f23bd67",
+  "tip": "56947053dce46d2bf742040853296e693f23bd67",
+  "commit": "56947053d",
+  "short": "56947053d"
 }
