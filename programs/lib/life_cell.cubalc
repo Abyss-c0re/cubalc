@@ -18440,4 +18440,73 @@ CLASS Cell
     RET take
   END
 
+
+  # Fh: fumarate hydratase (fumarase, FH/Fumarase) after SDHA Complex II limb.
+  # FH is the TCA-cycle hydratase that adds water across fumarate (product of SDHA
+  # succinate oxidation) to yield L-malate so free energy can proceed toward the
+  # MDH/OAA hinge and close the BA/odd-chain anaplerotic loop into citrate.
+  # After Sdha oxidizes succinate to fumarate on Complex II, Fh opens the next
+  # TCA gate so fumarate is not a silent pool trapped before malate dehydrogenase.
+  # Distinct from Sdha flavoprotein, Suclg1 ligase, Mut mutase, Mdh oxidoreductase,
+  # and Cs citrate synthase - Fh is the fumarate hydratase / fumarase gate.
+  # Domain: post-SDHA fumarate hydratase (FH) malate TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh
+  # Gift: post-SDHA FH so BA/odd-chain free-energy path can hydrate
+  #   fumarate to L-malate under ASSERT after Complex II open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fh.
+  # Usability: AGI models post-SDHA FH hydratase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END

@@ -1,3 +1,12 @@
+## 1.15.1793-usability — MI 2294 LIFE_CELL_FH
+
+- **feat(life):** FH fumarate hydratase after SDHA on BA continuum
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh` (fumarate → L-malate TCA gate)
+- Proof: `programs/proof/2294_life_cell_fh.cubalc` (asserts_ok=70)
+- Atomic: `programs/science/integration/atomic_printer_life_fh.cubalc` (26)
+- SMX: `programs/science/integration/smx_mesh_vesicle_fh_life.cubalc` (21)
+- asserts_fail: 0 · life 70 · atomic 26 · smx 21 · flagship 12
+
 ## 1.15.1792-usability — MI 2293 LIFE_CELL_SDHA
 
 - **feat(life):** SDHA succinate dehydrogenase after SUCLG1 on BA continuum
