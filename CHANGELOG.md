@@ -1,3 +1,9 @@
+## 1.15.1805-usability — MI 2306 LIFE_CELL_HMGCL
+- feat(life): HMGCL mitochondrial HMG-CoA lyase after HMGCS2 on life_cell continuum
+- Continuum: ...->oxct1->acat1->hmgcs2->hmgcl
+- Proofs asserts_fail:0 — life 130 · atomic 48 · smx 44 · flagship 12 · sum 234
+- METHOD hmgcl n — ketogenic HMG-CoA cleavage gate (acetoacetate + acetyl-CoA)
+
 ## 1.15.1803-usability — MI 2304 LIFE_CELL_ACAT1
 
 - **feat(life):** ACAT1 acetyl-CoA acetyltransferase / acetoacetyl-CoA thiolase after OXCT1 on BA continuum (ketolytic T2 limb)
