@@ -1,13 +1,50 @@
 {
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2262,
+  "MEANINGFUL_ITER": 2262,
+  "iter": 2262,
+  "n": 2262,
   "mi": 2262,
-  "feature": "LIFE_CELL_FMO1",
-  "title": "Fmo1 hypotaurine monooxygenase after Csad",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1",
-  "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5",
-  "head": "f767591658d586b6bbf61846e8f1efe687fd852a",
+  "MI": 2262,
+  "version": "1.15.1760-usability",
+  "VERSION": "1.15.1760-usability",
+  "feature": "life_cell_fmo1",
+  "FEATURE": "LIFE_CELL_FMO1",
+  "name": "LIFE_CELL_FMO1",
+  "title": "Fmo1 hypotaurine monooxygenase after Csad on life_cell",
+  "label": "LIFE_CELL_FMO1",
+  "method": "fmo1 n",
+  "ship": "2262_life_cell_fmo1",
   "proof": "programs/proof/2262_life_cell_fmo1.cubalc",
-  "asserts_ok": 189,
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2262_life_cell_fmo1.cubalc",
+    "programs/science/integration/atomic_printer_life_fmo1.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_fmo1_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->dug1->nat8->cdo1->csad->fmo1",
+  "domain": "Fmo1 hypotaurine monooxygenase after Csad / hypotaurine + O2 -> taurine",
+  "gift": "Fmo1 oxidizes hypotaurine after Csad so taurine free-energy osmolyte flow seals",
+  "proof_sum": {
+    "life": 197,
+    "atomic": 66,
+    "smx": 54,
+    "flagship": 12,
+    "sum": 329,
+    "asserts_fail": 0
+  },
   "asserts_fail": 0,
-  "sum_ok": 316,
-  "status": "PASS"
+  "asserts_ok_sum": 329,
+  "asserts_ok": {
+    "life": 197,
+    "atomic_printer": 66,
+    "smx": 54,
+    "flagship_1620": 12
+  },
+  "HEAD": "406e3a9ec7ea31aba11e4c689997a11aaa1bb8c2",
+  "HEAD_tip": "406e3a9ec7ea31aba11e4c689997a11aaa1bb8c2",
+  "tip": "406e3a9ec7ea31aba11e4c689997a11aaa1bb8c2",
+  "feat": "6ffb60272e5bf8425a8deb12501de53b38959861",
+  "head": "6ffb60272e5bf8425a8deb12501de53b38959861"
 }
