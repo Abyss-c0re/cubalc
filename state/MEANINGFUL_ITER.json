@@ -29,9 +29,9 @@
   "status": "sealed",
   "asserts_fail": 0,
   "anti_bloat": true,
-  "commit": "9f4a5e2fc",
+  "commit": "7995331bb",
   "feat": "73515fcbf2e47b1a226db01741f623e232b6c974",
-  "HEAD": "9f4a5e2fc0018de7b583497089f79431edfebc1c",
+  "HEAD": "7995331bb2897c350d8a2f336f672b104a0f3cb7",
   "proof_sum": {
     "life": 172,
     "atomic": 62,
@@ -51,6 +51,6 @@
   "feat_head": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "FEAT_HEAD": "73515fcbf2e47b1a226db01741f623e232b6c974",
   "feat_short": "73515fcbf2e",
-  "commit_full": "9f4a5e2fc0018de7b583497089f79431edfebc1c",
+  "commit_full": "7995331bb2897c350d8a2f336f672b104a0f3cb7",
   "pure_c": "programs/lib/life_cell.cubalc"
 }
