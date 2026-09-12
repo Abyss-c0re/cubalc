@@ -4,5 +4,5 @@ CYP8B1 sterol 12a-hydroxylase after CYP7A1 classical BA open
 continuum ...->klb->shp->cyp7a1->cyp8b1
 proofs asserts_fail:0 life=690 ap=154 smx=103 flagship_1620=12 sum=959
 feat: b131e26950dd83340d190f10736d73e4e6369566
-HEAD: 97e293b36e662e638ea06e6c8092ddd3d75eb61b
+HEAD: f8c2554375bc20115609e6ba7ccd299fb507ab12
 Cube is SoT. Free energy must flow.
