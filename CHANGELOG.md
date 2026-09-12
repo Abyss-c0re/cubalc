@@ -1,3 +1,13 @@
+## 1.15.1801-usability — LIFE_CELL_SDHB (MI 2303)
+
+### Life continuum
+- **LIFE_CELL_SDHB**: `METHOD sdhb n` — succinate dehydrogenase subunit B (Fe-S) after SCS on BA/odd-chain limb.
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->sdhb`
+- Domain: post-SCS succinate dehydrogenase subunit B (SDHB) Fe-S TCA-progression gate.
+- Gift: transfer electrons from succinate through Fe-S centers under ASSERT after SCS open so free energy proceeds toward FH.
+- Proofs PASS target: life + atomic_printer + smx fail=0.
+- Files: `programs/lib/life_cell.cubalc`, `programs/proof/2303_life_cell_sdhb.cubalc`, `programs/science/integration/atomic_printer_life_sdhb.cubalc`, `programs/science/integration/smx_mesh_vesicle_sdhb_life.cubalc`.
+
 ## 1.15.1799-usability — MI 2300 LIFE_CELL_SCS
 
 - **feat(life):** SCS succinyl-CoA synthetase after OGDH on BA continuum (SUCLA2-family limb)
