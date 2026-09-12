@@ -7,7 +7,7 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 686,
   "proof": "programs/proof/2272_life_cell_fxr.cubalc",
-  "HEAD": "8033409a12b1c546a9b98ee2150278aff30314c3",
+  "HEAD": "e5fdf5d889d664dac861b359e973b0d001b5692e",
   "feat": "8033409a12b1c546a9b98ee2150278aff30314c3",
   "law": "cube_is_sot; free_energy_must_flow"
 }
