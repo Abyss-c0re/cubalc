@@ -4,10 +4,10 @@
 - **FEATURE**: LIFE_CELL_FH
 - **method**: fh n
 - **version**: 1.15.1793-usability
-- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh
+- **continuum**: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh
 - **asserts_fail**: 0
 - **asserts_ok sum**: 129 (life=70 atomic_printer=26 smx=21 flagship_1620=12)
 - **proof**: programs/proof/2294_life_cell_fh.cubalc
-- **HEAD**: 677da4da8625df16f2f1c73fea23c1d150299e78
+- **HEAD**: 5a7c07ee8ebb9d460d4a20be799872589d61e637
 - **feat**: 468348969f21a0d9f2ab2c413fa4ba75063fcb78
 - **law**: cube_is_sot; free_energy_must_flow
