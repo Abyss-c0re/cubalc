@@ -1,0 +1,11 @@
+LIFE_CELL_METE (MI 2248) — shipped
+
+- feat: MetE cobalamin-independent methionine synthase after LuxS on life_cell
+- continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn->luxs->mete
+- method: mete n
+- proof: programs/proof/2248_life_cell_mete.cubalc — asserts_ok=240, fail=0
+- boards: atomic_printer_life_mete (85) + smx_mesh_vesicle_mete_life (73) + flagship_1620 (12)
+- sum asserts_ok=410 asserts_fail=0
+- version: 1.15.1745-usability
+- feat seal: e4b1bff6d804e67f8d4ea8ec542838418d96efe5
+- Cube is SoT. Free energy must flow.

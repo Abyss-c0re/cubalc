@@ -1,0 +1,12 @@
+LIFE_CELL_GOR MI 2255
+asserts_fail: 0
+asserts_ok_sum: 104
+feat: 3b841431aacb88119b903a14ac3d9c04c3f833e7
+HEAD/tip: 5eeeaf5ee36019267ea1dfac95063b16b3f3fc20
+branch: life-cell-gor-mi2255
+sealed: true
+method: gor n
+continuum: ...->gsha->gshb->gor
+proof: programs/proof/2255_life_cell_gor.cubalc
+version: 1.15.1753-usability
+Cube is SoT. Free energy must flow.

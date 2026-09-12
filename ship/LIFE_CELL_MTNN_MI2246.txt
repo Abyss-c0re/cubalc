@@ -1,0 +1,13 @@
+LIFE_CELL_MTNN MI2246
+method: mtnn n
+version: 1.15.1743-usability
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk->sped->mtnn
+domain: MtnN MTA/SAH nucleosidase after SpeD/MetK
+asserts_fail: 0
+asserts_ok: life=240 atomic_printer=84 smx=72 flagship_1620=12 sum=408
+proof: programs/proof/2246_life_cell_mtnn.cubalc
+HEAD: 3f018382916321316140dc59ebf13cc56e84a529
+FEAT_HEAD: 3f018382916321316140dc59ebf13cc56e84a529
+cube: SoT
+free_energy: must_flow
+verified_run: asserts_fail:0

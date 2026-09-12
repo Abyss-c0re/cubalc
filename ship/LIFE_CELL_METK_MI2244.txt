@@ -1,0 +1,13 @@
+LIFE_CELL_METK MI2244
+method: metk n
+version: 1.15.1740-usability
+continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map->rimi->metk
+domain: MetK methionine adenosyltransferase after RimI
+asserts_fail: 0
+asserts_ok: life=240 atomic_printer=84 smx=72 flagship_1620=12 sum=408
+proof: programs/proof/2244_life_cell_metk.cubalc
+HEAD: 255b65c29eb97f402a13ebc7614bfd910203747e
+FEAT_HEAD: 33a70d8f22a931c859a610cb887ee5835999e908
+cube: SoT
+free_energy: must_flow
+verified_run: asserts_fail:0
