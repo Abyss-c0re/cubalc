@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_FORCE MI2309 atomic printer: AACS after SLC16A7 on BA/odd-chain ketogenic limb.
+# LIFE_FORCE MI2311 atomic printer: AACS after SLC16A7 on BA/odd-chain ketogenic limb.
 # Place cells, bond metabolism, energize, then open BA beta-ox + propionyl gate:
-#   amacr -> acox2 -> hsd17b4 -> scp2 -> acot8 -> pcca -> mcee -> mut -> suclg1 -> sdha -> fh -> mdh -> cs -> aco2 -> idh2 -> ogdh -> scs -> dld -> dlst -> oxct1 -> acat1 -> hmgcs2 -> hmgcl -> bdh1 -> slc16a1 -> aacs.
-# Wonder: AGI sees ASSERT heat+n atp-n energy-n on aacs after SLC16A7 open.
+#   amacr -> acox2 -> hsd17b4 -> scp2 -> acot8 -> pcca -> mcee -> mut -> suclg1 -> sdha -> fh -> mdh -> cs -> aco2 -> idh2 -> ogdh -> scs -> dld -> dlst -> oxct1 -> acat1 -> hmgcs2 -> hmgcl -> bdh1 -> slc16a1 -> slc16a7 -> aacs -> aacs.
+# Wonder: AGI sees ASSERT heat+n atp-n energy-n on aacs after AACS open.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY printer OF Cell 1 60 0
@@ -154,6 +154,11 @@ SEND printer slc16a1 1
 ASSERT LAST_N == 1 "printer slc16a1 open before aacs"
 SEND printer slc16a7 1
 ASSERT LAST_N == 1 "printer slc16a7 open before aacs"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer emb 1
+ASSERT LAST_N == 1 "printer emb open before aacs"
 GETF printer heat
 LET h0 = LAST_N
 GETF printer energy
@@ -161,7 +166,7 @@ LET e0 = LAST_N
 GETF printer atp
 LET a0 = LAST_N
 SEND printer aacs 3
-ASSERT LAST_N == 3 "printer aacs activate 3"
+ASSERT LAST_N == 3 "printer aacs import 3"
 GETF printer heat
 ASSERT LAST_N == h0 + 3 "printer aacs heat+3"
 GETF printer energy
@@ -249,6 +254,11 @@ SEND ink slc16a1 1
 ASSERT LAST_N == 1 "ink slc16a1 open before aacs"
 SEND ink slc16a7 1
 ASSERT LAST_N == 1 "ink slc16a7 open before aacs"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink emb 1
+ASSERT LAST_N == 1 "ink emb open before aacs"
 GETF ink heat
 LET ih = LAST_N
 GETF ink energy

@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_CELL_AACS — cytosolic AACS acetoacetyl-CoA synthetase after AACS on BA continuum
-# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->aacs->aacs (AACS after AACS)
-# Gift: AACS opens cytosolic ketolytic acetoacetate-CoA activation gate under ASSERT after AACS open.
-# Domain: post-AACS cytosolic acetoacetyl-CoA synthetase (AACS) ketolytic anabolic gate.
+# LIFE_CELL_AACS — cytosolic AACS acetoacetyl-CoA synthetase after EMB on BA continuum
+# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->emb->aacs (AACS after EMB)
+# Gift: AACS opens cytosolic ketolytic acetoacetate-CoA activation gate under ASSERT after EMB open.
+# Domain: post-EMB cytosolic acetoacetyl-CoA synthetase (AACS) ketolytic anabolic gate.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY mito OF Cell 1 44 0
@@ -166,11 +166,16 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito slc16a1 1
 ASSERT LAST_N == 1 "mito slc16a1 open before aacs"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
 SEND mito slc16a7 1
 ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before aacs"
 GETF mito heat
 LET f_h = LAST_N
 GETF mito energy
@@ -269,11 +274,11 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito slc16a1 1
 ASSERT LAST_N == 1 "mito slc16a1 open before aacs"
-SEND mito slc16a7 1
-ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before aacs"
 SEND mito aacs 0
 ASSERT LAST_N == 0 "mito aacs n0"
 
@@ -318,11 +323,16 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito slc16a1 1
 ASSERT LAST_N == 1 "mito slc16a1 open before aacs"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
 SEND mito slc16a7 1
 ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before aacs"
 GETF mito heat
 LET f2_h = LAST_N
 GETF mito energy
@@ -381,8 +391,6 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito slc16a1 1
 ASSERT LAST_N == 1 "mito slc16a1 open before aacs"
-SEND mito slc16a7 1
-ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
@@ -394,6 +402,13 @@ GETF mito heat
 LET fc_h = LAST_N
 GETF mito age
 LET fc_age = LAST_N
+SEND mito slc16a7 1
+ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before aacs"
 SEND mito aacs 100
 GETF mito atp
 LET fc_a2 = LAST_N
@@ -498,6 +513,13 @@ ASSERT LAST_N == 1 "peri acat1 open before aacs"
 SEND peri photosynth 10
 SEND peri charge 10
 SEND peri feed 8
+SEND peri slc16a7 1
+ASSERT LAST_N == 1 "peri slc16a7 open before aacs"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri emb 1
+ASSERT LAST_N == 1 "peri emb open before aacs"
 GETF peri heat
 LET q_h = LAST_N
 GETF peri energy
@@ -612,6 +634,13 @@ ASSERT LAST_N == 1 "nest acat1 open before aacs"
 SEND nest photosynth 10
 SEND nest charge 10
 SEND nest feed 8
+SEND nest slc16a7 1
+ASSERT LAST_N == 1 "nest slc16a7 open before aacs"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest emb 1
+ASSERT LAST_N == 1 "nest emb open before aacs"
 GETF nest heat
 LET b_h = LAST_N
 GETF nest energy
@@ -713,8 +742,6 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito slc16a1 1
 ASSERT LAST_N == 1 "mito slc16a1 open before aacs"
-SEND mito slc16a7 1
-ASSERT LAST_N == 1 "mito slc16a7 open before aacs"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8

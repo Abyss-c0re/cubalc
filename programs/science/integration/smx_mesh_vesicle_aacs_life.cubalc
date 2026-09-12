@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX mesh vesicle LIFE_FORCE MI2309: AACS after SLC16A7 on ketogenic limb.
-# Continuum ...->dld->dlst->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->aacs
-# Gift: AACS opens cytosolic ketogenic AACS monocarboxylate activation gate under ASSERT after SLC16A7 open.
-# Domain: post-SLC16A7 cytosolic acetoacetyl-CoA synthetase (AACS) ketogenic activation gate.
+# SMX mesh vesicle LIFE_FORCE MI2311: SLC16A7 after SLC16A1 on ketogenic limb.
+# Continuum ...->dld->dlst->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7
+# Gift: AACS opens plasma-membrane embigin MCT2 accessory chaperone gate under ASSERT after AACS open.
+# Domain: post-SLC16A7 plasma-membrane embigin (AACS) MCT2 accessory chaperone gate.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY vesicle OF Cell 1 55 0
@@ -132,6 +132,11 @@ SEND vesicle slc16a1 1
 ASSERT LAST_N == 1 "vesicle slc16a1 open before aacs"
 SEND vesicle slc16a7 1
 ASSERT LAST_N == 1 "vesicle slc16a7 open before aacs"
+SEND vesicle photosynth 10
+SEND vesicle charge 10
+SEND vesicle feed 8
+SEND vesicle emb 1
+ASSERT LAST_N == 1 "vesicle emb open before aacs"
 GETF vesicle heat
 LET vh = LAST_N
 GETF vesicle energy
@@ -227,6 +232,11 @@ SEND cargo slc16a1 1
 ASSERT LAST_N == 1 "cargo slc16a1 open before aacs"
 SEND cargo slc16a7 1
 ASSERT LAST_N == 1 "cargo slc16a7 open before aacs"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo emb 1
+ASSERT LAST_N == 1 "cargo emb open before aacs"
 GETF cargo heat
 LET ch = LAST_N
 GETF cargo energy
