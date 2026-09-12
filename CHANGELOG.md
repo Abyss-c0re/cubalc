@@ -1,3 +1,10 @@
+## 1.15.1790-usability — MI 2291 LIFE_CELL_MUT
+
+- feat(life): MUT methylmalonyl-CoA mutase after MCEE on BA continuum
+- METHOD mcee n + METHOD mut n: epimerase then B12 mutase plate heat+n atp-n energy-n
+- Continuum ...->scp2->acot8->pcca->mcee->mut; proofs life+atomic+smx asserts_fail:0
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1788-usability — MI 2289 LIFE_CELL_PCCA
 
 - feat(life): PCCA propionyl-CoA carboxylase after ACOT8 on BA continuum

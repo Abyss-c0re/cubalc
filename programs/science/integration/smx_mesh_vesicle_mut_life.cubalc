@@ -1,0 +1,79 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle LIFE_FORCE MI2291: MUT methylmalonyl-CoA mutase pulse on sealed exchange.
+# Vesicle cells exchange FOLDBITS-style readiness while mut isomerizes L-methylmalonyl-CoA.
+# Gift: post-MCEE MUT gate visible on SMX neighbor pair under ASSERT.
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle_a OF Cell 1 48 0
+ENTITY vesicle_b OF Cell 1 48 0
+ENTITY ghost OF Cell 0 8 0
+
+SEND vesicle_a set_threshold 9
+SEND vesicle_b set_threshold 9
+
+SEND vesicle_a photosynth 26
+SEND vesicle_a glycolyse 18
+SEND vesicle_a charge 24
+SEND vesicle_a feed 20
+SEND vesicle_b photosynth 26
+SEND vesicle_b glycolyse 18
+SEND vesicle_b charge 24
+SEND vesicle_b feed 20
+
+SEND vesicle_a pcca 2
+ASSERT LAST_N == 2 "vesA pcca"
+SEND vesicle_a photosynth 10
+SEND vesicle_a charge 10
+SEND vesicle_a feed 8
+SEND vesicle_a mcee 2
+ASSERT LAST_N == 2 "vesA mcee"
+SEND vesicle_a photosynth 10
+SEND vesicle_a charge 10
+SEND vesicle_a feed 8
+GETF vesicle_a heat
+LET ah = LAST_N
+GETF vesicle_a energy
+LET ae = LAST_N
+GETF vesicle_a atp
+LET aa = LAST_N
+SEND vesicle_a mut 2
+ASSERT LAST_N == 2 "vesA mut"
+GETF vesicle_a heat
+ASSERT LAST_N == ah + 2 "vesA mut h+2"
+GETF vesicle_a energy
+ASSERT LAST_N == ae - 2 "vesA mut e-2"
+GETF vesicle_a atp
+ASSERT LAST_N == aa - 2 "vesA mut a-2"
+GETF vesicle_a ready
+ASSERT LAST_N >= 0 "vesA ready defined"
+
+GETF vesicle_b heat
+LET bh = LAST_N
+GETF vesicle_b energy
+LET be = LAST_N
+GETF vesicle_b atp
+LET ba = LAST_N
+SEND vesicle_b mut 3
+ASSERT LAST_N == 3 "vesB mut"
+GETF vesicle_b heat
+ASSERT LAST_N == bh + 3 "vesB mut h+3"
+GETF vesicle_b energy
+ASSERT LAST_N == be - 3 "vesB mut e-3"
+GETF vesicle_b atp
+ASSERT LAST_N == ba - 3 "vesB mut a-3"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive"
+
+SEND ghost mut 2
+ASSERT LAST_N == 0 "ghost mut 0"
+GETF ghost alive
+ASSERT LAST_N == 0 "ghost dead"
+
+GETF vesicle_a alive
+ASSERT LAST_N == 1 "vesA alive final"
+GETF vesicle_b alive
+ASSERT LAST_N == 1 "vesB alive final"
+ASSERT 1 == 1 "smx_mesh_vesicle_mut_life PASS"
+ASSERT 1 == 1 "SMX MUT mutase mesh PASS"
