@@ -1,5 +1,14 @@
 # Changelog
 
+## MI 2276 — LIFE_CELL_SHP (1.15.1775-usability)
+- Feature: `shp n` small heterodimer partner (NR0B2) after KLB ternary FGFR4/FGF19/KLB on life_cell
+- Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp
+- Proof: `programs/proof/2276_life_cell_shp.cubalc` asserts_fail:0 life=613 ap=149 smx=103 flagship_1620=12 sum=877
+- Integration: `atomic_printer_life_shp.cubalc` (149), `smx_mesh_vesicle_shp_life.cubalc` (103); flagship_1620=12
+- Gift: post-KLB SHP/NR0B2 so ternary FGF19/FGFR4/KLB free-energy complex can induce NR0B2 and authorize CYP7A1 repression under ASSERT
+- Law: cube_is_sot; free_energy_must_flow
+
+
 ## MI 2271 — LIFE_CELL_FABP6 (1.15.1770-usability)
 - Feature: `fabp6 n` ileal bile-acid binding protein (FABP6/IBABP/ILBP) after Asbt on life_cell
 - Continuum: ...->mrp2->mrp3->ost->asbt->fabp6
