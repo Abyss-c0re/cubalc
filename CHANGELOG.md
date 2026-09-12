@@ -1,3 +1,11 @@
+## 1.15.1803-usability — MI 2304 LIFE_CELL_ACAT1
+
+- **feat(life):** ACAT1 acetyl-CoA acetyltransferase / acetoacetyl-CoA thiolase after OXCT1 on BA continuum (ketolytic T2 limb)
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1->acat1`
+- Method: `METHOD acat1 n` — post-OXCT1 ketolytic thiolase gate under ASSERT
+- Proofs: life 118 + atomic 44 + smx 40 + flagship 12 = **214 asserts_fail:0**
+- Gift: after OXCT1 mints acetoacetyl-CoA, ACAT1 thiolyses to acetyl-CoA so ketone carbon feeds TCA
+
 ## 1.15.1801-usability — MI 2302 LIFE_CELL_DLST
 
 - **feat(life):** DLST dihydrolipoamide succinyltransferase after DLD on BA continuum (OGDHC-E2 limb)
