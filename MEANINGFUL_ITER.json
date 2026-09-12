@@ -48,13 +48,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell sdhb",
-  "HEAD": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "head": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "tip": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "pin": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "pinned_head": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "git_head": "b80c2356c96147544c148fc2777235d09b4d60f4",
-  "commit": "b80c2356c961",
-  "short": "b80c2356c961",
-  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=b80c2356c961"
+  "HEAD": "77385190a6d05c301336fa4d473858a60b03890a",
+  "head": "77385190a6d05c301336fa4d473858a60b03890a",
+  "tip": "77385190a6d05c301336fa4d473858a60b03890a",
+  "pin": "77385190a6d05c301336fa4d473858a60b03890a",
+  "pinned_head": "77385190a6d05c301336fa4d473858a60b03890a",
+  "git_head": "77385190a6d05c301336fa4d473858a60b03890a",
+  "commit": "77385190a6d0",
+  "short": "77385190a6d0",
+  "summary": "LIFE_CELL_SDHB MI2303 tip==pin sealed PASS asserts_ok=189 HEAD=77385190a6d0"
 }
