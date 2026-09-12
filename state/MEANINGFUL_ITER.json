@@ -42,12 +42,12 @@
     "smx": 71,
     "flagship_1620": 12
   },
-  "HEAD": "PENDING",
-  "head": "PENDING",
-  "feat": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING",
-  "HEAD_tip": "PENDING",
+  "HEAD": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "head": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "feat": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "FEAT_HEAD": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "tip": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "pin": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
+  "HEAD_tip": "7a582b4492872c18dedf3cf17ec37484b546c9f0",
   "law": "Cube is SoT. Free energy must flow."
 }
