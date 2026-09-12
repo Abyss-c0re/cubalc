@@ -1,0 +1,7 @@
+LIFE_CELL_GGT MI 2258
+method: ggt n
+continuum: ...->gsha->gshb->gor->gpx->gst->ggt
+version: 1.15.1756-usability
+proof: programs/proof/2258_life_cell_ggt.cubalc
+asserts: life=164 atomic=49 smx=42 flagship=12 sum=267 fail=0
+Cube is SoT. Free energy must flow.
