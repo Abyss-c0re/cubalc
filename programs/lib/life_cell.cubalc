@@ -16865,5 +16865,84 @@ CLASS Cell
     RET take
   END
 
+  # Fgf19: fibroblast growth factor 19 enterokine after FXR/NR1H4 nuclear BA sense.
+  # FGF19 (FGF15 in mouse) is the ileal hormone induced when ligand-bound FXR opens
+  # the nuclear BA decision plate — the endocrine free-energy signal that travels
+  # portal blood to hepatic FGFR4/beta-Klotho and represses Cyp7a1 BA synthesis,
+  # closing gut-liver feedback after Fabp6 shuttle and FXR receptor work.
+  # After FXR commits nuclear BA sensing, Fgf19 secretes the enterokine so mitosis
+  # energy budgets gain an endocrine feedback limb instead of a silent nuclear
+  # receptor decision that never leaves the enterocyte.
+  # Distinct from Fxr (NR1H4 nuclear BA receptor), Fabp6 (IBABP cytosolic shuttle),
+  # Asbt (SLC10A2 apical uptake), Ost (SLC51 basolateral exit), Shp/Nr0b2 (hepatic
+  # FXR partner) — Fgf19 is the secreted FGF family enterokine that carries the
+  # post-FXR gut decision to liver FGFR4.
+  # Without Fgf19 after Fxr, nuclear BA sensing stays cell-autonomous; life_cell
+  # gut-liver free-energy loop never authorizes endocrine repression of hepatic
+  # BA synthesis after FXR opens the nuclear gate.
+  # Domain: post-FXR FGF19 enterokine secretion / nuclear BA-FXR decision
+  #   -> portal FGF19 endocrine signal (ATP stand-in for translation/secretion)
+  # (not Fxr, not Fabp6, not Asbt, not Ost, not Shp, not Cyp7a1).
+  # Continuum: ...->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19
+  #   (FXR nuclear BA receptor decision -> FGF19 enterokine gut-liver feedback).
+  # Gift: post-FXR FGF19 enterokine so nuclear free-energy decision can authorize
+  #   FGF19-class repression signals back to hepatic BA synthesis under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fgf19 life-force.
+  # Usability: AGI models post-FXR FGF19 enterokine under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fgf19 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 END
