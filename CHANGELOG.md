@@ -1,3 +1,11 @@
+## 1.15.1780-usability — MI 2281 LIFE_CELL_AKR1C4
+
+- feat(life): METHOD akr1c4 n after akr1d1 (3alpha-HSD classical BA plate)
+- proof: programs/proof/2281_life_cell_akr1c4.cubalc PASS asserts_ok=807 fail=0
+- flagship 1620: 12/0 PASS
+- continuum: ...->hsd3b7->akr1d1->akr1c4
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## MI 2280 — LIFE_CELL_AKR1D1 (1.15.1779-usability)
