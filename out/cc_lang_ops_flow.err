@@ -1,0 +1,7 @@
+src/lang/lang_ops_flow.c: In function ‘cubalc_lang_ops_flow’:
+src/lang/lang_ops_flow.c:16296:11: warning: ‘memcpy’ reading 255 bytes from a region of size 128 [-Wstringop-overread]
+16296 |           memcpy(out, needle, o);
+      |           ^~~~~~~~~~~~~~~~~~~~~~
+src/lang/lang_ops_flow.c:16159:50: note: source object ‘needle’ of size 128
+16159 |     char oname[48], fname[48], op[24], hay[256], needle[128], out[256];
+      |                                                  ^~~~~~

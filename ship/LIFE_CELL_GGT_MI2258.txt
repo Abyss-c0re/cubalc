@@ -1,0 +1,13 @@
+LIFE_CELL_GGT MI 2258
+asserts_fail: 0
+asserts_ok_sum: 249
+life: 146
+atomic_printer: 49
+smx: 42
+flagship_1620: 12
+feat: 9148358b6420bead487d5a97050172b29a136e4c
+HEAD: 6d3cabd1afeb61215f10454a7269701c450ae11d
+method: ggt n
+continuum: ...->gor->gpx->gst->ggt
+note: Ggt gamma-glutamyltransferase after Gst
+Cube is SoT. Free energy must flow.

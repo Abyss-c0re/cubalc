@@ -1,0 +1,7 @@
+src/lang/lang_ops_core.c: In function ‘cubalc_lang_ops_core’:
+src/lang/lang_ops_core.c:37768:13: warning: ‘memcpy’ reading 8191 bytes from a region of size 512 [-Wstringop-overread]
+37768 |             memcpy(out, val, take);
+      |             ^~~~~~~~~~~~~~~~~~~~~~
+src/lang/lang_ops_core.c:37724:38: note: source object ‘val’ of size 512
+37724 |       char bag[CUBALC_HOST_STR_MAX], val[512], out[CUBALC_HOST_STR_MAX];
+      |                                      ^~~
