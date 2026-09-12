@@ -23,7 +23,7 @@
     "programs/science/integration/smx_mesh_vesicle_acox2_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->cyp27a1->slc27a5->amacr->acox2",
+  "continuum": "...->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2",
   "asserts_ok": {
     "life": 969,
     "atomic_printer": 190,
@@ -33,11 +33,10 @@
   "asserts_ok_sum": 1292,
   "asserts_fail": 0,
   "flagship_1620": "PASS 12/0",
-  "HEAD": "0bd44ae1eda90ecbb4d6eeaff7af6f5df4c1e33f",
-  "feat": "12eb08fcbb44993a7c7cde1fd94476b21649755d",
-  "head": "0bd44ae1eda90ecbb4d6eeaff7af6f5df4c1e33f",
   "law": [
     "cube_is_sot",
     "free_energy_must_flow"
-  ]
+  ],
+  "HEAD": "7f14e51a0ef91fc60e941ed9e432bff25c9bc1ce",
+  "feat": "12eb08fcbb44993a7c7cde1fd94476b21649755d"
 }
