@@ -7,16 +7,27 @@
   "asserts_fail": 0,
   "asserts_ok": {
     "life": 104,
-    "sum": 104
+    "atomic_printer": 34,
+    "smx": 27,
+    "flagship_1620": 12,
+    "sum": 177
   },
   "proof": "programs/proof/2255_life_cell_gor.cubalc",
-  "HEAD": "e12a9065dda46330d7108aa3391ef530b3825ffe",
+  "HEAD": "3dfe6a7300d86687383abbba8f2be33de7bda711",
   "feat": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
   "creed": "Cube is SoT. Free energy must flow.",
-  "head": "e12a9065dda46330d7108aa3391ef530b3825ffe",
-  "tip": "e12a9065dda46330d7108aa3391ef530b3825ffe",
+  "head": "3dfe6a7300d86687383abbba8f2be33de7bda711",
+  "tip": "3dfe6a7300d86687383abbba8f2be33de7bda711",
   "feat_head": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
-  "branch": "life-cell-gor-mi2255",
+  "feat_commit": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
+  "FEAT_HEAD": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
+  "MEANINGFUL_ITER": 2255,
+  "meaningful_iter": 2255,
+  "iter": 2255,
+  "n": 2255,
+  "FEATURE": "LIFE_CELL_GOR",
+  "pass": true,
   "sealed": true,
-  "pass": true
+  "asserts_ok_sum": 177,
+  "branch": "life-cell-gor-mi2255"
 }
