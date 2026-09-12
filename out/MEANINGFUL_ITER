@@ -6,8 +6,8 @@
 - **version**: 1.15.1791-usability
 - **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->sucl
 - **asserts_fail**: 0
-- **asserts_ok sum**: 1334 (life=1278 atomic_printer=25 smx=19 flagship_1620=12)
+- **asserts_ok sum**: 1338 (life=1282 atomic_printer=25 smx=19 flagship_1620=12)
 - **proof**: programs/proof/2292_life_cell_sucl.cubalc
-- **HEAD**: 9ae84ce3825b9827f62f2eea1caa9949bbd868cc
+- **HEAD**: 57895418a656a06ff4dbe17a143d2f8d5ba1573e
 - **feat**: ccb9ece06df9d1201d3168c040537608954843b7
 - **law**: cube_is_sot; free_energy_must_flow
