@@ -42,10 +42,10 @@
     "smx": 54,
     "flagship_1620": 12
   },
-  "HEAD": "490dca3ef1744a38668ccf2802b148e688a5c2e2",
-  "head": "490dca3ef1744a38668ccf2802b148e688a5c2e2",
-  "tip": "490dca3ef1744a38668ccf2802b148e688a5c2e2",
-  "HEAD_tip": "490dca3ef1744a38668ccf2802b148e688a5c2e2",
+  "HEAD": "15d1e44775ee96e592de82bec7df01a3136ce8c1",
+  "head": "15d1e44775ee96e592de82bec7df01a3136ce8c1",
+  "tip": "15d1e44775ee96e592de82bec7df01a3136ce8c1",
+  "HEAD_tip": "15d1e44775ee96e592de82bec7df01a3136ce8c1",
   "feat": "c430cd3d661f9caf9c55bf662ed973342bb92da5",
   "status": "PASS"
 }
