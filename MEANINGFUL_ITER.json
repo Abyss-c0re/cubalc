@@ -13,7 +13,7 @@
     "sum": 419
   },
   "proof": "programs/proof/2254_life_cell_gshb.cubalc",
-  "HEAD": "30402e01644006ba57ce9712fd7d2e67a0aa2f73",
+  "HEAD": "26bfd28e4d80be24c49b28e6b858f7b91573e5d2",
   "feat": "e2ac56058c3bb6614436359d5913a2eab8151a2e",
   "note": "Cube is SoT. Free energy must flow."
 }
