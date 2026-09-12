@@ -38,7 +38,7 @@
   "asserts_ok_sum": 129,
   "asserts_ok": 129,
   "HEAD": "PENDING",
-  "feat": "PENDING",
+  "feat": "468348969f21a0d9f2ab2c413fa4ba75063fcb78",
   "head": "PENDING",
   "law": "cube_is_sot; free_energy_must_flow",
   "status": "PASS"
