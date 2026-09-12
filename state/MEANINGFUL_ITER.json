@@ -1,20 +1,54 @@
 {
-  "schema": "cubalc.meaningful_iter.v1",
-  "mi": 2281,
-  "feature": "LIFE_CELL_AKR1C4",
-  "method": "akr1c4 n",
-  "version": "1.15.1780-usability",
-  "proof": "programs/proof/2281_life_cell_akr1c4.cubalc",
-  "head": "bee9e453dcc8830263d1f3234d6404a1ba11120a",
-  "feat": "bee9e453dcc8830263d1f3234d6404a1ba11120a",
-  "asserts_fail": 0,
-  "asserts_ok_sum": 1092,
-  "asserts_ok": {
-    "life": 807,
-    "atomic_printer": 170,
-    "smx": 103,
-    "flagship_1620": 12
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2282,
+  "MEANINGFUL_ITER": 2282,
+  "iter": 2282,
+  "n": 2282,
+  "mi": 2282,
+  "MI": 2282,
+  "version": "1.15.1781-usability",
+  "VERSION": "1.15.1781-usability",
+  "feature": "LIFE_CELL_CYP27A1",
+  "FEATURE": "LIFE_CELL_CYP27A1",
+  "name": "LIFE_CELL_CYP27A1",
+  "title": "CYP27A1 sterol 27-hydroxylase after AKR1C4 on life_cell continuum",
+  "label": "LIFE_CELL_CYP27A1",
+  "method": "cyp27a1 n",
+  "ship": "2282_life_cell_cyp27a1",
+  "proof": "programs/proof/2282_life_cell_cyp27a1.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2282_life_cell_cyp27a1.cubalc",
+    "programs/science/integration/atomic_printer_life_cyp27a1.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_cyp27a1_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1",
+  "domain": "post-AKR1C4 mitochondrial CYP27A1 sterol 27-hydroxylase / C27 gate",
+  "gift": "CYP27A1 after AKR1C4 so classic BA free-energy path can hydroxylate C27 under ASSERT after 3a,5b close.",
+  "proof_sum": {
+    "life": 845,
+    "atomic": 178,
+    "smx": 109,
+    "flagship": 12,
+    "sum": 1144,
+    "asserts_fail": 0
   },
-  "continuum_tail": "hsd3b7->akr1d1->akr1c4",
-  "ok": true
+  "asserts_fail": 0,
+  "asserts_ok_sum": 1144,
+  "asserts_ok": {
+    "life": 845,
+    "atomic_printer": 178,
+    "smx": 109,
+    "flagship_1620": 12,
+    "sum": 1144
+  },
+  "HEAD": "862903f69f8b25d4323a47e0e09e4a8f1e9048db",
+  "feat": "862903f69f8b25d4323a47e0e09e4a8f1e9048db",
+  "head": "862903f69f8b25d4323a47e0e09e4a8f1e9048db",
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ],
+  "tip": "862903f69f8b25d4323a47e0e09e4a8f1e9048db"
 }
