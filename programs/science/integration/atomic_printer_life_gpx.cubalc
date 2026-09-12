@@ -1,0 +1,196 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# Atomic printer life force — Gpx glutathione peroxidase after Gor
+# Extends printer continuum after Gor: pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx
+# Gift: Gpx detoxes ROOH with 2 GSH so the glutathione shield peroxidase limb runs on the printer board.
+# Cube is SoT. Free energy must flow.
+
+ENTITY printer OF Cell 1 60 0
+SEND printer set_threshold 8
+SEND printer pulse 4
+SEND printer photosynth 48
+SEND printer glycolyse 40
+SEND printer pump 30
+SEND printer photophos 28
+SEND printer charge 44
+SEND printer feed 40
+
+SEND printer pepf 2
+ASSERT LAST_N == 2 "ap pepf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer pdf 2
+ASSERT LAST_N == 2 "ap pdf"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 20
+SEND printer feed 14
+SEND printer map 2
+ASSERT LAST_N == 2 "ap map"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nata 2
+ASSERT LAST_N == 2 "ap nata"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natb 2
+ASSERT LAST_N == 2 "ap natb"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer natc 2
+ASSERT LAST_N == 2 "ap natc"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer nate 2
+ASSERT LAST_N == 2 "ap nate"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer mete 2
+ASSERT LAST_N == 2 "ap mete"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer metk 2
+ASSERT LAST_N == 2 "ap metk"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+SEND printer ahcy 2
+ASSERT LAST_N == 2 "ap ahcy"
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+
+SEND printer cbs 3
+ASSERT LAST_N == 3 "ap pre cbs3"
+GETF printer heat
+ASSERT LAST_N == h0 + 3 "ap pre cbs heat"
+GETF printer energy
+ASSERT LAST_N == e0 - 3 "ap pre cbs energy"
+GETF printer atp
+ASSERT LAST_N == a0 - 3 "ap pre cbs atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h1 = LAST_N
+GETF printer energy
+LET e1 = LAST_N
+GETF printer atp
+LET a1 = LAST_N
+
+SEND printer cgl 3
+ASSERT LAST_N == 3 "ap pre cgl3"
+GETF printer heat
+ASSERT LAST_N == h1 + 3 "ap pre cgl heat"
+GETF printer energy
+ASSERT LAST_N == e1 - 3 "ap pre cgl energy"
+GETF printer atp
+ASSERT LAST_N == a1 - 3 "ap pre cgl atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h2 = LAST_N
+GETF printer energy
+LET e2 = LAST_N
+GETF printer atp
+LET a2 = LAST_N
+
+SEND printer gsha 3
+ASSERT LAST_N == 3 "ap pre gsha3"
+GETF printer heat
+ASSERT LAST_N == h2 + 3 "ap pre gsha heat"
+GETF printer energy
+ASSERT LAST_N == e2 - 3 "ap pre gsha energy"
+GETF printer atp
+ASSERT LAST_N == a2 - 3 "ap pre gsha atp"
+
+SEND printer photosynth 18
+SEND printer glycolyse 14
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET h3 = LAST_N
+GETF printer energy
+LET e3 = LAST_N
+GETF printer atp
+LET a3 = LAST_N
+
+SEND printer gshb 3
+ASSERT LAST_N == 3 "ap gshb3"
+GETF printer heat
+ASSERT LAST_N == h3 + 3 "ap gshb heat"
+GETF printer energy
+ASSERT LAST_N == e3 - 3 "ap gshb energy"
+GETF printer atp
+ASSERT LAST_N == a3 - 3 "ap gshb atp"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gshb"
+
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hg = LAST_N
+GETF printer energy
+LET eg = LAST_N
+GETF printer atp
+LET ag = LAST_N
+SEND printer gor 3
+ASSERT LAST_N == 3 "ap gor3"
+GETF printer heat
+ASSERT LAST_N == hg + 3 "ap gor h+3"
+GETF printer energy
+ASSERT LAST_N == eg - 3 "ap gor e-3"
+GETF printer atp
+ASSERT LAST_N == ag - 3 "ap gor a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gor"
+SEND printer photosynth 18
+SEND printer charge 22
+SEND printer feed 16
+GETF printer heat
+LET hx = LAST_N
+GETF printer energy
+LET ex = LAST_N
+GETF printer atp
+LET ax = LAST_N
+SEND printer gpx 3
+ASSERT LAST_N == 3 "ap gpx3"
+GETF printer heat
+ASSERT LAST_N == hx + 3 "ap gpx h+3"
+GETF printer energy
+ASSERT LAST_N == ex - 3 "ap gpx e-3"
+GETF printer atp
+ASSERT LAST_N == ax - 3 "ap gpx a-3"
+GETF printer alive
+ASSERT LAST_N == 1 "ap alive post-gpx"
+ASSERT 1 == 1 "ATOMIC_PRINTER_LIFE_GPX PASS"
