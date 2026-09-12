@@ -1,8 +1,11 @@
-MI 2283 LIFE_CELL_SLC27A5
-method: slc27a5 n
-SLC27A5/BACS bile acyl-CoA synthetase after CYP27A1 classical BA side-chain activation
-continuum ...->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5
-proofs asserts_fail:0 life=886 ap=183 smx=114 flagship_1620=12 sum=1195
-feat: 558d020b3640163cbe07fb83dc9d462a8cdd3ab4
-HEAD: 558d020b3640163cbe07fb83dc9d462a8cdd3ab4
-Cube is SoT. Free energy must flow.
+SHIP LIFE_CELL_SLC27A5 MI2283
+- method: slc27a5 n (BACS after CYP27A1)
+- continuum: ...->akr1c4->cyp27a1->slc27a5
+- proof: programs/proof/2283_life_cell_slc27a5.cubalc
+- asserts_fail: 0
+- asserts_ok sum: 1195 (life=886 atomic_printer=183 smx=114 flagship_1620=12)
+- flagship_1620: PASS 12/0
+- version: 1.15.1782-usability
+- law: cube_is_sot; free_energy_must_flow
+- feat: 558d020b3640163cbe07fb83dc9d462a8cdd3ab4
+- HEAD: 893dab724a3995548df215452b6704e82331eaa4
