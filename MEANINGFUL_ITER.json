@@ -37,9 +37,10 @@
     "cube_is_sot",
     "free_energy_must_flow"
   ],
-  "HEAD": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
-  "head": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
+  "HEAD": "6714383df3d4f923b3879e23de9ad44f384abff2",
+  "head": "6714383df3d4f923b3879e23de9ad44f384abff2",
   "feat": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
   "FEAT": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
-  "feat_sha": "3d2a6c6faedbc810495baeaaa8520c72548985aa"
+  "feat_sha": "3d2a6c6faedbc810495baeaaa8520c72548985aa",
+  "tip": "6714383df3d4f923b3879e23de9ad44f384abff2"
 }
