@@ -8,7 +8,7 @@
   "asserts_ok_sum": 457,
   "life": 457,
   "proof": "programs/proof/2271_life_cell_fabp6.cubalc",
-  "HEAD": "c8297fdfcbe1e9616a50fce733a819cd2129bda6",
+  "HEAD": "80479b6738f01ec13cd761423aa8e6e031d778f1",
   "feat": "bcadff541353e0ab4b0d374ac5603cf5e9fc9778",
   "law": "cube_is_sot; free_energy_must_flow"
 }
