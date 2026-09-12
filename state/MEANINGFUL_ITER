@@ -1,13 +1,54 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2280
-- **FEATURE**: LIFE_CELL_AKR1D1
-- **method**: akr1d1 n
-- **version**: 1.15.1779-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1
-- **asserts_fail**: 0
-- **asserts_ok sum**: 1042 (life=767 atomic_printer=154 smx=109 flagship_1620=12)
-- **proof**: programs/proof/2280_life_cell_akr1d1.cubalc
-- **HEAD**: 5299b5d73080c0aef52067904732e74253db5247
-- **feat**: 5299b5d73080c0aef52067904732e74253db5247
-- **law**: cube_is_sot; free_energy_must_flow
+{
+  "schema": "cubalc.meaningful_iter/v1",
+  "meaningful_iter": 2283,
+  "MEANINGFUL_ITER": 2283,
+  "iter": 2283,
+  "n": 2283,
+  "mi": 2283,
+  "MI": 2283,
+  "version": "1.15.1782-usability",
+  "VERSION": "1.15.1782-usability",
+  "feature": "LIFE_CELL_SLC27A5",
+  "FEATURE": "LIFE_CELL_SLC27A5",
+  "name": "LIFE_CELL_SLC27A5",
+  "title": "SLC27A5/BACS bile acyl-CoA synthetase after CYP27A1 on life_cell continuum",
+  "label": "LIFE_CELL_SLC27A5",
+  "method": "slc27a5 n",
+  "ship": "2283_life_cell_slc27a5",
+  "proof": "programs/proof/2283_life_cell_slc27a5.cubalc",
+  "proofs": [
+    "programs/lib/life_cell.cubalc",
+    "programs/proof/2283_life_cell_slc27a5.cubalc",
+    "programs/science/integration/atomic_printer_life_slc27a5.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_slc27a5_life.cubalc",
+    "programs/proof/1620_atomic_printer_life_force.cubalc"
+  ],
+  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5",
+  "domain": "post-CYP27A1 hepatic SLC27A5/BACS bile acyl-CoA synthetase / BA-CoA gate",
+  "gift": "SLC27A5 after CYP27A1 so classic BA free-energy path can form BA-CoA under ASSERT after C27-OH open.",
+  "proof_sum": {
+    "life": 886,
+    "atomic": 183,
+    "smx": 114,
+    "flagship": 12,
+    "sum": 1195,
+    "asserts_fail": 0
+  },
+  "asserts_fail": 0,
+  "asserts_ok_sum": 1195,
+  "asserts_ok": {
+    "life": 886,
+    "atomic_printer": 183,
+    "smx": 114,
+    "flagship_1620": 12,
+    "sum": 1195
+  },
+  "HEAD": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "head": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ],
+  "tip": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4"
+}
