@@ -104,14 +104,11 @@ ASSERT LAST_N == 1 "printer ogdh open"
 SEND printer photosynth 8
 SEND printer charge 8
 SEND printer feed 6
-SEND printer photosynth 16
-SEND printer charge 16
-SEND printer feed 14
 SEND printer scs 1
 ASSERT LAST_N == 1 "printer scs open before sdhb"
-SEND printer photosynth 16
-SEND printer charge 16
-SEND printer feed 14
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
 GETF printer heat
 LET h0 = LAST_N
 GETF printer energy
@@ -119,7 +116,7 @@ LET e0 = LAST_N
 GETF printer atp
 LET a0 = LAST_N
 SEND printer sdhb 3
-ASSERT LAST_N == 3 "printer sdhb ligase 3"
+ASSERT LAST_N == 3 "printer sdhb Fe-S 3"
 GETF printer heat
 ASSERT LAST_N == h0 + 3 "printer sdhb heat+3"
 GETF printer energy
@@ -160,14 +157,11 @@ ASSERT LAST_N == 1 "ink ogdh open"
 SEND ink photosynth 8
 SEND ink charge 8
 SEND ink feed 6
-SEND ink photosynth 16
-SEND ink charge 16
-SEND ink feed 14
 SEND ink scs 1
 ASSERT LAST_N == 1 "ink scs open before sdhb"
-SEND ink photosynth 16
-SEND ink charge 16
-SEND ink feed 14
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
 GETF ink heat
 LET ih = LAST_N
 GETF ink energy
@@ -190,4 +184,4 @@ ASSERT LAST_N == 0 "dead sdhb refused"
 GETF dead alive
 ASSERT LAST_N == 0 "dead stays dead"
 
-ASSERT 1 == 1 "LIFE_CELL_SDHB atomic PASS"
+ASSERT 1 == 1 "atomic_printer_life_sdhb PASS"
