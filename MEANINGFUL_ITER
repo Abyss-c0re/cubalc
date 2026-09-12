@@ -4,10 +4,10 @@
 - **FEATURE**: LIFE_CELL_SDHA
 - **method**: sdha n
 - **version**: 1.15.1792-usability
-- **continuum**: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha
 - **asserts_fail**: 0
-- **asserts_ok sum**: 124 (life=69 atomic_printer=25 smx=18 flagship_1620=12)
+- **asserts_ok sum**: 126 (life=69 atomic_printer=25 smx=20 flagship_1620=12)
 - **proof**: programs/proof/2293_life_cell_sdha.cubalc
-- **HEAD**: 5a34b8a2c14f950f8010326b17109786ddc85044
+- **HEAD**: d36897f4bcf11bf6a7008e39a2d150212d32a0fc
 - **feat**: c1d22b6967a6fc2128dfcf1e910f8b26c6786a7c
 - **law**: cube_is_sot; free_energy_must_flow
