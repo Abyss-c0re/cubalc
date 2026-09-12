@@ -1,13 +1,1 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2264
-- **FEATURE**: LIFE_CELL_BSEP
-- **method**: bsep n
-- **version**: 1.15.1762-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep
-- **asserts_fail**: 0
-- **asserts_ok sum**: 415 (life=258 atomic_printer=79 smx=66 flagship_1620=12)
-- **proof**: programs/proof/2264_life_cell_bsep.cubalc
-- **HEAD**: 5d9ed5fd10fd523371a7d847e537833097ce577c
-- **feat**: b6c92fb5b00497da0f4a66d01339717f2fac7e7b
-- Cube is SoT. Free energy must flow.
+MEANINGFUL_ITER=2264 FEATURE=LIFE_CELL_BSEP version=1.15.1762-usability feat=b6c92fb5b00497da0f4a66d01339717f2fac7e7b tip=2b555f2742db35720d365c5314a5ec1f412dc8e4 asserts_fail=0 asserts_ok_sum=415
