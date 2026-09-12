@@ -33,5 +33,8 @@
   "asserts_ok_sum": 997,
   "asserts_fail": 0,
   "flagship": 12,
-  "law": "cube_is_sot; free_energy_must_flow"
+  "law": "cube_is_sot; free_energy_must_flow",
+  "HEAD": "5965f2e01fd0a2964777ced70ce863fb1631d67e",
+  "head": "5965f2e01fd0a2964777ced70ce863fb1631d67e",
+  "feat": "5965f2e01fd0a2964777ced70ce863fb1631d67e"
 }
