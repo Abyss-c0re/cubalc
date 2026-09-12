@@ -7,6 +7,16 @@
 
 # Changelog
 
+## 1.15.1756-usability — MI2259 LIFE_CELL_DUG1
+
+- feat(life): Dug1 cysteinylglycine dipeptidase after Ggt on life_cell
+- continuum ...->gsha->gshb->gor->gpx->gst->ggt->dug1
+- METHOD dug1 n: Cys-Gly-R -> Cys-R + Gly dipeptide cleavage after Ggt gamma-glutamyl cleavage
+- proof programs/proof/2259_life_cell_dug1.cubalc asserts_ok=147 fail=0
+- atomic_printer_life_dug1 + smx_mesh_vesicle_dug1_life + flagship 1620 PASS (sum 260)
+- Cube is SoT. Free energy must flow.
+
+
 ## 1.15.1755-usability — MI2257 LIFE_CELL_GST
 
 - feat(life): Gst glutathione S-transferase after Gpx on life_cell
