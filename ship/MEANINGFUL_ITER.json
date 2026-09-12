@@ -11,7 +11,7 @@
   "smx": 84,
   "flagship_1620": 12,
   "proof": "programs/proof/2270_life_cell_asbt.cubalc",
-  "HEAD": "2880e6f700043907c9854b84a7665ec5ba4e1386",
+  "HEAD": "5cd73ba4270431cdfd7b3bf15b0f77ffa1164a67",
   "feat": "e8f5c3639594a199f60f32688a01c672c29f45f0",
   "law": "cube_is_sot; free_energy_must_flow"
 }
