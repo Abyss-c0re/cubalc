@@ -20,22 +20,10 @@
     "programs/lib/life_cell.cubalc",
     "programs/proof/2297_life_cell_aco2.cubalc",
     "programs/science/integration/atomic_printer_life_aco2.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_aco2_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
+    "programs/science/integration/smx_mesh_vesicle_aco2_life.cubalc"
   ],
-  "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2",
-  "domain": "post-CS aconitase 2 (ACO2) isocitrate TCA-progression gate",
-  "gift": "ACO2 after CS so BA/odd-chain free-energy path can isomerize citrate to isocitrate and progress TCA under ASSERT after CS open.",
-  "proof_sum": {
-    "life": 85,
-    "atomic": 31,
-    "smx": 26,
-    "flagship": 12,
-    "sum": 154,
-    "asserts_fail": 0
-  },
+  "continuum": "...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2",
   "asserts_fail": 0,
-  "asserts_ok_sum": 154,
   "asserts_ok": {
     "life": 85,
     "atomic_printer": 31,
@@ -43,11 +31,13 @@
     "flagship_1620": 12,
     "sum": 154
   },
-  "HEAD": "ca1ce44286bcdc8bc06378e163ff330647c6d6ec",
   "feat": "6d395e299335f677f47ec3762490963ead8228e6",
-  "head": "ca1ce44286bcdc8bc06378e163ff330647c6d6ec",
-  "law": "cube_is_sot; free_energy_must_flow",
-  "status": "PASS",
-  "pin": "ca1ce44286bcdc8bc06378e163ff330647c6d6ec",
-  "tip": "ca1ce44286bcdc8bc06378e163ff330647c6d6ec"
+  "law": [
+    "cube_is_sot",
+    "free_energy_must_flow"
+  ],
+  "HEAD": "f3172caecec0d85536f0e5d68ce5c6f25b32622c",
+  "head": "f3172caecec0d85536f0e5d68ce5c6f25b32622c",
+  "pin": "f3172caecec0d85536f0e5d68ce5c6f25b32622c",
+  "tip": "f3172caecec0d85536f0e5d68ce5c6f25b32622c"
 }
