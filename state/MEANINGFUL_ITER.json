@@ -25,7 +25,7 @@
   ],
   "continuum": "...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2",
   "domain": "post-ACO2 isocitrate dehydrogenase 2 (IDH2) aKG TCA-progression gate",
-  "gift": "IDH2 after ACO2 so BA/odd-chain free-energy path can oxidatively decarboxylate isocitrate to aKG and progress TCA under ASSERT after ACO2 open.",
+  "gift": "IDH2 after ACO2 so BA/odd-chain free-energy path can oxidatively decarboxylate isocitrate to alpha-ketoglutarate and progress TCA under ASSERT after ACO2 open.",
   "proof_sum": {
     "life": 90,
     "atomic": 33,
@@ -43,11 +43,11 @@
     "flagship_1620": 12,
     "sum": 163
   },
-  "HEAD": "4e3784785e2c516b97a96cce22bca8003008402f",
-  "feat": "74e14044b76d92d8eb470c6feedf932dd597555d",
-  "head": "4e3784785e2c516b97a96cce22bca8003008402f",
+  "HEAD": "9ae34f4a3a646e6a31bd17fa1e56e7c5813ee2ba",
+  "feat": "877be688bde0e09943f0a8836b9d96ed7a0c545a",
+  "head": "9ae34f4a3a646e6a31bd17fa1e56e7c5813ee2ba",
   "law": "cube_is_sot; free_energy_must_flow",
   "status": "PASS",
-  "pin": "4e3784785e2c516b97a96cce22bca8003008402f",
-  "tip": "4e3784785e2c516b97a96cce22bca8003008402f"
+  "pin": "9ae34f4a3a646e6a31bd17fa1e56e7c5813ee2ba",
+  "tip": "9ae34f4a3a646e6a31bd17fa1e56e7c5813ee2ba"
 }
