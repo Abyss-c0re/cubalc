@@ -1,42 +1,22 @@
 {
-  "schema": "cubalc.meaningful_iter/v1",
-  "meaningful_iter": 2255,
-  "MEANINGFUL_ITER": 2255,
-  "iter": 2255,
-  "n": 2255,
   "mi": 2255,
-  "version": "1.15.1753-usability",
-  "VERSION": "1.15.1753-usability",
   "feature": "life_cell_gor",
-  "FEATURE": "LIFE_CELL_GOR",
-  "name": "LIFE_CELL_GOR",
-  "title": "Gor GSSG reductase after GshB on life_cell",
-  "label": "LIFE_CELL_GOR",
   "method": "gor n",
-  "ship": "2255_life_cell_gor",
-  "proof": "programs/proof/2255_life_cell_gor.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2255_life_cell_gor.cubalc",
-    "programs/science/integration/atomic_printer_life_gor.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_gor_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
+  "version": "1.15.1753-usability",
   "continuum": "...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor",
-  "domain": "Gor glutathione disulfide reductase after GshB / GSSG->2GSH NADPH recycle",
-  "gift": "Gor regenerates 2 GSH from GSSG with NADPH so the glutathione free-energy shield can cycle after GshB",
-  "proof_sum": {
+  "asserts_fail": 0,
+  "asserts_ok": {
     "life": 104,
-    "atomic": 34,
-    "smx": 27,
-    "flagship": 12,
-    "sum": 177,
-    "asserts_fail": 0
+    "sum": 104
   },
-  "HEAD": "9a0895931719c63177d73f7a0893b35099cd6e71",
-  "head": "9a0895931719c63177d73f7a0893b35099cd6e71",
-  "feat": "9a0895931719c63177d73f7a0893b35099cd6e71",
-  "FEAT_HEAD": "9a0895931719c63177d73f7a0893b35099cd6e71",
-  "tip": "9a0895931719c63177d73f7a0893b35099cd6e71",
-  "pin": "9a0895931719c63177d73f7a0893b35099cd6e71"
+  "proof": "programs/proof/2255_life_cell_gor.cubalc",
+  "HEAD": "PENDING",
+  "feat": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
+  "creed": "Cube is SoT. Free energy must flow.",
+  "head": "PENDING",
+  "tip": "PENDING",
+  "feat_head": "3b841431aacb88119b903a14ac3d9c04c3f833e7",
+  "branch": "life-cell-gor-mi2255",
+  "sealed": false,
+  "pass": true
 }

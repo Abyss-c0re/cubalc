@@ -1,1 +1,13 @@
-2235
+# MEANINGFUL_ITER
+
+- **MI**: 2255
+- **FEATURE**: LIFE_CELL_GOR
+- **method**: gor n
+- **version**: 1.15.1753-usability
+- **continuum**: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor
+- **asserts_fail**: 0
+- **asserts_ok sum**: 104 (life=104)
+- **proof**: programs/proof/2255_life_cell_gor.cubalc
+- **HEAD/tip**: PENDING
+- **feat**: 3b841431aacb88119b903a14ac3d9c04c3f833e7
+- Cube is SoT. Free energy must flow.
