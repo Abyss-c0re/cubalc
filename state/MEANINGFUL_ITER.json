@@ -45,14 +45,14 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell hmgcs1",
-  "feat": "",
-  "feat_head": "",
-  "FEAT_HEAD": "",
+  "feat": "4a8f7cb96fed84f900f9c39ef51221de1fa76b1e",
+  "feat_head": "4a8f7cb96fed84f900f9c39ef51221de1fa76b1e",
+  "FEAT_HEAD": "4a8f7cb96fed84f900f9c39ef51221de1fa76b1e",
   "pure_c": "programs/lib/life_cell.cubalc",
   "host_finish": true,
-  "tip": "1fc1e9b4cb07e0eb07f2944467e77d67800995e0",
-  "head": "1fc1e9b4cb07e0eb07f2944467e77d67800995e0",
-  "HEAD": "1fc1e9b4cb07e0eb07f2944467e77d67800995e0",
-  "pin": "1fc1e9b4cb07e0eb07f2944467e77d67800995e0",
-  "sealed_head": "1fc1e9b4cb07e0eb07f2944467e77d67800995e0"
+  "tip": "49230e0117effd8d59f44c450a845635980a7b33",
+  "head": "49230e0117effd8d59f44c450a845635980a7b33",
+  "HEAD": "49230e0117effd8d59f44c450a845635980a7b33",
+  "pin": "49230e0117effd8d59f44c450a845635980a7b33",
+  "sealed_head": "49230e0117effd8d59f44c450a845635980a7b33"
 }
