@@ -6,8 +6,8 @@
 - **version**: 1.15.1769-usability
 - **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6
 - **asserts_fail**: 0
-- **asserts_ok sum**: 457 (life=457)
+- **asserts_ok sum**: 458 (life=458 fabp6 proof)
 - **proof**: programs/proof/2271_life_cell_fabp6.cubalc
-- **HEAD**: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
+- **HEAD**: 529640a77874c7fa16897d824d5f10b67bfd66b1
 - **feat**: bcadff541353e0ab4b0d374ac5603cf5e9fc9778
 - **law**: cube_is_sot; free_energy_must_flow
