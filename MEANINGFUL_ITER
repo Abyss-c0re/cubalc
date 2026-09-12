@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2288
-- **FEATURE**: LIFE_CELL_ACOT8
-- **method**: acot8 n
-- **version**: 1.15.1787-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8
+- **MI**: 2289
+- **FEATURE**: LIFE_CELL_PCCA
+- **method**: pcca n
+- **version**: 1.15.1788-usability
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
 - **asserts_fail**: 0
-- **asserts_ok sum**: 1150 (life=1099 atomic_printer=21 smx=18 flagship_1620=12)
-- **proof**: programs/proof/2288_life_cell_acot8.cubalc
-- **HEAD**: f9cfb809a06430c2227ef7bb512fd9fa8827c6c3
-- **feat**: f76336e7fe78536617eb0b6a620ea9035fbadad9
+- **asserts_ok sum**: 1199 (life=1147 atomic_printer=22 smx=18 flagship_1620=12)
+- **proof**: programs/proof/2289_life_cell_pcca.cubalc
+- **HEAD**: 4febe4fb73ae6d9dfbc7d946663b22bdb0f43be5
+- **feat**: 9f8698d0feb830e383baadefc1a2d7efc083c458
 - **law**: cube_is_sot; free_energy_must_flow
