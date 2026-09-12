@@ -38,8 +38,8 @@
   "asserts_ok_sum": 178,
   "asserts_ok": 178,
   "prior_feature": "LIFE_CELL_OGDH",
-  "status": "pinned_feat",
-  "sealed": false,
+  "status": "sealed",
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -47,5 +47,14 @@
   "item": "life cell sucla2",
   "feat": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db",
   "feat_head": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db",
-  "FEAT_HEAD": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db"
+  "FEAT_HEAD": "d40cf0d18f0473deb6a0f1b6dbe8c4dc77f4f4db",
+  "HEAD": "686c5207031cd907bd8217592797033e5b75f832",
+  "head": "686c5207031cd907bd8217592797033e5b75f832",
+  "tip": "686c5207031cd907bd8217592797033e5b75f832",
+  "pin": "686c5207031cd907bd8217592797033e5b75f832",
+  "pinned_head": "686c5207031cd907bd8217592797033e5b75f832",
+  "git_head": "686c5207031cd907bd8217592797033e5b75f832",
+  "commit": "686c5207031c",
+  "short": "686c5207031c",
+  "summary": "LIFE_CELL_SUCLA2 MI2300 tip==pin sealed PASS asserts_ok=178 HEAD=686c5207031c"
 }
