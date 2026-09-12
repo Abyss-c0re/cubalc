@@ -17718,5 +17718,81 @@ CLASS Cell
     RET take
   END
 
+  # Amacr: alpha-methylacyl-CoA racemase after SLC27A5 BA-CoA.
+  # AMACR (P504S) racemizes (25R)-BA-CoA from Slc27a5/BACS to the (25S)
+  # stereoisomer required by peroxisomal ACOX2 - it locks BA-CoA chirality so
+  # classic BA free-energy can enter peroxisomal beta-oxidation under ASSERT.
+  # After Slc27a5 activates C27-OH BA with CoA, Amacr is the racemase plate so
+  # mitosis energy budgets gain an explicit 25R->25S step instead of a silent
+  # BA-CoA pool with no stereochemical gate into ACOX2.
+  # Distinct from Slc27a5 (BA-CoA synthetase), Cyp27a1 (sterol 27-hydroxylase),
+  # Akr1c4, Akr1d1, Hsd3b7, Cyp8b1, Cyp7a1 - Amacr is the BA-CoA racemase of
+  # classic BA side-chain oxidation prep.
+  # Without Amacr after Slc27a5, classic BA free-energy flow stalls at (25R)-BA-CoA
+  # without racemase catalytic close; life_cell gut-liver loop loses the
+  # BA-CoA stereochemical decision plate.
+  # Domain: post-SLC27A5 peroxisomal/cytosolic AMACR BA-CoA racemase / 25S gate
+  #   -> AMACR free-energy (ATP stand-in for racemase turnover)
+  # (not Slc27a5, not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7, not Cyp8b1).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr
+  #   (SLC27A5/BACS BA-CoA synthetase -> AMACR 25R->25S racemase close).
+  # Gift: post-SLC27A5 AMACR so classic BA free-energy path can racemize BA-CoA
+  #   under ASSERT after the BA-CoA plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - amacr life-force.
+  # Usability: AGI models post-SLC27A5 AMACR BA-CoA racemase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD amacr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
