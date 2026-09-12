@@ -43,8 +43,8 @@
     "flagship_1620": 12,
     "sum": 124
   },
-  "HEAD": "HEAD_PLACEHOLDER",
-  "feat": "FEAT_PLACEHOLDER",
-  "tip": "HEAD_PLACEHOLDER",
-  "pin": "HEAD_PLACEHOLDER"
+  "HEAD": "c1d22b6967a6fc2128dfcf1e910f8b26c6786a7c",
+  "feat": "c1d22b6967a6fc2128dfcf1e910f8b26c6786a7c",
+  "tip": "c1d22b6967a6fc2128dfcf1e910f8b26c6786a7c",
+  "pin": "c1d22b6967a6fc2128dfcf1e910f8b26c6786a7c"
 }
