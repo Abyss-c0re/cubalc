@@ -1,13 +1,1 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2285
-- **FEATURE**: LIFE_CELL_ACOX2
-- **method**: acox2 n
-- **version**: 1.15.1784-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2
-- **asserts_fail**: 0
-- **asserts_ok sum**: 1292 (life=969 atomic_printer=190 smx=121 flagship_1620=12)
-- **proof**: programs/proof/2285_life_cell_acox2.cubalc
-- **HEAD**: 3306345fcc76c3064111043dc4e17cd8d633add3
-- **feat**: 12eb08fcbb44993a7c7cde1fd94476b21649755d
-- **law**: cube_is_sot; free_energy_must_flow
+2309 LIFE_CELL_SLC16A7 PASS

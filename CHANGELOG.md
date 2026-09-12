@@ -1,3 +1,9 @@
+## 1.15.1808-usability — MI 2309 LIFE_CELL_SLC16A7
+- feat(life): SLC16A7/MCT2 high-affinity plasma-membrane monocarboxylate ketone import after SLC16A1 on life_cell continuum
+- Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7
+- Proofs asserts_fail:0 — life 145 · atomic 54 · smx 50 · flagship 12 · sum 261
+- METHOD slc16a7 n — ketogenic MCT2 monocarboxylate import gate (BHB/AcAc import)
+
 ## 1.15.1807-usability — MI 2308 LIFE_CELL_SLC16A1
 - feat(life): SLC16A1/MCT1 plasma-membrane monocarboxylate ketone export after BDH1 on life_cell continuum
 - Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1
