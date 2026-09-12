@@ -13,7 +13,9 @@
     "flagship_1620": 12
   },
   "proof": "programs/proof/2268_life_cell_mrp3.cubalc",
-  "HEAD": "PENDING",
-  "feat": "PENDING",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "HEAD": "021934a111acd566049a79f3782f1112f4153a33",
+  "feat": "021934a111acd566049a79f3782f1112f4153a33",
+  "law": "cube_is_sot; free_energy_must_flow",
+  "FEAT_HEAD": "021934a111acd566049a79f3782f1112f4153a33",
+  "tip": "021934a111acd566049a79f3782f1112f4153a33"
 }
