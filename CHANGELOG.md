@@ -1,5 +1,13 @@
 # Changelog
 
+## MI 2271 — LIFE_CELL_FABP6 (1.15.1770-usability)
+- Feature: `fabp6 n` ileal bile-acid binding protein (FABP6/IBABP/ILBP) after Asbt on life_cell
+- Continuum: ...->mrp2->mrp3->ost->asbt->fabp6
+- Proof: `programs/proof/2271_life_cell_fabp6.cubalc` asserts_fail:0 life=457 ap=125 smx=92 flagship_1620=12 sum=686
+- Integration: `atomic_printer_life_fabp6.cubalc` (125), `smx_mesh_vesicle_fabp6_life.cubalc` (92); flagship_1620=12
+- Gift: cytosolic IBABP shuttle after Asbt closes enterohepatic free-energy epithelial transit toward Ost
+- Law: cube_is_sot; free_energy_must_flow
+
 ## MI 2270 — LIFE_CELL_ASBT (1.15.1769-usability)
 - Feature: `asbt n` apical Na+-dependent bile-acid transporter (SLC10A2/IBAT) after Ost on life_cell
 - Continuum: ...->mrp2->mrp3->ost->asbt
