@@ -1,3 +1,13 @@
+## 1.15.1799-usability — LIFE_CELL_SUCLA2 (MI 2300)
+
+### Life continuum
+- **LIFE_CELL_SUCLA2**: `METHOD sucla2 n` — succinate-CoA ligase ADP-forming after OGDH on BA/odd-chain limb.
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->sucla2`
+- Domain: post-OGDH succinate-CoA ligase ADP-forming (SUCLA2) succinate TCA-progression gate.
+- Gift: substrate-level phosphorylate while releasing succinate under ASSERT after OGDH open so free energy proceeds toward SDHA.
+- Proofs PASS: life=98 atomic_printer=36 smx=32 flagship_1620=12 sum=178 fail=0.
+- Files: `programs/lib/life_cell.cubalc`, `programs/proof/2300_life_cell_sucla2.cubalc`, `programs/science/integration/atomic_printer_life_sucla2.cubalc`, `programs/science/integration/smx_mesh_vesicle_sucla2_life.cubalc`.
+
 ## 1.15.1799-usability — MI 2300 LIFE_CELL_SUCLA2
 
 - **feat(life):** SUCLA2 succinate-CoA ligase ADP-forming after OGDH on BA continuum
