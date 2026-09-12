@@ -1,0 +1,91 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh vesicle life: MCEE methylmalonyl-CoA epimerase after PCCA.
+# Sealed State Matrix talk around BA beta-ox tail + anaplerotic epimerase gate.
+# Continuum tail: acot8 -> pcca -> mcee
+# Cube is SoT. Free energy must flow.
+
+ENTITY vesicle OF Cell 1 55 0
+ENTITY dock OF Cell 1 36 0
+ENTITY ghost OF Cell 0 8 0
+
+SEND vesicle set_threshold 9
+SEND dock set_threshold 11
+
+SEND vesicle pulse 3
+SEND vesicle photosynth 28
+SEND vesicle glycolyse 20
+SEND vesicle charge 26
+SEND vesicle feed 20
+SEND vesicle photophos 14
+GETF vesicle energy
+ASSERT LAST_N >= 16 "vesicle energy"
+GETF vesicle atp
+ASSERT LAST_N >= 16 "vesicle atp"
+
+SEND vesicle scp2 2
+ASSERT LAST_N == 2 "vesicle scp2"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle acot8 2
+ASSERT LAST_N == 2 "vesicle acot8"
+SEND vesicle photosynth 12
+SEND vesicle charge 12
+SEND vesicle feed 10
+SEND vesicle pcca 2
+ASSERT LAST_N == 2 "vesicle pcca"
+SEND vesicle photosynth 14
+SEND vesicle charge 14
+SEND vesicle feed 12
+GETF vesicle heat
+LET vh = LAST_N
+GETF vesicle energy
+LET ve = LAST_N
+GETF vesicle atp
+LET va = LAST_N
+GETF vesicle pmf
+LET vp = LAST_N
+SEND vesicle mcee 3
+ASSERT LAST_N == 3 "vesicle mcee 3"
+GETF vesicle heat
+ASSERT LAST_N == vh + 3 "vesicle mcee h+3"
+GETF vesicle energy
+ASSERT LAST_N == ve - 3 "vesicle mcee e-3"
+GETF vesicle atp
+ASSERT LAST_N == va - 3 "vesicle mcee a-3"
+GETF vesicle pmf
+ASSERT LAST_N == vp "vesicle mcee pmf held"
+GETF vesicle alive
+ASSERT LAST_N == 1 "vesicle alive post-mcee"
+
+SEND dock photosynth 18
+SEND dock charge 16
+SEND dock feed 14
+GETF dock heat
+LET dh = LAST_N
+GETF dock energy
+LET de = LAST_N
+GETF dock atp
+LET da = LAST_N
+SEND dock mcee 2
+ASSERT LAST_N == 2 "dock mcee 2"
+GETF dock heat
+ASSERT LAST_N == dh + 2 "dock mcee h+2"
+GETF dock energy
+ASSERT LAST_N == de - 2 "dock mcee e-2"
+GETF dock atp
+ASSERT LAST_N == da - 2 "dock mcee a-2"
+GETF dock alive
+ASSERT LAST_N == 1 "dock alive post-mcee"
+
+SEND ghost mcee 2
+ASSERT LAST_N == 0 "ghost mcee 0"
+GETF ghost alive
+ASSERT LAST_N == 0 "ghost dead"
+
+SEND vesicle mcee 0
+ASSERT LAST_N == 0 "vesicle mcee n0"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_mcee_life PASS"

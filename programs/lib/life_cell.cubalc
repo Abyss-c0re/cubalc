@@ -18158,5 +18158,76 @@ CLASS Cell
   END
 
 
+  # Mcee: methylmalonyl-CoA epimerase (MCEE) after PCCA carboxylase limb.
+  # MCEE is the mitochondrial epimerase that converts D-methylmalonyl-CoA
+  # (product of biotin-dependent PCCA/PCCB on propionyl-CoA from SCPx BA
+  # shortening / odd-chain / Ile / Val / Met / Thr / cholesterol side-chain)
+  # into L-methylmalonyl-CoA so MUT can open the succinyl-CoA anaplerotic gate.
+  # After Pcca carboxylates propionyl-CoA to D-methylmalonyl-CoA, Mcee flips
+  # stereochemistry so free energy can enter the TCA cycle instead of a silent
+  # D-methylmalonyl pool.
+  # Distinct from Pcca carboxylase, Mut mutase, Mmab adenosyltransferase,
+  # Acot8 thioesterase, Scp2 thiolase - Mcee is the D/L-methylmalonyl epimerase.
+  # Domain: post-PCCA methylmalonyl-CoA epimerase (MCEE) stereochemistry gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee
+  # Gift: post-PCCA MCEE so BA/odd-chain free-energy path can epimerize
+  #   D-methylmalonyl-CoA to L-methylmalonyl-CoA under ASSERT after carboxylase.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mcee.
+  # Usability: AGI models post-PCCA MCEE epimerase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mcee n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 END
