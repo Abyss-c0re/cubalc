@@ -1,3 +1,12 @@
+## 1.15.1797-usability — MI 2298 LIFE_CELL_IDH2
+
+- **feat(life):** IDH2 isocitrate dehydrogenase after ACO2 on BA continuum
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2` (isocitrate → aKG TCA gate)
+- Proof: `programs/proof/2298_life_cell_idh2.cubalc` (asserts_ok=90)
+- Atomic: `programs/science/integration/atomic_printer_life_idh2.cubalc`
+- SMX: `programs/science/integration/smx_mesh_vesicle_idh2_life.cubalc`
+- asserts_fail: 0 · life+atomic+smx+flagship PASS
+
 ## 1.15.1793-usability — MI 2294 LIFE_CELL_FH
 
 - **feat(life):** FH fumarate hydratase after SDHA on BA continuum
