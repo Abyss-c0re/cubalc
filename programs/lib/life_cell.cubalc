@@ -15775,4 +15775,81 @@ CLASS Cell
   END
 
 
+  # Cdo1: cysteine dioxygenase after Dug1 Cys-Gly dipeptidase.
+  # Cdo1 (CDO1 / cysteine dioxygenase type 1) oxygenates free L-cysteine with O2
+  # -> cysteine sulfinic acid (CSA) + heat-of-oxidation stand-in, opening the
+  # taurine/sulfate catabolic limb after Dug1 frees Cys from Cys-Gly. After Dug1
+  # hydrolyzes the dipeptide left by Ggt, Cdo1 commits salvage Cys into oxidative
+  # disposal so excess sulfur does not stall GSH rebuild or membrane thiol pools.
+  # Distinct from Dug1 (Cys-Gly -> Cys + Gly dipeptidase), Ggt (GSH|GS-R gamma-Glu
+  # cleavage), Gst (GSH+RX->GS-R), Gpx (2GSH+ROOH->GSSG), Gor (GSSG+NADPH->2GSH),
+  # GshA (Cys+Glu gamma-ligase), GshB (gamma-Glu-Cys+Gly->GSH), Cbs/Cgl (trans-
+  # sulfuration) — Cdo1 is the Fe(II)-dependent thiol dioxygenase that starts
+  # cysteine catabolism toward CSA / hypotaurine / taurine after Dug1 salvage.
+  # Without Cdo1 after Dug1, free Cys from dipeptide cleavage backlog wins even
+  # with open mercapturic gates; the glutathione free-energy shield never engages
+  # its oxidative cysteine-disposal limb and thiol overflow stalls mitosis budgets.
+  # Domain: post-Dug1 Cdo1 cysteine dioxygenase / Cys + O2 -> CSA
+  # (not Dug1, not Ggt, not Gst, not Gpx, not Gor, not GshA, not GshB, not Cbs).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->cdo1
+  #   (Dug1 Cys-Gly dipeptidase -> Cdo1 cysteine dioxygenase / Cys oxidative disposal).
+  # Pay take=min(n,atp,energy) - energy stand-in for dioxygenase O2-activation work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cdo1 life-force.
+  # Usability: AGI models post-Dug1 Cdo1 Cys dioxygenation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cdo1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
