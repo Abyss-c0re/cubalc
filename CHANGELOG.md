@@ -1,3 +1,13 @@
+## 1.15.1799-usability — MI 2300 LIFE_CELL_SCS
+
+- **feat(life):** SCS succinyl-CoA synthetase after OGDH on BA continuum (SUCLA2-family limb)
+- Continuum: `...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs`
+- Also ships METHOD sucla2 n (ADP-forming isoform) beside scs
+- Proof: `programs/proof/2300_life_cell_scs.cubalc` (asserts_ok=98)
+- Atomic: `programs/science/integration/atomic_printer_life_scs.cubalc` (36)
+- SMX: `programs/science/integration/smx_mesh_vesicle_scs_life.cubalc` (32)
+- asserts_fail: 0 · life 98 · atomic 36 · smx 32 · flagship 12 · sum=178
+
 ## 1.15.1799-usability — LIFE_CELL_SUCLA2 (MI 2300)
 
 ### Life continuum
