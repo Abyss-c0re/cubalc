@@ -4,10 +4,10 @@
 - **FEATURE**: LIFE_CELL_PCCA
 - **method**: pcca n
 - **version**: 1.15.1788-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca
+- **continuum**: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
 - **asserts_fail**: 0
 - **asserts_ok sum**: 1199 (life=1147 atomic_printer=22 smx=18 flagship_1620=12)
 - **proof**: programs/proof/2289_life_cell_pcca.cubalc
-- **HEAD**: 2cfe899feb0e84102870048c4ca0c728e82c5103
+- **HEAD**: f979c053bf7cd49ad72fb6af53762678e9d6e568
 - **feat**: 9b068560a9049f960851e25a54a770bd0df1ecdd
 - **law**: cube_is_sot; free_energy_must_flow
