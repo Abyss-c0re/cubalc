@@ -1,13 +1,13 @@
 # MEANINGFUL_ITER
 
-- **MI**: 2276
-- **FEATURE**: LIFE_CELL_SHP
-- **method**: shp n
-- **version**: 1.15.1775-usability
-- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp
+- **MI**: 2277
+- **FEATURE**: LIFE_CELL_CYP7A1
+- **method**: cyp7a1 n
+- **version**: 1.15.1776-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1
 - **asserts_fail**: 0
-- **asserts_ok sum**: 877 (life=613 atomic_printer=149 smx=103 flagship_1620=12)
-- **proof**: programs/proof/2276_life_cell_shp.cubalc
-- **HEAD**: 58457423a6cdd29bdea04f2f91288638a3441be7
-- **feat**: 58457423a6cdd29bdea04f2f91288638a3441be7
+- **asserts_ok sum**: 915 (life=651 atomic_printer=149 smx=103 flagship_1620=12)
+- **proof**: programs/proof/2277_life_cell_cyp7a1.cubalc
+- **HEAD**: e934f4960ea8a56006c5209f86f09e7321416dea
+- **feat**: e934f4960ea8a56006c5209f86f09e7321416dea
 - **law**: cube_is_sot; free_energy_must_flow
