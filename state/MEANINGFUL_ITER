@@ -6,8 +6,8 @@
 - **version**: 1.15.1762-usability
 - **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep
 - **asserts_fail**: 0
-- **asserts_ok sum**: 410 (life=258 atomic_printer=79 smx=61 flagship_1620=12)
+- **asserts_ok sum**: 415 (life=258 atomic_printer=79 smx=66 flagship_1620=12)
 - **proof**: programs/proof/2264_life_cell_bsep.cubalc
-- **HEAD**: b6c92fb5b00497da0f4a66d01339717f2fac7e7b
+- **HEAD**: ca85b562d1be976df112cd2e1bd9f035f271a98a
 - **feat**: b6c92fb5b00497da0f4a66d01339717f2fac7e7b
 - Cube is SoT. Free energy must flow.
