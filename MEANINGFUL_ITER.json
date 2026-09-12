@@ -3,7 +3,7 @@
   "FEATURE": "LIFE_CELL_CSAD",
   "method": "csad n",
   "version": "1.15.1759-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad",
+  "continuum": "...->nat8->cdo1->csad",
   "asserts_fail": 0,
   "asserts_ok_sum": 272,
   "asserts_ok": {
@@ -14,7 +14,7 @@
   },
   "proof": "programs/proof/2261_life_cell_csad.cubalc",
   "HEAD_tip": "a426191de033574dfb0e393f58491c68d10a423a",
-  "HEAD": "a426191de033574dfb0e393f58491c68d10a423a",
+  "HEAD": "fb9c3d30003cdf388bbed15431d6a64ebdd005ba",
   "tip": "a426191de033574dfb0e393f58491c68d10a423a",
   "feat": "4fd5aefceb429644c7049592e6ae63c3df0ba26f"
 }
