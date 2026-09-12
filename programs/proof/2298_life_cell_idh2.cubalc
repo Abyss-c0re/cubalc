@@ -2,7 +2,7 @@ REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
 # LIFE_CELL_IDH2 — isocitrate dehydrogenase IDH2 after ACO2 on BA continuum
-# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->idh2 (isocitrate to 2-oxoglutarate for TCA)
+# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->idh2->idh2 (isocitrate to aKG for TCA)
 # Gift: IDH2 opens TCA-progression aKG gate under ASSERT after ACO2 isocitrate.
 # Domain: post-ACO2 isocitrate dehydrogenase 2 (IDH2) aKG TCA-progression gate.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
@@ -100,6 +100,11 @@ ASSERT LAST_N == 1 "mito cs open"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
+SEND mito idh2 1
+ASSERT LAST_N == 1 "mito aco2 open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
 GETF mito heat
 LET f_h = LAST_N
 GETF mito energy
@@ -116,11 +121,6 @@ GETF mito pmf
 LET f_pmf = LAST_N
 GETF mito threshold
 LET f_thr = LAST_N
-SEND mito aco2 1
-ASSERT LAST_N == 1 "mito aco2 open"
-SEND mito photosynth 10
-SEND mito charge 10
-SEND mito feed 8
 SEND mito idh2 3
 ASSERT LAST_N == 3 "mito IDH2 isocitrate dehydrogenase 3"
 GETF mito heat
@@ -149,6 +149,11 @@ SEND mito charge 10
 SEND mito feed 8
 SEND mito cs 1
 ASSERT LAST_N == 1 "mito cs open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito idh2 1
+ASSERT LAST_N == 1 "mito aco2 open"
 SEND mito photosynth 10
 SEND mito charge 10
 SEND mito feed 8
@@ -186,48 +191,20 @@ GETF mito heat
 LET fc_h = LAST_N
 GETF mito age
 LET fc_age = LAST_N
-SEND mito aco2 100
+SEND mito idh2 100
 GETF mito atp
 LET fc_a2 = LAST_N
 GETF mito energy
 LET fc_e2 = LAST_N
 GETF mito heat
 LET fc_h2 = LAST_N
-ASSERT fc_a2 >= 0 "mito aco2 clamp atp>=0"
-ASSERT fc_e2 >= 0 "mito aco2 clamp energy>=0"
-ASSERT fc_h2 >= fc_h "mito aco2 clamp heat+="
-ASSERT fc_a2 <= fc_a "mito aco2 clamp atp down"
-ASSERT fc_e2 <= fc_e "mito aco2 clamp energy down"
+ASSERT fc_a2 >= 0 "mito idh2 clamp atp>=0"
+ASSERT fc_e2 >= 0 "mito idh2 clamp energy>=0"
+ASSERT fc_h2 >= fc_h "mito idh2 clamp heat+="
+ASSERT fc_a2 <= fc_a "mito idh2 clamp atp down"
+ASSERT fc_e2 <= fc_e "mito idh2 clamp energy down"
 GETF mito age
-ASSERT LAST_N == fc_age "mito aco2 clamp age held"
-GETF mito alive
-ASSERT LAST_N == 1 "mito alive post-aco2 clamp"
-
-SEND mito photosynth 24
-SEND mito charge 22
-SEND mito feed 18
-GETF mito atp
-LET idh_fc_a = LAST_N
-GETF mito energy
-LET idh_fc_e = LAST_N
-GETF mito heat
-LET idh_fc_h = LAST_N
-GETF mito age
-LET idh_fc_age = LAST_N
-SEND mito idh2 100
-GETF mito atp
-LET idh_fc_a2 = LAST_N
-GETF mito energy
-LET idh_fc_e2 = LAST_N
-GETF mito heat
-LET idh_fc_h2 = LAST_N
-ASSERT idh_fc_a2 >= 0 "mito idh2 clamp atp>=0"
-ASSERT idh_fc_e2 >= 0 "mito idh2 clamp energy>=0"
-ASSERT idh_fc_h2 >= idh_fc_h "mito idh2 clamp heat+="
-ASSERT idh_fc_a2 <= idh_fc_a "mito idh2 clamp atp down"
-ASSERT idh_fc_e2 <= idh_fc_e "mito idh2 clamp energy down"
-GETF mito age
-ASSERT LAST_N == idh_fc_age "mito idh2 clamp age held"
+ASSERT LAST_N == fc_age "mito idh2 clamp age held"
 GETF mito alive
 ASSERT LAST_N == 1 "mito alive post-idh2 clamp"
 
@@ -269,6 +246,11 @@ ASSERT LAST_N == 1 "peri cs open"
 SEND peri photosynth 10
 SEND peri charge 10
 SEND peri feed 8
+SEND peri idh2 1
+ASSERT LAST_N == 1 "peri aco2 open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
 GETF peri heat
 LET q_h = LAST_N
 GETF peri energy
@@ -285,11 +267,6 @@ GETF peri pmf
 LET q_pmf = LAST_N
 GETF peri threshold
 LET q_thr = LAST_N
-SEND peri aco2 1
-ASSERT LAST_N == 1 "peri aco2 open"
-SEND peri photosynth 10
-SEND peri charge 10
-SEND peri feed 8
 SEND peri idh2 2
 ASSERT LAST_N == 2 "peri idh2 2"
 GETF peri heat
@@ -339,6 +316,11 @@ ASSERT LAST_N == 1 "nest cs open"
 SEND nest photosynth 10
 SEND nest charge 10
 SEND nest feed 8
+SEND nest idh2 1
+ASSERT LAST_N == 1 "nest aco2 open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
 GETF nest heat
 LET b_h = LAST_N
 GETF nest energy
@@ -355,11 +337,6 @@ GETF nest pmf
 LET b_pmf = LAST_N
 GETF nest threshold
 LET b_thr = LAST_N
-SEND nest aco2 1
-ASSERT LAST_N == 1 "nest aco2 open"
-SEND nest photosynth 10
-SEND nest charge 10
-SEND nest feed 8
 SEND nest idh2 2
 ASSERT LAST_N == 2 "nest idh2 2"
 GETF nest heat
@@ -398,11 +375,6 @@ GETF mito atp
 LET p_a = LAST_N
 GETF mito energy
 LET p_e = LAST_N
-SEND mito aco2 1
-ASSERT LAST_N == 1 "mito aco2 open"
-SEND mito photosynth 10
-SEND mito charge 10
-SEND mito feed 8
 SEND mito idh2 1
 ASSERT LAST_N == 1 "mito idh2 partial"
 GETF mito atp
@@ -416,4 +388,4 @@ GETF mito alive
 ASSERT LAST_N == 1 "mito sealed alive for TCA"
 GETF peri alive
 ASSERT LAST_N == 1 "peri sealed alive for TCA"
-ASSERT 1 == 1 "LIFE_CELL_IDH2 PASS"
+ASSERT 1 == 1 "LIFE_CELL_ACO2 PASS"

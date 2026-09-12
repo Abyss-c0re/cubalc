@@ -90,6 +90,11 @@ ASSERT LAST_N == 2 "printer cs citrate synthase"
 SEND printer photosynth 12
 SEND printer charge 12
 SEND printer feed 10
+SEND printer aco2 1
+ASSERT LAST_N == 1 "printer aco2 open"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
 
 GETF printer heat
 LET h0 = LAST_N
@@ -97,11 +102,6 @@ GETF printer energy
 LET e0 = LAST_N
 GETF printer atp
 LET a0 = LAST_N
-SEND printer aco2 1
-ASSERT LAST_N == 1 "printer aco2 open"
-SEND printer photosynth 10
-SEND printer charge 10
-SEND printer feed 8
 SEND printer idh2 3
 ASSERT LAST_N == 3 "printer idh2 aconitase 3"
 GETF printer heat
@@ -126,17 +126,17 @@ ASSERT LAST_N == 1 "ink cs open"
 SEND ink photosynth 8
 SEND ink charge 8
 SEND ink feed 6
+SEND ink aco2 1
+ASSERT LAST_N == 1 "ink aco2 open"
+SEND ink photosynth 12
+SEND ink charge 12
+SEND ink feed 10
 GETF ink heat
 LET ih = LAST_N
 GETF ink energy
 LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
-SEND ink aco2 1
-ASSERT LAST_N == 1 "ink aco2 open"
-SEND ink photosynth 10
-SEND ink charge 10
-SEND ink feed 8
 SEND ink idh2 2
 ASSERT LAST_N == 2 "ink idh2 2"
 GETF ink heat
