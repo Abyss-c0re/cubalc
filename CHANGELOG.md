@@ -1,3 +1,12 @@
+## 1.15.1759-usability — MI2261 LIFE_CELL_CSAD
+
+- feat(life): Csad cysteine sulfinic acid decarboxylase after Cdo1 on life_cell
+- continuum ...->ggt->dug1->nat8->cdo1->csad
+- METHOD csad n: CSA -> hypotaurine + CO2 after Cdo1
+- proof programs/proof/2261_life_cell_csad.cubalc asserts_ok=155 fail=0
+- atomic_printer_life_csad + smx_mesh_vesicle_csad_life + flagship 1620 PASS (sum 272)
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1746-usability — MI2248 LIFE_CELL_METK
