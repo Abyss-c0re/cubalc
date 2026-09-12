@@ -11,9 +11,11 @@
   },
   "proof": "programs/proof/2257_life_cell_gst.cubalc",
   "feat": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418",
-  "HEAD": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
-  "head": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
-  "tip": "f6f5a412b0b55e4133530c975d1e3dd9a128b5ab",
+  "HEAD": "b7dfe0e1d4da9178aea10f694ae6799204337fce",
+  "head": "b7dfe0e1d4da9178aea10f694ae6799204337fce",
+  "tip": "b7dfe0e1d4da9178aea10f694ae6799204337fce",
   "sealed": true,
-  "note": "Gst GSH S-transferase after Gpx \u2014 conjugation detox on GSH free-energy shield"
+  "note": "Gst GSH S-transferase after Gpx \u2014 conjugation detox on GSH free-energy shield",
+  "pin": "b7dfe0e1d4da9178aea10f694ae6799204337fce",
+  "FEAT_HEAD": "3b084bdc3f3b84bcf3b7e9e20e89638d92cc7418"
 }
