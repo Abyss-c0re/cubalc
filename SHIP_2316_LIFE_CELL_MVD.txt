@@ -5,6 +5,6 @@ proof: programs/proof/2316_life_cell_mvd.cubalc
 asserts_fail: 0
 asserts_ok: life=187 atomic_printer=68 smx=64 flagship=12 sum=331
 continuum: ...->hmgcs1->hmgcr->mvk->pmvk->mvd
-HEAD: ff0fa100077dabea021331d64a132a09c85b7553
+HEAD: bab11394e3e238a76bc6f8473869f6029b87225b
 feat: 893df7b00399b919fb8b140debf8d342adb82ac0
 law: cube_is_sot; free_energy_must_flow
