@@ -1,13 +1,13 @@
 {
-  "MI": 2271,
-  "FEATURE": "LIFE_CELL_FABP6",
-  "method": "fabp6 n",
-  "version": "1.15.1770-usability",
-  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6",
+  "MI": 2272,
+  "FEATURE": "LIFE_CELL_FXR",
+  "method": "fxr n",
+  "version": "1.15.1771-usability",
+  "continuum": "...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr",
   "asserts_fail": 0,
   "asserts_ok_sum": 686,
-  "proof": "programs/proof/2271_life_cell_fabp6.cubalc",
-  "HEAD": "8b2074dfa3eef6e5db114ff754d51140ec42a508",
-  "feat": "bcadff541353e0ab4b0d374ac5603cf5e9fc9778",
+  "proof": "programs/proof/2272_life_cell_fxr.cubalc",
+  "HEAD": "8033409a12b1c546a9b98ee2150278aff30314c3",
+  "feat": "8033409a12b1c546a9b98ee2150278aff30314c3",
   "law": "cube_is_sot; free_energy_must_flow"
 }
