@@ -1,0 +1,1 @@
+agent=hive-01 tick=3 host=cubeA
