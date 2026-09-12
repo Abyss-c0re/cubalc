@@ -14,8 +14,8 @@
   "asserts_fail": 0,
   "asserts_ok_sum": 1195,
   "proof": "programs/proof/2283_life_cell_slc27a5.cubalc",
-  "HEAD": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "HEAD": "698f83a96d2308990e8215bcd5bcfb532994255e",
   "feat": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
-  "head": "558d020b3640163cbe07fb83dc9d462a8cdd3ab4",
+  "head": "698f83a96d2308990e8215bcd5bcfb532994255e",
   "law": "cube_is_sot; free_energy_must_flow"
 }
