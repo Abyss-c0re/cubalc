@@ -1,11 +1,13 @@
-MI=2268
-FEATURE=LIFE_CELL_MRP3
-METHOD=mrp3 n
-VERSION=1.15.1766-usability
-CONTINUUM=...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
-ASSERTS_FAIL=0
-ASSERTS_OK_SUM=589
-PROOF=programs/proof/2268_life_cell_mrp3.cubalc
-HEAD=888dc9c9c6c1da38a701641481782d38b15d4150
-FEAT=021934a111acd566049a79f3782f1112f4153a33
-LAW=cube_is_sot; free_energy_must_flow
+# MEANINGFUL_ITER
+
+- **MI**: 2268
+- **FEATURE**: LIFE_CELL_MRP3
+- **method**: mrp3 n
+- **version**: 1.15.1766-usability
+- **continuum**: ...->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
+- **asserts_fail**: 0
+- **asserts_ok sum**: 589 (life=388 atomic_printer=111 smx=78 flagship_1620=12)
+- **proof**: programs/proof/2268_life_cell_mrp3.cubalc
+- **HEAD**: a3e7d228744b3ac40a9f6406abb050864be846ee
+- **feat**: 021934a111acd566049a79f3782f1112f4153a33
+- **law**: cube_is_sot; free_energy_must_flow
