@@ -18,14 +18,14 @@
   "proof": "programs/proof/2359_life_cell_st6galnac5.cubalc",
   "proofs": [
     "programs/lib/life_cell.cubalc",
-    "programs/proof/2359_life_cell_neu3.cubalc",
-    "programs/science/integration/atomic_printer_life_neu3.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_neu3_life.cubalc",
+    "programs/proof/2359_life_cell_st6galnac5.cubalc",
+    "programs/science/integration/atomic_printer_life_st6galnac5.cubalc",
+    "programs/science/integration/smx_mesh_vesicle_st6galnac5_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->neu3",
-  "domain": "post-ST6GALNAC6 glycosphingolipid NEU3 PM sialidase ward (catabolic sialic return)",
-  "gift": "NEU3 releases terminal Neu5Ac from GQ1b-alpha under ASSERT after ST6GALNAC6 GQ1b-alpha ward so free energy re-enters sialic salvage pools without hollow over-sialylated stall",
+  "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5",
+  "domain": "post-ST6GALNAC6 glycosphingolipid ST6GALNAC5 GD1-alpha synthase ward (alpha-series GD1a limb)",
+  "gift": "ST6GALNAC5 commits GM1b-class acceptors into Golgi GD1-alpha under ASSERT after ST6GALNAC6 GQ1b-alpha ward so free energy keeps moving into alpha-series GD1 pools without hollow unsialylated GM1b stall",
   "proof_sum": {
     "life": 401,
     "atomic": 141,
@@ -51,8 +51,8 @@
   "note": "LIFE_CELL_NEU3 MI2359 METHOD neu3 n after st6galnac6 on glycosphingolipid continuum",
   "ts": "2026-09-13T16:49:00Z",
   "commit": "PENDING",
-  "HEAD": "c7d7980bd55ee6e9c4a7f998f90c28a3c5bf8dae",
-  "head": "c7d7980bd55ee6e9c4a7f998f90c28a3c5bf8dae",
-  "tip": "c7d7980bd55ee6e9c4a7f998f90c28a3c5bf8dae",
-  "git_head": "c7d7980bd55ee6e9c4a7f998f90c28a3c5bf8dae"
+  "HEAD": "272abdaecfe48e88f0622cd8bbb7c4b182ea52f0",
+  "head": "272abdaecfe48e88f0622cd8bbb7c4b182ea52f0",
+  "tip": "272abdaecfe48e88f0622cd8bbb7c4b182ea52f0",
+  "git_head": "272abdaecfe48e88f0622cd8bbb7c4b182ea52f0"
 }
