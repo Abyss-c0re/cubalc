@@ -1,3 +1,11 @@
+## MI 2327 -- LIFE_CELL_EBP
+
+- feat(life): sterol Delta8-Delta7 isomerase (EBP/ERG2) after HSD17B7 on life_cell continuum
+- Continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp -- Delta8->Delta7 zymosterol-ward gate
+- Proof: programs/proof/2327_life_cell_ebp.cubalc (252 ASSERT ok)
+- Science: atomic_printer_life_ebp (90), smx_mesh_vesicle_ebp_life (86)
+- Flagship 1620 PASS (12). Sum 440 asserts_fail:0
+
 ## MI 2324 -- LIFE_CELL_SC4MOL
 
 - feat(life): sterol-C4-methyl oxidase (SC4MOL/MSMO1/ERG25) after TM7SF2 on life_cell continuum
