@@ -20297,4 +20297,78 @@ CLASS Cell
   END
 
 
+  # Sqs: squalene synthase (SQS / FDFT1) after FDPS limb.
+  # SQS is the first committed sterol-branch enzyme: it condenses two
+  # farnesyl diphosphate units (minted by FDPS elongation of IDI1-derived
+  # DMAPP+IPP) head-to-head into presqualene diphosphate then squalene so
+  # SQLE/LSS can drive lanosterol and free energy reclaimed from BA/odd-chain
+  # ketones builds membrane sterol mass under ASSERT.
+  # After Fdps opens the FPP pool, Sqs spends that FPP pool under ASSERT to
+  # open the squalene synthase gate toward SQLE/LSS (committed C30 sterol
+  # backbone condensation step).
+  # Distinct from Fdps FPP synthase, Idi1 isomerase, Ggps1 GGPP synthase,
+  # and Sqle squalene epoxidase - Sqs is the squalene synthase (SQS/FDFT1)
+  # 2xFPP -> squalene gate.
+  # Domain: post-FDPS squalene synthase (SQS/FDFT1) sterol-entry gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
+  # Gift: post-FDPS SQS so BA/odd-chain free-energy path can condense
+  #   2xFPP into squalene under ASSERT after FDPS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sqs.
+  # Usability: AGI models post-FDPS SQS squalene synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sqs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
