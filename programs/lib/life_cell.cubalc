@@ -21734,4 +21734,77 @@ CLASS Cell
     RET take
   END
 
+  # Npc2: NPC intracellular cholesterol transporter 2 after NPC1L1 luminal sterol uptake.
+  # NPC2 is the soluble lysosomal sterol-binding protein that receives unesterified
+  # cholesterol liberated in the late endosome/lysosome after NPC1L1-dependent
+  # dietary/biliary sterol entry and hands the sterol cargo to membrane NPC1 under
+  # ASSERT for egress into the metabolically active sterol pool.
+  # After Npc1l1 commits brush-border/canalicular sterol uptake into the endocytic
+  # continuum, Npc2 spends handoff cargo under ASSERT to complete the lysosomal
+  # sterol-binding step (committed lysosomal FC -> NPC1-docked sterol handoff on the
+  # post-NPC1L1 lysosomal sterol limb).
+  # Distinct from Npc1l1 brush-border cholesterol uptake, Npc1 lysosomal sterol egress
+  # pump, Lipa lysosomal acid lipase CE hydrolysis, Scarb1 plasma-membrane SR-BI
+  # selective HDL-CE uptake, Abcg5/Abcg8 biliary sterol heterodimer, and Soat1 ER
+  # sterol O-acyltransferase - Npc2 is the soluble lysosomal sterol handoff carrier.
+  # Domain: post-NPC1L1 lysosomal sterol handoff ward on the dietary/biliary sterol limb.
+  # Continuum: ...->cetp->pltp->scarb1->npc1l1->npc2
+  # Gift: post-NPC1L1 NPC2 hands lysosomal free sterol under ASSERT so endocytosed
+  # dietary/biliary cholesterol reflows into cytosolic sterol without lysosomal trap.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc2.
+  # Usability: AGI models post-NPC1L1 lysosomal sterol handoff under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD npc2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END

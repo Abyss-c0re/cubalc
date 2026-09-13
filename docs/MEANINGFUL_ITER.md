@@ -30,3 +30,9 @@
 - asserts: life=339 ap=113 smx=110 flagship=12 sum=574
 - VERSION: 1.15.1839-usability
 
+
+## MI 2342 LIFE_CELL_NPC2 PASS
+- method: `npc2 n` after NPC1L1 / SCARB1 limb
+- continuum: ...->cetp->pltp->scarb1->npc1l1->npc2
+- asserts: life=346 ap=115 smx=112 flagship=12 sum=585
+- VERSION: 1.15.1842-usability

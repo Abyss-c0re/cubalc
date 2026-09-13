@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1842-usability — LIFE_CELL_NPC2 MI2342
+- METHOD npc2 n: NPC2 lysosomal sterol handoff after NPC1L1 on sterol continuum
+- Continuum ...->pltp->scarb1->npc1l1->npc2
+- Proofs PASS life 346 atomic 115 smx 112 flagship 12 sum 585 asserts_fail 0
+- Cube is SoT. Free energy must flow.
+
+
 ## 1.15.1839-usability — LIFE_CELL_SCARB1 MI2339
 - METHOD scarb1 n: SR-BI selective HDL-CE uptake after PLTP on sterol continuum
 - Continuum ...->cetp->pltp->scarb1
