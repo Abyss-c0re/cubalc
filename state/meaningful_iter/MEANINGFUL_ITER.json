@@ -41,8 +41,10 @@
   "status": "PASS",
   "sealed": true,
   "note": "Cube is SoT. Free energy must flow. Not a dual ladder.",
-  "commit": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "head": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "HEAD": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "feat_head": "0acf4703bb7bf3766c06483c4c6c5358417798f4"
+  "commit": "7e12bb25422028e5e9861ecad2c093f8a2756f8c",
+  "head": "7e12bb25422028e5e9861ecad2c093f8a2756f8c",
+  "HEAD": "7e12bb25422028e5e9861ecad2c093f8a2756f8c",
+  "feat_head": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
+  "pinned_head": "7e12bb25422028e5e9861ecad2c093f8a2756f8c",
+  "tip": "7e12bb25422028e5e9861ecad2c093f8a2756f8c"
 }
