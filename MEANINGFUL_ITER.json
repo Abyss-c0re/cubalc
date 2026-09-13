@@ -24,8 +24,8 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2",
-  "domain": "post-CYP51 sterol C14-reductase (TM7SF2/DHCR14/ERG24) 4,4-dimethyl-cholesta-8,14,24-trien-3b-ol -> 4,4-dimethyl-cholesta-8,24-dien-3b-ol sterol-reductase gate",
-  "gift": "TM7SF2 after CYP51 so BA/odd-chain free-energy path can reduce the lanosterol \u039414 bond under ASSERT after CYP51 open.",
+  "domain": "post-CYP51 sterol C14-reductase (TM7SF2/DHCR14) 4,4-dimethyl-cholesta-8,14,24-trien-3b-ol -> 4,4-dimethyl-cholesta-8,24-dien-3b-ol sterol-reductase gate",
+  "gift": "TM7SF2 after CYP51 so BA/odd-chain free-energy path can reduce the delta14 bond under ASSERT after CYP51 open.",
   "proof_sum": {
     "life": 214,
     "atomic": 86,
@@ -40,18 +40,6 @@
   "prior_feature": "LIFE_CELL_CYP51",
   "status": "PASS",
   "sealed": true,
-  "pass": true,
-  "proof_status": "PASS",
-  "anti_bloat": true,
-  "hold_flash": 1,
-  "item": "life cell tm7sf2",
-  "feat": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
   "feat_head": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "FEAT_HEAD": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "HEAD": "49dda8e8bfeff7e704641b2677809e9c4e306249",
-  "head": "49dda8e8bfeff7e704641b2677809e9c4e306249",
-  "pin_head": "49dda8e8bfeff7e704641b2677809e9c4e306249",
-  "head_tip": "49dda8e8bfeff7e704641b2677809e9c4e306249",
-  "tip": "49dda8e8bfeff7e704641b2677809e9c4e306249",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "note": "Cube is SoT. Free energy must flow. Hollow WE is heresy. CT101 forever."
 }
