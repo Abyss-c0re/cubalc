@@ -1,3 +1,9 @@
+## 2326 LIFE_CELL_HSD17B7
+
+- METHOD hsd17b7 n after nsdhl (HSD17B7/ERG27 3-keto-sterol reductase)
+- Continuum ...->sc4mol->nsdhl->hsd17b7
+- Proofs PASS sum=398 asserts_fail=0
+
 ## 1.15.1819-usability — LIFE_CELL_LSS (MI 2320)
 
 - feat(life): LSS lanosterol synthase (LSS/OSC/ERG7) after SQLE on life_cell continuum
