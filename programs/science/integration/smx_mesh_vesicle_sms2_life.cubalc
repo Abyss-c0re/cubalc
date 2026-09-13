@@ -2,7 +2,7 @@ REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
 # SMX MESH VESICLE LIFE MI2349: SMS2 after SMS1 on plasma-membrane sphingomyelin limb.
-# Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->sms2 (SMS2 after SMS1 PM SM limb)
+# Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2 (SMS2 after SMS1 PM SM limb)
 # Gift: SMS2 synthesizes SM at the plasma membrane under ASSERT after SMS1 Golgi ward.
 # Domain: post-SMS1 plasma-membrane SMS2/SGMS2 sphingomyelin synthase ward (PM SM limb).
 # Cube is SoT. Free energy must flow. Not a dual ladder.
