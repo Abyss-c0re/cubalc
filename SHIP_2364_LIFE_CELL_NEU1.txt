@@ -1,0 +1,11 @@
+SHIP LIFE_CELL_NEU1 MI 2364
+version: 1.15.1864-usability
+method: neu1 n
+proof: programs/proof/2364_life_cell_neu1.cubalc
+life=409 atomic=144 mesh=141 flagship=12 sum=706 asserts_fail=0
+continuum: ...->st6galnac6->st6galnac5->neu3->glb1->hexa->neu1
+domain: post-HEXA lysosomal NEU1 neuraminidase ward (catabolic sialyl-hydrolase limb)
+gift: NEU1 cleaves terminal alpha-Neu5Ac from GM3 after HEXA so free energy re-enters sialic salvage without hollow GM3-sialyl lock (sialidosis / mucolipidosis ward)
+prior: LIFE_CELL_HEXA MI 2363
+status: PASS
+law: cube_is_sot; free_energy_must_flow; hollow_we_heresy

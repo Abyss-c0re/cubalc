@@ -1,3 +1,12 @@
+# Changelog
+
+## 1.15.1864-usability — LIFE_CELL_NEU1 (MI 2364)
+- feat(life): METHOD neu1 n lysosomal neuraminidase after HEXA on glycosphingolipid continuum
+- continuum: ...->neu3->glb1->hexa->neu1
+- Gift: NEU1 cleaves terminal alpha-Neu5Ac from GM3 after HEXA so free energy re-enters sialic salvage without hollow GM3-sialyl lock (sialidosis ward)
+- Proof PASS life=409 atomic=144 mesh=141 flagship=12 sum=706 asserts_fail=0
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1857-usability — LIFE_CELL_ST6GALNAC6 (MI 2357)
 
 - `METHOD st6galnac6 n` — ST6GALNAC6/SIAT7F alpha-2,6-sialyltransferase GQ1b-alpha synthase after ST8SIA5.
