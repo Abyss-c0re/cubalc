@@ -50,14 +50,15 @@
   "feat": "5ecff7fc211210bacfbaa5b21541e81f76238cd4",
   "feat_head": "5ecff7fc211210bacfbaa5b21541e81f76238cd4",
   "FEAT_HEAD": "5ecff7fc211210bacfbaa5b21541e81f76238cd4",
-  "HEAD": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
-  "head": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
-  "tip": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
+  "HEAD": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
+  "head": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
+  "tip": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
   "pin": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
   "pinned_head": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
   "TIP": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
   "ship_head": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
   "CUBALC_HEAD_NOW": "85f4dbaac75963f455fc324a1c0e9ad8314b04d3",
   "asserts_fail": 0,
-  "ts": 1789314891.1375058
+  "ts": 1789314891.1375058,
+  "git_head": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c"
 }
