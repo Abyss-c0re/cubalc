@@ -42,3 +42,12 @@
 - continuum: ...->cetp->pltp->scarb1->npc1l1->npc2
 - asserts: life=346 ap=115 smx=112 flagship=12 sum=585
 - VERSION: 1.15.1842-usability
+
+## MI 2344 — LIFE_CELL_STARD3
+
+- Method: `stard3 n`
+- Version: `1.15.1844-usability`
+- Continuum: `...->npc1l1->npc2->npc1->stard3`
+- Proofs: life 360 · atomic 119 · smx 116 · flagship 12 · sum 607 · fail 0
+- Gift: post-NPC1 STARD3 LE START-domain sterol shuttle (MLN64) under ASSERT.
+

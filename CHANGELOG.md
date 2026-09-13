@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1844-usability — MI2344 LIFE_CELL_STARD3 (2026-09-13)
+
+- **LIFE_CELL_STARD3**: METHOD `stard3 n` — STARD3 (MLN64) LE START-domain sterol transfer after NPC1 lysosomal sterol egress on life_cell continuum.
+- Continuum: `...->npc1l1->npc2->npc1->stard3`
+- Proofs PASS life 360 atomic 119 smx 116 flagship 12 sum 607 asserts_fail 0.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1843-usability — LIFE_CELL_NPC1 MI2343
 - METHOD npc1 n: lysosomal sterol egress after NPC2 handoff on sterol continuum
 - Continuum ...->scarb1->npc1l1->npc2->npc1
