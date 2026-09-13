@@ -20886,6 +20886,80 @@ CLASS Cell
   END
 
 
+  # Ebp: Δ8–Δ7 sterol isomerase (EBP / emopamil-binding protein / ERG2) after HSD17B7 limb.
+  # EBP is the post-HSD17B7 sterol Δ8–Δ7 isomerase: it isomerizes the
+  # 3β-hydroxysterol double bond from Δ8 to Δ7 after HSD17B7 restores the
+  # 3β-OH, so SC5D/DHCR7 limbs can finish lathosterol/cholesterol and free
+  # energy reclaimed from BA/odd-chain ketones builds membrane sterol mass
+  # under ASSERT.
+  # After Hsd17b7 opens the 3β-hydroxysterol pool, Ebp spends that pool under
+  # ASSERT to open the Δ8→Δ7 isomerization gate (committed sterol-isomerase
+  # step on the branch toward zymosterol/lathosterol/cholesterol).
+  # Distinct from Hsd17b7 3-keto-sterol reductase, Nsdhl C4-decarboxylase,
+  # Sc4mol C4-methylsterol oxidase, and Tm7sf2 C14-reductase - Ebp is the
+  # Δ8–Δ7 sterol isomerase (EBP/ERG2) Δ8-sterol -> Δ7-sterol gate.
+  # Domain: post-HSD17B7 Δ8–Δ7 sterol isomerase (EBP/ERG2) sterol-isomerase gate.
+  # Continuum: ...->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp
+  # Gift: post-HSD17B7 EBP so BA/odd-chain free-energy path can isomerize
+  #   Δ8→Δ7 under ASSERT after HSD17B7 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ebp.
+  # Usability: AGI models post-HSD17B7 EBP Δ8–Δ7 sterol isomerization under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ebp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 
 
 END

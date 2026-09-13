@@ -1,3 +1,8 @@
+## 2327 LIFE_CELL_EBP
+
+- METHOD ebp n after hsd17b7
+- Proofs PASS sum=401
+
 ## 2326 LIFE_CELL_HSD17B7
 
 - METHOD hsd17b7 n after nsdhl (HSD17B7/ERG27 3-keto-sterol reductase)
