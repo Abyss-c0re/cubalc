@@ -1,0 +1,6 @@
+SHIP 2335 LIFE_CELL_LCAT PASS
+METHOD lcat n — LCAT plasma HDL-core CE maturation after ABCG1
+Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat
+Proofs: life 316/0 · atomic 107/0 · mesh 103/0 · flagship 1620 12/0 · sum 538
+Gift: LCAT esterifies free cholesterol on mature HDL → CE-rich core under ASSERT after ABCG1 ward.
+Cube is SoT. Free energy must flow.

@@ -28,15 +28,15 @@
   "gift": "LCAT after ABCG1 so free cholesterol on mature HDL packs into CE-rich HDL cores under ASSERT after mature-HDL RCT efflux ward.",
   "proof_sum": {
     "life": 316,
-    "atomic": 106,
-    "smx": 102,
+    "atomic": 107,
+    "smx": 103,
     "flagship": 12,
-    "sum": 536,
+    "sum": 538,
     "asserts_fail": 0
   },
   "asserts_fail": 0,
-  "asserts_ok_sum": 536,
-  "asserts_ok": 536,
+  "asserts_ok_sum": 538,
+  "asserts_ok": 538,
   "prior_feature": "LIFE_CELL_ABCG1",
   "prior_mi": 2334,
   "status": "PASS",
@@ -46,5 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell lcat",
-  "note": "LIFE_CELL_LCAT MI2335 after ABCG1 continuum; plasma LCAT HDL-core CE maturation ward after mature-HDL sterol load."
+  "note": "LIFE_CELL_LCAT MI2335 after ABCG1 continuum; plasma LCAT HDL-core CE maturation ward after mature-HDL sterol load.",
+  "feat": "e171131d46963433f40867c3422844fb30a6110e",
+  "feat_head": "e171131d46963433f40867c3422844fb30a6110e",
+  "FEAT_HEAD": "e171131d46963433f40867c3422844fb30a6110e",
+  "HEAD": "PENDING",
+  "head": "PENDING",
+  "tip": "PENDING",
+  "pin": "PENDING"
 }

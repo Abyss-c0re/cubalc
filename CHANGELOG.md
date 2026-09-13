@@ -1,3 +1,16 @@
+## 1.15.1835-usability — 2335 LIFE_CELL_LCAT
+- feat(life): lcat n — LCAT plasma HDL-core CE maturation after ABCG1 on sterol RCT continuum
+- continuum ...->soat1->nceh1->abca1->abcg1->lcat
+- proofs: 2335_life_cell_lcat 316/0; atomic 107/0; smx mesh 103/0; flagship 1620 12/0; sum 538/0
+- Cube is SoT. Free energy must flow.
+
+## 1.15.1835-usability — LIFE_CELL_LCAT (MI 2335)
+
+- feat(life): LCAT plasma HDL-core CE maturation after ABCG1 mature-HDL load
+- Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat; proofs life 316 + atomic 107 + smx 103 + flagship 12 = 538 asserts_fail:0
+- METHOD lcat n — free-cholesterol + PC -> HDL-core CE under ASSERT after ABCG1
+
+
 ## 1.15.1834-usability — LIFE_CELL_ABCG1 (MI 2334)
 
 - feat(life): ABCG1 mature-HDL sterol efflux after ABCA1 nascent RCT

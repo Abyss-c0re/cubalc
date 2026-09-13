@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# ATOMIC PRINTER LIFE_FORCE MI2335: LCAT after LCAT on sterol CE limb.
-# Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1 (LCAT after LCAT)
-# Gift: LCAT esterifies free cholesterol on mature HDL after LCAT sterol load under ASSERT after RCT efflux ward.
-# Domain: post-LCAT plasma LCAT HDL-core CE maturation reverse-cholesterol-transport ward.
+# ATOMIC PRINTER LIFE_FORCE MI2335: LCAT after ABCG1 on sterol CE limb.
+# Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat (LCAT after ABCG1)
+# Gift: LCAT esterifies free cholesterol on mature HDL after ABCG1 sterol load under ASSERT after RCT efflux ward.
+# Domain: post-ABCG1 plasma LCAT HDL-core CE maturation reverse-cholesterol-transport ward.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY press OF Cell 1 60 0
@@ -494,7 +494,7 @@ ASSERT LAST_N == 1 "ink dhcr7 gate before HDL-lcat"
 SEND ink photosynth 8
 SEND ink charge 8
 SEND ink feed 6
-SEND ink lcat 1
+SEND ink dhcr24 1
 ASSERT LAST_N == 1 "ink nceh1 gate before HDL-lcat"
 SEND ink soat1 1
 ASSERT LAST_N == 1 "ink soat1 gate before HDL-lcat"
@@ -532,6 +532,8 @@ ASSERT LAST_N == ia - 2 "ink lcat atp-2"
 GETF ink alive
 ASSERT LAST_N == 1 "ink alive post-lcat"
 
+SEND dead abcg1 1
+ASSERT LAST_N == 0 "dead abcg1 refused"
 SEND dead lcat 3
 ASSERT LAST_N == 0 "dead lcat refused"
 GETF dead alive

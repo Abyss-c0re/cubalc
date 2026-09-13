@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX mesh mesh LIFE_FORCE MI2335: LCAT after LCAT on sterol CE limb.
-# Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1 (LCAT after LCAT)
-# Gift: LCAT esterifies free cholesterol on mature HDL after LCAT sterol load under ASSERT after RCT efflux ward.
-# Domain: post-LCAT plasma LCAT HDL-core CE maturation reverse-cholesterol-transport ward.
+# SMX MESH VESICLE LIFE MI2335: LCAT after ABCG1 on sterol CE limb.
+# Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat (LCAT after ABCG1)
+# Gift: LCAT esterifies free cholesterol on mature HDL after ABCG1 sterol load under ASSERT after RCT efflux ward.
+# Domain: post-ABCG1 plasma LCAT HDL-core CE maturation reverse-cholesterol-transport ward.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY mesh OF Cell 1 55 0
@@ -510,9 +510,11 @@ ASSERT LAST_N == ca - 2 "cargo lcat atp-2"
 GETF cargo alive
 ASSERT LAST_N == 1 "cargo alive post-lcat"
 
+SEND lysed abcg1 1
+ASSERT LAST_N == 0 "lysed abcg1 refused"
 SEND lysed lcat 3
 ASSERT LAST_N == 0 "lysed lcat refused"
 GETF lysed alive
 ASSERT LAST_N == 0 "lysed stays dead"
 
-ASSERT 1 == 1 "smx_mesh_vesicle_abcg1_life PASS"
+ASSERT 1 == 1 "smx_mesh_vesicle_lcat_life PASS"
