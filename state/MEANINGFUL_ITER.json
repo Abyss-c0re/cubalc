@@ -11,23 +11,25 @@
   "feature": "life_cell_acadvl",
   "FEATURE": "LIFE_CELL_ACADVL",
   "name": "LIFE_CELL_ACADVL",
-  "title": "ACADVL very-long-chain acyl-CoA dehydrogenase after CPT2 on beta-oxidation entry",
+  "title": "ACADVL very-long-chain acyl-CoA dehydrogenase after CPT2 on beta-oxidation entry continuum",
   "label": "LIFE_CELL_ACADVL",
   "method": "acadvl n",
   "ship": "2372_life_cell_acadvl",
   "proof": "programs/proof/2372_life_cell_acadvl.cubalc",
-  "proofs": [
-    "programs/science/integration/smx_mesh_vesicle_acadvl_life.cubalc",
-    "programs/science/integration/atomic_printer_life_acadvl.cubalc"
-  ],
-  "continuum": "...->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl",
-  "domain": "post-CPT2 matrix VLCAD/ACADVL ward (hexadecenoyl-CoA to enoyl-CoA limb)",
-  "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock.",
+  "proofs": {
+    "life": 69,
+    "atomic": 150,
+    "mesh": 147,
+    "total": 366,
+    "fail": 0
+  },
+  "continuum": "...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl",
+  "domain": "post-CPT2 matrix very-long-chain acyl-CoA dehydrogenase ACADVL ward",
+  "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock",
   "proof_sum": {
     "life": 69,
     "atomic": 150,
-    "smx": 147,
-    "flagship": 0,
+    "mesh": 147,
     "sum": 366,
     "asserts_fail": 0
   },
@@ -44,14 +46,14 @@
   "item_id": "mi_smx_mesh_vesicle_acadvl_life",
   "commit": "265ddfa89",
   "summary": "LIFE_CELL_ACADVL MI2372 after CPT2 continuum PASS.",
-  "feat_head": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "FEAT_HEAD": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
+  "feat_head": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
+  "FEAT_HEAD": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
   "feat": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
   "prior_mi": 2371,
-  "head": "104463ac94fc40f78427ebcca54a885ce6dfdea8",
-  "HEAD": "104463ac94fc40f78427ebcca54a885ce6dfdea8",
-  "tip": "104463ac94fc40f78427ebcca54a885ce6dfdea8",
-  "pin": "104463ac94fc40f78427ebcca54a885ce6dfdea8",
+  "head": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
+  "HEAD": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
+  "tip": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
+  "pin": "aab62c22d159a1704032bbc2dfe51acf7d38cc62",
   "proof_counts": {
     "life": 69,
     "atomic": 150,
@@ -59,5 +61,8 @@
     "flagship": 0,
     "total": 366,
     "fail": 0
-  }
+  },
+  "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
+  "tip_short": "aab62c22d",
+  "HEAD_short": "aab62c22d"
 }
