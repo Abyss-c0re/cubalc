@@ -28,15 +28,15 @@
   "gift": "SMS2 synthesizes sphingomyelin at the plasma membrane under ASSERT after SMS1 Golgi ward so free energy re-enters PM SM pools without hollow surface ceramide stall",
   "proof_sum": {
     "life": 387,
-    "atomic": 135,
-    "smx": 132,
+    "atomic": 134,
+    "smx": 131,
     "flagship": 12,
-    "sum": 666,
+    "sum": 664,
     "asserts_fail": 0
   },
   "asserts_fail": 0,
-  "asserts_ok_sum": 666,
-  "asserts_ok": 666,
+  "asserts_ok_sum": 664,
+  "asserts_ok": 664,
   "prior_feature": "LIFE_CELL_SMS1",
   "prior_mi": 2348,
   "status": "PASS",
@@ -47,5 +47,13 @@
   "hold_flash": 1,
   "item": "life cell sms2",
   "note": "LIFE_CELL_SMS2 MI2349 METHOD sms2 n after sms1 on sterol continuum",
-  "pass_": true
+  "pass_": true,
+  "head": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "HEAD": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "tip": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "pin": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "feat_head": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "FEAT_HEAD": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "feat": "8bbe53eac1d000a8a04fd1e996c9635c80bba659",
+  "pinned_head": "8bbe53eac1d000a8a04fd1e996c9635c80bba659"
 }
