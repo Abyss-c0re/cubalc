@@ -1,11 +1,11 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# ATOMIC PRINTER LIFE_FORCE MI2337: PLTP after PLTP on sterol PL-shuttle limb.
-# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->pltp->pltp (PLTP after PLTP)
+# ATOMIC PRINTER LIFE_FORCE MI2337: PLTP after CETP on sterol PL-shuttle limb.
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp (PLTP after CETP)
 # Gift: PLTP shuttles LCAT-packed CE from HDL onto apoB under ASSERT so RCT free energy redistributes without hollow HDL-only CE trap.
-# Domain: post-PLTP plasma phospholipid-transfer / HDL remodeling PLTP ward.
-# Cube is SoT. Free energy must flow. Not a dual ladder. Not a rename of PLTP.
+# Domain: post-CETP plasma phospholipid-transfer / HDL remodeling PLTP ward.
+# Cube is SoT. Free energy must flow. Not a dual ladder. Not a rename of LCAT.
 
 ENTITY press OF Cell 1 62 0
 ENTITY ink OF Cell 1 42 0
@@ -512,7 +512,7 @@ LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
 SEND ink pltp 2
-ASSERT LAST_N == 2 "ink pltp CE-transfer pack-2"
+ASSERT LAST_N == 2 "ink pltp PL-transfer pack-2"
 GETF ink heat
 ASSERT LAST_N == ih + 2 "ink pltp heat+2"
 GETF ink energy
@@ -520,7 +520,7 @@ ASSERT LAST_N == ie - 2 "ink pltp energy-2"
 GETF ink atp
 ASSERT LAST_N == ia - 2 "ink pltp atp-2"
 GETF ink alive
-ASSERT LAST_N == 1 "ink alive post-cetp"
+ASSERT LAST_N == 1 "ink alive post-pltp"
 
 # press triple cassette: ABCA1 + ABCG1 + PLTP
 SEND press photosynth 16
@@ -537,7 +537,7 @@ LET pe = LAST_N
 GETF press atp
 LET pa = LAST_N
 SEND press pltp 2
-ASSERT LAST_N == 2 "press pltp CE-transfer pack-2"
+ASSERT LAST_N == 2 "press pltp PL-transfer pack-2"
 GETF press heat
 ASSERT LAST_N == ph + 2 "press pltp heat+2"
 GETF press energy
@@ -545,7 +545,7 @@ ASSERT LAST_N == pe - 2 "press pltp energy-2"
 GETF press atp
 ASSERT LAST_N == pa - 2 "press pltp atp-2"
 GETF press alive
-ASSERT LAST_N == 1 "press alive post-cetp"
+ASSERT LAST_N == 1 "press alive post-pltp"
 
 SEND dead pltp 3
 ASSERT LAST_N == 0 "dead pltp refused"

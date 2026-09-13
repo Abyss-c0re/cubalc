@@ -1,0 +1,1 @@
+LIFE_CELL_PLTP MI2337 PASS sum=337 fail=0 method=pltp n continuum=lcat->cetp->pltp

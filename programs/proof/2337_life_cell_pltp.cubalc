@@ -1,0 +1,464 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_PLTP — PLTP phospholipid transfer protein PL-shuttle after CETP on sterol continuum
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp (PLTP after CETP)
+# Gift: PLTP shuttles surface phospholipids between apoB and HDL after CETP under ASSERT so RCT free energy
+# keeps remodeling without hollow surface-lipid stall. Surface PL exchange is the PLTP gift.
+# Domain: post-CETP plasma phospholipid-transfer / HDL remodeling PLTP ward.
+# Science: PLTP prefers post-CETP remodeled lipoprotein surfaces (vs CETP CE/TG heteroexchange alone);
+#   net PL transfer remodels HDL/apoB surfaces after CETP moves CE so particle free energy stays in flow.
+# Cube is SoT. Free energy must flow. Not a dual ladder. Not a rename of CETP or LCAT.
+
+# PLTP-first cast: PL-shuttle broker + apoB acceptor + surface donor + hollow clamps
+ENTITY broker OF Cell 1 64 0
+ENTITY apob OF Cell 1 48 0
+ENTITY tgdon OF Cell 1 50 0
+ENTITY hollow OF Cell 0 14 0
+ENTITY dry OF Cell 1 0 0
+
+SEND broker set_threshold 11
+SEND apob set_threshold 13
+SEND tgdon set_threshold 9
+SEND dry set_threshold 12
+
+# --- PLTP prelude (unique early divergence; front-loaded for anti-bloat window) ---
+SEND broker photosynth 24
+SEND broker charge 20
+SEND broker feed 18
+SEND broker pump 12
+SEND broker glycolyse 10
+SEND broker photophos 8
+GETF broker energy
+ASSERT LAST_N >= 18 "broker PLTP-prelude energy"
+GETF broker atp
+ASSERT LAST_N >= 18 "broker PLTP-prelude atp"
+GETF broker pmf
+ASSERT LAST_N >= 4 "broker PLTP-prelude pmf"
+SEND apob photosynth 14
+SEND apob charge 12
+SEND apob feed 10
+GETF apob alive
+ASSERT LAST_N == 1 "apob PLTP acceptor primed"
+SEND tgdon photosynth 14
+SEND tgdon charge 12
+SEND tgdon feed 10
+GETF tgdon alive
+ASSERT LAST_N == 1 "tgdon PLTP TG-donor primed"
+
+# Early PLTP clamp board
+SEND dry pltp 6
+ASSERT LAST_N == 0 "dry pltp no-ATP clamp"
+SEND hollow pltp 4
+ASSERT LAST_N == 0 "hollow pltp dead clamp"
+SEND broker cetp 1
+ASSERT LAST_N == 1 "broker cetp CE-transfer before PLTP"
+SEND broker photosynth 12
+SEND broker charge 12
+SEND broker feed 10
+SEND broker pltp 0
+ASSERT LAST_N == 0 "broker pltp zero-take"
+
+SEND broker pulse 3
+SEND broker photosynth 48
+SEND broker glycolyse 36
+SEND broker charge 44
+SEND broker feed 40
+SEND broker pump 16
+SEND broker photophos 14
+SEND broker photosynth 20
+SEND broker charge 20
+SEND broker feed 16
+GETF broker age
+ASSERT LAST_N == 3 "broker age3 after PLTP prime pulse"
+GETF broker energy
+ASSERT LAST_N >= 12 "broker energy after PLTP prime"
+GETF broker atp
+ASSERT LAST_N >= 12 "broker atp after PLTP prime"
+
+SEND broker photosynth 9
+SEND broker charge 8
+SEND broker feed 6
+SEND broker amacr 1
+ASSERT LAST_N == 1 "broker amacr gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 9
+SEND broker feed 7
+SEND broker acox2 1
+ASSERT LAST_N == 1 "broker acox2 gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 10
+SEND broker feed 8
+SEND broker hsd17b4 1
+ASSERT LAST_N == 1 "broker hsd17b4 gate on PLTP continuum"
+SEND broker photosynth 12
+SEND broker charge 11
+SEND broker feed 6
+SEND broker scp2 1
+ASSERT LAST_N == 1 "broker scp2 gate on PLTP continuum"
+SEND broker photosynth 13
+SEND broker charge 8
+SEND broker feed 7
+SEND broker acot8 1
+ASSERT LAST_N == 1 "broker acot8 gate on PLTP continuum"
+SEND broker photosynth 9
+SEND broker charge 9
+SEND broker feed 8
+SEND broker pcca 1
+ASSERT LAST_N == 1 "broker pcca gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 10
+SEND broker feed 6
+SEND broker mcee 1
+ASSERT LAST_N == 1 "broker mcee gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 11
+SEND broker feed 7
+SEND broker mut 1
+ASSERT LAST_N == 1 "broker mut gate on PLTP continuum"
+SEND broker photosynth 12
+SEND broker charge 8
+SEND broker feed 8
+SEND broker hmgcs1 1
+ASSERT LAST_N == 1 "broker hmgcs1 gate on PLTP continuum"
+SEND broker photosynth 13
+SEND broker charge 9
+SEND broker feed 6
+SEND broker hmgcr 1
+ASSERT LAST_N == 1 "broker hmgcr gate on PLTP continuum"
+SEND broker photosynth 9
+SEND broker charge 10
+SEND broker feed 7
+SEND broker mvk 1
+ASSERT LAST_N == 1 "broker mvk gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 11
+SEND broker feed 8
+SEND broker pmvk 1
+ASSERT LAST_N == 1 "broker pmvk gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 8
+SEND broker feed 6
+SEND broker mvd 1
+ASSERT LAST_N == 1 "broker mvd gate on PLTP continuum"
+SEND broker photosynth 12
+SEND broker charge 9
+SEND broker feed 7
+SEND broker idi1 1
+ASSERT LAST_N == 1 "broker idi1 gate on PLTP continuum"
+SEND broker photosynth 13
+SEND broker charge 10
+SEND broker feed 8
+SEND broker fdps 1
+ASSERT LAST_N == 1 "broker fdps gate on PLTP continuum"
+SEND broker photosynth 9
+SEND broker charge 11
+SEND broker feed 6
+SEND broker sqs 1
+ASSERT LAST_N == 1 "broker sqs gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 8
+SEND broker feed 7
+SEND broker sqle 1
+ASSERT LAST_N == 1 "broker sqle gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 9
+SEND broker feed 8
+SEND broker lss 1
+ASSERT LAST_N == 1 "broker lss gate on PLTP continuum"
+SEND broker photosynth 12
+SEND broker charge 10
+SEND broker feed 6
+SEND broker cyp51 1
+ASSERT LAST_N == 1 "broker cyp51 gate on PLTP continuum"
+SEND broker photosynth 13
+SEND broker charge 11
+SEND broker feed 7
+SEND broker tm7sf2 1
+ASSERT LAST_N == 1 "broker tm7sf2 gate on PLTP continuum"
+SEND broker photosynth 9
+SEND broker charge 8
+SEND broker feed 8
+SEND broker sc4mol 1
+ASSERT LAST_N == 1 "broker sc4mol gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 9
+SEND broker feed 6
+SEND broker nsdhl 1
+ASSERT LAST_N == 1 "broker nsdhl gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 10
+SEND broker feed 7
+SEND broker hsd17b7 1
+ASSERT LAST_N == 1 "broker hsd17b7 gate on PLTP continuum"
+SEND broker photosynth 12
+SEND broker charge 11
+SEND broker feed 8
+SEND broker ebp 1
+ASSERT LAST_N == 1 "broker ebp gate on PLTP continuum"
+SEND broker photosynth 13
+SEND broker charge 8
+SEND broker feed 6
+SEND broker sc5d 1
+ASSERT LAST_N == 1 "broker sc5d gate on PLTP continuum"
+SEND broker photosynth 9
+SEND broker charge 9
+SEND broker feed 7
+SEND broker dhcr7 1
+ASSERT LAST_N == 1 "broker dhcr7 gate on PLTP continuum"
+SEND broker photosynth 10
+SEND broker charge 10
+SEND broker feed 8
+SEND broker dhcr24 1
+ASSERT LAST_N == 1 "broker dhcr24 gate on PLTP continuum"
+SEND broker photosynth 11
+SEND broker charge 11
+SEND broker feed 6
+SEND broker soat1 1
+ASSERT LAST_N == 1 "broker soat1 gate on PLTP continuum"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive after soat1 on PLTP path"
+SEND broker photosynth 12
+SEND broker charge 8
+SEND broker feed 7
+SEND broker nceh1 1
+ASSERT LAST_N == 1 "broker nceh1 gate on PLTP continuum"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive after nceh1 on PLTP path"
+SEND broker photosynth 13
+SEND broker charge 9
+SEND broker feed 8
+SEND broker abca1 1
+ASSERT LAST_N == 1 "broker abca1 gate on PLTP continuum"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive after abca1 on PLTP path"
+SEND broker photosynth 9
+SEND broker charge 10
+SEND broker feed 6
+SEND broker abcg1 1
+ASSERT LAST_N == 1 "broker abcg1 gate on PLTP continuum"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive after abcg1 on PLTP path"
+SEND broker photosynth 10
+SEND broker charge 11
+SEND broker feed 7
+SEND broker lcat 2
+ASSERT LAST_N == 2 "broker lcat gate on PLTP continuum"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive after lcat on PLTP path"
+
+# === Distinctive PLTP heteroexchange board (unique vs LCAT CE-core / ABCG1 floppage) ===
+SEND broker photosynth 16
+SEND broker charge 14
+SEND broker feed 12
+SEND broker soat1 1
+ASSERT LAST_N == 1 "broker soat1 re-pack before PLTP heteroexchange"
+SEND broker photosynth 8
+SEND broker charge 8
+SEND broker feed 6
+SEND broker nceh1 1
+ASSERT LAST_N == 1 "broker nceh1 liberate before PLTP heteroexchange"
+SEND broker photosynth 8
+SEND broker charge 8
+SEND broker feed 6
+SEND broker abca1 1
+ASSERT LAST_N == 1 "broker abca1 seed before PLTP heteroexchange"
+SEND broker photosynth 8
+SEND broker charge 8
+SEND broker feed 6
+SEND broker abcg1 1
+ASSERT LAST_N == 1 "broker abcg1 load before PLTP heteroexchange"
+SEND broker photosynth 8
+SEND broker charge 8
+SEND broker feed 6
+SEND broker lcat 2
+ASSERT LAST_N == 2 "broker lcat CE-core pack-2 before PLTP"
+GETF broker heat
+LET bh = LAST_N
+GETF broker energy
+LET be = LAST_N
+GETF broker atp
+LET ba = LAST_N
+GETF broker age
+LET bage = LAST_N
+GETF broker pcr
+LET bpcr = LAST_N
+GETF broker reserve
+LET brsv = LAST_N
+GETF broker pmf
+LET bpmf = LAST_N
+GETF broker threshold
+LET bthr = LAST_N
+SEND broker pltp 3
+ASSERT LAST_N == 3 "broker pltp heteroexchange-3"
+GETF broker heat
+ASSERT LAST_N == bh + 3 "broker pltp heat+3"
+GETF broker energy
+ASSERT LAST_N == be - 3 "broker pltp energy-3"
+GETF broker atp
+ASSERT LAST_N == ba - 3 "broker pltp atp-3"
+GETF broker age
+ASSERT LAST_N == bage "broker pltp age held"
+GETF broker pcr
+ASSERT LAST_N == bpcr "broker pltp pcr held"
+GETF broker reserve
+ASSERT LAST_N == brsv "broker pltp reserve held"
+GETF broker pmf
+ASSERT LAST_N == bpmf "broker pltp pmf held"
+GETF broker threshold
+ASSERT LAST_N == bthr "broker pltp threshold held"
+GETF broker alive
+ASSERT LAST_N == 1 "broker alive post PLTP heteroexchange"
+
+# apoB acceptor limb
+SEND apob photosynth 14
+SEND apob charge 12
+SEND apob feed 10
+SEND apob abca1 1
+ASSERT LAST_N == 1 "apob abca1 seed acceptor limb"
+SEND apob photosynth 7
+SEND apob charge 7
+SEND apob feed 5
+SEND apob abcg1 1
+ASSERT LAST_N == 1 "apob abcg1 load acceptor limb"
+SEND apob photosynth 7
+SEND apob charge 7
+SEND apob feed 5
+SEND apob lcat 1
+ASSERT LAST_N == 1 "apob lcat before PLTP accept"
+SEND apob cetp 1
+ASSERT LAST_N == 1 "apob cetp CE-transfer before PLTP"
+SEND apob photosynth 12
+SEND apob charge 12
+SEND apob feed 10
+GETF apob heat
+LET ah = LAST_N
+GETF apob energy
+LET ae = LAST_N
+GETF apob atp
+LET aa = LAST_N
+SEND apob pltp 2
+ASSERT LAST_N == 2 "apob pltp PL-accept-2"
+GETF apob heat
+ASSERT LAST_N == ah + 2 "apob pltp heat+2"
+GETF apob energy
+ASSERT LAST_N == ae - 2 "apob pltp energy-2"
+GETF apob atp
+ASSERT LAST_N == aa - 2 "apob pltp atp-2"
+GETF apob alive
+ASSERT LAST_N == 1 "apob alive after PLTP accept"
+
+# TG-rich donor limb
+SEND tgdon photosynth 14
+SEND tgdon charge 12
+SEND tgdon feed 10
+SEND tgdon lcat 1
+ASSERT LAST_N == 1 "tgdon lcat TG-donor prep"
+SEND tgdon cetp 1
+ASSERT LAST_N == 1 "tgdon cetp CE-transfer before PLTP"
+SEND tgdon photosynth 12
+SEND tgdon charge 12
+SEND tgdon feed 10
+GETF tgdon heat
+LET th = LAST_N
+GETF tgdon energy
+LET te = LAST_N
+GETF tgdon atp
+LET ta = LAST_N
+SEND tgdon pltp 2
+ASSERT LAST_N == 2 "tgdon pltp PL exchange-2"
+GETF tgdon heat
+ASSERT LAST_N == th + 2 "tgdon pltp heat+2"
+GETF tgdon energy
+ASSERT LAST_N == te - 2 "tgdon pltp energy-2"
+GETF tgdon atp
+ASSERT LAST_N == ta - 2 "tgdon pltp atp-2"
+GETF tgdon alive
+ASSERT LAST_N == 1 "tgdon alive after PLTP exchange"
+
+# Partial PLTP shuttle
+SEND broker photosynth 12
+SEND broker charge 10
+SEND broker feed 8
+SEND broker lcat 1
+ASSERT LAST_N == 1 "broker lcat re-pack before partial PLTP"
+GETF broker energy
+LET pe = LAST_N
+GETF broker atp
+LET pa = LAST_N
+SEND broker pltp 1
+ASSERT LAST_N == 1 "broker pltp partial-1"
+GETF broker energy
+ASSERT LAST_N == pe - 1 "broker pltp partial energy-1"
+GETF broker atp
+ASSERT LAST_N == pa - 1 "broker pltp partial atp-1"
+
+# Budget clamp — pltp take is min(n, atp, energy)
+SEND broker photosynth 6
+SEND broker charge 6
+SEND broker feed 4
+GETF broker atp
+LET c_a = LAST_N
+GETF broker energy
+LET c_e = LAST_N
+SEND broker pltp 1
+ASSERT LAST_N == 1 "broker pltp drain-1"
+GETF broker atp
+ASSERT LAST_N == c_a - 1 "broker pltp drain atp-1"
+GETF broker energy
+ASSERT LAST_N == c_e - 1 "broker pltp drain energy-1"
+GETF broker atp
+LET c_a2 = LAST_N
+GETF broker energy
+LET c_e2 = LAST_N
+SEND broker pltp 9999
+LET took = LAST_N
+ASSERT took >= 1 "broker pltp oversize took some"
+ASSERT took <= c_a2 "broker pltp oversize not above atp"
+ASSERT took <= c_e2 "broker pltp oversize not above energy"
+GETF broker atp
+ASSERT LAST_N == c_a2 - took "broker atp reduced by PLTP take"
+GETF broker energy
+ASSERT LAST_N == c_e2 - took "broker energy reduced by PLTP take"
+
+
+# Final PLTP seal
+SEND broker photosynth 20
+SEND broker charge 18
+SEND broker feed 16
+SEND broker lcat 1
+ASSERT LAST_N == 1 "broker lcat before final PLTP seal"
+GETF broker heat
+LET fh = LAST_N
+GETF broker energy
+LET fe = LAST_N
+SEND broker pltp 5
+ASSERT LAST_N == 5 "broker pltp final seal-5"
+GETF broker heat
+ASSERT LAST_N == fh + 5 "broker pltp final heat+5"
+GETF broker energy
+ASSERT LAST_N == fe - 5 "broker pltp final energy-5"
+GETF broker alive
+ASSERT LAST_N == 1 "broker sealed alive after PLTP"
+GETF apob alive
+ASSERT LAST_N == 1 "apob sealed alive after PLTP"
+GETF tgdon alive
+ASSERT LAST_N == 1 "tgdon sealed alive after PLTP"
+GETF hollow alive
+ASSERT LAST_N == 0 "hollow remains dead after PLTP ward"
+GETF dry atp
+ASSERT LAST_N == 0 "dry atp hollow held after PLTP ward"
+GETF broker ready
+ASSERT LAST_N >= 0 "broker ready nonneg final"
+GETF broker pmf
+ASSERT LAST_N >= 0 "broker pmf nonneg final"
+GETF broker energy
+ASSERT LAST_N >= 0 "broker energy nonneg seal"
+GETF apob energy
+ASSERT LAST_N >= 0 "apob energy nonneg seal"
+GETF tgdon energy
+ASSERT LAST_N >= 0 "tgdon energy nonneg seal"
+SEND hollow pltp 2
+ASSERT LAST_N == 0 "hollow pltp still dead"
+SEND dry pltp 2
+ASSERT LAST_N == 0 "dry pltp still empty"

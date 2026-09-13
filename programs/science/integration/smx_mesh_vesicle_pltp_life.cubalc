@@ -1,10 +1,10 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX mesh LIFE_FORCE MI2337: PLTP after PLTP on sterol RCT limb.
-# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->pltp->pltp (PLTP after PLTP)
+# SMX mesh LIFE_FORCE MI2337: PLTP after CETP on sterol RCT limb.
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp (PLTP after CETP)
 # Gift: PLTP shuttles LCAT-packed CE from HDL onto apoB under ASSERT so RCT free energy redistributes without hollow HDL-only CE trap.
-# Domain: post-PLTP plasma phospholipid-transfer / HDL remodeling PLTP ward.
+# Domain: post-CETP plasma phospholipid-transfer / HDL remodeling PLTP ward.
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
 ENTITY mesh OF Cell 1 55 0
@@ -280,6 +280,11 @@ ASSERT LAST_N == 1 "mesh abcg1 gate before CE-lcat"
 SEND mesh photosynth 10
 SEND mesh charge 10
 SEND mesh feed 8
+SEND mesh cetp 1
+ASSERT LAST_N == 1 "mesh cetp CE-transfer before PLTP"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
 GETF mesh heat
 LET mh = LAST_N
 GETF mesh energy
@@ -509,6 +514,11 @@ ASSERT LAST_N == 1 "cargo abcg1 gate before CE-lcat"
 SEND cargo photosynth 10
 SEND cargo charge 10
 SEND cargo feed 8
+SEND cargo cetp 1
+ASSERT LAST_N == 1 "cargo cetp CE-transfer before PLTP"
+SEND cargo photosynth 12
+SEND cargo charge 12
+SEND cargo feed 10
 GETF cargo heat
 LET ih = LAST_N
 GETF cargo energy
