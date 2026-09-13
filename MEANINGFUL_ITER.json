@@ -42,5 +42,14 @@
   "gate": "nceh1",
   "enzyme": "NCEH1",
   "feat": "life_cell_nceh1",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
+  "feat_head": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "FEAT_HEAD": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "head": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "tip": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "sha": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "pin_head": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "head_tip": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "HEAD": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a",
+  "commit": "e7ba09141485910b5c9cc99fb8c27bd6e54bc23a"
 }
