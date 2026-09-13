@@ -40,7 +40,7 @@
   },
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "status": "PASS",
-  "sealed": false,
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -50,9 +50,9 @@
   "feat": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
   "feat_head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
   "FEAT_HEAD": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "HEAD": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "tip": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "pin": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "pinned_head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf"
+  "HEAD": "9fefc067468458b23463173162fc9610768037f4",
+  "head": "9fefc067468458b23463173162fc9610768037f4",
+  "tip": "9fefc067468458b23463173162fc9610768037f4",
+  "pin": "9fefc067468458b23463173162fc9610768037f4",
+  "pinned_head": "9fefc067468458b23463173162fc9610768037f4"
 }
