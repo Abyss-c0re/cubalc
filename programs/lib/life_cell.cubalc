@@ -21489,4 +21489,65 @@ CLASS Cell
   END
 
 
+  # Pltp: phospholipid transfer protein — shuttle PL between apoB and HDL after CETP CE-exchange.
+  # PLTP moves surface phospholipids across lipoprotein classes after CETP heteroexchanges CE/TG
+  # so RCT free energy keeps remodeling HDL/apoB particles without hollow surface-lipid stall.
+  # Domain: post-CETP plasma phospholipid-transfer / HDL remodeling PLTP ward (not a rename of CETP CE shuttle).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp
+  # Gift: PLTP keeps phospholipid free energy in motion under ASSERT so post-CETP particles do not freeze as hollow shells.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pltp.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pltp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
