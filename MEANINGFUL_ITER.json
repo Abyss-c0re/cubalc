@@ -46,5 +46,8 @@
   "hold_flash": 1,
   "item": "life cell hsd17b7",
   "prior_mi": 2325,
-  "note": "LIFE_CELL_HSD17B7 MI2326 after NSDHL continuum; HSD17B7 gate shipped"
+  "note": "LIFE_CELL_HSD17B7 MI2326 after NSDHL continuum; HSD17B7 gate shipped",
+  "feat": "e990ca31433a46daff1209e6285b52025692b7ac",
+  "feat_head": "e990ca31433a46daff1209e6285b52025692b7ac",
+  "FEAT_HEAD": "e990ca31433a46daff1209e6285b52025692b7ac"
 }
