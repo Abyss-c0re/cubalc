@@ -38,7 +38,7 @@
   "asserts_ok_sum": 360,
   "asserts_ok": 360,
   "prior_feature": "LIFE_CELL_FDPS",
-  "status": "PASS",
+  "status": "sealed",
   "sealed": true,
   "pass": true,
   "proof_status": "PASS",
@@ -48,10 +48,10 @@
   "feat": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "feat_head": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "FEAT_HEAD": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "feat_short": "0f553fdbbe22",
-  "HEAD": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "commit": "0f553fdbbe22",
-  "commit_full": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "pure_c": "programs/lib/life_cell.cubalc",
-  "tip": "0f553fdbbe229ebee4806d19e4883f7472abfb81"
+  "HEAD": "9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a",
+  "head": "9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a",
+  "pin_head": "9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a",
+  "head_tip": "9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a",
+  "tip": "9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a",
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
