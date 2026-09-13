@@ -47,11 +47,11 @@
   "hold_flash": 1,
   "item": "life cell pltp",
   "note": "LIFE_CELL_PLTP MI2338 after CETP continuum; plasma PLTP apoB-to-HDL PL transfer ward after CETP CE heteroexchange.",
-  "feat": "",
-  "feat_head": "",
-  "FEAT_HEAD": "",
-  "HEAD": "",
-  "head": "",
-  "tip": "",
-  "pin": ""
+  "feat": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "feat_head": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "FEAT_HEAD": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "HEAD": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "head": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "tip": "3424712df96fc356c8771574fc1ccd929d404c66",
+  "pin": "3424712df96fc356c8771574fc1ccd929d404c66"
 }
