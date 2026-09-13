@@ -24,7 +24,7 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2",
-  "domain": "post-CYP51 sterol C14-reductase (TM7SF2/DHCR14) 4,4-dimethyl-cholesta-8,14,24-trien-3b-ol -> 4,4-dimethyl-cholesta-8,24-dien-3b-ol sterol-reductase gate",
+  "domain": "post-CYP51 sterol C14-reductase (TM7SF2/DHCR14) sterol-reductase gate",
   "gift": "TM7SF2 after CYP51 so BA/odd-chain free-energy path can reduce the delta14 bond under ASSERT after CYP51 open.",
   "proof_sum": {
     "life": 214,
@@ -40,11 +40,11 @@
   "prior_feature": "LIFE_CELL_CYP51",
   "status": "PASS",
   "sealed": true,
-  "commit": "7242cff8323de0c6f2d419bdb0a6d513b501bbdf",
-  "head": "7242cff8323de0c6f2d419bdb0a6d513b501bbdf",
-  "HEAD": "7242cff8323de0c6f2d419bdb0a6d513b501bbdf",
+  "commit": "7440d694751abe1591afcea614e120bca6eeb202",
+  "head": "7440d694751abe1591afcea614e120bca6eeb202",
+  "HEAD": "7440d694751abe1591afcea614e120bca6eeb202",
   "feat_head": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "pinned_head": "7242cff8323de0c6f2d419bdb0a6d513b501bbdf",
-  "tip": "7242cff8323de0c6f2d419bdb0a6d513b501bbdf",
+  "pinned_head": "7440d694751abe1591afcea614e120bca6eeb202",
+  "tip": "7440d694751abe1591afcea614e120bca6eeb202",
   "note": "Cube is SoT. Free energy must flow. Not a dual ladder."
 }
