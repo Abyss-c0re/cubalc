@@ -38,7 +38,7 @@
   "asserts_ok_sum": 360,
   "asserts_ok": 360,
   "prior_feature": "LIFE_CELL_FDPS",
-  "status": "sealed",
+  "status": "PASS",
   "sealed": true,
   "pass": true,
   "proof_status": "PASS",
@@ -48,10 +48,10 @@
   "feat": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "feat_head": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "FEAT_HEAD": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "HEAD": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
+  "HEAD": "542753dec9d224d6c1ddc4157529cb46d7baa794",
   "head": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
-  "pin_head": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
-  "head_tip": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
-  "tip": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
+  "pin_head": "542753dec9d224d6c1ddc4157529cb46d7baa794",
+  "head_tip": "542753dec9d224d6c1ddc4157529cb46d7baa794",
+  "tip": "542753dec9d224d6c1ddc4157529cb46d7baa794",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
