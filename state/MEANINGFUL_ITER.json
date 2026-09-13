@@ -48,13 +48,10 @@
   "feat": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
   "feat_head": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
   "FEAT_HEAD": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
-  "HEAD": "2cabc4718f8f41c6106df07b359840a6681a9527",
-  "head": "2cabc4718f8f41c6106df07b359840a6681a9527",
-  "pin_head": "2cabc4718f8f41c6106df07b359840a6681a9527",
-  "head_tip": "2cabc4718f8f41c6106df07b359840a6681a9527",
-  "pinned_head": "470185b60c8e147a427c1733425621841c82465e",
-  "PINNED_HEAD": "470185b60c8e147a427c1733425621841c82465e",
-  "short": "470185b60c8",
-  "HEAD_SHORT": "470185b60c8",
-  "tip": "2cabc4718f8f41c6106df07b359840a6681a9527"
+  "HEAD": "9104f90b811fa103fddce753520ba70f400d6171",
+  "head": "9104f90b811fa103fddce753520ba70f400d6171",
+  "pin_head": "9104f90b811fa103fddce753520ba70f400d6171",
+  "head_tip": "9104f90b811fa103fddce753520ba70f400d6171",
+  "tip": "9104f90b811fa103fddce753520ba70f400d6171",
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
