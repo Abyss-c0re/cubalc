@@ -21036,7 +21036,7 @@ CLASS Cell
   # DHCR7 saturates the Delta7 double bond of 7-dehydrocholesterol after SC5D
   # introduced Delta5 on the lathosterol path, yielding cholesterol under ASSERT.
   # Domain: post-SC5D sterol Delta7-reductase cholesterol-ward gate.
-  # Continuum: ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7
+  # Continuum: ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24
   # Gift: post-SC5D DHCR7 reduces Delta7 sterol under ASSERT so free energy from
   # BA/odd-chain ketones seals Kandutsch-Russell limb to membrane cholesterol.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dhcr7.
@@ -21093,6 +21093,137 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+  # Dhcr24: 24-dehydrocholesterol reductase (DHCR24 / seladin-1 / Diminuto) after DHCR7 limb.
+  # DHCR24 saturates the side-chain Delta24 double bond of desmosterol (Bloch path)
+  # and of earlier Delta24-sterol intermediates, sealing desmosterol -> cholesterol
+  # under ASSERT after DHCR7 closed the Kandutsch-Russell Delta7 gate.
+  # Distinct from Dhcr7 sterol Delta7-reductase, Sc5d sterol-C5-desaturase, and
+  # Ebp Delta8-Delta7 isomerase - Dhcr24 is the side-chain Delta24-reductase
+  # (DHCR24/seladin-1) desmosterol -> cholesterol Bloch-seal gate.
+  # Domain: post-DHCR7 sterol Delta24-reductase (DHCR24) Bloch cholesterol-seal gate.
+  # Continuum: ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24
+  # Gift: post-DHCR7 DHCR24 so BA/odd-chain free-energy path can reduce Delta24
+  #   under ASSERT after DHCR7 open, sealing Bloch limb to membrane cholesterol.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dhcr24.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dhcr24 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Soat1: sterol O-acyltransferase 1 (SOAT1/ACAT1-ER) after DHCR24 cholesterol seal.
+  # SOAT1 esterifies membrane cholesterol with long-chain acyl-CoA forming cholesteryl
+  # esters for lipid-droplet storage after DHCR24 united Bloch+KR limbs as free cholesterol.
+  # Domain: post-DHCR24 ER sterol O-acyltransferase cholesterol-ester storage ward.
+  # Continuum: ...->ebp->sc5d->dhcr7->dhcr24->soat1
+  # Gift: post-DHCR24 SOAT1 packs free cholesterol into CE under ASSERT so free energy from
+  # sterol seal flows into neutral lipid stores without membrane crystallisation toxicity.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - soat1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD soat1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
