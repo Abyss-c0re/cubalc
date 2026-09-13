@@ -1,0 +1,8 @@
+SHIP LIFE_CELL_GLB1 MI 2362
+version: 1.15.1862-usability
+method: glb1 n
+proof: programs/proof/2362_life_cell_glb1.cubalc
+life=402 atomic=142 mesh=139 flagship=12 sum=695 asserts_fail=0
+continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5->neu3->glb1
+gift: GLB1 cleaves terminal beta-Gal from GM1 after NEU3 so free energy re-enters galactose salvage without hollow GM1-Gal lock (GM1-gangliosidosis ward)
+law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
