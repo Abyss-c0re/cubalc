@@ -1,13 +1,1 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2290
-- **FEATURE**: LIFE_CELL_MCEE
-- **method**: mcee n
-- **version**: 1.15.1789-usability
-- **continuum**: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee
-- **asserts_fail**: 0
-- **asserts_ok sum**: 1251 (life=1195 atomic_printer=23 smx=21 flagship_1620=12)
-- **proof**: programs/proof/2290_life_cell_mcee.cubalc
-- **HEAD**: f61dc6645ef1b43c9dfe7d026cdc78c12407515c
-- **feat**: 1b7657dd8a15813187c66ac673c88b47158f3c3c
-- **law**: cube_is_sot; free_energy_must_flow
+2336
