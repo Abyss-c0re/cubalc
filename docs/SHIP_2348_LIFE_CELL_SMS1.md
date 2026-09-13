@@ -1,9 +1,9 @@
-# LIFE_CELL_SMS1 (MI 2348)
+# SHIP 2348 LIFE_CELL_SMS1
 
-- **Method:** `sms1 n`
-- **Domain:** post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase ward (SM acceptor limb)
-- **Continuum:** `...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1`
-- **Gift:** SMS1 synthesizes sphingomyelin from CERT-delivered ceramide at Golgi under ASSERT so free energy re-enters SM membrane pools without hollow Golgi ceramide stall
-- **Proofs:** life 384 · atomic 134 · smx 131 · flagship 12 · sum 661 · fail 0
-- **VERSION:** 1.15.1848-usability
-- **Status:** PASS
+SHIP 2348 LIFE_CELL_SMS1 PASS
+METHOD sms1 n — SMS1/SGMS1 Golgi sphingomyelin synthase after CERT
+Continuum ...->npc2->npc1->stard3->osbp->sacm1l->cert->sms1
+Proofs: life 384/0 · atomic 134/0 · mesh 131/0 · flagship 1620 12/0 · sum 661
+Gift: SMS1 synthesizes SM from CERT-delivered ceramide under ASSERT after CERT ward.
+Cube is SoT. Free energy must flow.
+

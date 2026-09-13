@@ -1,9 +1,9 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# LIFE_CELL_SMS1 — SMS1/SGMS1 Golgi sphingomyelin synthase after SMS1 on sterol continuum
-# Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1 (SMS1 after SMS1 Golgi limb)
-# Gift: SMS1 synthesizes sphingomyelin from CERT-delivered ceramide at Golgi under ASSERT after SMS1 ward.
+# LIFE_CELL_SMS1 — SMS1/SGMS1 Golgi sphingomyelin synthase after CERT on sterol continuum
+# Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1 (SMS1 after CERT Golgi SM limb)
+# Gift: SMS1 synthesizes sphingomyelin from CERT-delivered ceramide at Golgi under ASSERT after CERT ward.
 # Domain: post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase ward (SM acceptor limb).
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
