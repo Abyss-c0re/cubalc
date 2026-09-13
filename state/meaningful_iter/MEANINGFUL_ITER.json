@@ -45,17 +45,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell lss",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "feat": "d4186f4924ff1c48badfe818746b68cd46994f55",
   "feat_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
   "FEAT_HEAD": "d4186f4924ff1c48badfe818746b68cd46994f55",
-  "head": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "HEAD": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "tip": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "tip_head": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "pinned_head": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "PINNED_HEAD": "b7d4be7313e0a6da51a0fb21ce24af5efc117490",
-  "short": "b7d4be731",
-  "pin_head": "b28d97f34b740d6107aa4763ffc47a3593909db9",
-  "head_tip": "b28d97f34b740d6107aa4763ffc47a3593909db9"
+  "HEAD": "d8e9b940058d008565520e496dddc317b21f706e",
+  "head": "d8e9b940058d008565520e496dddc317b21f706e",
+  "pin_head": "d8e9b940058d008565520e496dddc317b21f706e",
+  "head_tip": "d8e9b940058d008565520e496dddc317b21f706e",
+  "tip": "d8e9b940058d008565520e496dddc317b21f706e",
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
