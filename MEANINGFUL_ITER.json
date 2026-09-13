@@ -49,13 +49,13 @@
   "feat_head": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "FEAT_HEAD": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "feat_short": "0f553fdbbe22",
-  "HEAD": "a8bdab7a77955ea37ee1741e4bfc68dd25a84abd",
+  "HEAD": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
   "commit": "0f553fdbbe22",
   "commit_full": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "pure_c": "programs/lib/life_cell.cubalc",
-  "tip": "a8bdab7a77955ea37ee1741e4bfc68dd25a84abd",
-  "pin_head": "a8bdab7a77955ea37ee1741e4bfc68dd25a84abd",
-  "head_tip": "a8bdab7a77955ea37ee1741e4bfc68dd25a84abd",
+  "tip": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
+  "pin_head": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
+  "head_tip": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "head": "a8bdab7a77955ea37ee1741e4bfc68dd25a84abd"
+  "head": "25828086a2263ede8e28e0e8cbfc3dc2937ce062"
 }
