@@ -47,11 +47,13 @@
   "item": "life cell tm7sf2",
   "gate": "tm7sf2",
   "enzyme": "TM7SF2",
-  "head": "c804eb4b1b8ac147a6b29bd9a211b7a8afa0ff2a",
-  "tip": "c804eb4b1b8ac147a6b29bd9a211b7a8afa0ff2a",
-  "sha": "c804eb4b1b8ac147a6b29bd9a211b7a8afa0ff2a",
-  "commit": "c804eb4b1b8ac147a6b29bd9a211b7a8afa0ff2a",
-  "short": "c804eb4b1",
-  "feat_sha": "022dce129",
-  "feat_head": "022dce129d8174015d41f78a90d428f56da9f589"
+  "head": "022dce129d8174015d41f78a90d428f56da9f589",
+  "tip": "022dce129d8174015d41f78a90d428f56da9f589",
+  "sha": "022dce129d8174015d41f78a90d428f56da9f589",
+  "commit": "022dce129d8174015d41f78a90d428f56da9f589",
+  "short": "022dce129",
+  "feat_sha": "022dce129d8174015d41f78a90d428f56da9f589",
+  "feat_head": "022dce129d8174015d41f78a90d428f56da9f589",
+  "feat_short": "022dce129",
+  "pin_status": "feat_anchored"
 }
