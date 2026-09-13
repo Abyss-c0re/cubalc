@@ -43,13 +43,13 @@
   "enzyme": "NCEH1",
   "feat": "life_cell_nceh1",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "feat_head": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "FEAT_HEAD": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "head": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "tip": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "sha": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "pin_head": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "head_tip": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "HEAD": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25",
-  "commit": "a7db928fbf4f8aa23fec2e2719fcfdfe63420f25"
+  "feat_head": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "FEAT_HEAD": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "head": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "tip": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "sha": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "pin_head": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "head_tip": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "HEAD": "0a355442387d843905a23f9054e3c3eb7e1264e6",
+  "commit": "0a355442387d843905a23f9054e3c3eb7e1264e6"
 }
