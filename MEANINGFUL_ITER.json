@@ -39,7 +39,7 @@
   "asserts_ok": 401,
   "prior_feature": "LIFE_CELL_HSD17B7",
   "status": "PASS",
-  "sealed": false,
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -49,5 +49,9 @@
   "note": "LIFE_CELL_EBP MI2327",
   "feat": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf",
   "feat_head": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf",
-  "FEAT_HEAD": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf"
+  "FEAT_HEAD": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf",
+  "HEAD": "750da2e3ab5609ac95d555549288c5d4d84f50b6",
+  "head": "750da2e3ab5609ac95d555549288c5d4d84f50b6",
+  "tip": "750da2e3ab5609ac95d555549288c5d4d84f50b6",
+  "pin": "750da2e3ab5609ac95d555549288c5d4d84f50b6"
 }
