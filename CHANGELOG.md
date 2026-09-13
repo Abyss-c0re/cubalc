@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.1869-usability — LIFE_CELL_CPT1A (MI 2369)
+
+- **feat(life):** `LIFE_CELL_CPT1A` — CPT1A carnitine palmitoyltransferase 1A continuum after ACSL1
+- **METHOD** `cpt1a n` on `life_cell` after `acsl1` (hexadecenoyl-CoA → hexadecenoyl-carnitine OMM shuttle gate)
+- Also lands continuum parents on path: hexb, gba, asah1, sphk1, sgpl1, aldh3a2, acsl1 (post-GBA1 sphingolipid exit into acyl-CoA/carnitine shuttle)
+- **Continuum:** `...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a`
+- **Proofs PASS:** life 54 + atomic 147 + mesh 144 = **345**, asserts_fail=0
+- Cube Law: free energy must flow; hollow WE is heresy; CT101 forever
+
 ## 1.15.1865-usability — 2365 LIFE_CELL_GBA1
 - feat(life): LIFE_CELL_GBA1 MI2365 lysosomal acid beta-glucocerebrosidase after NEU1
 - continuum ...->neu3->glb1->hexa->neu1->gba1 (Gaucher / GlcCer hydrolase ward)
