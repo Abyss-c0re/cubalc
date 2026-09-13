@@ -1,3 +1,11 @@
+## MI 2321 -- LIFE_CELL_LSS
+
+- feat(life): lanosterol synthase (LSS/ERG7/OSC) after SQLE on life_cell continuum
+- Continuum: ...->fdps->sqs->sqle->lss -- 2,3-oxidosqualene to lanosterol cyclase gate
+- Proof: programs/proof/2321_life_cell_lss.cubalc (212 ASSERT ok)
+- Science: atomic_printer_life_lss (78), smx_mesh_vesicle_lss_life (74)
+- Flagship 1620 PASS (12). Sum 376 asserts_fail:0
+
 ## 1.15.1819-usability — LIFE_CELL_SQLE (MI 2320)
 
 - feat(life): SQLE squalene epoxidase after SQS on life_cell continuum
