@@ -1,3 +1,11 @@
+## MI 2324 -- LIFE_CELL_SC4MOL
+
+- feat(life): sterol-C4-methyl oxidase (SC4MOL/MSMO1/ERG25) after TM7SF2 on life_cell continuum
+- Continuum: ...->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol -- C4-alpha-methyl oxidation gate
+- Proof: programs/proof/2324_life_cell_sc4mol.cubalc (231 ASSERT ok)
+- Science: atomic_printer_life_sc4mol (84), smx_mesh_vesicle_sc4mol_life (80)
+- Flagship 1620 PASS (12). Sum 407 asserts_fail:0
+
 ## MI 2322 -- LIFE_CELL_CYP51
 
 - feat(life): lanosterol 14α-demethylase (CYP51/ERG11) after LSS on life_cell continuum
