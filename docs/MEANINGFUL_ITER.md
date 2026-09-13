@@ -13,3 +13,8 @@ feature LIFE_CELL_OSBP version 1.15.1845-usability PASS prior STARD3
 B4GALT5/6 LacCer synthase after UGCG on glycosphingolipid continuum.
 Proofs sum 676 fail 0.
 B4GALT commits GlcCer into Golgi LacCer under ASSERT after UGCG GlcCer ward so free energy keeps moving into neutral glycosphingolipid pools without hollow monoglycosylceramide stall.
+
+## MI 2352 — LIFE_CELL_ST3GAL5
+- method: `st3gal5 n`
+- continuum: `...->ugcg->b4galt->st3gal5`
+- proof: `programs/proof/2352_life_cell_st3gal5.cubalc`

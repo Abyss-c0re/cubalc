@@ -22453,4 +22453,76 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_ST3GAL5: ST3GAL5/SIAT9 alpha-2,3-sialyltransferase GM3 synthase after B4GALT LacCer limb.
+  # ST3GAL5 (ST3 beta-galactoside alpha-2,3-sialyltransferase 5; GM3 synthase; SIAT9) is the Golgi enzyme
+  # that transfers sialic acid (Neu5Ac) from CMP-Neu5Ac onto lactosylceramide (LacCer), yielding GM3
+  # ganglioside (Neu5Ac-alpha2,3-Gal-beta1,4-Glc-Cer) under ASSERT after B4GALT5/6 has committed
+  # GlcCer -> LacCer on the glycosphingolipid path.
+  # After B4galt synthesizes LacCer at Golgi, St3gal5 spends cargo under ASSERT to sialylate LacCer into
+  # GM3 (committed post-B4GALT LacCer -> GM3 on the a-series ganglioside limb).
+  # Distinct from B4galt LacCer synthase, Ugcg/Gcs GlcCer synthase, Sms1/Sgms1 Golgi SM synthase,
+  # Sms2/Sgms2 PM SM synthase, and Cert/Col4a3bp ER-Golgi ceramide transfer - St3gal5 is the GM3
+  # synthase after B4GALT.
+  # Domain: post-B4GALT glycosphingolipid ST3GAL5 GM3 synthase ward (a-series ganglioside limb).
+  # Continuum: ...->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5
+  # Gift: ST3GAL5 commits LacCer into Golgi GM3 under ASSERT after B4GALT LacCer ward so free energy
+  # keeps moving into a-series ganglioside pools without hollow unsialylated LacCer stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st3gal5.
+  # Usability: AGI models post-B4GALT ST3GAL5 GM3 synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st3gal5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

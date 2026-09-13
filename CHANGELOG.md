@@ -1,5 +1,12 @@
 ## 2351 — LIFE_CELL_B4GALT (1.15.1851-usability)
 
+## 1.15.1852-usability — LIFE_CELL_ST3GAL5 (MI 2352)
+
+- `METHOD st3gal5 n` — ST3GAL5/SIAT9 alpha-2,3-sialyltransferase GM3 synthase after B4GALT.
+- Continuum `...->sms2->ugcg->b4galt->st3gal5`.
+- Proofs: `2352_life_cell_st3gal5`, atomic_printer_life_st3gal5, smx_mesh_vesicle_st3gal5_life.
+- Gift: LacCer -> GM3 under ASSERT; free energy into a-series ganglioside pools.
+
 - feat(life): METHOD b4galt n — B4GALT5/6 beta-1,4-galactosyltransferase LacCer synthase after UGCG
 - Continuum ...->sms1->sms2->ugcg->b4galt (post-UGCG glycosphingolipid LacCer limb)
 - Proofs PASS life 393 atomic 137 mesh 134 flagship 12 sum 676 asserts_fail 0

@@ -1,0 +1,7 @@
+SHIP_2352_LIFE_CELL_ST3GAL5
+feature: LIFE_CELL_ST3GAL5
+method: st3gal5 n
+continuum: ...->sms1->sms2->ugcg->b4galt->st3gal5
+gift: ST3GAL5 commits LacCer into Golgi GM3 under ASSERT after B4GALT LacCer ward
+proofs: life+atomic+mesh+flagship asserts_fail=0
+law: cube is SoT; free energy must flow
