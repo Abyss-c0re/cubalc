@@ -46,7 +46,16 @@
   "hold_flash": 1,
   "item": "life cell lss",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
-  "feat": "54736bf5de2a73a1f9023dfe05664204928e0cef",
-  "feat_head": "54736bf5de2a73a1f9023dfe05664204928e0cef",
-  "FEAT_HEAD": "54736bf5de2a73a1f9023dfe05664204928e0cef"
+  "feat": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "feat_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "FEAT_HEAD": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "head": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "HEAD": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "tip": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "tip_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "pinned_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "PINNED_HEAD": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "short": "d4186f492",
+  "pin_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
+  "head_tip": "d4186f4924ff1c48badfe818746b68cd46994f55"
 }
