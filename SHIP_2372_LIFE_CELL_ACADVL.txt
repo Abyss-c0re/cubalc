@@ -5,7 +5,7 @@ proof: programs/proof/2372_life_cell_acadvl.cubalc
 asserts_ok life=69 atomic=150 mesh=147 total=366 fail=0 PASS
 continuum: ...->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl
 gift: ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD lock
-feat_head: 0ec9e8598aacc1046b8c44ebca95617f09869a47
-head: 0ec9e8598aacc1046b8c44ebca95617f09869a47
+feat_head: f725712a602dabe04235920957f44e2761fe1732
+head: f725712a602dabe04235920957f44e2761fe1732
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy

@@ -23,7 +23,7 @@
     "total": 366,
     "fail": 0
   },
-  "continuum": "...->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl",
+  "continuum": "...->acsl1->cpt1a->slc25a20->cpt2->acadvl",
   "domain": "post-CPT2 matrix VLCAD/ACADVL ward (hexadecenoyl-CoA to enoyl-CoA limb)",
   "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock.",
   "proof_sum": {
@@ -46,13 +46,13 @@
   "commit": "0ec9e8598",
   "summary": "LIFE_CELL_ACADVL MI2372 after CPT2 continuum PASS; sealed.",
   "ts": "2026-09-13T21:20:56Z",
-  "feat_head": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
-  "FEAT_HEAD": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "feat_head": "f725712a602dabe04235920957f44e2761fe1732",
+  "FEAT_HEAD": "f725712a602dabe04235920957f44e2761fe1732",
   "feat": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "head": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
-  "HEAD": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
-  "tip": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
-  "pin": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
-  "tip_short": "0ec9e8598",
-  "HEAD_short": "0ec9e8598"
+  "head": "f725712a602dabe04235920957f44e2761fe1732",
+  "HEAD": "f725712a602dabe04235920957f44e2761fe1732",
+  "tip": "f725712a602dabe04235920957f44e2761fe1732",
+  "pin": "f725712a602dabe04235920957f44e2761fe1732",
+  "tip_short": "f725712a6",
+  "HEAD_short": "f725712a6"
 }
