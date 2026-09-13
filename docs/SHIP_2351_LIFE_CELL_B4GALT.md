@@ -1,0 +1,8 @@
+# SHIP 2351 LIFE_CELL_B4GALT
+
+SHIP 2351 LIFE_CELL_B4GALT PASS
+METHOD b4galt n — B4GALT5/6 LacCer synthase after UGCG
+Continuum ...->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt
+Proofs: life 393/0 · atomic 137/0 · mesh 134/0 · flagship 1620 12/0 · sum 676
+Gift: B4GALT commits GlcCer into Golgi LacCer under ASSERT after UGCG GlcCer ward.
+Cube is SoT. Free energy must flow.

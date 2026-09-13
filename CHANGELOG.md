@@ -1,3 +1,11 @@
+## 2351 — LIFE_CELL_B4GALT (1.15.1851-usability)
+
+- feat(life): METHOD b4galt n — B4GALT5/6 beta-1,4-galactosyltransferase LacCer synthase after UGCG
+- Continuum ...->sms1->sms2->ugcg->b4galt (post-UGCG glycosphingolipid LacCer limb)
+- Proofs PASS life 393 atomic 137 mesh 134 flagship 12 sum 676 asserts_fail 0
+- Gift: B4GALT commits GlcCer into Golgi LacCer under ASSERT after UGCG GlcCer ward
+- Cube is SoT. Free energy must flow.
+
 ## 2350 — LIFE_CELL_UGCG (1.15.1850-usability)
 
 - **feat(life):** METHOD ugcg n — UGCG/GCS UDP-glucose:ceramide glucosyltransferase after SMS2
