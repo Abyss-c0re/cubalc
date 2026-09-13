@@ -7,7 +7,7 @@
 
 ## Continuum
 
-`...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2`
+`...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc2`
 
 ## Proofs PASS life 346 atomic 115 smx 112 flagship 12 sum 585 asserts_fail 0
 
