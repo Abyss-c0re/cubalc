@@ -48,10 +48,10 @@
   "feat": "c105253e16da8fb8e3131f0faefdb07ffd0c93a0",
   "feat_head": "c105253e16da8fb8e3131f0faefdb07ffd0c93a0",
   "FEAT_HEAD": "c105253e16da8fb8e3131f0faefdb07ffd0c93a0",
-  "HEAD": "d3cb50339c28be771d3e157879c31a81123f7407",
-  "head": "d3cb50339c28be771d3e157879c31a81123f7407",
-  "tip": "d3cb50339c28be771d3e157879c31a81123f7407",
-  "pin": "d3cb50339c28be771d3e157879c31a81123f7407",
+  "HEAD": "3a3df399e6b9d33e9f22cc6aec547e81409b2375",
+  "head": "3a3df399e6b9d33e9f22cc6aec547e81409b2375",
+  "tip": "3a3df399e6b9d33e9f22cc6aec547e81409b2375",
+  "pin": "3a3df399e6b9d33e9f22cc6aec547e81409b2375",
   "prior_mi": 2322,
   "note": "LIFE_CELL_NSDHL MI2325 after TM7SF2 continuum; SC4MOL+NSDHL gates shipped"
 }
