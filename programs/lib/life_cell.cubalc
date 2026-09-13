@@ -22241,5 +22241,75 @@ CLASS Cell
   END
 
 
+  # LIFE_CELL_SMS2: SMS2/SGMS2 plasma-membrane sphingomyelin synthase after SMS1 Golgi SM limb.
+  # SMS2 (sphingomyelin synthase 2; SGMS2) is the plasma-membrane-resident enzyme that transfers
+  # phosphocholine from phosphatidylcholine onto ceramide at the PM, yielding sphingomyelin + DAG
+  # under ASSERT after SMS1/SGMS1 has committed Golgi ceramide -> SM on the secretory path.
+  # After Sms1 synthesizes SM at Golgi, Sms2 spends PM cargo under ASSERT to synthesize SM at the
+  # cell surface (committed post-SMS1 Golgi SM -> PM SM on the post-SMS1 SMS2 plasma-membrane limb).
+  # Distinct from Sms1/Sgms1 Golgi SM synthase, Cert/Col4a3bp ER-Golgi ceramide transfer, Sacm1l
+  # SAC1 PI4P phosphatase, Osbp sterol/PI4P counterexchanger, and Smpd1 acid sphingomyelinase -
+  # Sms2 is the SGMS2 plasma-membrane sphingomyelin synthase after SMS1.
+  # Domain: post-SMS1 plasma-membrane SMS2/SGMS2 sphingomyelin synthase ward (PM SM limb).
+  # Continuum: ...->stard3->osbp->sacm1l->cert->sms1->sms2
+  # Gift: SMS2 synthesizes sphingomyelin at the plasma membrane under ASSERT after SMS1 Golgi ward
+  # so free energy re-enters PM SM pools without hollow surface ceramide stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sms2.
+  # Usability: AGI models post-SMS1 plasma-membrane SMS2/SGMS2 sphingomyelin synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sms2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 
 END

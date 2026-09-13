@@ -1,3 +1,9 @@
+## 1.15.1849-usability — LIFE_CELL_SMS2 (MI 2349)
+
+- METHOD sms2 n on life_cell after SMS1/SGMS1 — SMS2/SGMS2 plasma-membrane sphingomyelin synthase.
+- Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2. Proofs PASS life 387 atomic 135 smx 132 flagship 12 sum 666.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1848-usability — LIFE_CELL_SMS1 (MI 2348)
 
 - METHOD sms1 n on life_cell after CERT/COL4A3BP — SMS1/SGMS1 Golgi sphingomyelin synthase.
