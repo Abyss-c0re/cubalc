@@ -22732,23 +22732,23 @@ CLASS Cell
   END
 
 
-  # LIFE_CELL_NEU3: NEU3 plasma-membrane ganglioside sialidase after ST6GALNAC6 GQ1b-alpha limb.
+  # LIFE_CELL_NEU3: NEU3 plasma-membrane ganglioside sialidase after ST6GALNAC5 GD1-alpha limb.
   # NEU3 (neuraminidase 3; plasma membrane sialidase; SIAL3) is the outer-leaflet enzyme that
   # cleaves terminal alpha-linked sialic acid (Neu5Ac) from gangliosides including GQ1b-alpha,
-  # GD1a, GM3 and related termini under ASSERT after ST6GALNAC6 has committed GQ1b -> GQ1b-alpha
+  # GD1a, GM3 and related termini under ASSERT after ST6GALNAC5 has committed GM1b-class acceptors into GD1-alpha
   # on the alpha-series synthase path.
-  # After St6galnac6 synthesizes GQ1b-alpha at Golgi/trafficked PM, Neu3 spends cargo under ASSERT
-  # to desialylate GQ1b-alpha into asialo/less-sialylated products (committed post-ST6GALNAC6
-  # GQ1b-alpha -> desialyl-GQ1b limb), releasing free Neu5Ac back into salvage pools.
-  # Distinct from St6galnac6 GQ1b-alpha synthase, St8sia5 GQ1b synthase, St3gal5 GM3 synthase,
-  # Hexa GM2 hexosaminidase, Glb1 beta-galactosidase - Neu3 is the PM ganglioside sialidase
-  # after ST6GALNAC6 alpha-series terminus.
-  # Domain: post-ST6GALNAC6 glycosphingolipid NEU3 PM sialidase ward (catabolic sialic return).
-  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->neu3
-  # Gift: NEU3 releases terminal Neu5Ac from Golgi/PM GQ1b-alpha under ASSERT after ST6GALNAC6
-  # GQ1b-alpha ward so free energy re-enters sialic salvage pools without hollow over-sialylated stall.
+  # After St6galnac5 synthesizes GD1-alpha at Golgi/trafficked PM, Neu3 spends cargo under ASSERT
+  # to desialylate GD1-alpha into asialo/less-sialylated products (committed post-ST6GALNAC5
+  # GD1-alpha -> desialyl-GD1 limb), releasing free Neu5Ac back into salvage pools.
+  # Distinct from St6galnac5 GD1-alpha synthase, St6galnac6 GQ1b-alpha synthase, St8sia5 GQ1b
+  # synthase, St3gal5 GM3 synthase, Hexa GM2 hexosaminidase, Glb1 beta-galactosidase - Neu3 is
+  # the PM ganglioside sialidase after ST6GALNAC5 alpha-series GD1 limb.
+  # Domain: post-ST6GALNAC5 glycosphingolipid NEU3 PM sialidase ward (catabolic sialic return).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5->neu3
+  # Gift: NEU3 releases terminal Neu5Ac from Golgi/PM GD1-alpha under ASSERT after ST6GALNAC5
+  # GD1-alpha ward so free energy re-enters sialic salvage pools without hollow over-sialylated stall.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - neu3.
-  # Usability: AGI models post-ST6GALNAC6 NEU3 ganglioside sialidase under ASSERT.
+  # Usability: AGI models post-ST6GALNAC5 NEU3 ganglioside sialidase under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
   METHOD neu3 n
     GETF THIS alive
