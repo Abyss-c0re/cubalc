@@ -30,9 +30,9 @@
     "sum": 366,
     "asserts_fail": 0
   },
-  "continuum": "...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs",
+  "continuum": "...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs",
   "domain": "intermembrane cytochrome c CYCS ward (CIII to CIV electron shuttle limb of oxidative phosphorylation)",
-  "gift": "CYCS shuttles electrons CIII (UQCRC1) to CIV so free energy completes oxphos without hollow cytochrome-c deficiency lock (cyt-c ward)",
+  "gift": "CYCS shuttles electrons CIII\u2192CIV so proton-motive free energy flows without hollow cytochrome-c deficiency lock (cyt-c ward)",
   "asserts_fail": 0,
   "asserts_ok": 366,
   "prior_feature": "LIFE_CELL_ACADVL",
@@ -44,10 +44,13 @@
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1,
-  "feat_head": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7",
-  "FEAT_HEAD": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7",
-  "head": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7",
-  "HEAD": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7",
-  "tip": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7",
-  "TIP": "68f6441a9f03f6c1f28c75808ed3f4b317e7b8d7"
+  "feat_head": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "FEAT_HEAD": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "head": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "HEAD": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "tip": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "TIP": "e88926a1a6261668fe5680bd835a2849dfe27428",
+  "pin": "dffe97feb92934cba521120f1825d97c60e016fe",
+  "tip_short": "dffe97feb",
+  "HEAD_short": "dffe97feb"
 }
