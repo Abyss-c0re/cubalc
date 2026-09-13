@@ -48,5 +48,10 @@
   "gate": "cyp51",
   "enzyme": "CYP51/ERG11",
   "substrate": "lanosterol",
-  "product": "4,4-dimethyl-cholesta-8,14,24-trienol"
+  "product": "4,4-dimethyl-cholesta-8,14,24-trienol",
+  "feat": "6f74a47966bde895980c350cc8202b425c32e7e2",
+  "feat_head": "6f74a4796",
+  "head": "6f74a47966bde895980c350cc8202b425c32e7e2",
+  "HEAD": "6f74a47966bde895980c350cc8202b425c32e7e2",
+  "tip": "6f74a47966bde895980c350cc8202b425c32e7e2"
 }
