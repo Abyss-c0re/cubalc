@@ -1,0 +1,4 @@
+LIFE_CELL_HSD17B7 MI2326 PASS
+continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7
+proofs: life 233 + atomic 88 + smx 84 + flagship 12 = 417 asserts_fail:0
+gift: HSD17B7 3-ketosteroid reductase after NSDHL

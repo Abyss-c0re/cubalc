@@ -20797,4 +20797,66 @@ CLASS Cell
     RET take
   END
 
+
+  # Hsd17b7: 3-ketosteroid reductase (HSD17B7/ERG27) after NSDHL limb.
+  # HSD17B7 reduces the 3-keto formed by NSDHL decarboxylation to 3-beta-OH,
+  # completing one C4-demethylation turn toward zymosterol/EBP continuum.
+  # Domain: post-NSDHL 3-ketosteroid reductase 3-keto -> 3-beta-hydroxysterol gate.
+  # Continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7
+  # Gift: post-NSDHL HSD17B7 reduces 3-keto-4alpha-methyl sterol under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hsd17b7.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hsd17b7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 END
