@@ -16,20 +16,21 @@
   "method": "acadvl n",
   "ship": "2372_life_cell_acadvl",
   "proof": "programs/proof/2372_life_cell_acadvl.cubalc",
-  "proofs": [
-    "programs/science/integration/smx_mesh_vesicle_acadvl_life.cubalc",
-    "programs/science/integration/atomic_printer_life_acadvl.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
+  "proofs": {
+    "life": 69,
+    "atomic": 150,
+    "mesh": 147,
+    "total": 366,
+    "fail": 0
+  },
   "continuum": "...->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl",
   "domain": "post-CPT2 matrix VLCAD/ACADVL ward (hexadecenoyl-CoA to enoyl-CoA limb)",
   "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock.",
   "proof_sum": {
     "life": 69,
     "atomic": 150,
-    "smx": 147,
-    "flagship": 12,
-    "sum": 378,
+    "mesh": 147,
+    "sum": 366,
     "asserts_fail": 0
   },
   "asserts_fail": 0,
@@ -42,16 +43,16 @@
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
-  "commit": "5365fab30",
+  "commit": "0ec9e8598",
   "summary": "LIFE_CELL_ACADVL MI2372 after CPT2 continuum PASS; sealed.",
   "ts": "2026-09-13T21:20:56Z",
-  "feat_head": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "FEAT_HEAD": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
+  "feat_head": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "FEAT_HEAD": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
   "feat": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "head": "5365fab30da5982e36a4b385aed366f778b822b0",
-  "HEAD": "5365fab30da5982e36a4b385aed366f778b822b0",
-  "tip": "5365fab30da5982e36a4b385aed366f778b822b0",
-  "pin": "5365fab30da5982e36a4b385aed366f778b822b0",
-  "tip_short": "5365fab30",
-  "HEAD_short": "5365fab30"
+  "head": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "HEAD": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "tip": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "pin": "0ec9e8598aacc1046b8c44ebca95617f09869a47",
+  "tip_short": "0ec9e8598",
+  "HEAD_short": "0ec9e8598"
 }
