@@ -39,9 +39,9 @@
   "asserts_ok": 404,
   "prior_feature": "LIFE_CELL_EBP",
   "status": "PASS",
-  "head": "b59d9e75a6dac06ebf60fd68ae905d332632295b",
-  "head_short": "b59d9e75a",
-  "HEAD": "b59d9e75a6dac06ebf60fd68ae905d332632295b",
+  "head": "ef52ceac5c25b2a99ec82d116f9bde5ac689c97c",
+  "head_short": "ef52ceac5",
+  "HEAD": "ef52ceac5c25b2a99ec82d116f9bde5ac689c97c",
   "feat_head": "3cadaabcb17af44d71e7d268b7a1db7bfefb92d5",
   "FEAT_HEAD": "3cadaabcb17af44d71e7d268b7a1db7bfefb92d5"
 }
