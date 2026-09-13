@@ -39,12 +39,15 @@
   "asserts_ok": 376,
   "prior_feature": "LIFE_CELL_SQLE",
   "status": "PASS",
-  "sealed": false,
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell lss",
-  "feat": "",
-  "feat_head": ""
+  "feat": "5670f76d8bb3fe6fb426f79ab767057f7a55700e",
+  "feat_head": "5670f76d8bb3fe6fb426f79ab767057f7a55700e",
+  "head": "5670f76d8bb3fe6fb426f79ab767057f7a55700e",
+  "HEAD": "5670f76d8bb3fe6fb426f79ab767057f7a55700e",
+  "tip": "5670f76d8bb3fe6fb426f79ab767057f7a55700e"
 }
