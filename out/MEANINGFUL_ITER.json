@@ -47,13 +47,13 @@
   "hold_flash": 1,
   "item": "life cell osbp",
   "note": "LIFE_CELL_OSBP MI2345 METHOD osbp n after stard3 on sterol continuum",
-  "HEAD": "19c26a9a9adc888638dabb3d4bfd4932ed3d94d6",
-  "head": "19c26a9a9adc888638dabb3d4bfd4932ed3d94d6",
+  "HEAD": "eea7358cb70ef8c53c38500ad7569ec7d544bd98",
+  "head": "eea7358cb70ef8c53c38500ad7569ec7d544bd98",
   "feat": "27a9d916424c63c1ed3a686ae8b400e791d257eb",
   "feat_head": "27a9d916424c63c1ed3a686ae8b400e791d257eb",
   "pass_": true,
-  "pinned_head": "",
-  "tip": "",
-  "pin": "",
-  "FEAT_HEAD": ""
+  "pinned_head": "eea7358cb70ef8c53c38500ad7569ec7d544bd98",
+  "tip": "eea7358cb70ef8c53c38500ad7569ec7d544bd98",
+  "pin": "eea7358cb70ef8c53c38500ad7569ec7d544bd98",
+  "FEAT_HEAD": "27a9d916424c63c1ed3a686ae8b400e791d257eb"
 }
