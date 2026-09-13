@@ -48,10 +48,10 @@
   "feat": "d4186f4924ff1c48badfe818746b68cd46994f55",
   "feat_head": "d4186f4924ff1c48badfe818746b68cd46994f55",
   "FEAT_HEAD": "d4186f4924ff1c48badfe818746b68cd46994f55",
-  "HEAD": "d8e9b940058d008565520e496dddc317b21f706e",
-  "head": "d8e9b940058d008565520e496dddc317b21f706e",
-  "pin_head": "d8e9b940058d008565520e496dddc317b21f706e",
-  "head_tip": "d8e9b940058d008565520e496dddc317b21f706e",
-  "tip": "d8e9b940058d008565520e496dddc317b21f706e",
+  "HEAD": "3e60b76368a479a5b39d5851fd872e43a108399a",
+  "head": "3e60b76368a479a5b39d5851fd872e43a108399a",
+  "pin_head": "3e60b76368a479a5b39d5851fd872e43a108399a",
+  "head_tip": "3e60b76368a479a5b39d5851fd872e43a108399a",
+  "tip": "3e60b76368a479a5b39d5851fd872e43a108399a",
   "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
