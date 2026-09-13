@@ -11,7 +11,7 @@
   "feature": "life_cell_soat1",
   "FEATURE": "LIFE_CELL_SOAT1",
   "name": "LIFE_CELL_SOAT1",
-  "title": "sterol O-acyltransferase SOAT1 after DHCR24 cholesterol seal",
+  "title": "SOAT1 sterol O-acyltransferase packs CE after DHCR24 on life_cell continuum",
   "label": "LIFE_CELL_SOAT1",
   "method": "soat1 n",
   "ship": "2331_life_cell_soat1",
@@ -23,9 +23,9 @@
     "programs/science/integration/smx_mesh_vesicle_soat1_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24->soat1",
-  "domain": "post-DHCR24 ER sterol O-acyltransferase cholesterol-ester storage ward",
-  "gift": "SOAT1 esterifies free cholesterol into CE storage after DHCR24 Bloch+KR seal under ASSERT",
+  "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24->soat1",
+  "domain": "post-DHCR24 ER sterol O-acyltransferase (SOAT1/ACAT1) free-cholesterol -> CE storage gate",
+  "gift": "SOAT1 after DHCR24 so BA/odd-chain free-energy path can esterify cholesterol under ASSERT after Bloch+KR seal.",
   "proof_sum": {
     "life": 284,
     "atomic": 98,
@@ -46,13 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell soat1",
-  "note": "LIFE_CELL_SOAT1 MI2331 after DHCR24 continuum; CE storage gate shipped",
+  "note": "LIFE_CELL_SOAT1 MI2331 after DHCR24 continuum; CE storage ward shipped (dhcr24 limb included)",
   "feat": "8f69494c38b85e5a075b4758afdf28099706b01f",
   "feat_head": "8f69494c38b85e5a075b4758afdf28099706b01f",
   "FEAT_HEAD": "8f69494c38b85e5a075b4758afdf28099706b01f",
-  "HEAD": "3c7dfea31a664fe89bc1c768c34ee1b51df4aae3",
-  "head": "3c7dfea31a664fe89bc1c768c34ee1b51df4aae3",
-  "tip": "3c7dfea31a664fe89bc1c768c34ee1b51df4aae3",
-  "pin": "3c7dfea31a664fe89bc1c768c34ee1b51df4aae3",
-  "head_short": "3c7dfea31"
+  "HEAD": "f5b5126b37b24cd8b3ccb083323243689f834a47",
+  "head": "f5b5126b37b24cd8b3ccb083323243689f834a47",
+  "tip": "f5b5126b37b24cd8b3ccb083323243689f834a47",
+  "pin": "f5b5126b37b24cd8b3ccb083323243689f834a47"
 }
