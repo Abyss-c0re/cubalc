@@ -1,5 +1,11 @@
 # MEANINGFUL_ITER
 
+## 2343 — LIFE_CELL_NPC1
+- Method: `npc1 n`
+- Version: 1.15.1843-usability
+- Continuum: ...->npc2->npc1
+- Prior: 2342 LIFE_CELL_NPC2
+
 - **MI**: 2315
 - **FEATURE**: LIFE_CELL_PMVK
 - **method**: pmvk n

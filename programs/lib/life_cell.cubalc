@@ -21748,9 +21748,9 @@ CLASS Cell
   # selective HDL-CE uptake, Abcg5/Abcg8 biliary sterol heterodimer, and Soat1 ER
   # sterol O-acyltransferase - Npc2 is the soluble lysosomal sterol handoff carrier.
   # Domain: post-NPC1L1 lysosomal sterol handoff ward on the dietary/biliary sterol limb.
-  # Continuum: ...->cetp->pltp->scarb1->npc1l1->npc2
+  # Continuum: ...->cetp->pltp->scarb1->npc1l1->npc2->npc1
   # Gift: post-NPC1L1 NPC2 hands lysosomal free sterol under ASSERT so endocytosed
-  # dietary/biliary cholesterol reflows into cytosolic sterol without lysosomal trap.
+  # dietary/biliary cholesterol reflows toward NPC1 egress without lysosomal trap.
   # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc2.
   # Usability: AGI models post-NPC1L1 lysosomal sterol handoff under ASSERT.
   # Cube is SoT. Free energy must flow. Returns take; else 0.
@@ -21806,5 +21806,78 @@ CLASS Cell
     SETF THIS ready rd
     RET take
   END
+
+
+  # Npc1: NPC intracellular cholesterol transporter 1 after NPC2 lysosomal sterol handoff.
+  # NPC1 is the membrane-bound lysosomal sterol egress pump that receives free sterol from
+  # soluble NPC2 and exports it from the late-endosome/lysosome lumen into the metabolically
+  # active cytosolic sterol pool under ASSERT after the NPC2 handoff ward.
+  # After Npc2 binds and presents lysosomal free cholesterol at the limiting membrane,
+  # Npc1 spends egress cargo under ASSERT to complete the lumen-to-cytosol sterol step
+  # (committed NPC2-docked FC -> cytosolic sterol pool on the post-NPC2 lysosomal limb).
+  # Distinct from Npc2 soluble lysosomal sterol handoff carrier, Npc1l1 brush-border
+  # cholesterol uptake, Lipa lysosomal acid lipase CE hydrolysis, Scarb1 plasma-membrane
+  # SR-BI selective HDL-CE uptake, Abcg5/Abcg8 biliary sterol heterodimer, and Soat1 ER
+  # sterol O-acyltransferase - Npc1 is the membrane lysosomal sterol egress pump.
+  # Domain: post-NPC2 lysosomal sterol egress ward on the dietary/biliary sterol limb.
+  # Continuum: ...->pltp->scarb1->npc1l1->npc2->npc1
+  # Gift: post-NPC2 NPC1 exports lysosomal free sterol under ASSERT so NPC2-handed
+  # dietary/biliary cholesterol reflows into cytosolic sterol without lysosomal trap.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc1.
+  # Usability: AGI models post-NPC2 lysosomal sterol egress under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD npc1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END

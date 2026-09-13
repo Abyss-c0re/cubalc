@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1843-usability — LIFE_CELL_NPC1 MI2343
+- METHOD npc1 n: lysosomal sterol egress after NPC2 handoff on sterol continuum
+- Continuum ...->scarb1->npc1l1->npc2->npc1
+- Proofs PASS life 353 atomic 117 smx 114 flagship 12 sum 596 asserts_fail 0
+
 ## 1.15.1842-usability — LIFE_CELL_NPC2 MI2342
 - METHOD npc2 n: lysosomal sterol handoff after NPC1L1 on sterol continuum
 - Continuum ...->pltp->scarb1->npc2
