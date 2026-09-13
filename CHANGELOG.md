@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1831-usability — LIFE_CELL_SOAT1 (MI 2331)
+
+- feat(life): SOAT1 sterol O-acyltransferase packs CE after DHCR24 cholesterol seal
+- Continuum ...->sc5d->dhcr7->dhcr24->soat1; proofs life 284 + atomic 98 + smx 94 + flagship 12 = 488 asserts_fail:0
+
 ## 1.15.1830-usability — LIFE_CELL_DHCR24 (MI 2330)
 
 - feat(life): DHCR24 Delta24-reductase seals Bloch+KR cholesterol after DHCR7

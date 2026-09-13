@@ -1,0 +1,4 @@
+LIFE_CELL_SOAT1 MI2331 PASS
+SOAT1 sterol O-acyltransferase 1 packs cholesteryl esters after DHCR24 seal.
+Continuum ...->dhcr7->dhcr24->soat1
+proofs life 284 + atomic 98 + smx 94 + flagship 12 = 488 asserts_fail:0
