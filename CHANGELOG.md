@@ -148,6 +148,12 @@
 
 # Changelog
 
+## 1.15.1818-usability — LIFE_CELL_SQS (MI 2319)
+- feat(life): SQS squalene synthase (FDFT1) after FDPS on life_cell continuum
+- Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
+- Proof PASS: life 204 + atomic 74 + smx 70 + flagship 12
+
+
 ## 1.15.1809-usability — MI 2310 LIFE_CELL_EMB
 
 - feat(life): METHOD emb n — embigin/EMB MCT2 accessory chaperone after SLC16A7

@@ -8,6 +8,6 @@
 - **asserts_fail**: 0
 - **asserts_ok sum**: 360 (life=204 atomic=74 smx=70 flagship_1620=12)
 - **proof**: programs/proof/2319_life_cell_sqs.cubalc
-- **HEAD**: 9a7b55024c2b4d5fe9d78dea6334d50bbec2f37a
+- **HEAD**: a8bdab7a77955ea37ee1741e4bfc68dd25a84abd
 - **feat**: 0f553fdbbe229ebee4806d19e4883f7472abfb81
 - **law**: cube_is_sot; free_energy_must_flow
