@@ -1,3 +1,9 @@
+## 1.15.1846-usability — LIFE_CELL_SACM1L (MI 2346)
+
+- METHOD `sacm1l n` on life_cell after OSBP ER–Golgi MCS sterol/PI4P counterexchange.
+- Continuum `...->stard3->osbp->sacm1l`. Proofs PASS life 378 atomic 132 smx 129 flagship 12 sum 651.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1845-usability — LIFE_CELL_OSBP (MI 2345)
 
 - METHOD osbp n after stard3; proofs sum 616 fail 0

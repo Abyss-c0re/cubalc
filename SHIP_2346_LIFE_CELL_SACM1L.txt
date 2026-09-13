@@ -1,0 +1,6 @@
+SHIP 2346 LIFE_CELL_SACM1L PASS
+METHOD sacm1l n — SACM1L/SAC1 PI4P phosphatase after OSBP
+Continuum ...->npc2->npc1->stard3->osbp->sacm1l
+Proofs: life 378/0 · atomic 132/0 · mesh 129/0 · flagship 1620 12/0 · sum 651
+Gift: SACM1L hydrolyzes PI4P at ER under ASSERT after OSBP ward.
+Cube is SoT. Free energy must flow.

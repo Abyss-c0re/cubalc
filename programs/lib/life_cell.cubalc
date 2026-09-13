@@ -22025,4 +22025,75 @@ CLASS Cell
   END
 
 
+  # LIFE_CELL_SACM1L: SACM1L/SAC1 PI4P phosphatase after OSBP ER-Golgi MCS sterol/PI4P counterexchange.
+  # SACM1L is the ER-resident SAC1 phosphoinositide 4-phosphatase that hydrolyzes PI4P delivered
+  # by OSBP counterexchange, completing the OSBP sterol/PI4P cycle under ASSERT after the OSBP
+  # ER-Golgi MCS ward has shuttled free sterol into the TGN.
+  # After Osbp docks VAP-A/B FFAT and counterexchanges sterol for PI4P at MCS, Sacm1l spends
+  # ER cargo under ASSERT to hydrolyze PI4P back to PI (committed post-OSBP PI4P -> PI on the
+  # post-OSBP SAC1 MCS limb).
+  # Distinct from Osbp ER-Golgi MCS sterol/PI4P counterexchanger, Stard3 LE START-domain sterol
+  # shuttle, Npc1 lysosomal sterol egress, Pi4kb/PI4KIIIb TGN PI4P kinase, and Vapa/Vapb VAP tethers
+  # - Sacm1l is the SAC1 ER PI4P phosphatase that closes the OSBP cycle.
+  # Domain: post-OSBP ER SAC1 PI4P phosphatase ward on the dietary/biliary sterol limb.
+  # Continuum: ...->npc1->stard3->osbp->sacm1l
+  # Gift: post-OSBP SACM1L hydrolyzes MCS-delivered PI4P under ASSERT so OSBP cycle free energy
+  # reflows without PI4P trap at the ER.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sacm1l.
+  # Usability: AGI models post-OSBP ER SAC1 PI4P phosphatase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sacm1l n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
