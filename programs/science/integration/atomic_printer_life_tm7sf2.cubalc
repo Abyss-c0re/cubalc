@@ -213,15 +213,20 @@ SEND printer charge 10
 SEND printer feed 8
 SEND printer cyp51 1
 ASSERT LAST_N == 1 "printer cyp51 open before tm7sf2"
-SEND printer photosynth 10
-SEND printer charge 10
-SEND printer feed 8
+SEND printer photosynth 20
+SEND printer charge 18
+SEND printer feed 16
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
 GETF printer heat
 LET h0 = LAST_N
 GETF printer energy
 LET e0 = LAST_N
 GETF printer atp
 LET a0 = LAST_N
+ASSERT e0 >= 3 "printer energy before tm7sf2"
+ASSERT a0 >= 3 "printer atp before tm7sf2"
 SEND printer tm7sf2 3
 
 ASSERT LAST_N == 3 "printer tm7sf2 import 3"
@@ -371,15 +376,20 @@ SEND ink charge 10
 SEND ink feed 8
 SEND ink cyp51 1
 ASSERT LAST_N == 1 "ink cyp51 open before tm7sf2"
-SEND ink photosynth 10
-SEND ink charge 10
-SEND ink feed 8
+SEND ink photosynth 20
+SEND ink charge 18
+SEND ink feed 16
+SEND ink photosynth 12
+SEND ink charge 12
+SEND ink feed 10
 GETF ink heat
 LET ih = LAST_N
 GETF ink energy
 LET ie = LAST_N
 GETF ink atp
 LET ia = LAST_N
+ASSERT ie >= 2 "ink energy before tm7sf2"
+ASSERT ia >= 2 "ink atp before tm7sf2"
 SEND ink tm7sf2 2
 
 ASSERT LAST_N == 2 "ink tm7sf2 2"
