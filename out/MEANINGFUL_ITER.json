@@ -47,11 +47,11 @@
   "hold_flash": 1,
   "item": "life cell scarb1",
   "note": "LIFE_CELL_SCARB1 MI2339 after PLTP continuum; SR-BI selective HDL-CE uptake ward after PLTP PL remodeling.",
-  "feat": "PENDING",
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "0b09ef987d28ad7250b93b9729d9ce51c16c6e90",
-  "head": "0b09ef987d28ad7250b93b9729d9ce51c16c6e90",
-  "tip": "PENDING",
-  "pin": "PENDING"
+  "feat": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
+  "feat_head": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
+  "FEAT_HEAD": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
+  "HEAD": "595752bf3228bf7ffe5e5e489d26ff40520767df",
+  "head": "595752bf3228bf7ffe5e5e489d26ff40520767df",
+  "tip": "595752bf3228bf7ffe5e5e489d26ff40520767df",
+  "pin": "595752bf3228bf7ffe5e5e489d26ff40520767df"
 }
