@@ -1,3 +1,9 @@
+## 1.15.1833-usability — LIFE_CELL_ABCA1 (MI 2333)
+
+- feat(life): ABCA1 reverse-cholesterol efflux loads apoA-I nascent HDL after NCEH1
+- Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1; proofs life 300 + atomic 102 + smx 98 + flagship 12 = 512 asserts_fail:0
+- METHOD abca1 n — free-cholesterol -> nascent-HDL RCT under ASSERT after NCEH1
+
 ## 1.15.1832-usability — LIFE_CELL_NCEH1 (MI 2332)
 
 - feat(life): NCEH1 neutral cholesterol ester hydrolase frees CE after SOAT1
