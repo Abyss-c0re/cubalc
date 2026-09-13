@@ -25,7 +25,7 @@
   ],
   "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1",
   "domain": "post-PLTP SR-BI selective HDL-CE uptake reverse-cholesterol-transport terminus ward",
-  "gift": "SCARB1 after PLTP so HDL-core CE selective uptake under ASSERT after plasma PLTP apoB-to-HDL PL remodeling ward.",
+  "gift": "SCARB1 after PLTP so mature remodeled HDL-core CE is selectively uptaken under ASSERT after plasma PLTP apoB-to-HDL PL transfer ward.",
   "proof_sum": {
     "life": 339,
     "atomic": 113,
@@ -46,14 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell scarb1",
-  "note": "LIFE_CELL_SCARB1 MI2339 after PLTP continuum; SR-BI selective HDL-CE uptake ward after PLTP PL remodeling.",
+  "note": "LIFE_CELL_SCARB1 MI2339 after PLTP continuum; SR-BI selective HDL-CE uptake terminus ward after PLTP remodeling.",
   "feat": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
   "feat_head": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
   "FEAT_HEAD": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
-  "HEAD": "712026f5f079301539f3d85eb51d0a88b0991c38",
-  "head": "712026f5f079301539f3d85eb51d0a88b0991c38",
-  "tip": "712026f5f079301539f3d85eb51d0a88b0991c38",
-  "pin": "e38dc40facb281749affe9fbd95ad720903d8ca6",
-  "pinned_head": "712026f5f079301539f3d85eb51d0a88b0991c38",
-  "pinned_head_sha": "712026f5f079301539f3d85eb51d0a88b0991c38"
+  "HEAD": "76fab97bd75cbbec02675155fd0454004361c9bb",
+  "head": "76fab97bd75cbbec02675155fd0454004361c9bb",
+  "tip": "76fab97bd75cbbec02675155fd0454004361c9bb",
+  "pin": "76fab97bd75cbbec02675155fd0454004361c9bb"
 }
