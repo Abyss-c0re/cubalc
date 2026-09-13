@@ -1,3 +1,11 @@
+## 2328 LIFE_CELL_SC5D
+- feat(life): SC5D sterol-C5-desaturase after EBP on life_cell continuum
+- proof: programs/proof/2328_life_cell_sc5d.cubalc (219 asserts)
+- science: atomic_printer_life_sc5d + smx_mesh_vesicle_sc5d_life
+- continuum: ...->sc4mol->nsdhl->hsd17b7->ebp->sc5d
+- METHOD sc5d n — Delta7-sterol -> 7-dehydrosterol C5-desaturase gate
+- flagship 1620: 12/0 PASS
+
 ## 2327 LIFE_CELL_EBP
 
 - METHOD ebp n after hsd17b7
