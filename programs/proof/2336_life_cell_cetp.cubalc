@@ -1,0 +1,1778 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_CETP — CETP cholesteryl ester transfer protein CE-shuttle after LCAT on sterol continuum
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp (CETP after LCAT)
+# Gift: CETP shuttles LCAT-packed cholesteryl ester from HDL onto apoB acceptors under ASSERT so RCT free energy redistributes without hollow HDL-only CE trap.
+# Domain: post-LCAT plasma lipoprotein CE-transfer / apoB remodeling CETP ward.
+# Science: CETP prefers LCAT-matured CE-rich HDL cores (vs LCAT acyl packing alone);
+#   heteroexchange CE out / TG in moves sterol-ester free energy onto VLDL/LDL after LCAT matures HDL.
+# Cube is SoT. Free energy must flow. Not a dual ladder. Not a rename of LCAT.
+
+ENTITY er OF Cell 1 46 0
+ENTITY drop OF Cell 1 30 0
+ENTITY ash OF Cell 0 16 0
+ENTITY starve OF Cell 1 0 0
+ENTITY nest OF Cell 1 50 0
+
+SEND er set_threshold 11
+SEND drop set_threshold 13
+SEND nest set_threshold 9
+SEND starve set_threshold 11
+
+# CETP CE-shuttle prelude (unique early divergence vs LCAT CE-core proof)
+SEND er photosynth 20
+SEND er charge 18
+SEND er feed 15
+SEND er pump 12
+GETF er energy
+ASSERT LAST_N >= 15 "er CETP-prelude energy"
+GETF er atp
+ASSERT LAST_N >= 15 "er CETP-prelude atp"
+GETF er pmf
+ASSERT LAST_N >= 4 "er CETP-prelude pmf"
+SEND drop photosynth 12
+SEND drop charge 10
+SEND drop feed 8
+GETF drop alive
+ASSERT LAST_N == 1 "drop CETP partner primed"
+SEND nest photosynth 12
+SEND nest charge 10
+SEND nest feed 8
+GETF nest alive
+ASSERT LAST_N == 1 "nest CETP partner primed"
+SEND er glycolyse 8
+SEND er photophos 6
+GETF er heat
+ASSERT LAST_N >= 0 "er heat nonneg prelude"
+
+
+SEND er pulse 5
+SEND er photosynth 42
+SEND er glycolyse 34
+SEND er pump 26
+SEND er photophos 24
+SEND er charge 38
+SEND er feed 36
+GETF er age
+ASSERT LAST_N == 5 "er age5"
+GETF er atp
+ASSERT LAST_N >= 18 "er atp"
+GETF er energy
+ASSERT LAST_N >= 18 "er energy"
+GETF er pmf
+ASSERT LAST_N >= 4 "er pmf"
+
+SEND er amacr 2
+ASSERT LAST_N == 2 "er amacr"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er acox2 2
+ASSERT LAST_N == 2 "er acox2"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er hsd17b4 2
+ASSERT LAST_N == 2 "er hsd17b4"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er scp2 2
+ASSERT LAST_N == 2 "er scp2"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er acot8 2
+ASSERT LAST_N == 2 "er acot8"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er pcca 2
+ASSERT LAST_N == 2 "er pcca carboxylase"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er mcee 2
+ASSERT LAST_N == 2 "er mcee epimerase"
+SEND er photosynth 14
+SEND er charge 14
+SEND er feed 12
+SEND er mut 2
+ASSERT LAST_N == 2 "er mut mutase to succinyl-CoA"
+SEND er photosynth 12
+SEND er charge 12
+SEND er feed 10
+SEND er suclg1 2
+ASSERT LAST_N == 2 "er suclg1 ligase to succinate"
+SEND er photosynth 12
+SEND er charge 12
+SEND er feed 10
+SEND er sdha 2
+ASSERT LAST_N == 2 "er sdha Complex-II to fumarate"
+SEND er photosynth 12
+SEND er charge 12
+SEND er feed 10
+SEND er fh 2
+ASSERT LAST_N == 2 "er fh fumarase to L-malate"
+SEND er photosynth 16
+SEND er charge 16
+SEND er feed 14
+
+SEND er mdh 1
+ASSERT LAST_N == 1 "er mdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cs 1
+ASSERT LAST_N == 1 "er cs open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aco2 1
+ASSERT LAST_N == 1 "er aco2 open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er idh2 2
+ASSERT LAST_N == 2 "er idh2 isocitrate to aKG"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er ogdh 1
+ASSERT LAST_N == 1 "er ogdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er scs 2
+ASSERT LAST_N == 2 "er scs open before dld"
+SEND er photosynth 12
+SEND er charge 12
+SEND er feed 10
+SEND er dld 2
+ASSERT LAST_N == 2 "er dld gate pre-CETP continuum"
+SEND er photosynth 12
+SEND er charge 12
+SEND er feed 10
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dlst 1
+ASSERT LAST_N == 1 "er dlst gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er oxct1 1
+ASSERT LAST_N == 1 "er oxct1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er acat1 1
+ASSERT LAST_N == 1 "er acat1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs2 1
+ASSERT LAST_N == 1 "er hmgcs2 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcl 1
+ASSERT LAST_N == 1 "er hmgcl gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er bdh1 1
+ASSERT LAST_N == 1 "er bdh1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a1 1
+ASSERT LAST_N == 1 "er slc16a1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a7 1
+ASSERT LAST_N == 1 "er slc16a7 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er emb 1
+ASSERT LAST_N == 1 "er emb gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aacs 1
+ASSERT LAST_N == 1 "er aacs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs1 1
+ASSERT LAST_N == 1 "er hmgcs1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcr 1
+ASSERT LAST_N == 1 "er hmgcr gate pre-CETP continuum"
+SEND er mvk 1
+ASSERT LAST_N == 1 "er mvk gate pre-CETP continuum"
+SEND er pmvk 1
+ASSERT LAST_N == 1 "er pmvk gate pre-CETP continuum"
+SEND er mvd 1
+ASSERT LAST_N == 1 "er mvd gate pre-CETP continuum"
+SEND er idi1 1
+ASSERT LAST_N == 1 "er idi1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er fdps 1
+ASSERT LAST_N == 1 "er fdps gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er sqs 1
+ASSERT LAST_N == 1 "er sqs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er sqle 1
+ASSERT LAST_N == 1 "er sqle gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er lss 1
+ASSERT LAST_N == 1 "er lss gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cyp51 1
+ASSERT LAST_N == 1 "er cyp51 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er tm7sf2 1
+ASSERT LAST_N == 1 "er tm7sf2 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc4mol 1
+ASSERT LAST_N == 1 "er sc4mol gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nsdhl 1
+ASSERT LAST_N == 1 "er nsdhl gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er hsd17b7 1
+ASSERT LAST_N == 1 "er hsd17b7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er ebp 1
+ASSERT LAST_N == 1 "er ebp gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc5d 1
+ASSERT LAST_N == 1 "er sc5d gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr7 1
+ASSERT LAST_N == 1 "er dhcr7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr24 1
+ASSERT LAST_N == 1 "er dhcr24 gate pre-CETP continuum"
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+GETF er heat
+LET f_h = LAST_N
+GETF er energy
+LET f_e = LAST_N
+GETF er atp
+LET f_a = LAST_N
+GETF er age
+LET f_age = LAST_N
+GETF er pcr
+LET f_pcr = LAST_N
+GETF er reserve
+LET f_rsv = LAST_N
+GETF er pmf
+LET f_pmf = LAST_N
+GETF er threshold
+LET f_thr = LAST_N
+SEND er nceh1 3
+ASSERT LAST_N == 3 "er nceh1 hydrolyze-3"
+GETF er heat
+ASSERT LAST_N == f_h + 3 "er nceh1 CE-heat+3"
+GETF er energy
+ASSERT LAST_N == f_e - 3 "er nceh1 CE-energy-3"
+GETF er atp
+ASSERT LAST_N == f_a - 3 "er nceh1 CE-atp-3"
+GETF er age
+ASSERT LAST_N == f_age "er nceh1 CE-age held"
+GETF er pcr
+ASSERT LAST_N == f_pcr "er nceh1 CE-pcr held"
+GETF er reserve
+ASSERT LAST_N == f_rsv "er nceh1 CE-reserve held"
+GETF er pmf
+ASSERT LAST_N == f_pmf "er nceh1 CE-pmf held"
+GETF er threshold
+ASSERT LAST_N == f_thr "er nceh1 CE-thr held"
+GETF er alive
+ASSERT LAST_N == 1 "er alive post-ABCG1-ward"
+
+SEND er mdh 1
+ASSERT LAST_N == 1 "er mdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cs 1
+ASSERT LAST_N == 1 "er cs open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aco2 1
+ASSERT LAST_N == 1 "er aco2 open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er ogdh 1
+ASSERT LAST_N == 1 "er ogdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dlst 1
+ASSERT LAST_N == 1 "er dlst gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er oxct1 1
+ASSERT LAST_N == 1 "er oxct1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er acat1 1
+ASSERT LAST_N == 1 "er acat1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs2 1
+ASSERT LAST_N == 1 "er hmgcs2 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcl 1
+ASSERT LAST_N == 1 "er hmgcl gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er bdh1 1
+ASSERT LAST_N == 1 "er bdh1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a1 1
+ASSERT LAST_N == 1 "er slc16a1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er emb 1
+ASSERT LAST_N == 1 "er emb gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aacs 1
+ASSERT LAST_N == 1 "er aacs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs1 1
+ASSERT LAST_N == 1 "er hmgcs1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcr 1
+ASSERT LAST_N == 1 "er hmgcr gate pre-CETP continuum"
+SEND er mvk 1
+ASSERT LAST_N == 1 "er mvk gate pre-CETP continuum"
+SEND er pmvk 1
+ASSERT LAST_N == 1 "er pmvk gate pre-CETP continuum"
+SEND er mvd 1
+ASSERT LAST_N == 1 "er mvd gate pre-CETP continuum"
+SEND er idi1 1
+ASSERT LAST_N == 1 "er idi1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er fdps 1
+ASSERT LAST_N == 1 "er fdps gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cyp51 1
+ASSERT LAST_N == 1 "er cyp51 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er tm7sf2 1
+ASSERT LAST_N == 1 "er tm7sf2 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc4mol 1
+ASSERT LAST_N == 1 "er sc4mol gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nsdhl 1
+ASSERT LAST_N == 1 "er nsdhl gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er hsd17b7 1
+ASSERT LAST_N == 1 "er hsd17b7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er ebp 1
+ASSERT LAST_N == 1 "er ebp gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc5d 1
+ASSERT LAST_N == 1 "er sc5d gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr7 1
+ASSERT LAST_N == 1 "er dhcr7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr24 1
+ASSERT LAST_N == 1 "er dhcr24 gate pre-CETP continuum"
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nceh1 0
+ASSERT LAST_N == 0 "er nceh1 CE-n0"
+
+SEND er photosynth 20
+SEND er charge 18
+SEND er feed 16
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dlst 1
+ASSERT LAST_N == 1 "er dlst gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er oxct1 1
+ASSERT LAST_N == 1 "er oxct1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er acat1 1
+ASSERT LAST_N == 1 "er acat1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs2 1
+ASSERT LAST_N == 1 "er hmgcs2 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcl 1
+ASSERT LAST_N == 1 "er hmgcl gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er bdh1 1
+ASSERT LAST_N == 1 "er bdh1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a1 1
+ASSERT LAST_N == 1 "er slc16a1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a7 1
+ASSERT LAST_N == 1 "er slc16a7 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er emb 1
+ASSERT LAST_N == 1 "er emb gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aacs 1
+ASSERT LAST_N == 1 "er aacs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs1 1
+ASSERT LAST_N == 1 "er hmgcs1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcr 1
+ASSERT LAST_N == 1 "er hmgcr gate pre-CETP continuum"
+SEND er mvk 1
+ASSERT LAST_N == 1 "er mvk gate pre-CETP continuum"
+SEND er pmvk 1
+ASSERT LAST_N == 1 "er pmvk gate pre-CETP continuum"
+SEND er mvd 1
+ASSERT LAST_N == 1 "er mvd gate pre-CETP continuum"
+SEND er idi1 1
+ASSERT LAST_N == 1 "er idi1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er fdps 1
+ASSERT LAST_N == 1 "er fdps gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er sqle 1
+ASSERT LAST_N == 1 "er sqle gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er lss 1
+ASSERT LAST_N == 1 "er lss gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cyp51 1
+ASSERT LAST_N == 1 "er cyp51 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er tm7sf2 1
+ASSERT LAST_N == 1 "er tm7sf2 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc4mol 1
+ASSERT LAST_N == 1 "er sc4mol gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nsdhl 1
+ASSERT LAST_N == 1 "er nsdhl gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er hsd17b7 1
+ASSERT LAST_N == 1 "er hsd17b7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er ebp 1
+ASSERT LAST_N == 1 "er ebp gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc5d 1
+ASSERT LAST_N == 1 "er sc5d gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr7 1
+ASSERT LAST_N == 1 "er dhcr7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr24 1
+ASSERT LAST_N == 1 "er dhcr24 gate pre-CETP continuum"
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+GETF er heat
+LET f2_h = LAST_N
+GETF er energy
+LET f2_e = LAST_N
+GETF er atp
+LET f2_a = LAST_N
+SEND er nceh1 4
+ASSERT LAST_N == 4 "er nceh1 4"
+GETF er heat
+ASSERT LAST_N == f2_h + 4 "er nceh1 CE-heat+4"
+GETF er energy
+ASSERT LAST_N == f2_e - 4 "er nceh1 CE-energy-4"
+GETF er atp
+ASSERT LAST_N == f2_a - 4 "er nceh1 CE-atp-4"
+GETF er alive
+ASSERT LAST_N == 1 "er alive post-ABCG1-ward-4"
+
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dlst 1
+ASSERT LAST_N == 1 "er dlst gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er oxct1 1
+ASSERT LAST_N == 1 "er oxct1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er acat1 1
+ASSERT LAST_N == 1 "er acat1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs2 1
+ASSERT LAST_N == 1 "er hmgcs2 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcl 1
+ASSERT LAST_N == 1 "er hmgcl gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er bdh1 1
+ASSERT LAST_N == 1 "er bdh1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a1 1
+ASSERT LAST_N == 1 "er slc16a1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a7 1
+ASSERT LAST_N == 1 "er slc16a7 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er emb 1
+ASSERT LAST_N == 1 "er emb gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aacs 1
+ASSERT LAST_N == 1 "er aacs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs1 1
+ASSERT LAST_N == 1 "er hmgcs1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcr 1
+ASSERT LAST_N == 1 "er hmgcr gate pre-CETP continuum"
+SEND er mvk 1
+ASSERT LAST_N == 1 "er mvk gate pre-CETP continuum"
+SEND er pmvk 1
+ASSERT LAST_N == 1 "er pmvk gate pre-CETP continuum"
+SEND er mvd 1
+ASSERT LAST_N == 1 "er mvd gate pre-CETP continuum"
+SEND er idi1 1
+ASSERT LAST_N == 1 "er idi1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er fdps 1
+ASSERT LAST_N == 1 "er fdps gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cyp51 1
+ASSERT LAST_N == 1 "er cyp51 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er tm7sf2 1
+ASSERT LAST_N == 1 "er tm7sf2 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc4mol 1
+ASSERT LAST_N == 1 "er sc4mol gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nsdhl 1
+ASSERT LAST_N == 1 "er nsdhl gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er hsd17b7 1
+ASSERT LAST_N == 1 "er hsd17b7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er ebp 1
+ASSERT LAST_N == 1 "er ebp gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc5d 1
+ASSERT LAST_N == 1 "er sc5d gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr7 1
+ASSERT LAST_N == 1 "er dhcr7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr24 1
+ASSERT LAST_N == 1 "er dhcr24 gate pre-CETP continuum"
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+GETF er atp
+LET fc_a = LAST_N
+GETF er energy
+LET fc_e = LAST_N
+GETF er heat
+LET fc_h = LAST_N
+GETF er age
+LET fc_age = LAST_N
+SEND er nceh1 100
+GETF er atp
+LET fc_a2 = LAST_N
+GETF er energy
+LET fc_e2 = LAST_N
+GETF er heat
+LET fc_h2 = LAST_N
+ASSERT fc_a2 >= 0 "er nceh1 CE-clamp atp>=0"
+ASSERT fc_e2 >= 0 "er nceh1 CE-clamp energy>=0"
+ASSERT fc_h2 >= fc_h "er nceh1 CE-clamp heat+="
+ASSERT fc_a2 <= fc_a "er nceh1 CE-clamp atp down"
+ASSERT fc_e2 <= fc_e "er nceh1 CE-clamp energy down"
+GETF er age
+ASSERT LAST_N == fc_age "er nceh1 CE-clamp age held"
+GETF er alive
+ASSERT LAST_N == 1 "er alive post-ABCG1-ward CE-clamp"
+
+SEND ash nceh1 5
+ASSERT LAST_N == 0 "ash nceh1 CE-refused"
+GETF ash alive
+ASSERT LAST_N == 0 "ash stays dead"
+
+SEND starve nceh1 3
+ASSERT LAST_N == 0 "starve nceh1 CE-refused no fuel"
+GETF starve alive
+ASSERT LAST_N == 1 "starve stays alive"
+
+SEND drop photosynth 16
+SEND drop charge 16
+SEND drop feed 10
+SEND drop suclg1 1
+ASSERT LAST_N == 1 "drop suclg1 open"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop sdha 1
+ASSERT LAST_N == 1 "drop sdha open"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop fh 1
+ASSERT LAST_N == 1 "drop fh open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop mdh 1
+ASSERT LAST_N == 1 "drop mdh open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop cs 1
+ASSERT LAST_N == 1 "drop cs open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop aco2 1
+ASSERT LAST_N == 1 "drop aco2 open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop idh2 1
+ASSERT LAST_N == 1 "drop idh2 open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop ogdh 1
+ASSERT LAST_N == 1 "drop ogdh open"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop scs 2
+ASSERT LAST_N == 2 "drop scs gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop dld 2
+ASSERT LAST_N == 2 "drop dld gate pre-CETP continuum"
+SEND drop photosynth 12
+SEND drop charge 12
+SEND drop feed 10
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop dlst 1
+ASSERT LAST_N == 1 "drop dlst gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop oxct1 1
+ASSERT LAST_N == 1 "drop oxct1 gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop acat1 1
+ASSERT LAST_N == 1 "drop acat1 gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop slc16a7 1
+ASSERT LAST_N == 1 "drop slc16a7 gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop emb 1
+ASSERT LAST_N == 1 "drop emb gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop aacs 1
+ASSERT LAST_N == 1 "drop aacs gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop hmgcs1 1
+ASSERT LAST_N == 1 "drop hmgcs1 gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop fdps 1
+ASSERT LAST_N == 1 "drop fdps gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop sqs 1
+ASSERT LAST_N == 1 "drop sqs gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop sqle 1
+ASSERT LAST_N == 1 "drop sqle gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop lss 1
+ASSERT LAST_N == 1 "drop lss gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop cyp51 1
+ASSERT LAST_N == 1 "drop cyp51 gate pre-CETP continuum"
+SEND drop photosynth 10
+SEND drop charge 10
+SEND drop feed 8
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop tm7sf2 1
+ASSERT LAST_N == 1 "drop tm7sf2 gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop sc4mol 1
+ASSERT LAST_N == 1 "drop sc4mol gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop nsdhl 1
+ASSERT LAST_N == 1 "drop nsdhl gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop hsd17b7 1
+ASSERT LAST_N == 1 "drop hsd17b7 gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop ebp 1
+ASSERT LAST_N == 1 "drop ebp gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop sc5d 1
+ASSERT LAST_N == 1 "drop sc5d gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop dhcr7 1
+ASSERT LAST_N == 1 "drop dhcr7 gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop dhcr24 1
+ASSERT LAST_N == 1 "drop dhcr24 gate pre-CETP continuum"
+SEND drop soat1 1
+ASSERT LAST_N == 1 "drop soat1 gate pre-CETP continuum"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+GETF drop heat
+LET q_h = LAST_N
+GETF drop energy
+LET q_e = LAST_N
+GETF drop atp
+LET q_a = LAST_N
+GETF drop age
+LET q_age = LAST_N
+GETF drop pcr
+LET q_pcr = LAST_N
+GETF drop reserve
+LET q_rsv = LAST_N
+GETF drop pmf
+LET q_pmf = LAST_N
+GETF drop threshold
+LET q_thr = LAST_N
+SEND drop nceh1 2
+ASSERT LAST_N == 2 "drop nceh1 2"
+GETF drop heat
+ASSERT LAST_N == q_h + 2 "drop dhcr24 h+2"
+GETF drop energy
+ASSERT LAST_N == q_e - 2 "drop dhcr24 e-2"
+GETF drop atp
+ASSERT LAST_N == q_a - 2 "drop dhcr24 a-2"
+GETF drop age
+ASSERT LAST_N == q_age "drop nceh1 CE-age held"
+GETF drop pcr
+ASSERT LAST_N == q_pcr "drop nceh1 CE-pcr held"
+GETF drop reserve
+ASSERT LAST_N == q_rsv "drop nceh1 CE-reserve held"
+GETF drop pmf
+ASSERT LAST_N == q_pmf "drop nceh1 CE-pmf held"
+GETF drop threshold
+ASSERT LAST_N == q_thr "drop nceh1 CE-thr held"
+GETF drop alive
+ASSERT LAST_N == 1 "drop alive post-ABCG1-ward"
+
+SEND nest photosynth 16
+SEND nest charge 16
+SEND nest feed 12
+SEND nest suclg1 1
+ASSERT LAST_N == 1 "nest suclg1 open"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest sdha 1
+ASSERT LAST_N == 1 "nest sdha open"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest fh 1
+ASSERT LAST_N == 1 "nest fh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest mdh 1
+ASSERT LAST_N == 1 "nest mdh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest cs 1
+ASSERT LAST_N == 1 "nest cs open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest aco2 1
+ASSERT LAST_N == 1 "nest aco2 open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest idh2 1
+ASSERT LAST_N == 1 "nest idh2 open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest ogdh 1
+ASSERT LAST_N == 1 "nest ogdh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest scs 2
+ASSERT LAST_N == 2 "nest scs gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest dld 2
+ASSERT LAST_N == 2 "nest dld gate pre-CETP continuum"
+SEND nest photosynth 12
+SEND nest charge 12
+SEND nest feed 10
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest dlst 1
+ASSERT LAST_N == 1 "nest dlst gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest oxct1 1
+ASSERT LAST_N == 1 "nest oxct1 gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest acat1 1
+ASSERT LAST_N == 1 "nest acat1 gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest slc16a7 1
+ASSERT LAST_N == 1 "nest slc16a7 gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest emb 1
+ASSERT LAST_N == 1 "nest emb gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest aacs 1
+ASSERT LAST_N == 1 "nest aacs gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest hmgcs1 1
+ASSERT LAST_N == 1 "nest hmgcs1 gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest fdps 1
+ASSERT LAST_N == 1 "nest fdps gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest sqs 1
+ASSERT LAST_N == 1 "nest sqs gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest sqle 1
+ASSERT LAST_N == 1 "nest sqle gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest lss 1
+ASSERT LAST_N == 1 "nest lss gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest cyp51 1
+ASSERT LAST_N == 1 "nest cyp51 gate pre-CETP continuum"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest tm7sf2 1
+ASSERT LAST_N == 1 "nest tm7sf2 gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest sc4mol 1
+ASSERT LAST_N == 1 "nest sc4mol gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest nsdhl 1
+ASSERT LAST_N == 1 "nest nsdhl gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest hsd17b7 1
+ASSERT LAST_N == 1 "nest hsd17b7 gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest ebp 1
+ASSERT LAST_N == 1 "nest ebp gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest sc5d 1
+ASSERT LAST_N == 1 "nest sc5d gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest dhcr7 1
+ASSERT LAST_N == 1 "nest dhcr7 gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest dhcr24 1
+ASSERT LAST_N == 1 "nest dhcr24 gate pre-CETP continuum"
+SEND nest soat1 1
+ASSERT LAST_N == 1 "nest soat1 gate pre-CETP continuum"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+GETF nest heat
+LET b_h = LAST_N
+GETF nest energy
+LET b_e = LAST_N
+GETF nest atp
+LET b_a = LAST_N
+GETF nest age
+LET b_age = LAST_N
+GETF nest pcr
+LET b_pcr = LAST_N
+GETF nest reserve
+LET b_rsv = LAST_N
+GETF nest pmf
+LET b_pmf = LAST_N
+GETF nest threshold
+LET b_thr = LAST_N
+SEND nest nceh1 2
+ASSERT LAST_N == 2 "nest nceh1 2"
+GETF nest heat
+ASSERT LAST_N == b_h + 2 "nest dhcr24 h+2"
+GETF nest energy
+ASSERT LAST_N == b_e - 2 "nest dhcr24 e-2"
+GETF nest atp
+ASSERT LAST_N == b_a - 2 "nest dhcr24 a-2"
+GETF nest age
+ASSERT LAST_N == b_age "nest nceh1 CE-age held"
+GETF nest pcr
+ASSERT LAST_N == b_pcr "nest nceh1 CE-pcr held"
+GETF nest reserve
+ASSERT LAST_N == b_rsv "nest nceh1 CE-reserve held"
+GETF nest pmf
+ASSERT LAST_N == b_pmf "nest nceh1 CE-pmf held"
+GETF nest threshold
+ASSERT LAST_N == b_thr "nest nceh1 CE-thr held"
+GETF nest alive
+ASSERT LAST_N == 1 "nest alive post-ABCG1-ward"
+
+SEND er photosynth 6
+SEND er charge 6
+SEND er feed 4
+SEND er mdh 1
+ASSERT LAST_N == 1 "er mdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cs 1
+ASSERT LAST_N == 1 "er cs open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aco2 1
+ASSERT LAST_N == 1 "er aco2 open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er ogdh 1
+ASSERT LAST_N == 1 "er ogdh open"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dlst 1
+ASSERT LAST_N == 1 "er dlst gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er oxct1 1
+ASSERT LAST_N == 1 "er oxct1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er acat1 1
+ASSERT LAST_N == 1 "er acat1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs2 1
+ASSERT LAST_N == 1 "er hmgcs2 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcl 1
+ASSERT LAST_N == 1 "er hmgcl gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er bdh1 1
+ASSERT LAST_N == 1 "er bdh1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a1 1
+ASSERT LAST_N == 1 "er slc16a1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er slc16a7 1
+ASSERT LAST_N == 1 "er slc16a7 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er emb 1
+ASSERT LAST_N == 1 "er emb gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er aacs 1
+ASSERT LAST_N == 1 "er aacs gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcs1 1
+ASSERT LAST_N == 1 "er hmgcs1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er hmgcr 1
+ASSERT LAST_N == 1 "er hmgcr gate pre-CETP continuum"
+SEND er mvk 1
+ASSERT LAST_N == 1 "er mvk gate pre-CETP continuum"
+SEND er pmvk 1
+ASSERT LAST_N == 1 "er pmvk gate pre-CETP continuum"
+SEND er mvd 1
+ASSERT LAST_N == 1 "er mvd gate pre-CETP continuum"
+SEND er idi1 1
+ASSERT LAST_N == 1 "er idi1 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er fdps 1
+ASSERT LAST_N == 1 "er fdps gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er sqle 1
+ASSERT LAST_N == 1 "er sqle gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er lss 1
+ASSERT LAST_N == 1 "er lss gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er cyp51 1
+ASSERT LAST_N == 1 "er cyp51 gate pre-CETP continuum"
+SEND er photosynth 10
+SEND er charge 10
+SEND er feed 8
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er tm7sf2 1
+ASSERT LAST_N == 1 "er tm7sf2 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc4mol 1
+ASSERT LAST_N == 1 "er sc4mol gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nsdhl 1
+ASSERT LAST_N == 1 "er nsdhl gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er hsd17b7 1
+ASSERT LAST_N == 1 "er hsd17b7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er ebp 1
+ASSERT LAST_N == 1 "er ebp gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er sc5d 1
+ASSERT LAST_N == 1 "er sc5d gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr7 1
+ASSERT LAST_N == 1 "er dhcr7 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er dhcr24 1
+ASSERT LAST_N == 1 "er dhcr24 gate pre-CETP continuum"
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nceh1 1
+ASSERT LAST_N == 1 "er nceh1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er abca1 1
+ASSERT LAST_N == 1 "er abca1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er abcg1 1
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er lcat 1
+ASSERT LAST_N == 1 "er lcat CE-core before CETP shuttle"
+ASSERT LAST_N == 1 "er abcg1 gate pre-CETP continuum"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+GETF er atp
+LET p_a = LAST_N
+GETF er energy
+LET p_e = LAST_N
+SEND er cetp 1
+ASSERT LAST_N == 1 "er cetp CE-transfer partial"
+GETF er atp
+LET p_a2 = LAST_N
+GETF er energy
+LET p_e2 = LAST_N
+ASSERT p_a2 == p_a - 1 "er cetp CE-transfer partial atp-1"
+ASSERT p_e2 == p_e - 1 "er cetp CE-transfer partial energy-1"
+
+GETF er alive
+ASSERT LAST_N == 1 "er sealed alive for CE-transfer-ward"
+GETF drop alive
+ASSERT LAST_N == 1 "drop sealed alive for CE-transfer-ward"
+SEND er photosynth 14
+SEND er charge 12
+SEND er feed 10
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 re-pack before final cetp"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nceh1 1
+ASSERT LAST_N == 1 "er nceh1 liberate before final cetp"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er abca1 1
+ASSERT LAST_N == 1 "er abca1 seed before final cetp"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+GETF er energy
+LET ce_budget = LAST_N
+SEND er cetp 1
+ASSERT LAST_N == 1 "er final CE-shuttle mitosis budget"
+GETF er energy
+ASSERT LAST_N == ce_budget - 1 "er CE-shuttle budget energy-1"
+GETF drop alive
+ASSERT LAST_N == 1 "drop CE-shuttle partner alive"
+GETF nest energy
+ASSERT LAST_N >= 0 "nest energy nonneg after CE-transfer"
+
+# Distinctive CETP CE-shuttle board (unique vs LCAT CE-core packing ward)
+SEND er photosynth 16
+SEND er charge 14
+SEND er feed 12
+SEND er soat1 1
+ASSERT LAST_N == 1 "er soat1 pack before CETP CE-shuttle board"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er nceh1 1
+ASSERT LAST_N == 1 "er nceh1 liberate before CETP CE-shuttle board"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er abca1 1
+ASSERT LAST_N == 1 "er abca1 seed nascent HDL before CETP path"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er abcg1 1
+ASSERT LAST_N == 1 "er abcg1 load before CETP distinctive"
+SEND er photosynth 8
+SEND er charge 8
+SEND er feed 6
+SEND er lcat 1
+ASSERT LAST_N == 1 "er lcat CE-core before CETP distinctive"
+GETF er heat
+LET g_h = LAST_N
+GETF er energy
+LET g_e = LAST_N
+GETF er atp
+LET g_a = LAST_N
+GETF er age
+LET g_age = LAST_N
+GETF er pcr
+LET g_pcr = LAST_N
+GETF er reserve
+LET g_rsv = LAST_N
+GETF er pmf
+LET g_pmf = LAST_N
+GETF er threshold
+LET g_thr = LAST_N
+SEND er cetp 3
+ASSERT LAST_N == 3 "er cetp CE-shuttle load-3"
+GETF er heat
+ASSERT LAST_N == g_h + 3 "er cetp heat+3"
+GETF er energy
+ASSERT LAST_N == g_e - 3 "er cetp energy-3"
+GETF er atp
+ASSERT LAST_N == g_a - 3 "er cetp atp-3"
+GETF er age
+ASSERT LAST_N == g_age "er cetp age held"
+GETF er pcr
+ASSERT LAST_N == g_pcr "er cetp pcr held"
+GETF er reserve
+ASSERT LAST_N == g_rsv "er cetp reserve held"
+GETF er pmf
+ASSERT LAST_N == g_pmf "er cetp pmf held"
+GETF er threshold
+ASSERT LAST_N == g_thr "er cetp thr held"
+GETF er alive
+ASSERT LAST_N == 1 "er alive post CETP CE-core"
+
+# drop partner CETP CE packing
+SEND drop photosynth 14
+SEND drop charge 12
+SEND drop feed 10
+SEND drop abca1 1
+ASSERT LAST_N == 1 "drop abca1 seed before CETP"
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop abcg1 1
+SEND drop photosynth 8
+SEND drop charge 8
+SEND drop feed 6
+SEND drop lcat 1
+ASSERT LAST_N == 1 "drop lcat CE-core before CETP shuttle"
+ASSERT LAST_N == 1 "drop abcg1 load before CETP"
+GETF drop heat
+LET dg_h = LAST_N
+GETF drop energy
+LET dg_e = LAST_N
+GETF drop atp
+LET dg_a = LAST_N
+SEND drop cetp 2
+ASSERT LAST_N == 2 "drop cetp CE-shuttle load-2"
+GETF drop heat
+ASSERT LAST_N == dg_h + 2 "drop cetp heat+2"
+GETF drop energy
+ASSERT LAST_N == dg_e - 2 "drop cetp energy-2"
+GETF drop atp
+ASSERT LAST_N == dg_a - 2 "drop cetp atp-2"
+GETF drop alive
+ASSERT LAST_N == 1 "drop alive post CETP"
+
+# nest partner
+SEND nest photosynth 14
+SEND nest charge 12
+SEND nest feed 10
+SEND nest abca1 1
+ASSERT LAST_N == 1 "nest abca1 seed before CETP"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest abcg1 1
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest lcat 1
+ASSERT LAST_N == 1 "nest lcat CE-core before CETP shuttle"
+ASSERT LAST_N == 1 "nest abcg1 load before CETP"
+GETF nest heat
+LET ng_h = LAST_N
+GETF nest energy
+LET ng_e = LAST_N
+GETF nest atp
+LET ng_a = LAST_N
+SEND nest cetp 2
+ASSERT LAST_N == 2 "nest cetp CE-shuttle load-2"
+GETF nest heat
+ASSERT LAST_N == ng_h + 2 "nest cetp heat+2"
+GETF nest energy
+ASSERT LAST_N == ng_e - 2 "nest cetp energy-2"
+GETF nest atp
+ASSERT LAST_N == ng_a - 2 "nest cetp atp-2"
+GETF nest alive
+ASSERT LAST_N == 1 "nest alive post CETP"
+
+# hollow clamps
+SEND starve cetp 4
+ASSERT LAST_N == 0 "starve cetp no-ATP clamp"
+SEND ash cetp 3
+ASSERT LAST_N == 0 "ash cetp dead clamp"
+SEND er cetp 0
+ASSERT LAST_N == 0 "er cetp n0 clamp"
+
+# quad cassette seal: ABCA1 seed + ABCG1 load + LCAT pack + CETP transfer in one mitosis budget
+SEND er photosynth 22
+SEND er charge 18
+SEND er feed 16
+GETF er energy
+LET dual_e = LAST_N
+SEND er abca1 1
+ASSERT LAST_N == 1 "er abca1 quad-cassette seed"
+SEND er abcg1 1
+ASSERT LAST_N == 1 "er abcg1 quad-cassette load"
+SEND er lcat 1
+ASSERT LAST_N == 1 "er lcat quad-cassette pack"
+SEND er cetp 1
+ASSERT LAST_N == 1 "er cetp quad-cassette transfer"
+GETF er energy
+ASSERT LAST_N == dual_e - 4 "er quad cassette energy-4"
+GETF er alive
+ASSERT LAST_N == 1 "er alive quad cassette RCT"
+GETF drop alive
+ASSERT LAST_N == 1 "drop sealed quad cassette"
+GETF nest alive
+ASSERT LAST_N == 1 "nest sealed quad cassette"
+
+
+# CE-transfer preference board — CETP after LCAT on ABCA1/ABCG1 HDL
+SEND er photosynth 20
+SEND er charge 16
+SEND er feed 14
+SEND er abca1 1
+ASSERT LAST_N == 1 "er abca1 seed discs before CETP"
+SEND er abcg1 1
+ASSERT LAST_N == 1 "er abcg1 load before CETP"
+SEND er lcat 1
+ASSERT LAST_N == 1 "er lcat pack before CETP"
+GETF er heat
+LET s_h = LAST_N
+GETF er energy
+LET s_e = LAST_N
+GETF er atp
+LET s_a = LAST_N
+GETF er age
+LET s_age = LAST_N
+GETF er reserve
+LET s_rsv = LAST_N
+SEND er cetp 4
+ASSERT LAST_N == 4 "er cetp CE-shuttle-HDL pack-4"
+GETF er heat
+ASSERT LAST_N == s_h + 4 "er cetp CE heat+4"
+GETF er energy
+ASSERT LAST_N == s_e - 4 "er cetp CE energy-4"
+GETF er atp
+ASSERT LAST_N == s_a - 4 "er cetp CE atp-4"
+GETF er age
+ASSERT LAST_N == s_age "er cetp CE age held"
+GETF er reserve
+ASSERT LAST_N == s_rsv "er cetp CE reserve held"
+GETF er alive
+ASSERT LAST_N == 1 "er alive CE-core HDL board"
+# Energy-aware ready coherence after CETP spend
+SEND er photosynth 24
+SEND er charge 20
+SEND er feed 18
+SEND er set_threshold 11
+GETF er energy
+LET rdy_e = LAST_N
+SEND er cetp 1
+ASSERT LAST_N == 1 "er cetp ready-coherence spend"
+GETF er energy
+LET rdy_e2 = LAST_N
+ASSERT rdy_e2 == rdy_e - 1 "er cetp ready energy-1"
+GETF er threshold
+LET rdy_thr = LAST_N
+GETF er ready
+LET rdy_flag = LAST_N
+# ready must match energy>=threshold
+GETF er alive
+ASSERT LAST_N == 1 "er alive ready-coherence"
+
+# Population seal: three living wards after CETP continuum
+GETF er alive
+ASSERT LAST_N == 1 "pop er"
+GETF drop alive
+ASSERT LAST_N == 1 "pop drop"
+GETF nest alive
+ASSERT LAST_N == 1 "pop nest"
+GETF ash alive
+ASSERT LAST_N == 0 "pop ash hollow held"
+GETF starve atp
+ASSERT LAST_N == 0 "pop starve atp hollow held"
+
+ASSERT 1 == 1 "life_cell_lcat PASS"
+
+
