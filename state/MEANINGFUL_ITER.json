@@ -36,7 +36,7 @@
   "asserts_ok": 440,
   "prior_feature": "LIFE_CELL_HSD17B7",
   "status": "PASS",
-  "sealed": false,
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -44,7 +44,7 @@
   "item": "smx mesh vesicle ebp life",
   "gate": "ebp",
   "enzyme": "EBP",
-  "head": "",
-  "tip": "",
-  "sha": ""
+  "head": "468a55e34409e141474e8c17b3cd85212416643a",
+  "tip": "468a55e34409e141474e8c17b3cd85212416643a",
+  "sha": "468a55e34409e141474e8c17b3cd85212416643a"
 }
