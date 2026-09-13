@@ -1,0 +1,6 @@
+SHIP 2334 LIFE_CELL_ABCG1 PASS
+METHOD abcg1 n — ABCG1 mature-HDL sterol efflux after ABCA1
+Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1
+Proofs: life 308/0 · atomic 104/0 · mesh 100/0 · flagship 1620 12/0 · sum 524
+Gift: ABCG1 loads free cholesterol → mature HDL under ASSERT after ABCA1 nascent-HDL ward.
+Cube is SoT. Free energy must flow.

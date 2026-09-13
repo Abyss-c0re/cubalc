@@ -1,3 +1,9 @@
+## 1.15.1834-usability — LIFE_CELL_ABCG1 (MI 2334)
+
+- feat(life): ABCG1 mature-HDL sterol efflux after ABCA1 nascent RCT
+- Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1; proofs life 308 + atomic 104 + smx 100 + flagship 12 = 524 asserts_fail:0
+- METHOD abcg1 n — free-cholesterol -> mature-HDL RCT under ASSERT after ABCA1
+
 ## 1.15.1833-usability — LIFE_CELL_ABCA1 (MI 2333)
 
 - feat(life): ABCA1 reverse-cholesterol efflux loads apoA-I nascent HDL after NCEH1
