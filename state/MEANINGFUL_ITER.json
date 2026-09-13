@@ -48,12 +48,15 @@
   "gate": "tm7sf2",
   "enzyme": "TM7SF2",
   "head": "022dce129d8174015d41f78a90d428f56da9f589",
-  "tip": "022dce129d8174015d41f78a90d428f56da9f589",
+  "tip": "b0eb5854b80699240ccb99c7bee7734e45ed9254",
   "sha": "022dce129d8174015d41f78a90d428f56da9f589",
   "commit": "022dce129d8174015d41f78a90d428f56da9f589",
   "short": "022dce129",
   "feat_sha": "022dce129d8174015d41f78a90d428f56da9f589",
   "feat_head": "022dce129d8174015d41f78a90d428f56da9f589",
   "feat_short": "022dce129",
-  "pin_status": "feat_anchored"
+  "pin_status": "feat_anchored",
+  "pin": "b0eb5854b80699240ccb99c7bee7734e45ed9254",
+  "pin_short": "b0eb5854b",
+  "tip_short": "b0eb5854b"
 }
