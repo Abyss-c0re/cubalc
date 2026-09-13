@@ -1,0 +1,4 @@
+LIFE_CELL_SC5D MI2328 PASS
+continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d
+proofs: life 259 + atomic 92 + smx 88 + flagship 12 = 451 asserts_fail:0
+gift: SC5D sterol-C5-desaturase after EBP
