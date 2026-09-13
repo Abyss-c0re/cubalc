@@ -1,3 +1,9 @@
+## 1.15.1847-usability — LIFE_CELL_CERT (MI 2347)
+
+- METHOD cert n on life_cell after SACM1L/SAC1 PI4P clear — CERT/COL4A3BP ER-Golgi MCS ceramide transfer.
+- Continuum ...->stard3->osbp->sacm1l->cert. Proofs PASS life 381 atomic 133 smx 130 flagship 12 sum 656.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1846-usability — LIFE_CELL_SACM1L (MI 2346)
 
 - METHOD `sacm1l n` on life_cell after OSBP ER–Golgi MCS sterol/PI4P counterexchange.
