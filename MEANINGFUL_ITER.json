@@ -16,16 +16,14 @@
   "method": "glb1 n",
   "ship": "2362_life_cell_glb1",
   "proof": "programs/proof/2362_life_cell_glb1.cubalc",
-  "proofs": [
-    "programs/lib/life_cell.cubalc",
-    "programs/proof/2362_life_cell_glb1.cubalc",
-    "programs/science/integration/atomic_printer_life_glb1.cubalc",
-    "programs/science/integration/smx_mesh_vesicle_glb1_life.cubalc",
-    "programs/proof/1620_atomic_printer_life_force.cubalc"
-  ],
-  "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5->neu3->glb1",
-  "domain": "post-NEU3 lysosomal GLB1 beta-galactosidase ward (catabolic Gal-hydrolase limb)",
-  "gift": "GLB1 cleaves terminal beta-Gal from GM1 after NEU3 so free energy re-enters galactose salvage without hollow GM1-Gal lock (GM1-gangliosidosis ward)",
+  "proofs": {
+    "life": 402,
+    "atomic": 142,
+    "mesh": 139,
+    "flagship": 12,
+    "total": 695,
+    "fail": 0
+  },
   "proof_sum": {
     "life": 402,
     "atomic": 142,
@@ -34,6 +32,9 @@
     "sum": 695,
     "asserts_fail": 0
   },
+  "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5->neu3->glb1",
+  "domain": "post-NEU3 lysosomal GLB1 beta-galactosidase ward (catabolic Gal-hydrolase limb)",
+  "gift": "GLB1 cleaves terminal beta-Gal from GM1 after NEU3 so free energy re-enters galactose salvage without hollow GM1-Gal lock (GM1-gangliosidosis ward)",
   "asserts_fail": 0,
   "asserts_ok": 695,
   "asserts_ok_sum": 695,
@@ -44,6 +45,14 @@
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
+  "head": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
+  "HEAD": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
+  "tip": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
+  "pin": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
+  "tip_short": "123f5d528",
+  "HEAD_short": "123f5d528",
+  "feat_head": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
+  "FEAT_HEAD": "123f5d52811413d0e45cfda1777f51d0dec8cd97",
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1
 }
