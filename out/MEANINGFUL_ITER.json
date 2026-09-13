@@ -46,5 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell cert",
-  "note": "LIFE_CELL_CERT MI2347 METHOD cert n after sacm1l on sterol continuum"
+  "note": "LIFE_CELL_CERT MI2347 METHOD cert n after sacm1l on sterol continuum",
+  "feat": "4d7bf8fff2565b8ea2c617524015095681bbecbb",
+  "feat_head": "4d7bf8fff2565b8ea2c617524015095681bbecbb",
+  "FEAT_HEAD": "4d7bf8fff2565b8ea2c617524015095681bbecbb",
+  "HEAD": "2aa635c1f4595edf0b2a9ba1e0c2318383ac1eaf",
+  "head": "2aa635c1f4595edf0b2a9ba1e0c2318383ac1eaf",
+  "tip": "2aa635c1f4595edf0b2a9ba1e0c2318383ac1eaf",
+  "pin": "2aa635c1f4595edf0b2a9ba1e0c2318383ac1eaf"
 }
