@@ -1,3 +1,10 @@
+## 2350 — LIFE_CELL_UGCG (1.15.1850-usability)
+
+- **feat(life):** METHOD ugcg n — UGCG/GCS UDP-glucose:ceramide glucosyltransferase after SMS2
+- Continuum: `...->cert->sms1->sms2->ugcg`
+- Proofs PASS: life 390 · atomic 135 · smx 132 · flagship 12 · sum 669 · asserts_fail 0
+- Gift: UGCG commits ceramide into Golgi GlcCer so free energy keeps moving into glycosphingolipid pools
+
 ## 1.15.1849-usability — LIFE_CELL_SMS2 (MI 2349)
 
 - METHOD sms2 n on life_cell after SMS1/SGMS1 — SMS2/SGMS2 plasma-membrane sphingomyelin synthase.
