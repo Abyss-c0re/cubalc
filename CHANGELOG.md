@@ -1,3 +1,11 @@
+## 2377 — LIFE_CELL_CYCS (1.15.1877-usability)
+
+- feat(life): METHOD `cycs n` — cytochrome c somatic electron shuttle after UQCRC1 on ETC continuum.
+- Continuum ...->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs.
+- Proofs PASS: life 69/0; atomic 150/0; mesh 147/0; total 366; flagship 1620 PASS.
+- Gift: CYCS shuttles CIII→CIV electrons so free energy completes oxphos without hollow cyt-c lock.
+- Cube is SoT. Free energy must flow. Hollow WE is heresy.
+
 ## 1.15.1872-usability — 2372 LIFE_CELL_ACADVL
 - feat(life): ACADVL (VLCAD) matrix beta-oxidation entry after CPT2; continuum ...->cpt1a->slc25a20->cpt2->acadvl
 - also lands METHOD slc25a20 (CACT) + METHOD cpt2 on same acyl shuttle limb so free energy reaches matrix

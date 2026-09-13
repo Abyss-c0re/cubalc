@@ -1,0 +1,304 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_CYCS — CYCS cytochrome c somatic electron shuttle after UQCRC1 on ETC continuum
+# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs
+# Gift: CYCS shuttles electrons CIII (UQCRC1) to CIV so free energy completes oxphos without hollow cytochrome-c deficiency lock (cyt-c ward).
+# Domain: intermembrane cytochrome c CYCS ward (CIII to CIV electron shuttle limb of oxidative phosphorylation).
+# Science: CYCS (cytochrome c, somatic) is the mobile electron carrier after UQCRC1/CIII; not a rename of ACADVL, HADHA, ETFDH, UQCRC1, COX4I1, CPT2, or PCYT2.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY hepatocyte OF Cell 1 72 0
+ENTITY kupffer OF Cell 1 54 0
+ENTITY mito_omm OF Cell 1 50 0
+ENTITY hollow OF Cell 0 14 0
+ENTITY dry OF Cell 1 0 0
+
+SEND hepatocyte set_threshold 11
+SEND kupffer set_threshold 9
+SEND mito_omm set_threshold 10
+SEND dry set_threshold 13
+
+SEND hepatocyte photosynth 30
+SEND hepatocyte charge 24
+SEND hepatocyte feed 22
+SEND hepatocyte pump 12
+SEND hepatocyte glycolyse 14
+SEND hepatocyte photophos 11
+GETF hepatocyte energy
+ASSERT LAST_N >= 22 "hepatocyte CYCS prelude energy"
+GETF hepatocyte atp
+ASSERT LAST_N >= 22 "hepatocyte CYCS prelude atp"
+GETF hepatocyte pmf
+ASSERT LAST_N >= 5 "hepatocyte CYCS prelude pmf"
+
+SEND kupffer photosynth 18
+SEND kupffer charge 16
+SEND kupffer feed 14
+GETF kupffer alive
+ASSERT LAST_N == 1 "kupffer primed"
+SEND mito_omm photosynth 16
+SEND mito_omm charge 14
+SEND mito_omm feed 12
+GETF mito_omm alive
+ASSERT LAST_N == 1 "mito_omm primed"
+
+# Dry/hollow heresy barred
+SEND dry acsl1 8
+ASSERT LAST_N == 0 "dry acsl1 no ATP"
+SEND dry cpt1a 8
+ASSERT LAST_N == 0 "dry cpt1a no ATP"
+SEND dry slc25a20 8
+ASSERT LAST_N == 0 "dry slc25a20 no ATP"
+SEND dry cpt2 8
+ASSERT LAST_N == 0 "dry cpt2 no ATP"
+SEND dry cycs 8
+ASSERT LAST_N == 0 "dry cycs no ATP"
+SEND hollow acsl1 4
+ASSERT LAST_N == 0 "hollow acsl1 heresy barred"
+SEND hollow cpt1a 4
+ASSERT LAST_N == 0 "hollow cpt1a heresy barred"
+SEND hollow slc25a20 4
+ASSERT LAST_N == 0 "hollow slc25a20 heresy barred"
+SEND hollow cpt2 4
+ASSERT LAST_N == 0 "hollow cpt2 heresy barred"
+SEND hollow cycs 4
+ASSERT LAST_N == 0 "hollow cycs heresy barred"
+
+# Gate chain before CPT1A on hepatocyte
+SEND hepatocyte photosynth 12
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte neu3 1
+ASSERT LAST_N == 1 "er neu3 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte glb1 1
+ASSERT LAST_N == 1 "er glb1 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte hexa 1
+ASSERT LAST_N == 1 "er hexa gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte hexb 1
+ASSERT LAST_N == 1 "er hexb gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte gba 1
+ASSERT LAST_N == 1 "er gba gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte asah1 1
+ASSERT LAST_N == 1 "er asah1 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte sphk1 1
+ASSERT LAST_N == 1 "er sphk1 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte sgpl1 1
+ASSERT LAST_N == 1 "er sgpl1 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte aldh3a2 1
+ASSERT LAST_N == 1 "er aldh3a2 gate before cycs"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte acsl1 1
+ASSERT LAST_N == 1 "er acsl1 gate before cycs"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cpt1a 1
+ASSERT LAST_N == 1 "er cpt1a gate before cycs"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte slc25a20 1
+ASSERT LAST_N == 1 "er slc25a20 gate before cycs"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cpt2 1
+ASSERT LAST_N == 1 "er cpt2 gate before cycs"
+
+# CPT1A delta-3 signature on hepatocyte
+SEND hepatocyte photosynth 14
+SEND hepatocyte charge 12
+SEND hepatocyte feed 10
+GETF hepatocyte heat
+LET s_h = LAST_N
+GETF hepatocyte energy
+LET s_e = LAST_N
+GETF hepatocyte atp
+LET s_a = LAST_N
+GETF hepatocyte age
+LET s_age = LAST_N
+GETF hepatocyte pcr
+LET s_pcr = LAST_N
+GETF hepatocyte reserve
+LET s_rsv = LAST_N
+GETF hepatocyte pmf
+LET s_pmf = LAST_N
+GETF hepatocyte threshold
+LET s_thr = LAST_N
+SEND hepatocyte cycs 3
+ASSERT LAST_N == 3 "er cycs delta-3"
+GETF hepatocyte heat
+ASSERT LAST_N == s_h + 3 "er cycs heat+3"
+GETF hepatocyte energy
+ASSERT LAST_N == s_e - 3 "er cycs energy-3"
+GETF hepatocyte atp
+ASSERT LAST_N == s_a - 3 "er cycs atp-3"
+GETF hepatocyte age
+ASSERT LAST_N == s_age "er cycs age held"
+GETF hepatocyte pcr
+ASSERT LAST_N == s_pcr "er cycs pcr held"
+GETF hepatocyte reserve
+ASSERT LAST_N == s_rsv "er cycs reserve held"
+GETF hepatocyte pmf
+ASSERT LAST_N == s_pmf "er cycs pmf held"
+GETF hepatocyte threshold
+ASSERT LAST_N == s_thr "er cycs thr held"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "er alive post-cycs-delta"
+
+# mito_omm CPT1A path
+SEND mito_omm photosynth 20
+SEND mito_omm charge 16
+SEND mito_omm feed 14
+SEND mito_omm acsl1 2
+ASSERT LAST_N == 2 "mito_omm acsl1 before cycs"
+SEND mito_omm photosynth 8
+SEND mito_omm charge 6
+SEND mito_omm feed 4
+SEND mito_omm cpt1a 1
+ASSERT LAST_N == 1 "mito_omm cpt1a before cycs"
+SEND mito_omm photosynth 8
+SEND mito_omm charge 6
+SEND mito_omm feed 4
+SEND mito_omm slc25a20 1
+ASSERT LAST_N == 1 "mito_omm slc25a20 before cycs"
+SEND mito_omm photosynth 8
+SEND mito_omm charge 6
+SEND mito_omm feed 4
+SEND mito_omm cpt2 1
+ASSERT LAST_N == 1 "mito_omm cpt2 before cycs"
+SEND mito_omm photosynth 12
+SEND mito_omm charge 10
+SEND mito_omm feed 8
+GETF mito_omm heat
+LET m_h = LAST_N
+GETF mito_omm energy
+LET m_e = LAST_N
+GETF mito_omm atp
+LET m_a = LAST_N
+SEND mito_omm cycs 2
+ASSERT LAST_N == 2 "mito_omm cycs delta-2"
+GETF mito_omm heat
+ASSERT LAST_N == m_h + 2 "mito_omm cycs heat+2"
+GETF mito_omm energy
+ASSERT LAST_N == m_e - 2 "mito_omm cycs energy-2"
+GETF mito_omm atp
+ASSERT LAST_N == m_a - 2 "mito_omm cycs atp-2"
+GETF mito_omm alive
+ASSERT LAST_N == 1 "mito_omm alive cycs"
+
+# kupffer multi-step tip seal
+SEND kupffer photosynth 16
+SEND kupffer charge 14
+SEND kupffer feed 12
+SEND kupffer hexb 1
+ASSERT LAST_N == 1 "kupffer hexb"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer asah1 1
+ASSERT LAST_N == 1 "kupffer asah1"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer sphk1 1
+ASSERT LAST_N == 1 "kupffer sphk1"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer sgpl1 1
+ASSERT LAST_N == 1 "kupffer sgpl1"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer aldh3a2 1
+ASSERT LAST_N == 1 "kupffer aldh3a2"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer acsl1 1
+ASSERT LAST_N == 1 "kupffer acsl1"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer cpt1a 1
+ASSERT LAST_N == 1 "kupffer cpt1a"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer slc25a20 1
+ASSERT LAST_N == 1 "kupffer slc25a20"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer cpt2 1
+ASSERT LAST_N == 1 "kupffer cpt2"
+SEND kupffer photosynth 8
+SEND kupffer charge 6
+SEND kupffer feed 4
+SEND kupffer cycs 1
+ASSERT LAST_N == 1 "kupffer cycs tip"
+GETF kupffer alive
+ASSERT LAST_N == 1 "kupffer alive tip CYCS"
+
+# Zero and oversize clamps
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 8
+SEND hepatocyte feed 6
+SEND hepatocyte cycs 0
+ASSERT LAST_N == 0 "cycs zero n"
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 8
+SEND hepatocyte feed 6
+SEND hepatocyte cycs 50
+ASSERT LAST_N <= 50 "cycs oversize clamp"
+ASSERT LAST_N >= 1 "cycs take some from pool"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "alive after cycs clamp"
+
+# Continuum tip seal: acsl1 then cpt1a
+SEND hepatocyte photosynth 14
+SEND hepatocyte charge 12
+SEND hepatocyte feed 10
+SEND hepatocyte acsl1 2
+ASSERT LAST_N == 2 "tip acsl1 before cycs"
+SEND hepatocyte photosynth 14
+SEND hepatocyte charge 12
+SEND hepatocyte feed 10
+SEND hepatocyte cpt1a 2
+ASSERT LAST_N == 2 "hepatocyte cpt1a acyl-carnitine export exit"
+GETF hepatocyte heat
+ASSERT LAST_N >= 2 "hepatocyte heat cpt1a"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "hepatocyte alive cpt1a"
+ASSERT LAST_N == 1 "tip alive CYCS continuum"
+
+ASSERT 1 == 1 "life_cell_cycs PASS"
+PASS
