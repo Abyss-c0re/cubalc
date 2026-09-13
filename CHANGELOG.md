@@ -1,3 +1,11 @@
+## 1.15.1857-usability — LIFE_CELL_ST6GALNAC6 (MI 2357)
+
+- `METHOD st6galnac6 n` — ST6GALNAC6/SIAT7F alpha-2,6-sialyltransferase GQ1b-alpha synthase after ST8SIA5.
+- Continuum: ...->st3gal2->st8sia5->st6galnac6 (alpha-series terminus limb).
+- Gift: commits GQ1b into Golgi GQ1b-alpha under ASSERT; free energy flows past GQ1b-only stall.
+- Proofs: life 400 / atomic 140 / mesh 137 / flagship 12 = 689 asserts_fail:0.
+- Prior: LIFE_CELL_ST8SIA5 (MI 2356).
+
 ## 2351 — LIFE_CELL_B4GALT (1.15.1851-usability)
 
 ## 1.15.1852-usability — LIFE_CELL_ST3GAL5 (MI 2352)
