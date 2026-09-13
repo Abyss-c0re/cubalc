@@ -21953,4 +21953,76 @@ CLASS Cell
   END
 
 
+  # Osbp: oxysterol-binding protein (OSBP/OSBP1) after STARD3 LE START-domain sterol transfer.
+  # OSBP is the ER–Golgi membrane-contact-site sterol/PI4P counterexchange transfer protein that
+  # docks VAP-A/B FFAT at the ER and shuttles free sterol into the trans-Golgi under ASSERT after
+  # the STARD3 late-endosome START ward has delivered post-NPC1 sterol to organelle acceptors.
+  # After Stard3 shuttles LE free sterol toward ER/mito contact acceptors, Osbp spends MCS cargo
+  # under ASSERT to complete ER–Golgi sterol counterexchange (committed post-STARD3 FC ->
+  # TGN sterol pool on the post-STARD3 oxysterol-binding MCS limb).
+  # Distinct from Stard3 LE START-domain sterol shuttle (MLN64), Npc1 lysosomal sterol egress,
+  # Stard4 cytosolic sterol transfer, Star/Stard1 mitochondrial StAR, Cert/Col4a3bp ceramide
+  # transfer, and Soat1 ER sterol O-acyltransferase - Osbp is the OSBP ER–Golgi MCS sterol/PI4P
+  # counterexchanger.
+  # Domain: post-STARD3 ER–Golgi MCS oxysterol-binding sterol transfer ward on the dietary/biliary sterol limb.
+  # Continuum: ...->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp
+  # Gift: post-STARD3 OSBP counterexchanges sterol at ER–Golgi MCS under ASSERT so STARD3-delivered
+  # dietary/biliary cholesterol reflows into TGN membranes without MCS sterol trap.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - osbp.
+  # Usability: AGI models post-STARD3 ER–Golgi OSBP sterol/PI4P counterexchange under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD osbp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

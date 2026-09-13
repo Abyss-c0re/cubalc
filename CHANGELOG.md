@@ -1,3 +1,8 @@
+## 1.15.1845-usability — LIFE_CELL_OSBP (MI 2345)
+
+- METHOD osbp n after stard3; proofs sum 616 fail 0
+- Cube is SoT. Free energy must flow.
+
 # Changelog
 
 ## 1.15.1844-usability — MI2344 LIFE_CELL_STARD3 (2026-09-13)
