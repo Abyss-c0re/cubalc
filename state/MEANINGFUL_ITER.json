@@ -50,12 +50,17 @@
   "feat": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
   "feat_head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
   "FEAT_HEAD": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
-  "HEAD": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479",
-  "head": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479",
-  "tip": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479",
+  "HEAD": "9c5d505621637412fdae8a4cf979f7ebb19df061",
+  "head": "9c5d505621637412fdae8a4cf979f7ebb19df061",
+  "tip": "9c5d505621637412fdae8a4cf979f7ebb19df061",
   "pin": "e0a504af5bf1db4ea963b492705b0db60caa61b1",
   "pinned_head": "e0a504af5bf1db4ea963b492705b0db60caa61b1",
-  "TIP": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479",
-  "ship_head": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479",
-  "CUBALC_HEAD_NOW": "95bfc44893c5ab7e80c0d67c9ad2775dc22e7479"
+  "TIP": "9c5d505621637412fdae8a4cf979f7ebb19df061",
+  "ship_head": "9c5d505621637412fdae8a4cf979f7ebb19df061",
+  "CUBALC_HEAD_NOW": "9c5d505621637412fdae8a4cf979f7ebb19df061",
+  "asserts_fail": 0,
+  "asserts_ok_sum": 681,
+  "asserts_ok": 681,
+  "prior_feature": "LIFE_CELL_B4GALT",
+  "prior_mi": 2351
 }
