@@ -2,9 +2,10 @@ SHIP LIFE_CELL_HEXA MI 2363
 version: 1.15.1863-usability
 method: hexa n
 proof: programs/proof/2363_life_cell_hexa.cubalc
-life=403 atomic=143 mesh=140 flagship=12 sum=698 asserts_fail=0
+life=408 atomic=143 mesh=140 flagship=12 sum=703 asserts_fail=0
 continuum: ...->st6galnac6->st6galnac5->neu3->glb1->hexa
 domain: post-GLB1 lysosomal HEXA beta-hexosaminidase A ward (catabolic GalNAc-hydrolase limb)
 gift: HEXA cleaves terminal beta-GalNAc from GM2 after GLB1 so free energy re-enters GalNAc salvage without hollow GM2-GalNAc lock (Tay-Sachs / GM2-gangliosidosis ward)
 prior: LIFE_CELL_GLB1 MI 2362
 status: PASS
+law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
