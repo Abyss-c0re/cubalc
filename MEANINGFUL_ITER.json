@@ -46,5 +46,11 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell cetp",
-  "note": "LIFE_CELL_CETP MI2336 after LCAT continuum; plasma CETP HDL-to-apoB CE heteroexchange ward after HDL-core CE maturation."
+  "note": "LIFE_CELL_CETP MI2336 after LCAT continuum; plasma CETP HDL-to-apoB CE heteroexchange ward after HDL-core CE maturation.",
+  "feat": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
+  "feat_head": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
+  "FEAT_HEAD": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
+  "HEAD": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
+  "head": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
+  "tip": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66"
 }
