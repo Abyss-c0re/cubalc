@@ -49,5 +49,9 @@
   "note": "LIFE_CELL_SMS1 MI2348 METHOD sms1 n after cert on sterol continuum",
   "feat": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
   "feat_head": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
-  "FEAT_HEAD": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5"
+  "FEAT_HEAD": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
+  "HEAD": "d092eab0e98d269223d2e0865d7cfa3798e06a40",
+  "head": "d092eab0e98d269223d2e0865d7cfa3798e06a40",
+  "tip": "d092eab0e98d269223d2e0865d7cfa3798e06a40",
+  "pin": "d092eab0e98d269223d2e0865d7cfa3798e06a40"
 }
