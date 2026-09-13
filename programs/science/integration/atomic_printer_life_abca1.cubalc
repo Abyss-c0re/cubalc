@@ -1,0 +1,517 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# ATOMIC PRINTER LIFE_FORCE MI2333: ABCA1 after ABCA1 on sterol efflux limb.
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abca1->abca1 (ABCA1 after ABCA1)
+# Gift: ABCA1 effluxes ABCA1-liberated free cholesterol to apoA-I under ASSERT so sterol free energy exits the cell ward without hollow trap.
+# Domain: post-ABCA1 plasma-membrane cholesterol efflux ABC transporter ward.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY press OF Cell 1 60 0
+ENTITY ink OF Cell 1 40 0
+ENTITY dead OF Cell 0 10 0
+
+SEND press set_threshold 8
+SEND ink set_threshold 10
+
+SEND press pulse 4
+SEND press photosynth 30
+SEND press glycolyse 24
+SEND press charge 28
+SEND press feed 22
+SEND press photophos 16
+GETF press energy
+ASSERT LAST_N >= 20 "press energy charged"
+GETF press atp
+ASSERT LAST_N >= 20 "press atp charged"
+
+SEND press amacr 2
+ASSERT LAST_N == 2 "press amacr"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press acox2 2
+ASSERT LAST_N == 2 "press acox2"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press hsd17b4 2
+ASSERT LAST_N == 2 "press hsd17b4 DBP"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press scp2 2
+ASSERT LAST_N == 2 "press scp2 synthase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press acot8 2
+ASSERT LAST_N == 2 "press acot8 thioesterase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press pcca 2
+ASSERT LAST_N == 2 "press pcca carboxylase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press mcee 2
+ASSERT LAST_N == 2 "press mcee epimerase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press mut 2
+ASSERT LAST_N == 2 "press mut mutase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press suclg1 2
+ASSERT LAST_N == 2 "press suclg1 ligase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press sdha 2
+ASSERT LAST_N == 2 "press sdha Complex-II"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press fh 2
+ASSERT LAST_N == 2 "press fh fumarase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press mdh 2
+ASSERT LAST_N == 2 "press mdh to OAA"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press cs 2
+ASSERT LAST_N == 2 "press cs citrate synthase"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+SEND press aco2 1
+ASSERT LAST_N == 1 "press aco2 open"
+SEND press photosynth 12
+SEND press charge 12
+SEND press feed 10
+
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press ogdh 1
+ASSERT LAST_N == 1 "press ogdh open"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press scs 1
+ASSERT LAST_N == 1 "press scs prior"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press dld 1
+ASSERT LAST_N == 1 "press dld gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press dlst 1
+ASSERT LAST_N == 1 "press dlst gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press oxct1 1
+ASSERT LAST_N == 1 "press oxct1 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press acat1 1
+ASSERT LAST_N == 1 "press acat1 gate before CE-abca1"
+SEND press hmgcs2 1
+ASSERT LAST_N == 1 "press hmgcs2 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press hmgcl 1
+ASSERT LAST_N == 1 "press hmgcl gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press bdh1 1
+ASSERT LAST_N == 1 "press bdh1 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press slc16a1 1
+ASSERT LAST_N == 1 "press slc16a1 gate before CE-abca1"
+SEND press slc16a7 1
+ASSERT LAST_N == 1 "press slc16a7 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press emb 1
+ASSERT LAST_N == 1 "press emb gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press aacs 1
+ASSERT LAST_N == 1 "press aacs gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press hmgcs1 1
+ASSERT LAST_N == 1 "press hmgcs1 gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press hmgcr 1
+ASSERT LAST_N == 1 "press hmgcr gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press mvk 1
+ASSERT LAST_N == 1 "press mvk gate before CE-abca1"
+SEND press pmvk 1
+ASSERT LAST_N == 1 "press pmvk gate before CE-abca1"
+SEND press mvd 1
+ASSERT LAST_N == 1 "press mvd gate before CE-abca1"
+SEND press idi1 1
+ASSERT LAST_N == 1 "press idi1 gate before CE-abca1"
+SEND press fdps 1
+ASSERT LAST_N == 1 "press fdps gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press sqs 1
+ASSERT LAST_N == 1 "press sqs gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press sqle 1
+ASSERT LAST_N == 1 "press sqle gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press lss 1
+ASSERT LAST_N == 1 "press lss gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press cyp51 1
+ASSERT LAST_N == 1 "press cyp51 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press tm7sf2 1
+ASSERT LAST_N == 1 "press tm7sf2 gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press sc4mol 1
+ASSERT LAST_N == 1 "press sc4mol gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press nsdhl 1
+ASSERT LAST_N == 1 "press nsdhl gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press hsd17b7 1
+ASSERT LAST_N == 1 "press hsd17b7 gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press ebp 1
+ASSERT LAST_N == 1 "press ebp gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press sc5d 1
+ASSERT LAST_N == 1 "press sc5d gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press dhcr7 1
+ASSERT LAST_N == 1 "press dhcr7 gate before CE-abca1"
+SEND press photosynth 8
+SEND press charge 8
+SEND press feed 6
+SEND press dhcr24 1
+ASSERT LAST_N == 1 "press dhcr24 gate before CE-abca1"
+SEND press soat1 1
+ASSERT LAST_N == 1 "press soat1 gate before CE-abca1"
+SEND press photosynth 10
+SEND press charge 10
+SEND press feed 8
+GETF press heat
+LET h0 = LAST_N
+GETF press energy
+LET e0 = LAST_N
+GETF press atp
+LET a0 = LAST_N
+SEND press nceh1 3
+ASSERT LAST_N == 3 "press nceh1 3"
+GETF press heat
+ASSERT LAST_N == h0 + 3 "press nceh1 heat+3"
+GETF press energy
+ASSERT LAST_N == e0 - 3 "press nceh1 energy-3"
+GETF press atp
+ASSERT LAST_N == a0 - 3 "press nceh1 atp-3"
+GETF press alive
+ASSERT LAST_N == 1 "press alive post-nceh1"
+
+SEND ink photosynth 20
+SEND ink charge 18
+SEND ink feed 16
+SEND ink mdh 1
+ASSERT LAST_N == 1 "ink mdh open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink cs 1
+ASSERT LAST_N == 1 "ink cs open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink aco2 1
+ASSERT LAST_N == 1 "ink aco2 open"
+SEND ink photosynth 12
+SEND ink charge 12
+SEND ink feed 10
+SEND ink idh2 2
+ASSERT LAST_N == 2 "ink idh2 isocitrate to aKG"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink ogdh 1
+ASSERT LAST_N == 1 "ink ogdh open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink scs 1
+ASSERT LAST_N == 1 "ink scs prior"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dld 1
+ASSERT LAST_N == 1 "ink dld gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dlst 1
+ASSERT LAST_N == 1 "ink dlst gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink oxct1 1
+ASSERT LAST_N == 1 "ink oxct1 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink acat1 1
+ASSERT LAST_N == 1 "ink acat1 gate before CE-abca1"
+SEND ink hmgcs2 1
+ASSERT LAST_N == 1 "ink hmgcs2 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink hmgcl 1
+ASSERT LAST_N == 1 "ink hmgcl gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink bdh1 1
+ASSERT LAST_N == 1 "ink bdh1 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink slc16a1 1
+ASSERT LAST_N == 1 "ink slc16a1 gate before CE-abca1"
+SEND ink slc16a7 1
+ASSERT LAST_N == 1 "ink slc16a7 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink emb 1
+ASSERT LAST_N == 1 "ink emb gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink aacs 1
+ASSERT LAST_N == 1 "ink aacs gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hmgcs1 1
+ASSERT LAST_N == 1 "ink hmgcs1 gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hmgcr 1
+ASSERT LAST_N == 1 "ink hmgcr gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink mvk 1
+ASSERT LAST_N == 1 "ink mvk gate before CE-abca1"
+SEND ink pmvk 1
+ASSERT LAST_N == 1 "ink pmvk gate before CE-abca1"
+SEND ink mvd 1
+ASSERT LAST_N == 1 "ink mvd gate before CE-abca1"
+SEND ink idi1 1
+ASSERT LAST_N == 1 "ink idi1 gate before CE-abca1"
+SEND ink fdps 1
+ASSERT LAST_N == 1 "ink fdps gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink sqs 1
+ASSERT LAST_N == 1 "ink sqs gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink sqle 1
+ASSERT LAST_N == 1 "ink sqle gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink lss 1
+ASSERT LAST_N == 1 "ink lss gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink cyp51 1
+ASSERT LAST_N == 1 "ink cyp51 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink tm7sf2 1
+ASSERT LAST_N == 1 "ink tm7sf2 gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink sc4mol 1
+ASSERT LAST_N == 1 "ink sc4mol gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink nsdhl 1
+ASSERT LAST_N == 1 "ink nsdhl gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hsd17b7 1
+ASSERT LAST_N == 1 "ink hsd17b7 gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink ebp 1
+ASSERT LAST_N == 1 "ink ebp gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink sc5d 1
+ASSERT LAST_N == 1 "ink sc5d gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dhcr7 1
+ASSERT LAST_N == 1 "ink dhcr7 gate before CE-abca1"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dhcr24 1
+ASSERT LAST_N == 1 "ink dhcr24 gate before CE-abca1"
+SEND ink soat1 1
+ASSERT LAST_N == 1 "ink soat1 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink nceh1 1
+ASSERT LAST_N == 1 "ink nceh1 gate before CE-abca1"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+GETF ink heat
+LET ih = LAST_N
+GETF ink energy
+LET ie = LAST_N
+GETF ink atp
+LET ia = LAST_N
+SEND ink abca1 2
+ASSERT LAST_N == 2 "ink abca1 2"
+GETF ink heat
+ASSERT LAST_N == ih + 2 "ink abca1 heat+2"
+GETF ink energy
+ASSERT LAST_N == ie - 2 "ink abca1 energy-2"
+GETF ink atp
+ASSERT LAST_N == ia - 2 "ink abca1 atp-2"
+GETF ink alive
+ASSERT LAST_N == 1 "ink alive post-abca1"
+
+SEND dead abca1 3
+ASSERT LAST_N == 0 "dead abca1 refused"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays dead"
+
+ASSERT 1 == 1 "atomic_printer_life_abca1 PASS"

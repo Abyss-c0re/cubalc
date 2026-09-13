@@ -1,0 +1,4 @@
+LIFE_CELL_ABCA1 MI2333 PASS
+ABCA1 ATP-binding cassette A1 effluxes FC after NCEH1 liberates sterol stores.
+Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1
+proofs life 294 + atomic 101 + smx 95 + flagship 12 = 502 asserts_fail:0

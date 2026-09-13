@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1833-usability — LIFE_CELL_ABCA1 (MI2333)
+
+- **feat(life):** ABCA1 ATP-binding cassette A1 cholesterol efflux after NCEH1 FC liberate
+- Continuum `...->dhcr7->dhcr24->soat1->nceh1->abca1`
+- Proofs life 294 + atomic 101 + smx 95 + flagship 12 = 502 asserts_fail:0
+
+
 ## 1.15.1832-usability — LIFE_CELL_NCEH1 (MI2332)
 
 - **feat(life):** NCEH1 neutral cholesterol ester hydrolase 1 after SOAT1 CE pack
