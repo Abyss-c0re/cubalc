@@ -32,7 +32,7 @@
   },
   "continuum": "...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl",
   "domain": "post-CPT2 matrix very-long-chain acyl-CoA dehydrogenase ACADVL ward (hexadecenoyl-CoA to enoyl-CoA limb of beta-oxidation entry)",
-  "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock (matrix ACADVL ward)",
+  "gift": "ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock (VLCAD ward)",
   "asserts_fail": 0,
   "asserts_ok": 366,
   "prior_feature": "LIFE_CELL_CPT2",
@@ -44,20 +44,12 @@
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1,
-  "feat_head": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "FEAT_HEAD": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "feat": "265ddfa894c07004fbeba4e60cf0d6e43bc3aff7",
-  "head": "a87825cc6ec72cf5b395f8b89ce090395ccd016f",
-  "HEAD": "a87825cc6ec72cf5b395f8b89ce090395ccd016f",
-  "tip": "a87825cc6ec72cf5b395f8b89ce090395ccd016f",
-  "pin": "a87825cc6ec72cf5b395f8b89ce090395ccd016f",
-  "tip_short": "a87825cc6",
-  "HEAD_short": "a87825cc6",
-  "commit": "265ddfa89",
-  "summary": "LIFE_CELL_ACADVL MI2372 after CPT2 continuum PASS life69+atomic150+mesh147=366.",
-  "flagship_1620": {
-    "asserts_ok": 12,
-    "asserts_fail": 0,
-    "pass": true
-  }
+  "feat_head": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "FEAT_HEAD": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "head": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "HEAD": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "tip": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "pin": "f1abd111a7282efb378a24a167d08bc741d5c635",
+  "tip_short": "f1abd111a",
+  "HEAD_short": "f1abd111a"
 }
