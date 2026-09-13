@@ -1,6 +1,6 @@
 SHIP 2336 LIFE_CELL_CETP PASS
-METHOD cetp n — CETP plasma HDL-to-apoB CE heteroexchange after LCAT
-Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp
+METHOD cetp n — CETP plasma HDL-to-apoB CE transfer after LCAT
+Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp
 Proofs: life 324/0 · atomic 109/0 · mesh 106/0 · flagship 1620 12/0 · sum 551
-Gift: CETP transfers HDL-core CE onto apoB lipoproteins under ASSERT after LCAT CE maturation ward.
+Gift: CETP transfers HDL-core CE onto apoB lipoproteins under ASSERT after LCAT ward.
 Cube is SoT. Free energy must flow.

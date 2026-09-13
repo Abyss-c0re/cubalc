@@ -11,7 +11,7 @@
   "feature": "life_cell_cetp",
   "FEATURE": "LIFE_CELL_CETP",
   "name": "LIFE_CELL_CETP",
-  "title": "CETP plasma HDL-to-apoB CE heteroexchange after LCAT on life_cell continuum",
+  "title": "CETP plasma HDL-to-apoB CE transfer after LCAT on life_cell continuum",
   "label": "LIFE_CELL_CETP",
   "method": "cetp n",
   "ship": "2336_life_cell_cetp",
@@ -25,7 +25,7 @@
   ],
   "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp",
   "domain": "post-LCAT plasma CETP HDL-to-apoB CE heteroexchange reverse-cholesterol-transport ward",
-  "gift": "CETP after LCAT so HDL-core CE transfers onto apoB lipoproteins under ASSERT after LCAT CE maturation ward.",
+  "gift": "CETP after LCAT so HDL-core CE transfers onto apoB lipoproteins under ASSERT after plasma LCAT HDL-maturation ward.",
   "proof_sum": {
     "life": 324,
     "atomic": 109,
@@ -46,11 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell cetp",
-  "note": "LIFE_CELL_CETP MI2336 after LCAT continuum; plasma CETP HDL-to-apoB CE heteroexchange ward after HDL-core CE maturation.",
+  "note": "LIFE_CELL_CETP MI2336 after LCAT continuum; plasma CETP HDL-to-apoB CE transfer ward after HDL-core CE maturation.",
   "feat": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
   "feat_head": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
   "FEAT_HEAD": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
-  "HEAD": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
-  "head": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66",
-  "tip": "ab0cce7a8700fd97a84b7ad8416966afc9f1df66"
+  "HEAD": "PENDING",
+  "head": "PENDING",
+  "tip": "PENDING",
+  "pin": "PENDING"
 }

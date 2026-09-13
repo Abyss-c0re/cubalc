@@ -17,3 +17,10 @@
 - continuum: ...->hmgcr->mvk->pmvk->mvd
 - asserts: life=187 ap=68 smx=64 flagship=12 sum=331
 - VERSION: 1.15.1815-usability
+
+## MI 2336 LIFE_CELL_CETP PASS
+- method: `cetp n` after LCAT
+- continuum: ...->abca1->abcg1->lcat->cetp
+- asserts: life=324 ap=109 smx=106 flagship=12 sum=551
+- VERSION: 1.15.1836-usability
+
