@@ -1,3 +1,12 @@
+## 2329 LIFE_CELL_DHCR7
+- feat(life): DHCR7 7-dehydrocholesterol reductase after SC5D on life_cell continuum
+- proof: programs/proof/2329_life_cell_dhcr7.cubalc (220 asserts)
+- science: atomic_printer_life_dhcr7 + smx_mesh_vesicle_dhcr7_life
+- continuum: ...->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7
+- METHOD dhcr7 n — 7-dehydrosterol -> cholesterol Δ7-reductase gate
+- flagship 1620: 12/0 PASS
+- Proofs asserts_fail:0 — life 220 · atomic 92 · mesh 83 · flagship 12 · sum 407
+
 ## 2328 LIFE_CELL_SC5D
 - feat(life): SC5D sterol-C5-desaturase after EBP on life_cell continuum
 - proof: programs/proof/2328_life_cell_sc5d.cubalc (219 asserts)
