@@ -39,7 +39,7 @@
   "asserts_ok": 398,
   "prior_feature": "LIFE_CELL_NSDHL",
   "status": "PASS",
-  "sealed": false,
+  "sealed": true,
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
@@ -49,5 +49,9 @@
   "note": "LIFE_CELL_HSD17B7 MI2326 after NSDHL continuum; HSD17B7 gate shipped",
   "feat": "e990ca31433a46daff1209e6285b52025692b7ac",
   "feat_head": "e990ca31433a46daff1209e6285b52025692b7ac",
-  "FEAT_HEAD": "e990ca31433a46daff1209e6285b52025692b7ac"
+  "FEAT_HEAD": "e990ca31433a46daff1209e6285b52025692b7ac",
+  "HEAD": "dbd1e079cf09d504c9a3738bc56c397de6c1c824",
+  "head": "dbd1e079cf09d504c9a3738bc56c397de6c1c824",
+  "tip": "dbd1e079cf09d504c9a3738bc56c397de6c1c824",
+  "pin": "dbd1e079cf09d504c9a3738bc56c397de6c1c824"
 }
