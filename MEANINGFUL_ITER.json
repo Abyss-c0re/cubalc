@@ -40,5 +40,8 @@
   "prior_feature": "LIFE_CELL_PLTP",
   "prior_mi": 2338,
   "status": "PASS",
-  "law": "cube_is_sot; free_energy_must_flow"
+  "law": "cube_is_sot; free_energy_must_flow",
+  "feat": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
+  "feat_head": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423",
+  "FEAT_HEAD": "3f0b41af02dac32b0aeaafb6b4cb4bba13f9b423"
 }
