@@ -1,0 +1,4 @@
+LIFE_CELL_EBP MI2327 PASS
+continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp
+proofs: life 252 + atomic 90 + smx 86 + flagship 12 = 440 asserts_fail:0
+gift: EBP sterol Delta8-Delta7 isomerase after HSD17B7

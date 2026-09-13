@@ -1,0 +1,1296 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_EBP — EBP sterol Delta8-Delta7 isomerase after HSD17B7 on BA continuum
+# Continuum ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp (EBP after HSD17B7)
+# Gift: EBP isomerizes HSD17B7 3-beta-OH-Delta8 sterol to Delta7 under ASSERT after HSD17B7 open.
+# Domain: post-HSD17B7 sterol Delta8-Delta7 isomerase (EBP/ERG2) zymosterol-ward gate.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY mito OF Cell 1 44 0
+ENTITY peri OF Cell 1 28 0
+ENTITY ash OF Cell 0 18 0
+ENTITY starve OF Cell 1 0 0
+ENTITY nest OF Cell 1 52 0
+
+SEND mito set_threshold 10
+SEND peri set_threshold 12
+SEND nest set_threshold 8
+SEND starve set_threshold 10
+
+SEND mito pulse 5
+SEND mito photosynth 42
+SEND mito glycolyse 34
+SEND mito pump 26
+SEND mito photophos 24
+SEND mito charge 38
+SEND mito feed 36
+GETF mito age
+ASSERT LAST_N == 5 "mito age5"
+GETF mito atp
+ASSERT LAST_N >= 18 "mito atp"
+GETF mito energy
+ASSERT LAST_N >= 18 "mito energy"
+GETF mito pmf
+ASSERT LAST_N >= 4 "mito pmf"
+
+SEND mito amacr 2
+ASSERT LAST_N == 2 "mito amacr"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito acox2 2
+ASSERT LAST_N == 2 "mito acox2"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito hsd17b4 2
+ASSERT LAST_N == 2 "mito hsd17b4"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito scp2 2
+ASSERT LAST_N == 2 "mito scp2"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito acot8 2
+ASSERT LAST_N == 2 "mito acot8"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito pcca 2
+ASSERT LAST_N == 2 "mito pcca carboxylase"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito mcee 2
+ASSERT LAST_N == 2 "mito mcee epimerase"
+SEND mito photosynth 14
+SEND mito charge 14
+SEND mito feed 12
+SEND mito mut 2
+ASSERT LAST_N == 2 "mito mut mutase to succinyl-CoA"
+SEND mito photosynth 12
+SEND mito charge 12
+SEND mito feed 10
+SEND mito suclg1 2
+ASSERT LAST_N == 2 "mito suclg1 ligase to succinate"
+SEND mito photosynth 12
+SEND mito charge 12
+SEND mito feed 10
+SEND mito sdha 2
+ASSERT LAST_N == 2 "mito sdha Complex-II to fumarate"
+SEND mito photosynth 12
+SEND mito charge 12
+SEND mito feed 10
+SEND mito fh 2
+ASSERT LAST_N == 2 "mito fh fumarase to L-malate"
+SEND mito photosynth 16
+SEND mito charge 16
+SEND mito feed 14
+
+SEND mito mdh 1
+ASSERT LAST_N == 1 "mito mdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cs 1
+ASSERT LAST_N == 1 "mito cs open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aco2 1
+ASSERT LAST_N == 1 "mito aco2 open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito idh2 2
+ASSERT LAST_N == 2 "mito idh2 isocitrate to aKG"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito ogdh 1
+ASSERT LAST_N == 1 "mito ogdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito scs 2
+ASSERT LAST_N == 2 "mito scs open before dld"
+SEND mito photosynth 12
+SEND mito charge 12
+SEND mito feed 10
+SEND mito dld 2
+ASSERT LAST_N == 2 "mito dld open before ebp"
+SEND mito photosynth 12
+SEND mito charge 12
+SEND mito feed 10
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito dlst 1
+ASSERT LAST_N == 1 "mito dlst open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito oxct1 1
+ASSERT LAST_N == 1 "mito oxct1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito acat1 1
+ASSERT LAST_N == 1 "mito acat1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs2 1
+ASSERT LAST_N == 1 "mito hmgcs2 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcl 1
+ASSERT LAST_N == 1 "mito hmgcl open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito bdh1 1
+ASSERT LAST_N == 1 "mito bdh1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a1 1
+ASSERT LAST_N == 1 "mito slc16a1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a7 1
+ASSERT LAST_N == 1 "mito slc16a7 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aacs 1
+ASSERT LAST_N == 1 "mito aacs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs1 1
+ASSERT LAST_N == 1 "mito hmgcs1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcr 1
+ASSERT LAST_N == 1 "mito hmgcr open before ebp"
+SEND mito mvk 1
+ASSERT LAST_N == 1 "mito mvk open before ebp"
+SEND mito pmvk 1
+ASSERT LAST_N == 1 "mito pmvk open before ebp"
+SEND mito mvd 1
+ASSERT LAST_N == 1 "mito mvd open before ebp"
+SEND mito idi1 1
+ASSERT LAST_N == 1 "mito idi1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito fdps 1
+ASSERT LAST_N == 1 "mito fdps open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito sqs 1
+ASSERT LAST_N == 1 "mito sqs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito sqle 1
+ASSERT LAST_N == 1 "mito sqle open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito lss 1
+ASSERT LAST_N == 1 "mito lss open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cyp51 1
+ASSERT LAST_N == 1 "mito cyp51 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito tm7sf2 1
+ASSERT LAST_N == 1 "mito tm7sf2 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito sc4mol 1
+ASSERT LAST_N == 1 "mito sc4mol open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito nsdhl 1
+ASSERT LAST_N == 1 "mito nsdhl open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito hsd17b7 1
+ASSERT LAST_N == 1 "mito hsd17b7 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+GETF mito heat
+LET f_h = LAST_N
+GETF mito energy
+LET f_e = LAST_N
+GETF mito atp
+LET f_a = LAST_N
+GETF mito age
+LET f_age = LAST_N
+GETF mito pcr
+LET f_pcr = LAST_N
+GETF mito reserve
+LET f_rsv = LAST_N
+GETF mito pmf
+LET f_pmf = LAST_N
+GETF mito threshold
+LET f_thr = LAST_N
+SEND mito ebp 3
+ASSERT LAST_N == 3 "mito ebp 3"
+GETF mito heat
+ASSERT LAST_N == f_h + 3 "mito ebp heat+3"
+GETF mito energy
+ASSERT LAST_N == f_e - 3 "mito ebp energy-3"
+GETF mito atp
+ASSERT LAST_N == f_a - 3 "mito ebp atp-3"
+GETF mito age
+ASSERT LAST_N == f_age "mito ebp age held"
+GETF mito pcr
+ASSERT LAST_N == f_pcr "mito ebp pcr held"
+GETF mito reserve
+ASSERT LAST_N == f_rsv "mito ebp reserve held"
+GETF mito pmf
+ASSERT LAST_N == f_pmf "mito ebp pmf held"
+GETF mito threshold
+ASSERT LAST_N == f_thr "mito ebp thr held"
+GETF mito alive
+ASSERT LAST_N == 1 "mito alive post-ebp"
+
+SEND mito mdh 1
+ASSERT LAST_N == 1 "mito mdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cs 1
+ASSERT LAST_N == 1 "mito cs open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aco2 1
+ASSERT LAST_N == 1 "mito aco2 open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito ogdh 1
+ASSERT LAST_N == 1 "mito ogdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito dlst 1
+ASSERT LAST_N == 1 "mito dlst open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito oxct1 1
+ASSERT LAST_N == 1 "mito oxct1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito acat1 1
+ASSERT LAST_N == 1 "mito acat1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs2 1
+ASSERT LAST_N == 1 "mito hmgcs2 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcl 1
+ASSERT LAST_N == 1 "mito hmgcl open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito bdh1 1
+ASSERT LAST_N == 1 "mito bdh1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a1 1
+ASSERT LAST_N == 1 "mito slc16a1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aacs 1
+ASSERT LAST_N == 1 "mito aacs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs1 1
+ASSERT LAST_N == 1 "mito hmgcs1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcr 1
+ASSERT LAST_N == 1 "mito hmgcr open before ebp"
+SEND mito mvk 1
+ASSERT LAST_N == 1 "mito mvk open before ebp"
+SEND mito pmvk 1
+ASSERT LAST_N == 1 "mito pmvk open before ebp"
+SEND mito mvd 1
+ASSERT LAST_N == 1 "mito mvd open before ebp"
+SEND mito idi1 1
+ASSERT LAST_N == 1 "mito idi1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito fdps 1
+ASSERT LAST_N == 1 "mito fdps open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cyp51 1
+ASSERT LAST_N == 1 "mito cyp51 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito tm7sf2 1
+ASSERT LAST_N == 1 "mito tm7sf2 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito sc4mol 1
+ASSERT LAST_N == 1 "mito sc4mol open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito nsdhl 1
+ASSERT LAST_N == 1 "mito nsdhl open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito hsd17b7 1
+ASSERT LAST_N == 1 "mito hsd17b7 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito ebp 0
+ASSERT LAST_N == 0 "mito sqs n0"
+
+SEND mito photosynth 20
+SEND mito charge 18
+SEND mito feed 16
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito dlst 1
+ASSERT LAST_N == 1 "mito dlst open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito oxct1 1
+ASSERT LAST_N == 1 "mito oxct1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito acat1 1
+ASSERT LAST_N == 1 "mito acat1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs2 1
+ASSERT LAST_N == 1 "mito hmgcs2 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcl 1
+ASSERT LAST_N == 1 "mito hmgcl open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito bdh1 1
+ASSERT LAST_N == 1 "mito bdh1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a1 1
+ASSERT LAST_N == 1 "mito slc16a1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a7 1
+ASSERT LAST_N == 1 "mito slc16a7 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aacs 1
+ASSERT LAST_N == 1 "mito aacs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs1 1
+ASSERT LAST_N == 1 "mito hmgcs1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcr 1
+ASSERT LAST_N == 1 "mito hmgcr open before ebp"
+SEND mito mvk 1
+ASSERT LAST_N == 1 "mito mvk open before ebp"
+SEND mito pmvk 1
+ASSERT LAST_N == 1 "mito pmvk open before ebp"
+SEND mito mvd 1
+ASSERT LAST_N == 1 "mito mvd open before ebp"
+SEND mito idi1 1
+ASSERT LAST_N == 1 "mito idi1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito fdps 1
+ASSERT LAST_N == 1 "mito fdps open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito sqle 1
+ASSERT LAST_N == 1 "mito sqle open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito lss 1
+ASSERT LAST_N == 1 "mito lss open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cyp51 1
+ASSERT LAST_N == 1 "mito cyp51 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito tm7sf2 1
+ASSERT LAST_N == 1 "mito tm7sf2 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito sc4mol 1
+ASSERT LAST_N == 1 "mito sc4mol open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito nsdhl 1
+ASSERT LAST_N == 1 "mito nsdhl open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito hsd17b7 1
+ASSERT LAST_N == 1 "mito hsd17b7 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+GETF mito heat
+LET f2_h = LAST_N
+GETF mito energy
+LET f2_e = LAST_N
+GETF mito atp
+LET f2_a = LAST_N
+SEND mito ebp 4
+ASSERT LAST_N == 4 "mito sqs 4"
+GETF mito heat
+ASSERT LAST_N == f2_h + 4 "mito ebp heat+4"
+GETF mito energy
+ASSERT LAST_N == f2_e - 4 "mito ebp energy-4"
+GETF mito atp
+ASSERT LAST_N == f2_a - 4 "mito ebp atp-4"
+GETF mito alive
+ASSERT LAST_N == 1 "mito alive post-ebp-4"
+
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito dlst 1
+ASSERT LAST_N == 1 "mito dlst open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito oxct1 1
+ASSERT LAST_N == 1 "mito oxct1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito acat1 1
+ASSERT LAST_N == 1 "mito acat1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs2 1
+ASSERT LAST_N == 1 "mito hmgcs2 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcl 1
+ASSERT LAST_N == 1 "mito hmgcl open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito bdh1 1
+ASSERT LAST_N == 1 "mito bdh1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a1 1
+ASSERT LAST_N == 1 "mito slc16a1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a7 1
+ASSERT LAST_N == 1 "mito slc16a7 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aacs 1
+ASSERT LAST_N == 1 "mito aacs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs1 1
+ASSERT LAST_N == 1 "mito hmgcs1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcr 1
+ASSERT LAST_N == 1 "mito hmgcr open before ebp"
+SEND mito mvk 1
+ASSERT LAST_N == 1 "mito mvk open before ebp"
+SEND mito pmvk 1
+ASSERT LAST_N == 1 "mito pmvk open before ebp"
+SEND mito mvd 1
+ASSERT LAST_N == 1 "mito mvd open before ebp"
+SEND mito idi1 1
+ASSERT LAST_N == 1 "mito idi1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito fdps 1
+ASSERT LAST_N == 1 "mito fdps open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cyp51 1
+ASSERT LAST_N == 1 "mito cyp51 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito tm7sf2 1
+ASSERT LAST_N == 1 "mito tm7sf2 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito sc4mol 1
+ASSERT LAST_N == 1 "mito sc4mol open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito nsdhl 1
+ASSERT LAST_N == 1 "mito nsdhl open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito hsd17b7 1
+ASSERT LAST_N == 1 "mito hsd17b7 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+GETF mito atp
+LET fc_a = LAST_N
+GETF mito energy
+LET fc_e = LAST_N
+GETF mito heat
+LET fc_h = LAST_N
+GETF mito age
+LET fc_age = LAST_N
+SEND mito ebp 100
+GETF mito atp
+LET fc_a2 = LAST_N
+GETF mito energy
+LET fc_e2 = LAST_N
+GETF mito heat
+LET fc_h2 = LAST_N
+ASSERT fc_a2 >= 0 "mito ebp clamp atp>=0"
+ASSERT fc_e2 >= 0 "mito ebp clamp energy>=0"
+ASSERT fc_h2 >= fc_h "mito ebp clamp heat+="
+ASSERT fc_a2 <= fc_a "mito ebp clamp atp down"
+ASSERT fc_e2 <= fc_e "mito ebp clamp energy down"
+GETF mito age
+ASSERT LAST_N == fc_age "mito ebp clamp age held"
+GETF mito alive
+ASSERT LAST_N == 1 "mito alive post-ebp clamp"
+
+SEND ash ebp 5
+ASSERT LAST_N == 0 "ash ebp refused"
+GETF ash alive
+ASSERT LAST_N == 0 "ash stays dead"
+
+SEND starve ebp 3
+ASSERT LAST_N == 0 "starve ebp refused no fuel"
+GETF starve alive
+ASSERT LAST_N == 1 "starve stays alive"
+
+SEND peri photosynth 16
+SEND peri charge 16
+SEND peri feed 10
+SEND peri suclg1 1
+ASSERT LAST_N == 1 "peri suclg1 open"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri sdha 1
+ASSERT LAST_N == 1 "peri sdha open"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri fh 1
+ASSERT LAST_N == 1 "peri fh open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri mdh 1
+ASSERT LAST_N == 1 "peri mdh open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri cs 1
+ASSERT LAST_N == 1 "peri cs open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri aco2 1
+ASSERT LAST_N == 1 "peri aco2 open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri idh2 1
+ASSERT LAST_N == 1 "peri idh2 open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri ogdh 1
+ASSERT LAST_N == 1 "peri ogdh open"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri scs 2
+ASSERT LAST_N == 2 "peri scs open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri dld 2
+ASSERT LAST_N == 2 "peri dld open before ebp"
+SEND peri photosynth 12
+SEND peri charge 12
+SEND peri feed 10
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri dlst 1
+ASSERT LAST_N == 1 "peri dlst open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri oxct1 1
+ASSERT LAST_N == 1 "peri oxct1 open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri acat1 1
+ASSERT LAST_N == 1 "peri acat1 open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri slc16a7 1
+ASSERT LAST_N == 1 "peri slc16a7 open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri emb 1
+ASSERT LAST_N == 1 "peri emb open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri aacs 1
+ASSERT LAST_N == 1 "peri aacs open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri hmgcs1 1
+ASSERT LAST_N == 1 "peri hmgcs1 open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri fdps 1
+ASSERT LAST_N == 1 "peri fdps open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri sqs 1
+ASSERT LAST_N == 1 "peri sqs open before ebp"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri sqle 1
+ASSERT LAST_N == 1 "peri sqle open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri lss 1
+ASSERT LAST_N == 1 "peri lss open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri cyp51 1
+ASSERT LAST_N == 1 "peri cyp51 open before ebp"
+SEND peri photosynth 10
+SEND peri charge 10
+SEND peri feed 8
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri tm7sf2 1
+ASSERT LAST_N == 1 "peri tm7sf2 open before ebp"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri sc4mol 1
+ASSERT LAST_N == 1 "peri sc4mol open before ebp"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri nsdhl 1
+ASSERT LAST_N == 1 "peri nsdhl open before ebp"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+SEND peri hsd17b7 1
+ASSERT LAST_N == 1 "peri hsd17b7 open before ebp"
+SEND peri photosynth 8
+SEND peri charge 8
+SEND peri feed 6
+GETF peri heat
+LET q_h = LAST_N
+GETF peri energy
+LET q_e = LAST_N
+GETF peri atp
+LET q_a = LAST_N
+GETF peri age
+LET q_age = LAST_N
+GETF peri pcr
+LET q_pcr = LAST_N
+GETF peri reserve
+LET q_rsv = LAST_N
+GETF peri pmf
+LET q_pmf = LAST_N
+GETF peri threshold
+LET q_thr = LAST_N
+SEND peri ebp 2
+ASSERT LAST_N == 2 "peri ebp 2"
+GETF peri heat
+ASSERT LAST_N == q_h + 2 "peri ebp h+2"
+GETF peri energy
+ASSERT LAST_N == q_e - 2 "peri ebp e-2"
+GETF peri atp
+ASSERT LAST_N == q_a - 2 "peri ebp a-2"
+GETF peri age
+ASSERT LAST_N == q_age "peri ebp age held"
+GETF peri pcr
+ASSERT LAST_N == q_pcr "peri ebp pcr held"
+GETF peri reserve
+ASSERT LAST_N == q_rsv "peri ebp reserve held"
+GETF peri pmf
+ASSERT LAST_N == q_pmf "peri ebp pmf held"
+GETF peri threshold
+ASSERT LAST_N == q_thr "peri ebp thr held"
+GETF peri alive
+ASSERT LAST_N == 1 "peri alive post-ebp"
+
+SEND nest photosynth 16
+SEND nest charge 16
+SEND nest feed 12
+SEND nest suclg1 1
+ASSERT LAST_N == 1 "nest suclg1 open"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest sdha 1
+ASSERT LAST_N == 1 "nest sdha open"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest fh 1
+ASSERT LAST_N == 1 "nest fh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest mdh 1
+ASSERT LAST_N == 1 "nest mdh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest cs 1
+ASSERT LAST_N == 1 "nest cs open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest aco2 1
+ASSERT LAST_N == 1 "nest aco2 open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest idh2 1
+ASSERT LAST_N == 1 "nest idh2 open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest ogdh 1
+ASSERT LAST_N == 1 "nest ogdh open"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest scs 2
+ASSERT LAST_N == 2 "nest scs open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest dld 2
+ASSERT LAST_N == 2 "nest dld open before ebp"
+SEND nest photosynth 12
+SEND nest charge 12
+SEND nest feed 10
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest dlst 1
+ASSERT LAST_N == 1 "nest dlst open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest oxct1 1
+ASSERT LAST_N == 1 "nest oxct1 open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest acat1 1
+ASSERT LAST_N == 1 "nest acat1 open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest slc16a7 1
+ASSERT LAST_N == 1 "nest slc16a7 open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest emb 1
+ASSERT LAST_N == 1 "nest emb open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest aacs 1
+ASSERT LAST_N == 1 "nest aacs open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest hmgcs1 1
+ASSERT LAST_N == 1 "nest hmgcs1 open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest fdps 1
+ASSERT LAST_N == 1 "nest fdps open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest sqs 1
+ASSERT LAST_N == 1 "nest sqs open before ebp"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest sqle 1
+ASSERT LAST_N == 1 "nest sqle open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest lss 1
+ASSERT LAST_N == 1 "nest lss open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest cyp51 1
+ASSERT LAST_N == 1 "nest cyp51 open before ebp"
+SEND nest photosynth 10
+SEND nest charge 10
+SEND nest feed 8
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest tm7sf2 1
+ASSERT LAST_N == 1 "nest tm7sf2 open before ebp"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest sc4mol 1
+ASSERT LAST_N == 1 "nest sc4mol open before ebp"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest nsdhl 1
+ASSERT LAST_N == 1 "nest nsdhl open before ebp"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+SEND nest hsd17b7 1
+ASSERT LAST_N == 1 "nest hsd17b7 open before ebp"
+SEND nest photosynth 8
+SEND nest charge 8
+SEND nest feed 6
+GETF nest heat
+LET b_h = LAST_N
+GETF nest energy
+LET b_e = LAST_N
+GETF nest atp
+LET b_a = LAST_N
+GETF nest age
+LET b_age = LAST_N
+GETF nest pcr
+LET b_pcr = LAST_N
+GETF nest reserve
+LET b_rsv = LAST_N
+GETF nest pmf
+LET b_pmf = LAST_N
+GETF nest threshold
+LET b_thr = LAST_N
+SEND nest ebp 2
+ASSERT LAST_N == 2 "nest ebp 2"
+GETF nest heat
+ASSERT LAST_N == b_h + 2 "nest ebp h+2"
+GETF nest energy
+ASSERT LAST_N == b_e - 2 "nest ebp e-2"
+GETF nest atp
+ASSERT LAST_N == b_a - 2 "nest ebp a-2"
+GETF nest age
+ASSERT LAST_N == b_age "nest ebp age held"
+GETF nest pcr
+ASSERT LAST_N == b_pcr "nest ebp pcr held"
+GETF nest reserve
+ASSERT LAST_N == b_rsv "nest ebp reserve held"
+GETF nest pmf
+ASSERT LAST_N == b_pmf "nest ebp pmf held"
+GETF nest threshold
+ASSERT LAST_N == b_thr "nest ebp thr held"
+GETF nest alive
+ASSERT LAST_N == 1 "nest alive post-ebp"
+
+SEND mito photosynth 6
+SEND mito charge 6
+SEND mito feed 4
+SEND mito mdh 1
+ASSERT LAST_N == 1 "mito mdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cs 1
+ASSERT LAST_N == 1 "mito cs open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aco2 1
+ASSERT LAST_N == 1 "mito aco2 open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito ogdh 1
+ASSERT LAST_N == 1 "mito ogdh open"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito dlst 1
+ASSERT LAST_N == 1 "mito dlst open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito oxct1 1
+ASSERT LAST_N == 1 "mito oxct1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito acat1 1
+ASSERT LAST_N == 1 "mito acat1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs2 1
+ASSERT LAST_N == 1 "mito hmgcs2 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcl 1
+ASSERT LAST_N == 1 "mito hmgcl open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito bdh1 1
+ASSERT LAST_N == 1 "mito bdh1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a1 1
+ASSERT LAST_N == 1 "mito slc16a1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito slc16a7 1
+ASSERT LAST_N == 1 "mito slc16a7 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito emb 1
+ASSERT LAST_N == 1 "mito emb open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito aacs 1
+ASSERT LAST_N == 1 "mito aacs open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcs1 1
+ASSERT LAST_N == 1 "mito hmgcs1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito hmgcr 1
+ASSERT LAST_N == 1 "mito hmgcr open before ebp"
+SEND mito mvk 1
+ASSERT LAST_N == 1 "mito mvk open before ebp"
+SEND mito pmvk 1
+ASSERT LAST_N == 1 "mito pmvk open before ebp"
+SEND mito mvd 1
+ASSERT LAST_N == 1 "mito mvd open before ebp"
+SEND mito idi1 1
+ASSERT LAST_N == 1 "mito idi1 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito fdps 1
+ASSERT LAST_N == 1 "mito fdps open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito sqle 1
+ASSERT LAST_N == 1 "mito sqle open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito lss 1
+ASSERT LAST_N == 1 "mito lss open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito cyp51 1
+ASSERT LAST_N == 1 "mito cyp51 open before ebp"
+SEND mito photosynth 10
+SEND mito charge 10
+SEND mito feed 8
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito tm7sf2 1
+ASSERT LAST_N == 1 "mito tm7sf2 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito sc4mol 1
+ASSERT LAST_N == 1 "mito sc4mol open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito nsdhl 1
+ASSERT LAST_N == 1 "mito nsdhl open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+SEND mito hsd17b7 1
+ASSERT LAST_N == 1 "mito hsd17b7 open before ebp"
+SEND mito photosynth 8
+SEND mito charge 8
+SEND mito feed 6
+GETF mito atp
+LET p_a = LAST_N
+GETF mito energy
+LET p_e = LAST_N
+SEND mito ebp 1
+ASSERT LAST_N == 1 "mito ebp partial"
+GETF mito atp
+LET p_a2 = LAST_N
+GETF mito energy
+LET p_e2 = LAST_N
+ASSERT p_a2 == p_a - 1 "mito ebp partial atp-1"
+ASSERT p_e2 == p_e - 1 "mito ebp partial energy-1"
+
+GETF mito alive
+ASSERT LAST_N == 1 "mito sealed alive for TCA"
+GETF peri alive
+ASSERT LAST_N == 1 "peri sealed alive for TCA"
+ASSERT 1 == 1 "LIFE_CELL_EBP PASS"

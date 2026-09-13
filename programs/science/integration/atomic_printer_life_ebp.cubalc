@@ -1,0 +1,462 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# ATOMIC PRINTER LIFE_FORCE MI2327: EBP after HSD17B7 on BA/mevalonate limb.
+# Continuum ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp (EBP after HSD17B7)
+# Gift: EBP isomerizes HSD17B7 Delta8 sterol to Delta7 under ASSERT after HSD17B7 open.
+# Domain: post-HSD17B7 sterol Delta8-Delta7 isomerase (EBP/ERG2) zymosterol-ward gate.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY printer OF Cell 1 60 0
+ENTITY ink OF Cell 1 40 0
+ENTITY dead OF Cell 0 10 0
+
+SEND printer set_threshold 8
+SEND ink set_threshold 10
+
+SEND printer pulse 4
+SEND printer photosynth 30
+SEND printer glycolyse 24
+SEND printer charge 28
+SEND printer feed 22
+SEND printer photophos 16
+GETF printer energy
+ASSERT LAST_N >= 20 "printer energy charged"
+GETF printer atp
+ASSERT LAST_N >= 20 "printer atp charged"
+
+SEND printer amacr 2
+ASSERT LAST_N == 2 "printer amacr"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer acox2 2
+ASSERT LAST_N == 2 "printer acox2"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer hsd17b4 2
+ASSERT LAST_N == 2 "printer hsd17b4 DBP"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer scp2 2
+ASSERT LAST_N == 2 "printer scp2 synthase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer acot8 2
+ASSERT LAST_N == 2 "printer acot8 thioesterase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer pcca 2
+ASSERT LAST_N == 2 "printer pcca carboxylase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer mcee 2
+ASSERT LAST_N == 2 "printer mcee epimerase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer mut 2
+ASSERT LAST_N == 2 "printer mut mutase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer suclg1 2
+ASSERT LAST_N == 2 "printer suclg1 ligase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer sdha 2
+ASSERT LAST_N == 2 "printer sdha Complex-II"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer fh 2
+ASSERT LAST_N == 2 "printer fh fumarase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer mdh 2
+ASSERT LAST_N == 2 "printer mdh to OAA"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer cs 2
+ASSERT LAST_N == 2 "printer cs citrate synthase"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+SEND printer aco2 1
+ASSERT LAST_N == 1 "printer aco2 open"
+SEND printer photosynth 12
+SEND printer charge 12
+SEND printer feed 10
+
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer ogdh 1
+ASSERT LAST_N == 1 "printer ogdh open"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer scs 1
+ASSERT LAST_N == 1 "printer scs prior"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer dld 1
+ASSERT LAST_N == 1 "printer dld open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer dlst 1
+ASSERT LAST_N == 1 "printer dlst open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer oxct1 1
+ASSERT LAST_N == 1 "printer oxct1 open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer acat1 1
+ASSERT LAST_N == 1 "printer acat1 open before ebp"
+SEND printer hmgcs2 1
+ASSERT LAST_N == 1 "printer hmgcs2 open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer hmgcl 1
+ASSERT LAST_N == 1 "printer hmgcl open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer bdh1 1
+ASSERT LAST_N == 1 "printer bdh1 open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer slc16a1 1
+ASSERT LAST_N == 1 "printer slc16a1 open before ebp"
+SEND printer slc16a7 1
+ASSERT LAST_N == 1 "printer slc16a7 open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer emb 1
+ASSERT LAST_N == 1 "printer emb open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer aacs 1
+ASSERT LAST_N == 1 "printer aacs open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer hmgcs1 1
+ASSERT LAST_N == 1 "printer hmgcs1 open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer hmgcr 1
+ASSERT LAST_N == 1 "printer hmgcr open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer mvk 1
+ASSERT LAST_N == 1 "printer mvk open before ebp"
+SEND printer pmvk 1
+ASSERT LAST_N == 1 "printer pmvk open before ebp"
+SEND printer mvd 1
+ASSERT LAST_N == 1 "printer mvd open before ebp"
+SEND printer idi1 1
+ASSERT LAST_N == 1 "printer idi1 open before ebp"
+SEND printer fdps 1
+ASSERT LAST_N == 1 "printer fdps open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer sqs 1
+ASSERT LAST_N == 1 "printer sqs open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer sqle 1
+ASSERT LAST_N == 1 "printer sqle open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer lss 1
+ASSERT LAST_N == 1 "printer lss open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer cyp51 1
+ASSERT LAST_N == 1 "printer cyp51 open before ebp"
+SEND printer photosynth 10
+SEND printer charge 10
+SEND printer feed 8
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer tm7sf2 1
+ASSERT LAST_N == 1 "printer tm7sf2 open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer sc4mol 1
+ASSERT LAST_N == 1 "printer sc4mol open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer nsdhl 1
+ASSERT LAST_N == 1 "printer nsdhl open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+SEND printer hsd17b7 1
+ASSERT LAST_N == 1 "printer hsd17b7 open before ebp"
+SEND printer photosynth 8
+SEND printer charge 8
+SEND printer feed 6
+GETF printer heat
+LET h0 = LAST_N
+GETF printer energy
+LET e0 = LAST_N
+GETF printer atp
+LET a0 = LAST_N
+SEND printer ebp 3
+ASSERT LAST_N == 3 "printer ebp import 3"
+GETF printer heat
+ASSERT LAST_N == h0 + 3 "printer ebp heat+3"
+GETF printer energy
+ASSERT LAST_N == e0 - 3 "printer ebp energy-3"
+GETF printer atp
+ASSERT LAST_N == a0 - 3 "printer ebp atp-3"
+GETF printer alive
+ASSERT LAST_N == 1 "printer alive post-ebp"
+
+SEND ink photosynth 20
+SEND ink charge 18
+SEND ink feed 16
+SEND ink mdh 1
+ASSERT LAST_N == 1 "ink mdh open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink cs 1
+ASSERT LAST_N == 1 "ink cs open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink aco2 1
+ASSERT LAST_N == 1 "ink aco2 open"
+SEND ink photosynth 12
+SEND ink charge 12
+SEND ink feed 10
+SEND ink idh2 2
+ASSERT LAST_N == 2 "ink idh2 isocitrate to aKG"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink ogdh 1
+ASSERT LAST_N == 1 "ink ogdh open"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink scs 1
+ASSERT LAST_N == 1 "ink scs prior"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dld 1
+ASSERT LAST_N == 1 "ink dld open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink dlst 1
+ASSERT LAST_N == 1 "ink dlst open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink oxct1 1
+ASSERT LAST_N == 1 "ink oxct1 open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink acat1 1
+ASSERT LAST_N == 1 "ink acat1 open before ebp"
+SEND ink hmgcs2 1
+ASSERT LAST_N == 1 "ink hmgcs2 open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink hmgcl 1
+ASSERT LAST_N == 1 "ink hmgcl open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink bdh1 1
+ASSERT LAST_N == 1 "ink bdh1 open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink slc16a1 1
+ASSERT LAST_N == 1 "ink slc16a1 open before ebp"
+SEND ink slc16a7 1
+ASSERT LAST_N == 1 "ink slc16a7 open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink emb 1
+ASSERT LAST_N == 1 "ink emb open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink aacs 1
+ASSERT LAST_N == 1 "ink aacs open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hmgcs1 1
+ASSERT LAST_N == 1 "ink hmgcs1 open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hmgcr 1
+ASSERT LAST_N == 1 "ink hmgcr open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink mvk 1
+ASSERT LAST_N == 1 "ink mvk open before ebp"
+SEND ink pmvk 1
+ASSERT LAST_N == 1 "ink pmvk open before ebp"
+SEND ink mvd 1
+ASSERT LAST_N == 1 "ink mvd open before ebp"
+SEND ink idi1 1
+ASSERT LAST_N == 1 "ink idi1 open before ebp"
+SEND ink fdps 1
+ASSERT LAST_N == 1 "ink fdps open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink sqs 1
+ASSERT LAST_N == 1 "ink sqs open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink sqle 1
+ASSERT LAST_N == 1 "ink sqle open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink lss 1
+ASSERT LAST_N == 1 "ink lss open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink cyp51 1
+ASSERT LAST_N == 1 "ink cyp51 open before ebp"
+SEND ink photosynth 10
+SEND ink charge 10
+SEND ink feed 8
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink tm7sf2 1
+ASSERT LAST_N == 1 "ink tm7sf2 open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink sc4mol 1
+ASSERT LAST_N == 1 "ink sc4mol open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink nsdhl 1
+ASSERT LAST_N == 1 "ink nsdhl open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+SEND ink hsd17b7 1
+ASSERT LAST_N == 1 "ink hsd17b7 open before ebp"
+SEND ink photosynth 8
+SEND ink charge 8
+SEND ink feed 6
+GETF ink heat
+LET ih = LAST_N
+GETF ink energy
+LET ie = LAST_N
+GETF ink atp
+LET ia = LAST_N
+SEND ink ebp 2
+ASSERT LAST_N == 2 "ink ebp 2"
+GETF ink heat
+ASSERT LAST_N == ih + 2 "ink ebp heat+2"
+GETF ink energy
+ASSERT LAST_N == ie - 2 "ink ebp energy-2"
+GETF ink atp
+ASSERT LAST_N == ia - 2 "ink ebp atp-2"
+GETF ink alive
+ASSERT LAST_N == 1 "ink alive post-ebp"
+
+SEND dead ebp 3
+ASSERT LAST_N == 0 "dead ebp refused"
+GETF dead alive
+ASSERT LAST_N == 0 "dead stays dead"
+
+ASSERT 1 == 1 "atomic_printer_life_ebp PASS"
