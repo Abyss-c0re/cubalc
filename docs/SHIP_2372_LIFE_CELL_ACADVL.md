@@ -1,12 +1,10 @@
-# SHIP LIFE_CELL_ACADVL MI 2372
-
-SHIP LIFE_CELL_ACADVL MI 2372
-version: 1.15.1872-usability
+# SHIP MI 2372 LIFE_CELL_ACADVL PASS
+feature: LIFE_CELL_ACADVL
 method: acadvl n
-proof: programs/proof/2372_life_cell_acadvl.cubalc
-asserts_ok life=69 atomic=150 mesh=147 total=366 fail=0 PASS
-continuum: ...->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl
-gift: ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD lock
-feat_head: 265ddfa894c07004fbeba4e60cf0d6e43bc3aff7
+continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl
+domain: post-CPT2 matrix very-long-chain acyl-CoA dehydrogenase ACADVL ward
+gift: ACADVL dehydrogenates post-CPT2 VLC acyl-CoA without hollow VLCAD lock
+proofs: life=69 atomic=150 mesh=147 total=366 fail=0
+feat_head: 5759ce74c42b70a501490d27cb1994586bf6577a
+head: 5759ce74c42b70a501490d27cb1994586bf6577a
 status: PASS
-law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
