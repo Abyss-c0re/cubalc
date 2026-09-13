@@ -22663,5 +22663,73 @@ CLASS Cell
     RET take
   END
 
+  # LIFE_CELL_ST6GALNAC5: ST6GALNAC5 alpha-2,6-sialyltransferase GD1-alpha synthase after ST6GALNAC6 GQ1b-alpha limb.
+  # ST6GALNAC5 (ST6 N-acetylgalactosaminide alpha-2,6-sialyltransferase 5; SIAT7E) is the Golgi enzyme
+  # that transfers sialic acid (Neu5Ac) from CMP-Neu5Ac onto GM1b/GD1a-class acceptors in alpha-2,6
+  # linkage on GalNAc, yielding GD1-alpha under ASSERT after ST6GALNAC6 GQ1b -> GQ1b-alpha.
+  # After St6galnac6 synthesizes GQ1b-alpha at Golgi, St6galnac5 spends cargo under ASSERT to
+  # alpha-2,6-sialylate GM1b-class acceptors into GD1-alpha (post-ST6GALNAC6 alpha-series limb).
+  # Distinct from St6galnac6 GQ1b-alpha synthase, St8sia5 GQ1b synthase, St3gal5 GM3 synthase -
+  # St6galnac5 is GD1-alpha synthase after ST6GALNAC6.
+  # Domain: post-ST6GALNAC6 glycosphingolipid ST6GALNAC5 GD1-alpha synthase ward (alpha-series GD1a limb).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5
+  # Gift: ST6GALNAC5 commits GM1b-class acceptors into Golgi GD1-alpha under ASSERT after ST6GALNAC6
+  # GQ1b-alpha ward so free energy keeps moving into alpha-series GD1 pools without hollow GM1b stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st6galnac5.
+  # Usability: AGI models post-ST6GALNAC6 ST6GALNAC5 GD1-alpha synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st6galnac5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 END
