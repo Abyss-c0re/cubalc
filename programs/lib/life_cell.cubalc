@@ -22874,4 +22874,77 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_HEXA: HEXA lysosomal beta-hexosaminidase A after GLB1 beta-galactosidase limb.
+  # HEXA (beta-hexosaminidase subunit alpha; HEXA; Tay-Sachs locus) pairs with HEXB to form
+  # Hex A (alpha/beta) — the lysosomal exoglycosidase that cleaves terminal beta-linked GalNAc
+  # from GM2 ganglioside under ASSERT after GLB1 has released terminal beta-Gal from GM1 on the
+  # post-NEU3 catabolic path (GM1 -> GM2 -> GM3 limb).
+  # After Glb1 hydrolyses GM1-Gal into GM2, Hexa spends cargo under ASSERT to hydrolyse terminal
+  # GalNAc from GM2 -> GM3 (committed post-GLB1 GM2-GalNAc -> GM3 limb), opening the NEU1/GM3
+  # sialidase ward without hollow GM2-GalNAc lock (Tay-Sachs / GM2-gangliosidosis ward).
+  # Distinct from Glb1 beta-galactosidase, Neu3 PM sialidase, Hexb hexosaminidase B (beta/beta),
+  # B4galnt1 GA2/GM2/GD2 synthase, St3gal5 GM3 synthase - Hexa is the lysosomal Hex A GalNAc
+  # hydrolase after GLB1 catabolic limb.
+  # Domain: post-GLB1 lysosomal HEXA beta-hexosaminidase A ward (catabolic GalNAc-hydrolase limb).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac6->st6galnac5->neu3->glb1->hexa
+  # Gift: HEXA cleaves terminal beta-GalNAc from GM2 after GLB1 so free energy re-enters GalNAc
+  # salvage without hollow GM2-GalNAc lock (Tay-Sachs / GM2-gangliosidosis ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hexa.
+  # Usability: AGI models post-GLB1 HEXA lysosomal beta-hexosaminidase A under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hexa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
