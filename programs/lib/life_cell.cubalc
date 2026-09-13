@@ -23076,4 +23076,501 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_HEXB: HEXB lysosomal beta-hexosaminidase B after HEXA on glycosphingolipid continuum
+  # HEXB (beta-hexosaminidase subunit beta; HEXB; Sandhoff locus) forms Hex B (beta/beta) and is required with HEXA for Hex A. Distinct from HEXA alpha subunit.
+  # Domain: post-HEXA lysosomal HEXB beta-hexosaminidase B ward (beta/beta Hex B GalNAc-hydrolase limb)
+  # Continuum: ...->neu3->glb1->hexa->hexb
+  # Gift: HEXB pairs as Hex B after HEXA so free energy clears GA2/Gb4 GalNAc without hollow Sandhoff lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hexb.
+  # Usability: AGI models hexb under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hexb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_GBA: GBA acid beta-glucocerebrosidase alias limb after HEXB (GBA1 locus)
+  # GBA is the GBA1 locus method alias used on the hexb->gba->asah1 continuum tip (same chemistry as gba1).
+  # Domain: post-HEXB lysosomal GBA GlcCer-hydrolase ward (alias path toward ASAH1)
+  # Continuum: ...->hexa->hexb->gba
+  # Gift: GBA cleaves GlcCer after HEXB path so ceramide opens without hollow Gaucher GlcCer lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gba.
+  # Usability: AGI models gba under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gba n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_ASAH1: ASAH1 acid ceramidase after GBA on sphingolipid continuum
+  # ASAH1 (N-acylsphingosine amidohydrolase 1; acid ceramidase; Farber locus) after GBA/GBA1.
+  # Domain: post-GBA lysosomal ASAH1 acid ceramidase ward (ceramide to sphingosine limb)
+  # Continuum: ...->hexb->gba->asah1
+  # Gift: ASAH1 cleaves ceramide to sphingosine+fatty acid after GBA so free energy exits GlcCer lock toward SPHK1 without hollow Farber ceramide lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - asah1.
+  # Usability: AGI models asah1 under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD asah1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_SPHK1: SPHK1 sphingosine kinase 1 after ASAH1 on sphingolipid continuum
+  # SPHK1 (sphingosine kinase 1) phosphorylates sphingosine to sphingosine-1-phosphate after ASAH1.
+  # Domain: post-ASAH1 cytosolic/PM SPHK1 sphingosine kinase ward (sphingosine to S1P limb)
+  # Continuum: ...->gba->asah1->sphk1
+  # Gift: SPHK1 stamps S1P from post-ASAH1 sphingosine under ASSERT so free energy enters S1P signaling without hollow S1P-deficit lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sphk1.
+  # Usability: AGI models sphk1 under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sphk1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_SGPL1: SGPL1 S1P lyase after SPHK1 on sphingolipid continuum
+  # SGPL1 (sphingosine-1-phosphate lyase 1) commits S1P to hexadecenal + PE-phosphate after SPHK1.
+  # Domain: post-SPHK1 ER SGPL1 sphingosine-1-phosphate lyase ward (S1P irreversible exit limb)
+  # Continuum: ...->asah1->sphk1->sgpl1
+  # Gift: SGPL1 cleaves S1P to hexadecenal+ethanolamine-P so free energy irreversibly exits sphingolipid cycle without hollow S1P-lyase-deficit lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sgpl1.
+  # Usability: AGI models sgpl1 under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sgpl1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_ALDH3A2: ALDH3A2 fatty aldehyde dehydrogenase after SGPL1 on sphingolipid continuum
+  # ALDH3A2 (fatty aldehyde dehydrogenase; FALDH; Sjogren-Larsson locus) after SGPL1 hexadecenal.
+  # Domain: post-SGPL1 ER/peroxisome-proximal fatty aldehyde dehydrogenase ALDH3A2 ward (NAD-dependent hexadecenal to hexadecenoate limb)
+  # Continuum: ...->sphk1->sgpl1->aldh3a2
+  # Gift: ALDH3A2 oxidizes post-SGPL1 hexadecenal into hexadecenoate so free energy exits toxic aldehyde pool into fatty-acid salvage (Sjogren-Larsson ward)
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - aldh3a2.
+  # Usability: AGI models aldh3a2 under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD aldh3a2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_ACSL1: ACSL1 long-chain acyl-CoA synthetase after ALDH3A2 on sphingolipid continuum
+  # ACSL1 (acyl-CoA synthetase long-chain family member 1) after ALDH3A2 hexadecenoate.
+  # Domain: post-ALDH3A2 ER/OMM-proximal long-chain acyl-CoA synthetase ACSL1 ward (hexadecenoate to hexadecenoyl-CoA limb)
+  # Continuum: ...->sgpl1->aldh3a2->acsl1
+  # Gift: ACSL1 activates post-ALDH3A2 hexadecenoate into hexadecenoyl-CoA so free energy exits FALDH fatty-acid pool into beta-oxidation/PE salvage without hollow free-acid lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acsl1.
+  # Usability: AGI models acsl1 under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acsl1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LIFE_CELL_CPT1A: CPT1A carnitine palmitoyltransferase 1A after ACSL1 on acyl-CoA export continuum
+  # CPT1A (carnitine palmitoyltransferase 1A; liver isoform) is the malonyl-CoA-gated OMM transferase after ACSL1. Distinct from ACSL1, CACT/SLC25A20, CPT2, ACOX1, HADHA.
+  # Domain: post-ACSL1 OMM carnitine palmitoyltransferase 1A CPT1A ward (hexadecenoyl-CoA to acyl-carnitine limb toward matrix beta-oxidation)
+  # Continuum: ...->aldh3a2->acsl1->cpt1a
+  # Gift: CPT1A converts post-ACSL1 long-chain acyl-CoA into acyl-carnitine so free energy crosses OMM into mitochondrial beta-oxidation without hollow CPT1A-deficiency acyl-CoA lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cpt1a.
+  # Usability: AGI models cpt1a under ASSERT on sphingolipid/acyl exit continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cpt1a n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
