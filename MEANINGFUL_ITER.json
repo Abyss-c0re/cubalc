@@ -46,5 +46,8 @@
   "hold_flash": 1,
   "item": "life cell ebp",
   "prior_mi": 2326,
-  "note": "LIFE_CELL_EBP MI2327"
+  "note": "LIFE_CELL_EBP MI2327",
+  "feat": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf",
+  "feat_head": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf",
+  "FEAT_HEAD": "d0d7bfc88bc0584fa0a01a0beaa212336261efbf"
 }
