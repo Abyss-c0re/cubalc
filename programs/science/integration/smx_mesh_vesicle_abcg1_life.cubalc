@@ -1,0 +1,490 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# SMX mesh LIFE_FORCE MI2334: ABCG1 after ABCA1 on sterol efflux limb.
+# Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1 (ABCG1 after ABCA1)
+# Gift: ABCG1 effluxes free cholesterol onto ABCA1-primed HDL under ASSERT so sterol free energy exits the cell ward without hollow trap.
+# Domain: post-ABCA1 plasma-membrane HDL-maturation cholesterol efflux ABCG transporter ward.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY mesh OF Cell 1 55 0
+ENTITY cargo OF Cell 1 36 0
+ENTITY lysed OF Cell 0 12 0
+
+SEND mesh set_threshold 9
+SEND cargo set_threshold 11
+
+SEND mesh pulse 3
+SEND mesh photosynth 28
+SEND mesh glycolyse 20
+SEND mesh charge 26
+SEND mesh feed 20
+GETF mesh energy
+ASSERT LAST_N >= 16 "mesh energy"
+GETF mesh atp
+ASSERT LAST_N >= 16 "mesh atp"
+
+SEND mesh pcca 2
+ASSERT LAST_N == 2 "mesh pcca"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh mcee 2
+ASSERT LAST_N == 2 "mesh mcee"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh mut 2
+ASSERT LAST_N == 2 "mesh mut"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh suclg1 2
+ASSERT LAST_N == 2 "mesh suclg1"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh sdha 2
+ASSERT LAST_N == 2 "mesh sdha"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh fh 2
+ASSERT LAST_N == 2 "mesh fh"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh mdh 2
+ASSERT LAST_N == 2 "mesh mdh"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh cs 2
+ASSERT LAST_N == 2 "mesh cs"
+SEND mesh photosynth 14
+SEND mesh charge 14
+SEND mesh feed 12
+SEND mesh aco2 1
+ASSERT LAST_N == 1 "mesh aco2 open"
+SEND mesh photosynth 12
+SEND mesh charge 12
+SEND mesh feed 10
+SEND mesh idh2 2
+ASSERT LAST_N == 2 "mesh idh2 isocitrate to aKG"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh ogdh 1
+ASSERT LAST_N == 1 "mesh ogdh open"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh scs 1
+ASSERT LAST_N == 1 "mesh scs prior"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh dld 1
+ASSERT LAST_N == 1 "mesh dld gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh dlst 1
+ASSERT LAST_N == 1 "mesh dlst gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh oxct1 1
+ASSERT LAST_N == 1 "mesh oxct1 gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh acat1 1
+ASSERT LAST_N == 1 "mesh acat1 gate before CE-abcg1"
+SEND mesh hmgcs2 1
+ASSERT LAST_N == 1 "mesh hmgcs2 gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh hmgcl 1
+ASSERT LAST_N == 1 "mesh hmgcl gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh bdh1 1
+ASSERT LAST_N == 1 "mesh bdh1 gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh slc16a1 1
+ASSERT LAST_N == 1 "mesh slc16a1 gate before CE-abcg1"
+SEND mesh slc16a7 1
+ASSERT LAST_N == 1 "mesh slc16a7 gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh emb 1
+ASSERT LAST_N == 1 "mesh emb gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh aacs 1
+ASSERT LAST_N == 1 "mesh aacs gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh idi1 1
+ASSERT LAST_N == 1 "mesh hmgcs1 gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh hmgcr 1
+ASSERT LAST_N == 1 "mesh hmgcr gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh mvk 1
+ASSERT LAST_N == 1 "mesh mvk gate before CE-abcg1"
+SEND mesh pmvk 1
+ASSERT LAST_N == 1 "mesh pmvk gate before CE-abcg1"
+SEND mesh mvd 1
+ASSERT LAST_N == 1 "mesh mvd gate before CE-abcg1"
+SEND mesh idi1 1
+ASSERT LAST_N == 1 "mesh idi1 gate before CE-abcg1"
+SEND mesh fdps 1
+ASSERT LAST_N == 1 "mesh fdps gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh sqs 1
+ASSERT LAST_N == 1 "mesh sqs gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh sqle 1
+ASSERT LAST_N == 1 "mesh sqle gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh lss 1
+ASSERT LAST_N == 1 "mesh lss gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh cyp51 1
+ASSERT LAST_N == 1 "mesh cyp51 gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh tm7sf2 1
+ASSERT LAST_N == 1 "mesh tm7sf2 gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh sc4mol 1
+ASSERT LAST_N == 1 "mesh sc4mol gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh nsdhl 1
+ASSERT LAST_N == 1 "mesh nsdhl gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh hsd17b7 1
+ASSERT LAST_N == 1 "mesh hsd17b7 gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh ebp 1
+ASSERT LAST_N == 1 "mesh ebp gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh sc5d 1
+ASSERT LAST_N == 1 "mesh sc5d gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh dhcr7 1
+ASSERT LAST_N == 1 "mesh dhcr7 gate before CE-abcg1"
+SEND mesh photosynth 8
+SEND mesh charge 8
+SEND mesh feed 6
+SEND mesh dhcr24 1
+ASSERT LAST_N == 1 "mesh dhcr24 gate before CE-abcg1"
+SEND mesh soat1 1
+ASSERT LAST_N == 1 "mesh soat1 gate before CE-abcg1"
+SEND mesh photosynth 10
+SEND mesh charge 10
+SEND mesh feed 8
+GETF mesh heat
+LET vh = LAST_N
+GETF mesh energy
+LET ve = LAST_N
+GETF mesh atp
+LET va = LAST_N
+SEND mesh nceh1 3
+ASSERT LAST_N == 3 "mesh nceh1 3"
+GETF mesh heat
+ASSERT LAST_N == vh + 3 "mesh nceh1 heat+3"
+GETF mesh energy
+ASSERT LAST_N == ve - 3 "mesh nceh1 energy-3"
+GETF mesh atp
+ASSERT LAST_N == va - 3 "mesh nceh1 atp-3"
+GETF mesh alive
+ASSERT LAST_N == 1 "mesh alive post-nceh1"
+
+SEND cargo photosynth 18
+SEND cargo charge 16
+SEND cargo feed 14
+SEND cargo mdh 1
+ASSERT LAST_N == 1 "cargo mdh open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo cs 1
+ASSERT LAST_N == 1 "cargo cs open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo aco2 1
+ASSERT LAST_N == 1 "cargo aco2 open"
+SEND cargo photosynth 12
+SEND cargo charge 12
+SEND cargo feed 10
+SEND cargo idh2 2
+ASSERT LAST_N == 2 "cargo idh2 isocitrate to aKG"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo ogdh 1
+ASSERT LAST_N == 1 "cargo ogdh open"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo scs 1
+ASSERT LAST_N == 1 "cargo scs prior"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dld 1
+ASSERT LAST_N == 1 "cargo dld gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dlst 1
+ASSERT LAST_N == 1 "cargo dlst gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo oxct1 1
+ASSERT LAST_N == 1 "cargo oxct1 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo acat1 1
+ASSERT LAST_N == 1 "cargo acat1 gate before CE-abcg1"
+SEND cargo hmgcs2 1
+ASSERT LAST_N == 1 "cargo hmgcs2 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo hmgcl 1
+ASSERT LAST_N == 1 "cargo hmgcl gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo bdh1 1
+ASSERT LAST_N == 1 "cargo bdh1 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo slc16a1 1
+ASSERT LAST_N == 1 "cargo slc16a1 gate before CE-abcg1"
+SEND cargo slc16a7 1
+ASSERT LAST_N == 1 "cargo slc16a7 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo emb 1
+ASSERT LAST_N == 1 "cargo emb gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo aacs 1
+ASSERT LAST_N == 1 "cargo aacs gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo idi1 1
+ASSERT LAST_N == 1 "cargo hmgcs1 gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo hmgcr 1
+ASSERT LAST_N == 1 "cargo hmgcr gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo mvk 1
+ASSERT LAST_N == 1 "cargo mvk gate before CE-abcg1"
+SEND cargo pmvk 1
+ASSERT LAST_N == 1 "cargo pmvk gate before CE-abcg1"
+SEND cargo mvd 1
+ASSERT LAST_N == 1 "cargo mvd gate before CE-abcg1"
+SEND cargo idi1 1
+ASSERT LAST_N == 1 "cargo idi1 gate before CE-abcg1"
+SEND cargo fdps 1
+ASSERT LAST_N == 1 "cargo fdps gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo sqs 1
+ASSERT LAST_N == 1 "cargo sqs gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo sqle 1
+ASSERT LAST_N == 1 "cargo sqle gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo lss 1
+ASSERT LAST_N == 1 "cargo lss gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo cyp51 1
+ASSERT LAST_N == 1 "cargo cyp51 gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo tm7sf2 1
+ASSERT LAST_N == 1 "cargo tm7sf2 gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo sc4mol 1
+ASSERT LAST_N == 1 "cargo sc4mol gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo nsdhl 1
+ASSERT LAST_N == 1 "cargo nsdhl gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo hsd17b7 1
+ASSERT LAST_N == 1 "cargo hsd17b7 gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo ebp 1
+ASSERT LAST_N == 1 "cargo ebp gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo sc5d 1
+ASSERT LAST_N == 1 "cargo sc5d gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dhcr7 1
+ASSERT LAST_N == 1 "cargo dhcr7 gate before CE-abcg1"
+SEND cargo photosynth 8
+SEND cargo charge 8
+SEND cargo feed 6
+SEND cargo dhcr24 1
+ASSERT LAST_N == 1 "cargo dhcr24 gate before CE-abcg1"
+SEND cargo soat1 1
+ASSERT LAST_N == 1 "cargo soat1 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+SEND cargo nceh1 1
+ASSERT LAST_N == 1 "cargo nceh1 gate before CE-abcg1"
+SEND cargo photosynth 10
+SEND cargo charge 10
+SEND cargo feed 8
+GETF cargo heat
+LET ih = LAST_N
+GETF cargo energy
+LET ie = LAST_N
+GETF cargo atp
+LET ia = LAST_N
+SEND cargo abcg1 2
+ASSERT LAST_N == 2 "cargo abcg1 2"
+GETF cargo heat
+ASSERT LAST_N == ih + 2 "cargo abcg1 heat+2"
+GETF cargo energy
+ASSERT LAST_N == ie - 2 "cargo abcg1 energy-2"
+GETF cargo atp
+ASSERT LAST_N == ia - 2 "cargo abcg1 atp-2"
+GETF cargo alive
+ASSERT LAST_N == 1 "cargo alive post-abcg1"
+
+ASSERT 1 == 1 "smx_mesh_vesicle_abcg1_life PASS"

@@ -1,0 +1,5 @@
+LIFE_CELL_ABCG1 MI2334 PASS
+ABCG1 ATP-binding cassette G1 effluxes FC onto ABCA1-primed HDL after ABCA1 seed.
+Continuum ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1
+proofs life 352 + atomic 101 + smx 95 + flagship 12 = 560 asserts_fail:0
+Gift: sterol free energy continues RCT on mature HDL without hollow trap.

@@ -21301,5 +21301,66 @@ CLASS Cell
     RET take
   END
 
+  # Abcg1: ATP-binding cassette G1 cholesterol efflux after ABCA1 nascent HDL seed.
+  # ABCG1 loads additional free cholesterol onto ABCA1-primed HDL particles
+  # so sterol free energy continues reverse-cholesterol-transport after ABCA1 seed.
+  # Domain: post-ABCA1 plasma-membrane HDL maturation cholesterol efflux ward.
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1
+  # Gift: post-ABCA1 ABCG1 effluxes FC onto mature HDL under ASSERT so free energy from
+  # sterol stores keeps flowing outward without hollow sequestration heresy.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - abcg1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD abcg1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 END

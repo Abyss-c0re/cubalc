@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.15.1834-usability — LIFE_CELL_ABCG1 (MI2334)
+
+- **feat(life):** ABCG1 ATP-binding cassette G1 cholesterol efflux after ABCA1 nascent HDL seed
+- Continuum `...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1`
+- Proofs life 352 + atomic 101 + smx 95 + flagship 12 = 560 asserts_fail:0
+
 ## 1.15.1833-usability — LIFE_CELL_ABCA1 (MI2333)
 
 - **feat(life):** ABCA1 ATP-binding cassette A1 cholesterol efflux after NCEH1 FC liberate
