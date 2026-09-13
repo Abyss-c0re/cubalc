@@ -40,11 +40,11 @@
   "prior_feature": "LIFE_CELL_CYP51",
   "status": "PASS",
   "sealed": true,
-  "note": "Cube is SoT. Free energy must flow. Not a dual ladder.",
-  "commit": "983c1c7ec625241b2215fd3dfbee952d27272746",
-  "head": "983c1c7ec625241b2215fd3dfbee952d27272746",
-  "HEAD": "983c1c7ec625241b2215fd3dfbee952d27272746",
+  "commit": "ea830cb66f9a7c3a5caae82310000b79ccdea470",
+  "head": "ea830cb66f9a7c3a5caae82310000b79ccdea470",
+  "HEAD": "ea830cb66f9a7c3a5caae82310000b79ccdea470",
   "feat_head": "0acf4703bb7bf3766c06483c4c6c5358417798f4",
-  "pinned_head": "983c1c7ec625241b2215fd3dfbee952d27272746",
-  "tip": "983c1c7ec625241b2215fd3dfbee952d27272746"
+  "pinned_head": "ea830cb66f9a7c3a5caae82310000b79ccdea470",
+  "tip": "ea830cb66f9a7c3a5caae82310000b79ccdea470",
+  "note": "Cube is SoT. Free energy must flow. Not a dual ladder."
 }
