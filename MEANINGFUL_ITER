@@ -1,13 +1,1 @@
-# MEANINGFUL_ITER
-
-- **MI**: 2319
-- **FEATURE**: LIFE_CELL_SQS
-- **method**: sqs n
-- **version**: 1.15.1818-usability
-- **continuum**: ...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
-- **asserts_fail**: 0
-- **asserts_ok sum**: 360 (life=204 atomic=74 smx=70 flagship_1620=12)
-- **proof**: programs/proof/2319_life_cell_sqs.cubalc
-- **HEAD**: 25828086a2263ede8e28e0e8cbfc3dc2937ce062
-- **feat**: 0f553fdbbe229ebee4806d19e4883f7472abfb81
-- **law**: cube_is_sot; free_energy_must_flow
+2319 LIFE_CELL_SQS PASS

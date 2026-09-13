@@ -1,3 +1,12 @@
+## 1.15.1818-usability — LIFE_CELL_SQS (MI 2319)
+
+- feat(life): SQS squalene synthase (FDFT1) after FDPS on life_cell continuum
+- proof: programs/proof/2319_life_cell_sqs.cubalc (204 asserts)
+- science: atomic_printer_life_sqs + smx_mesh_vesicle_sqs_life
+- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
+- Proofs asserts_fail:0 — life 204 · atomic 74 · smx 70 · flagship 12 · sum 360
+- METHOD sqs n — 2xFPP -> squalene sterol-branch gate
+
 ## 1.15.1817-usability — LIFE_CELL_FDPS (MI 2318)
 
 - feat(life): FDPS farnesyl diphosphate synthase after IDI1 on life_cell continuum
@@ -147,12 +156,6 @@
 - Cube is SoT. Free energy must flow.
 
 # Changelog
-
-## 1.15.1818-usability — LIFE_CELL_SQS (MI 2319)
-- feat(life): SQS squalene synthase (FDFT1) after FDPS on life_cell continuum
-- Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
-- Proof PASS: life 204 + atomic 74 + smx 70 + flagship 12
-
 
 ## 1.15.1809-usability — MI 2310 LIFE_CELL_EMB
 
