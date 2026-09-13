@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1865-usability — 2365 LIFE_CELL_GBA1
+- feat(life): LIFE_CELL_GBA1 MI2365 lysosomal acid beta-glucocerebrosidase after NEU1
+- continuum ...->neu3->glb1->hexa->neu1->gba1 (Gaucher / GlcCer hydrolase ward)
+- proofs: 2365_life_cell_gba1 410/0; atomic 145/0; mesh 142/0; flagship 1620 12/0; sum 709/0
+- signature heat+n atp-n energy-n; age+pcr+reserve+pmf+thr held
+
+
 ## 1.15.1864-usability — LIFE_CELL_NEU1 (MI 2364)
 - feat(life): METHOD neu1 n lysosomal neuraminidase after HEXA on glycosphingolipid continuum
 - continuum: ...->neu3->glb1->hexa->neu1
