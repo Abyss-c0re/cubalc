@@ -37,5 +37,10 @@
   "pass": true,
   "proof_status": "PASS",
   "anti_bloat": true,
-  "hold_flash": 1
+  "hold_flash": 1,
+  "feat_head": "516a6a6ae8bad10b65b14f36b38d9744c31595cd",
+  "FEAT_HEAD": "516a6a6ae8bad10b65b14f36b38d9744c31595cd",
+  "head": "516a6a6ae8bad10b65b14f36b38d9744c31595cd",
+  "HEAD": "516a6a6ae8bad10b65b14f36b38d9744c31595cd",
+  "tip": "516a6a6ae8bad10b65b14f36b38d9744c31595cd"
 }
