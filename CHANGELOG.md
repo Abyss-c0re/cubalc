@@ -1,3 +1,11 @@
+# Changelog
+
+## 1.15.1839-usability — LIFE_CELL_SCARB1 MI2339
+- METHOD scarb1 n: SR-BI selective HDL-CE uptake after PLTP on sterol continuum
+- Continuum ...->cetp->pltp->scarb1
+- Proofs PASS life 339 atomic 113 smx 110 flagship 12 sum 574 asserts_fail 0
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1835-usability — 2335 LIFE_CELL_LCAT
 - feat(life): lcat n — LCAT plasma HDL-core CE maturation after ABCG1 on sterol RCT continuum
 - continuum ...->soat1->nceh1->abca1->abcg1->lcat

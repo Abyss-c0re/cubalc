@@ -24,3 +24,9 @@
 - asserts: life=324 ap=109 smx=106 flagship=12 sum=551
 - VERSION: 1.15.1836-usability
 
+## MI 2339 LIFE_CELL_SCARB1 PASS
+- method: `scarb1 n` after PLTP
+- continuum: ...->abcg1->lcat->cetp->pltp->scarb1
+- asserts: life=339 ap=113 smx=110 flagship=12 sum=574
+- VERSION: 1.15.1839-usability
+

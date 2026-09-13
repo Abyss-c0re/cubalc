@@ -1,0 +1,6 @@
+SHIP 2339 LIFE_CELL_SCARB1 PASS
+METHOD scarb1 n — SCARB1/SR-BI selective HDL-CE uptake after PLTP
+Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1
+Proofs: life 339/0 · atomic 113/0 · mesh 110/0 · flagship 1620 12/0 · sum 574
+Gift: SCARB1 selectively uptakes HDL-core CE under ASSERT after PLTP ward.
+Cube is SoT. Free energy must flow.
