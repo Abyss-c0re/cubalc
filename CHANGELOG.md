@@ -1,16 +1,16 @@
-## 1.15.1824-usability — MI 2331 LIFE_CELL_DHCR24
-
-- feat(life): DHCR24 24-dehydrocholesterol reductase (seladin-1/Diminuto) after DHCR7
-- Continuum: ...->ebp->sc5d->dhcr7->dhcr24 (Bloch Delta24 seal to cholesterol)
-- Proof 2331_life_cell_dhcr24 273/0; atomic 96/0; mesh 92/0; flagship 1620 12/0; sum 473
-- Cube is SoT. Free energy must flow.
-
 ## 1.15.1831-usability — LIFE_CELL_SOAT1 (MI 2331)
 
 - feat(life): SOAT1 sterol O-acyltransferase packs CE after DHCR24 cholesterol seal
 - Continuum ...->sc5d->dhcr7->dhcr24->soat1; proofs life 284 + atomic 98 + smx 94 + flagship 12 = 488 asserts_fail:0
 - METHOD soat1 n — free cholesterol -> cholesteryl-ester storage under ASSERT after DHCR24
 - Also lands METHOD dhcr24 n (MI 2330 limb) required by continuum seal
+
+## 1.15.1830-usability — LIFE_CELL_DHCR24 (MI 2330)
+
+- feat(life): DHCR24 24-dehydrocholesterol reductase after DHCR7
+- Continuum ...->sc5d->dhcr7->dhcr24; proof 2330 273/0; science dhcr24 atomic/mesh
+- METHOD dhcr24 n — Bloch Delta24 desmosterol -> cholesterol seal under ASSERT
+- Cube is SoT. Free energy must flow.
 
 ## 2329 LIFE_CELL_DHCR7
 - feat(life): DHCR7 7-dehydrocholesterol reductase after SC5D on life_cell continuum
