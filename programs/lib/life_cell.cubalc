@@ -20371,4 +20371,150 @@ CLASS Cell
 
 
 
+
+  # Sqle: squalene epoxidase (SQLE / ERG1) after SQS limb.
+  # SQLE monooxygenates squalene (condensed by SQS from 2xFPP) into
+  # 2,3-oxidosqualene so LSS can cyclize the epoxide into lanosterol and
+  # free energy reclaimed from BA/odd-chain ketones builds membrane sterol
+  # mass under ASSERT.
+  # After Sqs opens the squalene pool, Sqle spends that pool under ASSERT to
+  # open the squalene epoxidase gate toward LSS (committed C30 epoxide
+  # step on the sterol branch).
+  # Distinct from Sqs squalene synthase, Fdps FPP synthase, and Lss
+  # lanosterol synthase - Sqle is the squalene epoxidase (SQLE/ERG1)
+  # squalene -> 2,3-oxidosqualene gate.
+  # Domain: post-SQS squalene epoxidase (SQLE/ERG1) sterol-epoxide gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle
+  # Gift: post-SQS SQLE so BA/odd-chain free-energy path can epoxidize
+  #   squalene into 2,3-oxidosqualene under ASSERT after SQS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sqle.
+  # Usability: AGI models post-SQS SQLE squalene epoxidase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sqle n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Lss: lanosterol synthase (LSS / OSC / ERG7) after SQLE limb.
+  # LSS is the post-SQLE cyclase: it folds 2,3-oxidosqualene (minted by SQLE
+  # epoxidation of SQS-derived squalene) into the tetracyclic lanosterol
+  # nucleus so downstream demethylases can drive cholesterol/ergosterol and
+  # free energy reclaimed from BA/odd-chain ketones builds membrane sterol
+  # mass under ASSERT.
+  # After Sqle opens the 2,3-oxidosqualene pool, Lss spends that pool under
+  # ASSERT to open the lanosterol synthase gate (committed C30 cyclization
+  # step on the sterol branch).
+  # Distinct from Sqle squalene epoxidase, Sqs squalene synthase, and Fdps
+  # FPP synthase - Lss is the lanosterol synthase (LSS/OSC) 2,3-oxidosqualene
+  # -> lanosterol gate.
+  # Domain: post-SQLE lanosterol synthase (LSS/OSC) sterol-cyclase gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss
+  # Gift: post-SQLE LSS so BA/odd-chain free-energy path can cyclize
+  #   2,3-oxidosqualene into lanosterol under ASSERT after SQLE open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lss.
+  # Usability: AGI models post-SQLE LSS lanosterol synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lss n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

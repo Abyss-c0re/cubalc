@@ -1,3 +1,13 @@
+## 1.15.1819-usability — LIFE_CELL_LSS (MI 2320)
+
+- feat(life): LSS lanosterol synthase (LSS/OSC/ERG7) after SQLE on life_cell continuum
+- also lands METHOD sqle n (SQLE/ERG1) so the post-SQS epoxide gate exists before LSS
+- proof: programs/proof/2320_life_cell_lss.cubalc (210 asserts)
+- science: atomic_printer_life_lss + smx_mesh_vesicle_lss_life
+- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss
+- Proofs asserts_fail:0 — life 210 · atomic 78 · smx 74 · flagship 12 · sum 374
+- METHOD lss n — 2,3-oxidosqualene -> lanosterol sterol-cyclase gate
+
 ## 1.15.1818-usability — LIFE_CELL_SQS (MI 2319)
 
 - feat(life): SQS squalene synthase (FDFT1) after FDPS on life_cell continuum
