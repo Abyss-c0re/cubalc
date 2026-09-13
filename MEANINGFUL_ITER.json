@@ -42,5 +42,13 @@
   "gate": "soat1",
   "enzyme": "SOAT1",
   "feat": "life_cell_soat1",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
+  "feat_head": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "FEAT_HEAD": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "head": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "tip": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "sha": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "pin_head": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "head_tip": "f9c26a25e0608025db648f03fa360e99c0975e8e",
+  "HEAD": "f9c26a25e0608025db648f03fa360e99c0975e8e"
 }
