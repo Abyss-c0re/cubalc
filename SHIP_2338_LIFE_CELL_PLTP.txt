@@ -1,0 +1,6 @@
+SHIP 2338 LIFE_CELL_PLTP PASS
+METHOD pltp n — PLTP plasma apoB-to-HDL PL transfer after CETP
+Continuum ...->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp
+Proofs: life 332/0 · atomic 111/0 · mesh 108/0 · flagship 1620 12/0 · sum 563
+Gift: PLTP transfers apoB surface phospholipids onto HDL under ASSERT after CETP ward.
+Cube is SoT. Free energy must flow.
