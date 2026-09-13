@@ -24,7 +24,7 @@
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
   "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs",
-  "domain": "post-FDPS squalene synthase (FDFT1 / SQS) sterol-branch gate",
+  "domain": "post-FDPS squalene synthase (SQS/FDFT1) 2xFPP -> squalene sterol-entry gate",
   "gift": "SQS after FDPS so BA/odd-chain free-energy path can condense 2xFPP into squalene under ASSERT after FDPS open.",
   "proof_sum": {
     "life": 204,
@@ -38,7 +38,7 @@
   "asserts_ok_sum": 360,
   "asserts_ok": 360,
   "prior_feature": "LIFE_CELL_FDPS",
-  "status": "PASS",
+  "status": "sealed",
   "sealed": true,
   "pass": true,
   "proof_status": "PASS",
@@ -48,18 +48,10 @@
   "feat": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "feat_head": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
   "FEAT_HEAD": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "feat_short": "0f553fdbbe22",
   "HEAD": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
-  "commit": "0f553fdbbe22",
-  "commit_full": "0f553fdbbe229ebee4806d19e4883f7472abfb81",
-  "pure_c": "programs/lib/life_cell.cubalc",
-  "tip": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
-  "pin_head": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
-  "head_tip": "25828086a2263ede8e28e0e8cbfc3dc2937ce062",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever",
   "head": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
-  "law": [
-    "cube_is_sot",
-    "free_energy_must_flow"
-  ]
+  "pin_head": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
+  "head_tip": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
+  "tip": "454c4895ab5cef04ccaa39412c13ad8131b3dcac",
+  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
 }
