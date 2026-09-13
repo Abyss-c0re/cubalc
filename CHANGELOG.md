@@ -1,11 +1,13 @@
-## 1.15.1818-usability — LIFE_CELL_SQS (MI 2319)
+## 1.15.1819-usability — LIFE_CELL_SQLE (MI 2320)
 
-- feat(life): SQS squalene synthase (FDFT1) after FDPS on life_cell continuum
-- proof: programs/proof/2319_life_cell_sqs.cubalc (204 asserts)
-- science: atomic_printer_life_sqs + smx_mesh_vesicle_sqs_life
-- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
-- Proofs asserts_fail:0 — life 204 · atomic 74 · smx 70 · flagship 12 · sum 360
-- METHOD sqs n — 2xFPP -> squalene sterol-branch gate
+- feat(life): SQLE squalene epoxidase after SQS on life_cell continuum
+- proof: programs/proof/2320_life_cell_sqle.cubalc (207 asserts)
+- science: atomic_printer_life_sqle + smx_mesh_vesicle_sqle_life
+- continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle
+- Proofs asserts_fail:0 — life 207 · atomic 76 · smx 72 · flagship 12 · sum 367
+- METHOD sqle n — squalene -> 2,3-oxidosqualene epoxidase gate
+
+- METHOD sqs n — 2xFPP -> squalene sterol-entry gate
 
 ## 1.15.1817-usability — LIFE_CELL_FDPS (MI 2318)
 
