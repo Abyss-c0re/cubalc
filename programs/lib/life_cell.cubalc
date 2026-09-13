@@ -21049,4 +21049,67 @@ CLASS Cell
   END
 
 
+  # Dhcr24: 24-dehydrocholesterol reductase (DHCR24/Diminuto) after DHCR7 limb.
+  # DHCR24 saturates the Delta24 double bond of desmosterol/Bloch sterols after
+  # DHCR7 sealed Delta7 on the KR limb, uniting both paths as membrane cholesterol.
+  # Domain: post-DHCR7 sterol Delta24-reductase cholesterol-ward Bloch seal.
+  # Continuum: ...->hsd17b7->ebp->sc5d->dhcr7->dhcr24
+  # Gift: post-DHCR7 DHCR24 reduces Delta24 sterol under ASSERT so free energy from
+  # BA/odd-chain ketones seals Bloch+KR limbs to membrane cholesterol.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dhcr24.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dhcr24 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END

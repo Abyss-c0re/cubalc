@@ -1,0 +1,4 @@
+LIFE_CELL_DHCR24 MI2330 PASS
+continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24
+proofs: life 273 + atomic 96 + smx 92 + flagship 12 = 473 asserts_fail:0
+gift: DHCR24 Delta24-reductase seals Bloch+KR cholesterol after DHCR7

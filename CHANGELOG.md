@@ -1,3 +1,12 @@
+# Changelog
+
+## 1.15.1830-usability — LIFE_CELL_DHCR24 (MI 2330)
+
+- feat(life): DHCR24 Delta24-reductase seals Bloch+KR cholesterol after DHCR7
+- continuum: ...->ebp->sc5d->dhcr7->dhcr24
+- proofs: life 277 + atomic 98 + smx 94 + flagship 12 = 481 asserts_fail:0
+- gift: free energy finishes membrane sterol under ASSERT (not a dual ladder)
+
 ## MI 2327 -- LIFE_CELL_EBP
 
 - feat(life): sterol Delta8-Delta7 isomerase (EBP/ERG2) after HSD17B7 on life_cell continuum
