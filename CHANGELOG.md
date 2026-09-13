@@ -1,3 +1,9 @@
+## 1.15.1848-usability — LIFE_CELL_SMS1 (MI 2348)
+
+- METHOD sms1 n on life_cell after CERT/COL4A3BP — SMS1/SGMS1 Golgi sphingomyelin synthase.
+- Continuum ...->stard3->osbp->sacm1l->cert->sms1. Proofs PASS life 384 atomic 134 smx 131 flagship 12 sum 661.
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1847-usability — LIFE_CELL_CERT (MI 2347)
 
 - METHOD cert n on life_cell after SACM1L/SAC1 PI4P clear — CERT/COL4A3BP ER-Golgi MCS ceramide transfer.
