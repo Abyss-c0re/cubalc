@@ -1,3 +1,10 @@
+## 1.15.1872-usability — 2372 LIFE_CELL_ACADVL
+- feat(life): ACADVL (VLCAD) matrix beta-oxidation entry after CPT2; continuum ...->cpt1a->slc25a20->cpt2->acadvl
+- also lands METHOD slc25a20 (CACT) + METHOD cpt2 on same acyl shuttle limb so free energy reaches matrix
+- proofs: 2372_life_cell_acadvl 69/0; smx_mesh_vesicle_acadvl_life 147/0; atomic_printer_life_acadvl 150/0; sum 366 fail=0
+- gift: ACADVL dehydrogenates post-CPT2 VLC acyl-CoA without hollow VLCAD lock
+- signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held
+
 # Changelog
 
 ## 1.15.1869-usability — LIFE_CELL_CPT1A (MI 2369)

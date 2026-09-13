@@ -23573,4 +23573,193 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_SLC25A20: SLC25A20/CACT carnitine-acylcarnitine translocase after CPT1A on carnitine shuttle continuum
+  # SLC25A20 (solute carrier family 25 member 20; CACT) is the IMM acyl-carnitine/carnitine antiporter after CPT1A after CPT1A. Distinct from CPT1A, CPT2, ACSL1, ACADVL, ACOX1, HADHA, or PCYT2.
+  # Domain: post-CPT1A IMM carnitine-acylcarnitine translocase SLC25A20/CACT ward (acyl-carnitine into matrix limb toward CPT2)
+  # Continuum: ...->aldh3a2->acsl1->cpt1a->slc25a20
+  # Gift: SLC25A20/CACT exchanges post-CPT1A acyl-carnitine for free carnitine across IMM so free energy enters the matrix without hollow CACT-deficiency shuttle lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc25a20.
+  # Usability: AGI models slc25a20 under ASSERT on acyl carnitine/beta-oxidation continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc25a20 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # LIFE_CELL_CPT2: CPT2 carnitine palmitoyltransferase 2 after SLC25A20 on matrix acyl-CoA reform continuum
+  # CPT2 (carnitine palmitoyltransferase 2; inner-membrane matrix-facing) reforms long-chain acyl-CoA after SLC25A20 after SLC25A20/CACT. Distinct from CPT1A, SLC25A20/CACT, ACSL1, ACADVL, ACOX1, HADHA, or PCYT2.
+  # Domain: post-SLC25A20 matrix-facing carnitine palmitoyltransferase 2 CPT2 ward (acyl-carnitine to acyl-CoA limb toward ACADVL beta-oxidation)
+  # Continuum: ...->acsl1->cpt1a->slc25a20->cpt2
+  # Gift: CPT2 reconverts matrix acyl-carnitine into acyl-CoA so free energy enters beta-oxidation without hollow CPT2-deficiency acyl-carnitine lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cpt2.
+  # Usability: AGI models cpt2 under ASSERT on acyl carnitine/beta-oxidation continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cpt2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # LIFE_CELL_ACADVL: ACADVL very-long-chain acyl-CoA dehydrogenase after CPT2 on beta-oxidation entry continuum
+  # ACADVL (acyl-CoA dehydrogenase very long chain; VLCAD) is the first matrix beta-oxidation dehydrogenase after CPT2 after CPT2. Distinct from CPT1A, CPT2, SLC25A20/CACT, ACSL1, ACOX1, HADHA, ACADM, or PCYT2.
+  # Domain: post-CPT2 matrix very-long-chain acyl-CoA dehydrogenase ACADVL ward (hexadecenoyl-CoA to enoyl-CoA limb of beta-oxidation entry)
+  # Continuum: ...->cpt1a->slc25a20->cpt2->acadvl
+  # Gift: ACADVL dehydrogenates post-CPT2 very-long-chain acyl-CoA so free energy enters beta-oxidation spiral without hollow VLCAD-deficiency acyl-CoA lock
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acadvl.
+  # Usability: AGI models acadvl under ASSERT on acyl carnitine/beta-oxidation continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acadvl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
