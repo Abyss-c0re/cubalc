@@ -23,9 +23,9 @@
     "programs/science/integration/smx_mesh_vesicle_sms1_life.cubalc",
     "programs/proof/1620_atomic_printer_life_force.cubalc"
   ],
-  "continuum": "...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1",
-  "domain": "post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase ward on the ceramide limb",
-  "gift": "SMS1 converts CERT-delivered ceramide into Golgi SM under ASSERT so free energy re-enters sphingomyelin acceptor pools without hollow Golgi ceramide stall.",
+  "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp->sacm1l->cert->sms1",
+  "domain": "post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase ward (SM acceptor limb)",
+  "gift": "SMS1 synthesizes sphingomyelin from CERT-delivered ceramide at Golgi under ASSERT so free energy re-enters SM membrane pools without hollow Golgi ceramide stall",
   "proof_sum": {
     "life": 384,
     "atomic": 134,
@@ -47,11 +47,12 @@
   "hold_flash": 1,
   "item": "life cell sms1",
   "note": "LIFE_CELL_SMS1 MI2348 METHOD sms1 n after cert on sterol continuum",
+  "pass_": true,
+  "HEAD": "8b2e25fd8cf260483f1b3934e4139ea071fbc1e7",
+  "head": "8b2e25fd8cf260483f1b3934e4139ea071fbc1e7",
+  "tip": "8b2e25fd8cf260483f1b3934e4139ea071fbc1e7",
+  "pin": "8b2e25fd8cf260483f1b3934e4139ea071fbc1e7",
   "feat": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
   "feat_head": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
-  "FEAT_HEAD": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5",
-  "HEAD": "3670918f29a680e9512240110e2afb81a6a51841",
-  "head": "3670918f29a680e9512240110e2afb81a6a51841",
-  "tip": "3670918f29a680e9512240110e2afb81a6a51841",
-  "pin": "3670918f29a680e9512240110e2afb81a6a51841"
+  "FEAT_HEAD": "ebca0c4de86a1724cc844958cd97d3b1ce6383a5"
 }
