@@ -1,0 +1,4 @@
+LIFE_CELL_NCEH1 MI2332 PASS
+NCEH1 neutral cholesterol ester hydrolase 1 liberates FC from SOAT1 CE packs.
+Continuum ...->dhcr7->dhcr24->soat1->nceh1
+proofs life 292 + atomic 100 + smx 96 + flagship 12 = 500 asserts_fail:0

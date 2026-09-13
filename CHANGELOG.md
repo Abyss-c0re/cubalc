@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.15.1832-usability — LIFE_CELL_NCEH1 (MI2332)
+
+- **feat(life):** NCEH1 neutral cholesterol ester hydrolase 1 after SOAT1 CE pack
+- Continuum `...->sc5d->dhcr7->dhcr24->soat1->nceh1`
+- Proofs life 292 + atomic 100 + smx 96 + flagship 12 = **500 asserts_fail:0**
+- Gift: NCEH1 liberates free cholesterol from CE stores so sterol free energy re-enters membrane wards
+
 ## 1.15.1831-usability — LIFE_CELL_SOAT1 (MI 2331)
 
 - feat(life): SOAT1 sterol O-acyltransferase packs CE after DHCR24 cholesterol seal
