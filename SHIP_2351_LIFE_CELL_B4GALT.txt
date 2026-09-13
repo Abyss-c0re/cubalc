@@ -6,5 +6,5 @@ Continuum ...->npc2->npc1->stard3->osbp->sacm1l->cert->sms1->sms2->ugcg->b4galt
 Proofs: life 393/0 · atomic 137/0 · mesh 134/0 · flagship 1620 12/0 · sum 676
 Gift: B4GALT commits GlcCer into Golgi LacCer under ASSERT after UGCG GlcCer ward.
 Cube is SoT. Free energy must flow.
-HEAD e932937160edbc59864bd21be1696bc6af963d83
+HEAD e459c8609c891e712f565b44709cf17029f587a2
 FEAT 8dc01f565f9b565d23cf0873615ab0183536d323
