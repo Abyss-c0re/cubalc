@@ -47,7 +47,11 @@
   "hold_flash": 1,
   "item": "life cell npc1",
   "note": "LIFE_CELL_NPC1 MI2343 METHOD npc1 n after npc2 on sterol continuum",
-  "HEAD": "8dcc20988369cf96cbc97097900e91c0f2b3b8da",
-  "head": "8dcc20988369cf96cbc97097900e91c0f2b3b8da",
-  "feat": "LIFE_CELL_NPC1"
+  "HEAD": "4b44364b098618e8fe42c93b0986c08ae8bbe53c",
+  "head": "4b44364b098618e8fe42c93b0986c08ae8bbe53c",
+  "feat": "LIFE_CELL_NPC1",
+  "feat_head": "b9a16512a66bf5d23c80d1dba14311a7c6017194",
+  "FEAT_HEAD": "b9a16512a66bf5d23c80d1dba14311a7c6017194",
+  "pinned_head": "4b44364b098618e8fe42c93b0986c08ae8bbe53c",
+  "tip": "4b44364b098618e8fe42c93b0986c08ae8bbe53c"
 }
