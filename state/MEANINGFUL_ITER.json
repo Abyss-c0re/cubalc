@@ -47,11 +47,11 @@
   "hold_flash": 1,
   "item": "life cell abca1",
   "note": "LIFE_CELL_ABCA1 MI2333 after NCEH1 continuum; RCT nascent-HDL efflux ward shipped",
-  "feat": "PENDING",
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING"
+  "feat": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "feat_head": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "FEAT_HEAD": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "HEAD": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "head": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "tip": "f77c47722297eaeab8528de51c5bbf286ce5bd5b",
+  "pin": "f77c47722297eaeab8528de51c5bbf286ce5bd5b"
 }
