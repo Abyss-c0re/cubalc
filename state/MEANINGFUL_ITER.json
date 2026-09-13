@@ -48,10 +48,12 @@
   "feat": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
   "feat_head": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
   "FEAT_HEAD": "9b7e0fbb73ad8994099d5d165a3c2d8650b8d8ae",
-  "HEAD": "1683d0f51dad47c2c5c7a1814adf850b0e7b090d",
-  "head": "1683d0f51dad47c2c5c7a1814adf850b0e7b090d",
-  "pin_head": "1683d0f51dad47c2c5c7a1814adf850b0e7b090d",
-  "head_tip": "1683d0f51dad47c2c5c7a1814adf850b0e7b090d",
-  "tip": "1683d0f51dad47c2c5c7a1814adf850b0e7b090d",
-  "cube_law": "cube_is_sot; free_energy; hollow_we_heresy; ct101_forever"
+  "HEAD": "470185b60c8e147a427c1733425621841c82465e",
+  "head": "470185b60c8e147a427c1733425621841c82465e",
+  "pin_head": "470185b60c8e147a427c1733425621841c82465e",
+  "head_tip": "470185b60c8e147a427c1733425621841c82465e",
+  "pinned_head": "470185b60c8e147a427c1733425621841c82465e",
+  "PINNED_HEAD": "470185b60c8e147a427c1733425621841c82465e",
+  "short": "470185b60c8",
+  "HEAD_SHORT": "470185b60c8"
 }
