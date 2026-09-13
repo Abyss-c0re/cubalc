@@ -46,5 +46,13 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell st3gal5",
-  "note": "LIFE_CELL_ST3GAL5 MI2352 METHOD st3gal5 n after b4galt on glycosphingolipid continuum"
+  "note": "LIFE_CELL_ST3GAL5 MI2352 METHOD st3gal5 n after b4galt on glycosphingolipid continuum",
+  "feat": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "feat_head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "FEAT_HEAD": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "HEAD": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "tip": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "pin": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf",
+  "pinned_head": "09e6ad749eb4007a2acae56ca0d7e8a4bdf683bf"
 }
