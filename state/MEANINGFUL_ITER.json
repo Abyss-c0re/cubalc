@@ -2,11 +2,11 @@
   "schema": "cubalc.meaningful_iter/v1",
   "meaningful_iter": 2335,
   "MEANINGFUL_ITER": 2335,
-  "iter": 2335,
+  "iter": 2336,
   "n": 2335,
   "mi": 2335,
   "MI": 2335,
-  "version": "1.15.1835-usability",
+  "version": "1.15.1836-usability",
   "VERSION": "1.15.1835-usability",
   "feature": "life_cell_lcat",
   "FEATURE": "LIFE_CELL_LCAT",
@@ -16,14 +16,9 @@
   "method": "lcat n",
   "ship": "2335_life_cell_lcat",
   "proof": "programs/proof/2335_life_cell_lcat.cubalc",
-  "proofs": {
-    "life": 358,
-    "atomic": 110,
-    "smx": 95,
-    "flagship": 12,
-    "total": 575,
-    "fail": 0
-  },
+  "proofs": [
+    "programs/science/integration/smx_mesh_vesicle_lcat_life.cubalc"
+  ],
   "continuum": "...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat",
   "domain": "post-ABCG1 plasma HDL-maturation cholesteryl-ester core packing LCAT ward",
   "gift": "LCAT esterifies ABCG1-delivered free cholesterol into CE so HDL cores pack and RCT free energy continues without hollow FC shell",
@@ -38,7 +33,7 @@
   "proof_status": "PASS",
   "anti_bloat": true,
   "hold_flash": 1,
-  "item": "LIFE_CELL_LCAT",
+  "item": "smx mesh vesicle lcat life",
   "gate": "lcat",
   "enzyme": "LCAT",
   "feat": "life_cell_lcat",
@@ -51,5 +46,9 @@
   "pin_head": "4682a02ec91cabf1026cbe830a77634fc9b80eae",
   "head_tip": "4682a02ec91cabf1026cbe830a77634fc9b80eae",
   "HEAD": "4682a02ec91cabf1026cbe830a77634fc9b80eae",
-  "commit": "4682a02ec91cabf1026cbe830a77634fc9b80eae"
+  "commit": "d2cab7a60",
+  "item_id": "mi_smx_mesh_vesicle_lcat_life",
+  "summary": "Host-finished MI ship after nanobot partial (smx_mesh_vesicle_lcat_life).",
+  "ts": "2026-09-13T07:09:30Z",
+  "host_finish": true
 }
