@@ -1,0 +1,6 @@
+SHIP 2332 LIFE_CELL_NCEH1 PASS
+METHOD nceh1 n — neutral CE hydrolase frees cholesterol after SOAT1
+Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1
+Proofs: life 292/0 · atomic 100/0 · mesh 96/0 · flagship 1620 12/0 · sum 500
+Gift: NCEH1 hydrolyzes CE → free cholesterol under ASSERT after SOAT1 pack.
+Cube is SoT. Free energy must flow.

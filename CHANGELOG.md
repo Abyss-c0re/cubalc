@@ -1,3 +1,10 @@
+## 1.15.1832-usability — LIFE_CELL_NCEH1 (MI 2332)
+
+- feat(life): NCEH1 neutral cholesterol ester hydrolase frees CE after SOAT1
+- Continuum ...->sc5d->dhcr7->dhcr24->soat1->nceh1; proofs life 292 + atomic 100 + smx 96 + flagship 12 = 500 asserts_fail:0
+- METHOD nceh1 n — CE -> free-cholesterol mobilization under ASSERT after SOAT1
+- Cube is SoT. Free energy must flow.
+
 ## 1.15.1831-usability — LIFE_CELL_SOAT1 (MI 2331)
 
 - feat(life): SOAT1 sterol O-acyltransferase packs CE after DHCR24 cholesterol seal
