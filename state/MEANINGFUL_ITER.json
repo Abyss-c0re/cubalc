@@ -46,12 +46,12 @@
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1,
-  "head": "826271c23e0545a1adf9ce26e8d134392dc0dac1",
-  "HEAD": "826271c23e0545a1adf9ce26e8d134392dc0dac1",
-  "tip": "826271c23e0545a1adf9ce26e8d134392dc0dac1",
-  "pin": "826271c23e0545a1adf9ce26e8d134392dc0dac1",
+  "head": "5f5ae9012cc6dfe71651ce92a818f3e13bf4802f",
+  "HEAD": "5f5ae9012cc6dfe71651ce92a818f3e13bf4802f",
+  "tip": "5f5ae9012cc6dfe71651ce92a818f3e13bf4802f",
+  "pin": "5f5ae9012cc6dfe71651ce92a818f3e13bf4802f",
   "feat_head": "679c788ed8b2dc32eba681ae026edbb3d00aac7a",
   "FEAT_HEAD": "679c788ed8b2dc32eba681ae026edbb3d00aac7a",
-  "tip_short": "826271c23",
-  "HEAD_short": "826271c23"
+  "tip_short": "5f5ae9012",
+  "HEAD_short": "5f5ae9012"
 }
