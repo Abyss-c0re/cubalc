@@ -1,3 +1,11 @@
+## MI 2322 -- LIFE_CELL_CYP51
+
+- feat(life): lanosterol 14α-demethylase (CYP51/ERG11) after LSS on life_cell continuum
+- Continuum: ...->fdps->sqs->sqle->lss->cyp51 -- lanosterol C14-demethyl gate
+- Proof: programs/proof/2322_life_cell_cyp51.cubalc (217 ASSERT ok)
+- Science: atomic_printer_life_cyp51 (80), smx_mesh_vesicle_cyp51_life (76)
+- Flagship 1620 PASS (12). Sum 385 asserts_fail:0
+
 ## MI 2321 -- LIFE_CELL_LSS
 
 - feat(life): lanosterol synthase (LSS/ERG7/OSC) after SQLE on life_cell continuum
