@@ -20664,6 +20664,152 @@ CLASS Cell
     RET take
   END
 
+  # Sc4mol: C4-methylsterol oxidase (SC4MOL / MSMO1 / ERG25) after TM7SF2 limb.
+  # SC4MOL is the post-TM7SF2 sterol C4-methyl oxidase: it oxygenates the
+  # C4-alpha-methyl on 4,4-dimethyl-cholesta-8,24-dien-3b-ol so NSDHL can
+  # decarboxylate and free energy reclaimed from BA/odd-chain ketones
+  # builds membrane sterol mass under ASSERT.
+  # After Tm7sf2 opens the C14-reduced dimethyl sterol pool, Sc4mol spends
+  # that pool under ASSERT to open the C4-methyl oxidase gate (committed
+  # C4 oxidation step on the sterol branch toward zymosterol/cholesterol).
+  # Distinct from Tm7sf2 sterol C14-reductase, Cyp51 lanosterol 14a-demethylase,
+  # and Lss lanosterol synthase - Sc4mol is the C4-methylsterol oxidase
+  # (SC4MOL/MSMO1) 4,4-dimethyl-cholesta-8,24-dien-3b-ol -> C4-carboxylated
+  # sterol intermediate gate.
+  # Domain: post-TM7SF2 C4-methylsterol oxidase (SC4MOL/MSMO1) sterol-oxidase gate.
+  # Continuum: ...->sqle->lss->cyp51->tm7sf2->sc4mol
+  # Gift: post-TM7SF2 SC4MOL so BA/odd-chain free-energy path can oxidize the
+  #   C4-alpha-methyl under ASSERT after TM7SF2 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sc4mol.
+  # Usability: AGI models post-TM7SF2 SC4MOL C4-methylsterol oxidase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sc4mol n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Nsdhl: C4-sterol decarboxylase (NSDHL / ERG26) after SC4MOL limb.
+  # NSDHL is the post-SC4MOL sterol C4-decarboxylase: it decarboxylates the
+  # C4-carboxylated intermediate minted by SC4MOL oxidase, yielding a
+  # 4a-methyl- or 4-desmethyl-3-ketosterol so HSD17B7 can reduce the C3 ketone
+  # and free energy reclaimed from BA/odd-chain ketones builds membrane
+  # sterol mass under ASSERT.
+  # After Sc4mol opens the C4-oxidized dimethyl sterol pool, Nsdhl spends
+  # that pool under ASSERT to open the C4-decarboxylation gate (committed
+  # C4 decarboxylation step on the sterol branch toward zymosterol/cholesterol).
+  # Distinct from Sc4mol C4-methylsterol oxidase, Tm7sf2 sterol C14-reductase,
+  # and Cyp51 lanosterol 14a-demethylase - Nsdhl is the C4-decarboxylase
+  # (NSDHL/ERG26) C4-carboxy-sterol -> 3-keto-4-monomethyl (or desmethyl) sterol gate.
+  # Domain: post-SC4MOL C4-sterol decarboxylase (NSDHL/ERG26) sterol-decarboxyl gate.
+  # Continuum: ...->sqle->lss->cyp51->tm7sf2->sc4mol->nsdhl
+  # Gift: post-SC4MOL NSDHL so BA/odd-chain free-energy path can decarboxylate
+  #   the C4 carboxyl under ASSERT after SC4MOL open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nsdhl.
+  # Usability: AGI models post-SC4MOL NSDHL C4-decarboxylation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nsdhl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
 
 
 END
