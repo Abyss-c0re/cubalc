@@ -51,8 +51,12 @@
   "note": "LIFE_CELL_NEU3 MI2359 METHOD neu3 n after st6galnac6 on glycosphingolipid continuum",
   "ts": "2026-09-13T16:49:00Z",
   "commit": "PENDING",
-  "HEAD": "300a64d343645f34a9fe2f9c997d562483696642",
-  "head": "300a64d343645f34a9fe2f9c997d562483696642",
-  "tip": "300a64d343645f34a9fe2f9c997d562483696642",
-  "git_head": "300a64d343645f34a9fe2f9c997d562483696642"
+  "HEAD": "41066e331c867dfe7989583a3462cdfcc7bab327",
+  "head": "41066e331c867dfe7989583a3462cdfcc7bab327",
+  "tip": "41066e331c867dfe7989583a3462cdfcc7bab327",
+  "git_head": "41066e331c867dfe7989583a3462cdfcc7bab327",
+  "feat": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
+  "feat_head": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
+  "FEAT_HEAD": "2e05dc28d7ec95a00daf9f96330cca0b04ce1d0c",
+  "pin": "41066e331c867dfe7989583a3462cdfcc7bab327"
 }
