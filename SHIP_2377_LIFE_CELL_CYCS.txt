@@ -5,7 +5,7 @@ proof: programs/proof/2377_life_cell_cycs.cubalc
 asserts_ok life=69 atomic=150 mesh=147 total=366 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs
 gift: CYCS shuttles electrons CIII→CIV so free energy completes oxphos without hollow cytochrome-c deficiency lock
-feat_head: 209f4e706d243fcde317e1c1fa9cda2c9c82d0a6
-head: 209f4e706d243fcde317e1c1fa9cda2c9c82d0a6
+feat_head: be2040148afd52cdbe91e41e9df9b9cf775cd30c
+head: be2040148afd52cdbe91e41e9df9b9cf775cd30c
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
