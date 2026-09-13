@@ -46,5 +46,12 @@
   "anti_bloat": true,
   "hold_flash": 1,
   "item": "life cell dhcr7",
-  "note": "LIFE_CELL_DHCR7 MI2329 after SC5D continuum; cholesterol Kandutsch-Russell close gate shipped"
+  "note": "LIFE_CELL_DHCR7 MI2329 after SC5D continuum; cholesterol Kandutsch-Russell close gate shipped",
+  "feat": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "feat_head": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "FEAT_HEAD": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "HEAD": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "head": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "tip": "99ba0df601a42833f2a7f236e55adf1c3d415652",
+  "pin": "99ba0df601a42833f2a7f236e55adf1c3d415652"
 }
