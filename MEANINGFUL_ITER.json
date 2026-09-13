@@ -47,11 +47,11 @@
   "hold_flash": 1,
   "item": "life cell abcg1",
   "note": "LIFE_CELL_ABCG1 MI2334 after ABCA1 continuum; mature-HDL RCT efflux ward shipped",
-  "feat": "PENDING",
-  "feat_head": "PENDING",
-  "FEAT_HEAD": "PENDING",
-  "HEAD": "PENDING",
-  "head": "PENDING",
-  "tip": "PENDING",
-  "pin": "PENDING"
+  "feat": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "feat_head": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "FEAT_HEAD": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "HEAD": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "head": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "tip": "69ae5c20c5a64ce6bd108e247c6562905d9f5811",
+  "pin": "69ae5c20c5a64ce6bd108e247c6562905d9f5811"
 }
