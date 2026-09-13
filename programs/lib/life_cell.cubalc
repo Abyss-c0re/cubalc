@@ -22169,4 +22169,77 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_SMS1: SMS1/SGMS1 Golgi sphingomyelin synthase after CERT ceramide transfer.
+  # SMS1 (sphingomyelin synthase 1; SGMS1) is the Golgi-resident enzyme that transfers
+  # phosphocholine from phosphatidylcholine onto CERT-delivered ceramide, yielding
+  # sphingomyelin + DAG under ASSERT after CERT/COL4A3BP has shuttled ceramide ER -> Golgi.
+  # After Cert docks and transfers ceramide at ER-Golgi MCS, Sms1 spends Golgi cargo
+  # under ASSERT to synthesize SM (committed post-CERT ceramide -> SM on the post-CERT
+  # SMS1 Golgi limb).
+  # Distinct from Cert/Col4a3bp ER-Golgi ceramide transfer, Sacm1l SAC1 PI4P phosphatase,
+  # Osbp sterol/PI4P counterexchanger, Sms2/Sgms2 plasma-membrane SM synthase, and
+  # Smpd1 acid sphingomyelinase - Sms1 is the SGMS1 Golgi sphingomyelin synthase after CERT.
+  # Domain: post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase ward (SM acceptor limb).
+  # Continuum: ...->stard3->osbp->sacm1l->cert->sms1
+  # Gift: SMS1 synthesizes sphingomyelin from CERT-delivered ceramide at Golgi under ASSERT
+  # so free energy re-enters SM membrane pools without hollow Golgi ceramide stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sms1.
+  # Usability: AGI models post-CERT Golgi SMS1/SGMS1 sphingomyelin synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sms1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
 END
