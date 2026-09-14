@@ -18,14 +18,16 @@
   "proof": "programs/proof/2402_multifile_extend_baseof_link3.cubalc",
   "proofs": {
     "feature": 48,
+    "related_2401": 33,
     "fail": 0
   },
   "proof_sum": {
     "feature": 48,
+    "related": 33,
     "asserts_fail": 0,
-    "sum": 48
+    "sum": 81
   },
-  "continuum": "...->atp5pd->multifile_extend_baseof_link3->multifile_extend_reset_link3->multifile_extend_baseof_link3_seal",
+  "continuum": "...->atp5pd->multifile_extend_baseof_link3->multifile_extend_reset_link3",
   "domain": "multi-file OOP EXTEND/link usability (BASEOF parent plate)",
   "gift": "agents resolve EXTEND parent without CLASSINFO scrape; three-unit greeter link holds; free energy flows",
   "asserts_fail": 0,
@@ -38,17 +40,13 @@
   "proof_status": "PASS",
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
-  "hold_flash": 1,
-  "feat_head": "ea291a12c75abeae5d9e16b2719d27fac40cf392",
-  "head": "9208965bf45fe95410b54a35e94ecf289595ed9a",
-  "HEAD": "9208965bf45fe95410b54a35e94ecf289595ed9a",
-  "tip": "9208965bf45fe95410b54a35e94ecf289595ed9a",
-  "ts": 1789358356.5608609,
-  "FEAT_HEAD": "ea291a12c75abeae5d9e16b2719d27fac40cf392",
-  "TIP": "9208965bf45fe95410b54a35e94ecf289595ed9a",
-  "pin": "9208965bf45fe95410b54a35e94ecf289595ed9a",
-  "tip_short": "9208965bf",
-  "HEAD_short": "6723c7b4b9",
-  "feat_commit": "ea291a12c",
-  "pinned_head": "9208965bf45fe95410b54a35e94ecf289595ed9a"
+  "head": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "HEAD": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "tip": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "TIP": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "pin": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "pinned_head": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
+  "tip_short": "bf18dcd31",
+  "feat_head": "3ebf6425eb401f1ecc924ca4e64a65ffbf597f71",
+  "FEAT_HEAD": "3ebf6425eb401f1ecc924ca4e64a65ffbf597f71"
 }
