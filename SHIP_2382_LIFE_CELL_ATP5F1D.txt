@@ -1,0 +1,10 @@
+SHIP LIFE_CELL_ATP5F1D MI 2382
+version: 1.15.1882-usability
+method: atp5f1d n
+proof: programs/proof/2382_life_cell_atp5f1d.cubalc
+asserts_ok life=77 atomic=150 mesh=147 total=374 fail=0 PASS
+continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d
+gift: ATP5F1D seats F1 delta so rotor torque from PMF couples through F1 alpha into ADP+Pi to ATP without hollow Complex-V delta lock
+feat_head: 697b33e799d06fe2557fb144794eb5a9bbdb878e
+head: 697b33e799d06fe2557fb144794eb5a9bbdb878e
+status: PASS
