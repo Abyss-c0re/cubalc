@@ -19312,6 +19312,182 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LISTLEAVES|LEAVESBAG + FIRSTLEAF/LASTLEAF/NTHLEAF (multifile EXTEND)
+   * LISTLEAVES Class|obj — newline bag of leaf class names in subtree (self if leaf).
+   * FIRSTLEAF / LASTLEAF — first/last leaf name in declaration order.
+   * NTHLEAF Class|obj N — leaf at index N (0-based); soft empty OOB.
+   * Complements LEAFCOUNT + ISLEAF + DESCENDANTS. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "LISTLEAVES") || kw(&L->cur, "LEAVESBAG") ||
+      kw(&L->cur, "LEAFNAMES") || kw(&L->cur, "LIST_LEAVES") ||
+      kw(&L->cur, "LEAVES_BAG") || kw(&L->cur, "GETLEAVES") ||
+      kw(&L->cur, "SUBTREELEAVES") || kw(&L->cur, "LEAFSBAG") ||
+      kw(&L->cur, "FIRSTLEAF") || kw(&L->cur, "ELDERLEAF") ||
+      kw(&L->cur, "OLDESTLEAF") || kw(&L->cur, "FIRST_LEAF") ||
+      kw(&L->cur, "LASTLEAF") || kw(&L->cur, "YOUNGLEAF") ||
+      kw(&L->cur, "NEWESTLEAF") || kw(&L->cur, "LAST_LEAF") ||
+      kw(&L->cur, "YOUNGESTLEAF") ||
+      kw(&L->cur, "NTHLEAF") || kw(&L->cur, "LEAFAT") ||
+      kw(&L->cur, "NTH_LEAF") || kw(&L->cur, "LEAF_AT") ||
+      kw(&L->cur, "KIDLEAFAT") || kw(&L->cur, "LEAFINDEX")) {
+    int want_bag = kw(&L->cur, "LISTLEAVES") || kw(&L->cur, "LEAVESBAG") ||
+                   kw(&L->cur, "LEAFNAMES") || kw(&L->cur, "LIST_LEAVES") ||
+                   kw(&L->cur, "LEAVES_BAG") || kw(&L->cur, "GETLEAVES") ||
+                   kw(&L->cur, "SUBTREELEAVES") || kw(&L->cur, "LEAFSBAG");
+    int want_first = kw(&L->cur, "FIRSTLEAF") || kw(&L->cur, "ELDERLEAF") ||
+                     kw(&L->cur, "OLDESTLEAF") || kw(&L->cur, "FIRST_LEAF");
+    int want_last = kw(&L->cur, "LASTLEAF") || kw(&L->cur, "YOUNGLEAF") ||
+                    kw(&L->cur, "NEWESTLEAF") || kw(&L->cur, "LAST_LEAF") ||
+                    kw(&L->cur, "YOUNGESTLEAF");
+    int want_nth = kw(&L->cur, "NTHLEAF") || kw(&L->cur, "LEAFAT") ||
+                   kw(&L->cur, "NTH_LEAF") || kw(&L->cur, "LEAF_AT") ||
+                   kw(&L->cur, "KIDLEAFAT") || kw(&L->cur, "LEAFINDEX");
+    char a[48], bag[4096], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, idx_want = -1, guard = 0;
+    int leaf_idx[512];
+    int nleaf = 0;
+    const char *opname = want_nth ? "NTHLEAF"
+                         : want_first ? "FIRSTLEAF"
+                         : want_last ? "LASTLEAF"
+                                       : "LISTLEAVES";
+    lex_next(L);
+    a[0] = bag[0] = pick[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_nth ? "NTHLEAF Class|obj N"
+                         : (want_bag ? "LISTLEAVES Class|obj"
+                                     : "FIRSTLEAF|LASTLEAF Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (want_nth) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx_want = (int)L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx_want = (int)vv->val;
+        else { fail(vm, "NTHLEAF Class|obj N"); return -1; }
+        lex_next(L);
+      } else { fail(vm, "NTHLEAF Class|obj N"); return -1; }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (cda && ai >= 0) {
+      int queue[512];
+      int qh = 0, qt = 0;
+      int seen[512];
+      for (i = 0; i < 512; i++) seen[i] = 0;
+      queue[qt++] = ai;
+      seen[ai] = 1;
+      guard = 0;
+      while (qh < qt && guard++ < CUBALC_MAX_CLASSES * 4) {
+        int cur = queue[qh++];
+        int nk = 0;
+        int kids[256];
+        int nkids = 0;
+        if (cur < 0 || cur >= vm->n_classes) continue;
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == cur) {
+            if (nkids < 256) kids[nkids++] = i;
+            nk++;
+            if (!seen[i] && qt < 512) {
+              seen[i] = 1;
+              queue[qt++] = i;
+            }
+          }
+        }
+        (void)kids;
+        if (nk == 0 && nleaf < 512) {
+          leaf_idx[nleaf++] = cur;
+        }
+      }
+    }
+    n = nleaf;
+    if (want_bag) {
+      size_t o = 0;
+      bag[0] = 0;
+      for (i = 0; i < nleaf; i++) {
+        const char *nm = vm->classes[leaf_idx[i]].name;
+        size_t ln = strlen(nm);
+        if (o && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln + 1 < sizeof bag) {
+          memcpy(bag + o, nm, ln);
+          o += ln;
+          bag[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_str(vm, "LISTLEAVES", bag);
+      var_set_str(vm, "LEAVESBAG", bag);
+      var_set_str(vm, "LEAFNAMES", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_num(vm, "LISTLEAVES_N", n);
+      var_set_num(vm, "LEAVESBAG_N", n);
+      var_set_num(vm, "LEAFNAMES_N", n);
+      var_set_num(vm, "LEAFCOUNT_N", n);
+    } else {
+      int hit = 0;
+      pick[0] = 0;
+      if (want_first && nleaf > 0) {
+        snprintf(pick, sizeof pick, "%s", vm->classes[leaf_idx[0]].name);
+        hit = 1;
+      } else if (want_last && nleaf > 0) {
+        snprintf(pick, sizeof pick, "%s", vm->classes[leaf_idx[nleaf - 1]].name);
+        hit = 1;
+      } else if (want_nth && idx_want >= 0 && idx_want < nleaf) {
+        snprintf(pick, sizeof pick, "%s", vm->classes[leaf_idx[idx_want]].name);
+        hit = 1;
+      }
+      var_set_str(vm, "LAST", pick);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+      var_set_str(vm, "FIRSTLEAF", pick);
+      var_set_str(vm, "LASTLEAF", pick);
+      var_set_str(vm, "NTHLEAF", pick);
+      var_set_str(vm, "LEAFAT", pick);
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "FIRSTLEAF_N", hit ? 1 : 0);
+      var_set_num(vm, "LASTLEAF_N", hit ? 1 : 0);
+      var_set_num(vm, "NTHLEAF_N", hit ? 1 : 0);
+      n = hit ? 1 : 0;
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d bag_or_hit=%d\n", opname, a, nleaf, n);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.

@@ -55382,9 +55382,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
    *   NTHFLAT "role" 1 OR "worker"
    *   NTHFLAT FROM PEER "name" 0
    */
+  /* NTHLEAF reserved for CLASS EXTEND leaf-index (lang_ops_flow). Cube is SoT. */
   if (kw(&L->cur,"NTHFLAT") || kw(&L->cur,"INDEXFLAT") || kw(&L->cur,"ATFLAT") ||
       kw(&L->cur,"MNTHFLAT") || kw(&L->cur,"PLATE_NTHFLAT") || kw(&L->cur,"LEAFNTH") ||
-      kw(&L->cur,"NTHLEAF") || kw(&L->cur,"GETFLATNTH")) {
+      kw(&L->cur,"GETFLATNTH")) {
     char plate[CUBALC_HOST_STR_MAX], needle[192], fallback[CUBALC_HOST_STR_MAX];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
