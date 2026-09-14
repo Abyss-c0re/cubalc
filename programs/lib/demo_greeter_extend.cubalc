@@ -1,9 +1,9 @@
 # multi-file unit 2/3 — EXTEND reopen: reset + greet
 EXTEND Greeter
   METHOD reset
-    RESETF THIS name
+    SETF THIS name "world"
     SETF THIS hits 0
-    RET LAST
+    RET 0
   END
   METHOD greet
     SEND THIS hi
