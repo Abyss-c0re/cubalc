@@ -1,3 +1,13 @@
+## 1.15.1887-usability — MI 2387 LIFE_CELL_ATP5PD PASS (383/0)
+
+- **FEATURE** `LIFE_CELL_ATP5PD` — METHOD `atp5pd n` on CLASS Cell after ATP5PB
+- **Continuum** `...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po->atp5pb->atp5pd`
+- **Gift** ATP5PD braces the peripheral stalk so Fo stator torque stays OSCP-tethered into F1 ADP+Pi->ATP and free energy flows without hollow stalk-d-gap (CV peripheral stalk-d ward)
+- **Proofs** life=81 atomic=153 mesh=149 total=383 asserts_fail=0
+- **Files** `programs/lib/life_cell.cubalc`, `programs/proof/2387_life_cell_atp5pd.cubalc`, `programs/science/integration/atomic_printer_life_atp5pd.cubalc`, `programs/science/integration/smx_mesh_vesicle_atp5pd_life.cubalc`
+- **feat_head** `8e56768c710b16c14a16a83185ab9a8e1b6d26ba`
+- Law: cube is SoT; free energy must flow; hollow WE is heresy
+
 # Changelog
 
 ## 1.15.1886-usability — MI 2386 LIFE_CELL_ATP5PB (PASS)
