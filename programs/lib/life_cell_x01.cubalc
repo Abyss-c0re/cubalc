@@ -1,0 +1,2244 @@
+# life_cell_x01.cubalc — EXTEND Cell pack 1
+
+EXTEND CLASS Cell
+  METHOD futile n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    RET take
+  END
+
+
+
+  # Boost: dump n PCr straight into active energy (phosphagen mitosis shortcut).
+  # Bypasses ATP intermediate — creatine kinase + rapid energy arm for division.
+  # Yield conserved (pcr→energy). Does not touch ATP/pmf/heat. Arms ready if past thr.
+  # Usability: AGI fires stored ~P buffer into mitosis budget under sudden demand.
+  # Returns amount boosted. Dead/zero/empty buffer → 0. Keeps life spark rules via ready.
+  METHOD boost n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Load: dump n active energy straight into PCr (phosphagen load shortcut).
+  # Bypasses ATP intermediate — inverse of boost; creatine kinase reverse arm.
+  # Yield conserved (energy→pcr). Does not touch ATP/pmf/heat. Disarms ready if below thr.
+  # Usability: AGI banks surplus mitosis budget into ~P buffer without dual ladders.
+  # Returns amount loaded. Dead/zero/empty energy→0. Keeps life spark (never drains last 1).
+  METHOD load n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # keep life spark — never bank the last unit of active energy
+    LET max_take = e - 1
+    IF max_take < 1 THEN
+      RET 0
+    END
+    LET take = n
+    IF take > max_take THEN
+      LET take = max_take
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS pcr
+    LET c = LAST_N + take
+    SETF THIS pcr c
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cool: radiate n heat to environment (radiative / evaporative cooling clearance).
+  # Inverse of shiver/futile/uncouple heat creation — clears thermogenesis ledger.
+  # Yield sheds by take (heat leaves system). Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI sheds surplus warmth after cold-stress budgets without dual ladders.
+  # Returns amount cooled. Dead/zero/empty heat → 0.
+  METHOD cool n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    RET take
+  END
+
+  # Temper: homeostatic heat setpoint — radiate excess warmth above target t.
+  # If heat > t, cool (heat - t); if heat <= t, no-op (never creates heat).
+  # Yield sheds only when excess cleared. Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI holds thermal ceiling after shiver/futile/uncouple budgets.
+  # Returns final heat. Dead → 0. t < 0 treated as 0.
+  METHOD temper t
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    LET tgt = t
+    IF tgt < 0 THEN
+      LET tgt = 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    IF h <= tgt THEN
+      RET h
+    END
+    LET take = h - tgt
+    LET h = h - take
+    SETF THIS heat h
+    RET h
+  END
+
+
+
+
+  # Thaw: recycle n heat back into active energy (endothermic / waste-heat recovery).
+  # Inverse of shiver (energy→heat). Distinct from cool (heat leaves) and temper (setpoint shed).
+  # Yield excludes heat; thaw restores yield (heat→energy). Does not touch atp/pmf/pcr. Recomputes ready vs threshold.
+  # Usability: AGI recovers thermogenesis ledger into mitosis budget after cold-stress.
+  # Returns amount thawed. Dead/zero/empty heat → 0.
+  METHOD thaw n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    LET rd = 0
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 1 THEN
+      LET thr = 10
+    END
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= thr THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Reclaim: salvage n heat into glycogen reserve (waste-heat → stores).
+  # Distinct from thaw (heat→energy, arms ready) and cool (heat leaves system).
+  # Yield restored into protected bank. Does not touch energy/atp/pmf/pcr/ready.
+  # Usability: AGI banks thermogenesis ledger as reserve without flooding mitosis.
+  # Returns amount reclaimed. Dead/zero/empty heat → 0.
+  METHOD reclaim n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS reserve
+    LET r = LAST_N + take
+    SETF THIS reserve r
+    RET take
+  END
+
+  # Capture: salvage n heat into ATP work currency (waste-heat → charged work).
+  # Distinct from thaw (heat→energy, arms ready), reclaim (heat→reserve), cool (heat leaves).
+  # Yield restored into ATP bank. Does not touch energy/reserve/pmf/pcr/ready.
+  # Usability: AGI banks thermogenesis ledger as work currency without flooding mitosis.
+  # Returns amount captured. Dead/zero/empty heat → 0.
+  METHOD capture n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS atp
+    LET a = LAST_N + take
+    SETF THIS atp a
+    RET take
+  END
+
+
+  # Harness: salvage n heat into pmf proton-motive force (waste-heat → chemiosmotic gradient).
+  # Distinct from thaw (heat→energy), reclaim (heat→reserve), capture (heat→ATP), cool (heat leaves).
+  # Yield restored into pmf bank. Does not touch energy/reserve/atp/pcr/ready.
+  # Usability: AGI banks thermogenesis ledger as proton gradient without flooding mitosis.
+  # Returns amount harnessed. Dead/zero/empty heat → 0.
+  METHOD harness n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS pmf
+    LET p = LAST_N + take
+    SETF THIS pmf p
+    RET take
+  END
+
+
+
+  # Buffer: salvage n heat into pcr phosphagen (~P buffer / waste-heat → rapid store).
+  # Distinct from thaw (heat→energy), reclaim (heat→reserve), capture (heat→ATP),
+  # harness (heat→pmf), cool (heat leaves). Yield restored into pcr bank.
+  # Does not touch energy/reserve/atp/pmf/ready.
+  # Usability: AGI banks thermogenesis ledger as phosphagen without flooding mitosis.
+  # Returns amount buffered. Dead/zero/empty heat → 0.
+  METHOD buffer n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    GETF THIS pcr
+    LET c = LAST_N + take
+    SETF THIS pcr c
+    RET take
+  END
+
+
+  # Anneal: spend n heat to shed age (chaperone / mild heat-shock protein refold).
+  # Distinct from repair (energy→age), cool (heat leaves), thaw/reclaim/capture/harness/buffer
+  # (heat→currency banks). Heat ledger pays; age floors at 0. Yield unchanged (heat not in yield).
+  # Does not touch energy/reserve/atp/pmf/pcr/ready.
+  # Usability: AGI spends thermogenesis ledger to rejuvenate without burning life spark.
+  # Returns amount annealed. Dead/zero/empty heat → 0.
+  METHOD anneal n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET a = LAST_N
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    LET a = a - take
+    SETF THIS age a
+    RET take
+  END
+
+
+  # Ease: spend n heat to lower mitosis threshold (thermal priming / heat-shock ease).
+  # Distinct from set_threshold (direct retune), anneal (heat→age), temper (radiate excess),
+  # thaw/reclaim/capture/harness/buffer (heat→currency banks). Heat pays; thr floors at 1.
+  # Yield unchanged (heat not in yield). energy/reserve/atp/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends thermogenesis to ease mitosis bar without flooding energy banks.
+  # Returns amount eased (threshold drop). Dead/zero/empty heat/thr already 1 → 0.
+  METHOD ease n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Refold: spend n ATP to shed age (chaperone ATPase / HSP70 ATP-dependent refold).
+  # Distinct from repair (energy→age), anneal (heat→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; age floors at 0. Yield sheds by take (ATP is in yield). ready untouched.
+  # Does not touch energy/reserve/heat/pmf/pcr/ready.
+  # Usability: AGI spends work currency to rejuvenate without burning life spark or heat ledger.
+  # Returns amount refolded. Dead/zero/empty ATP → 0.
+  METHOD refold n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
+  # Prime: spend n ATP to lower mitosis threshold (CDK / ATP-dependent cycle priming).
+  # Distinct from ease (heat→thr), catalyze (1 ATP arms ready near thr), set_threshold (direct),
+  # refold (ATP→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; thr floors at 1. Yield sheds by take (ATP in yield). energy/reserve/heat/pmf/pcr untouched.
+  # Recomputes ready so AGI can spend work currency to open mitosis gate without flooding energy.
+  # Returns amount primed (threshold drop). Dead/zero/empty ATP/thr already 1 → 0.
+  METHOD prime n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Poise: spend n PCr to lower mitosis threshold (phosphagen CDK burst priming).
+  # Distinct from prime (ATP→thr), ease (heat→thr), boost (PCr→energy), load (energy→PCr),
+  # discharge (PCr→ATP), set_threshold (direct), catalyze (1 ATP arms ready near thr).
+  # PCr pays; thr floors at 1. Yield sheds by take (PCr in yield). energy/reserve/atp/heat/pmf untouched.
+  # Recomputes ready so AGI can spend rapid ~P buffer to open mitosis gate without burning ATP or heat.
+  # Returns amount poised (threshold drop). Dead/zero/empty PCr/thr already 1 → 0.
+  METHOD poise n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Harden: spend n heat to raise mitosis threshold (thermal hardening / heat-shock fortify).
+  # Distinct from set_threshold (direct retune), ease (heat->lower thr), anneal (heat->age),
+  # prime (ATP->lower thr), refold (ATP->age), temper/cool, thaw/reclaim/capture/harness/buffer.
+  # Heat pays; thr ceiling at 1000. Yield unchanged (heat not in yield).
+  # energy/reserve/atp/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends thermogenesis to fortify mitosis bar without flooding energy banks.
+  # Returns amount hardened (threshold rise). Dead/zero/empty heat/thr already 1000 -> 0.
+  METHOD harden n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS heat
+    LET h = LAST_N
+    LET take = n
+    IF take > h THEN
+      LET take = h
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET h = h - take
+    SETF THIS heat h
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fortify: spend n ATP to raise mitosis threshold (CDK / work-currency fortification).
+  # Distinct from harden (heat→raise thr), prime (ATP→lower thr), set_threshold (direct),
+  # ease (heat→lower thr), refold (ATP→age), spend (ATP→work), futile (ATP→heat).
+  # ATP pays; thr ceiling at 1000. Yield sheds by take (ATP in yield).
+  # energy/reserve/heat/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends work currency to fortify mitosis bar without flooding heat.
+  # Returns amount fortified (threshold rise). Dead/zero/empty ATP/thr already 1000 → 0.
+  METHOD fortify n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Brace: spend n PCr to raise mitosis threshold (phosphagen CDK fortification).
+  # Distinct from poise (PCr→lower thr), fortify (ATP→raise thr), harden (heat→raise thr),
+  # prime (ATP→lower thr), ease (heat→lower thr), boost (PCr→energy), load (energy→PCr),
+  # discharge (PCr→ATP), set_threshold (direct).
+  # PCr pays; thr ceiling at 1000. Yield sheds by take (PCr in yield).
+  # energy/reserve/atp/heat/pmf untouched. Recomputes ready.
+  # Usability: AGI spends rapid ~P buffer to fortify mitosis bar without burning ATP or heat.
+  # Returns amount braced (threshold rise). Dead/zero/empty PCr/thr already 1000 → 0.
+  METHOD brace n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Drive: spend n pmf to lower mitosis threshold (chemiosmotic CDK priming / F1Fo-coupled gate open).
+  # Distinct from prime (ATP→lower thr), poise (PCr→lower thr), ease (heat→lower thr),
+  # fortify/brace/harden (raise thr), synthase (pmf→ATP), pump (energy→pmf), uncouple (pmf→heat),
+  # set_threshold (direct). pmf pays; thr floors at 1. Yield sheds by take (pmf in yield).
+  # energy/reserve/atp/heat/pcr untouched. Recomputes ready.
+  # Usability: AGI spends proton-motive force to open mitosis gate without burning ATP, PCr, or heat.
+  # Returns amount driven (threshold drop). Dead/zero/empty pmf/thr already 1 → 0.
+  METHOD drive n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Anchor: spend n pmf to raise mitosis threshold (chemiosmotic CDK fortify / F1Fo gate seal).
+  # Distinct from drive (pmf→lower thr), fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+  # prime/poise/ease (lower thr), synthase/pump/uncouple/set_threshold, mend (PCr→age), renew (pmf→age).
+  # pmf pays; thr ceiling 1000. Yield sheds by take (pmf in yield).
+  # energy/reserve/atp/heat/pcr untouched. Recomputes ready.
+  # Usability: AGI spends proton-motive force to seal mitosis gate without burning ATP, PCr, or heat.
+  # Returns amount anchored (threshold rise). Dead/zero/empty pmf/thr already 1000 → 0.
+  METHOD anchor n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mend: spend n PCr to shed age (phosphagen chaperone / creatine kinase age repair).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age),
+  # brace (PCr→raise thr), poise (PCr→lower thr), boost/load/discharge, drive (pmf→thr).
+  # PCr pays; age floors at 0. Yield sheds by take (PCr in yield).
+  # energy/reserve/atp/heat/pmf/ready/threshold untouched.
+  # Usability: AGI spends rapid ~P buffer to rejuvenate without burning ATP, heat, or life spark.
+  # Returns amount mended. Dead/zero/empty PCr/age already 0 → 0.
+  METHOD mend n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    LET take = n
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET c = c - take
+    SETF THIS pcr c
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+  # Renew: spend n pmf to shed age (chemiosmotic QC / Δψ-dependent chaperone / mito quality control).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+  # drive (pmf→lower thr), uncouple (pmf→heat), synthase (pmf→ATP), pump (energy→pmf).
+  # pmf pays; age floors at 0. Yield sheds by take (pmf in yield).
+  # energy/reserve/atp/heat/pcr/ready/threshold untouched.
+  # Usability: AGI spends proton-motive force to rejuvenate without burning ATP, PCr, heat, or life spark.
+  # Returns amount renewed. Dead/zero/empty pmf/age already 0 → 0.
+  METHOD renew n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+  # Scavenge: spend n reserve to shed age (macroautophagy / glycogen-funded proteostasis QC).
+  # Distinct from repair (energy→age), anneal (heat→age), refold (ATP→age), mend (PCr→age),
+  # renew (pmf→age), bank/draw/stow/saturate/respire/anabolize (reserve traffic).
+  # reserve pays; age floors at 0. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr/ready/threshold untouched.
+  # Usability: AGI spends protected glycogen bank to rejuvenate without burning ATP, PCr, pmf, heat, or life spark.
+  # Returns amount scavenged. Dead/zero/empty reserve/age already 0 → 0.
+  METHOD scavenge n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET ag = ag - take
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+
+  # Invest: spend n active energy to raise mitosis threshold (cytosolic nutrient→CDK fortify).
+  # Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+  # anchor (pmf→raise thr), feed (energy+ready), bank/draw, set_threshold, drive/prime/poise/ease.
+  # energy pays; thr ceiling 1000. Yield sheds by take. reserve/atp/heat/pmf/pcr untouched.
+  # Recomputes ready. Usability: AGI invests life spark into mitosis gate seal without ATP/PCr/pmf/heat.
+  # Returns amount invested (threshold rise). Dead/zero/empty energy/thr already 1000 → 0.
+  METHOD invest n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Spare: spend n reserve to lower mitosis threshold (glycogen CDK priming / storage-funded cycle ease).
+  # Distinct from ease (heat→lower thr), prime (ATP→lower thr), poise (PCr→lower thr), drive (pmf→lower thr),
+  # scavenge (reserve→age), bank/draw/respire/anabolize, invest (energy→raise thr), fortify/brace/harden/anchor.
+  # reserve pays; thr floors at 1. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr untouched. Recomputes ready.
+  # Usability: AGI spends protected glycogen bank to prime mitosis gate without ATP/PCr/pmf/heat/life spark.
+  # Returns amount spared (threshold drop). Dead/zero/empty reserve/thr already 1 → 0.
+  METHOD spare n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = th - 1
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET th = th - take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Buttress: spend n reserve to raise mitosis threshold (glycogen CDK fortify / nutrient-bank gate seal).
+  # Distinct from fortify (ATP→raise thr), brace (PCr→raise thr), harden (heat→raise thr),
+  # anchor (pmf→raise thr), invest (energy→raise thr), spare (reserve→lower thr), scavenge (reserve→age),
+  # bank/draw/stow/saturate/respire, set_threshold, drive/prime/poise/ease (lower thr).
+  # reserve pays; thr ceiling 1000. Yield sheds by take (reserve in yield).
+  # energy/atp/heat/pmf/pcr/age untouched. Recomputes ready.
+  # Usability: AGI spends protected glycogen bank to seal mitosis gate without burning ATP, PCr, pmf, heat, or life spark.
+  # Returns amount buttressed (threshold rise). Dead/zero/empty reserve/thr already 1000 → 0.
+  METHOD buttress n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 1
+    END
+    LET room = 1000 - th
+    IF room < 1 THEN
+      RET 0
+    END
+    IF take > room THEN
+      LET take = room
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    LET th = th + take
+    SETF THIS threshold th
+    LET rd = 0
+    GETF THIS quiescent
+    LET q = LAST_N
+    IF q == 0 THEN
+      GETF THIS energy
+      LET e = LAST_N
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Fission: cytokinesis prep — parent yields half active energy + half reserve as maternal endowment.
+  # Endowment code = de*1000 + dr (de = energy/2, dr = reserve/2). Parent keeps remainder + full
+  # threshold/setpoint/gen phenotype (epigenetic continuity). Ready cleared after cut.
+  # Requires alive, not quiescent, energy >= threshold, and energy >= 2 so both keep a spark path.
+  # Distinct from after_div (energy-only half, no return, no reserve split), gift (voluntary energy),
+  # birth (slot activate), bank/draw/stow/saturate, spare/buttress/invest (threshold ops), scavenge.
+  # Yield conserved across parent remainder + code unpack. Free energy flows to daughter lineage.
+  # Returns endowment code; dead/G0/below-threshold/spark-only → 0.
+  METHOD fission
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    IF e < th THEN
+      RET 0
+    END
+    IF e < 2 THEN
+      RET 0
+    END
+    LET de = e / 2
+    IF de < 1 THEN
+      RET 0
+    END
+    LET e = e - de
+    IF e < 1 THEN
+      LET e = 1
+    END
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r / 2
+    LET r = r - dr
+    SETF THIS reserve r
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+  # Inherit: apply maternal fission endowment code to a living daughter cell.
+  # de = code/1000 → energy; dr = code - de*1000 → reserve. Recomputes ready vs threshold.
+  # Does not alter gen/threshold/setpoint/age (lineage identity stays daughter's).
+  # Distinct from feed (nutrient pulse), birth (activate slot), bank/draw, gift, saturate,
+  # after_div, fission (parent side). Usability: AGI unpacks one RET from parent fission into child.
+  # Returns de+dr absorbed. Dead/zero code → 0.
+  METHOD inherit code
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF code < 1 THEN
+      RET 0
+    END
+    LET de = code / 1000
+    LET dr = code - de * 1000
+    IF de < 0 THEN
+      LET de = 0
+    END
+    IF dr < 0 THEN
+      LET dr = 0
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N + de
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + dr
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET got
+  END
+
+  # Bud: asymmetric cytokinesis / budding-yeast style minority endowment.
+  # Packs ~1/3 active energy + ~1/3 reserve as code=de*1000+dr; mother keeps ~2/3.
+  # Gates: alive, not G0, energy >= threshold, energy >= 3 so mother keeps spark
+  # and bud carries at least 1 unit. Parent phenotype (thr/setpoint/gen/age) held;
+  # ready cleared. Yield conserved mother remainder + code unpack.
+  # Distinct from fission (equal half split), after_div (energy-only no code/reserve),
+  # gift, birth, bank/draw, spare/buttress/invest, scavenge, inherit (daughter side).
+  # Usability: AGI models polar growth / stem self-renewal without equal bipartition.
+  # Returns endowment code; dead/G0/sub-threshold/too-lean → 0.
+  METHOD bud
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS threshold
+    LET th = LAST_N
+    IF th < 1 THEN
+      LET th = 10
+    END
+    IF e < th THEN
+      RET 0
+    END
+    IF e < 3 THEN
+      RET 0
+    END
+    LET de = e / 3
+    IF de < 1 THEN
+      RET 0
+    END
+    LET e = e - de
+    IF e < 1 THEN
+      LET e = 1
+    END
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r / 3
+    LET r = r - dr
+    SETF THIS reserve r
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+  # Spore: bacterial endospore-style survival packing.
+  # Parent keeps life spark energy=1, yields de=(energy-1) + full reserve dr as
+  # code=de*1000+dr. Reserve cleared on parent; ready cleared. Phenotype thr/gen held.
+  # Gates: alive, not G0, energy >= 2 so a transferable de >= 1 exists.
+  # Does NOT require mitosis threshold (stress path ≠ division path).
+  # Distinct from fission (half/half, needs ready/threshold), bud (~1/3 minority),
+  # after_div (energy-only half), die (zeros all), gift, bank/draw, scavenge,
+  # inherit (daughter absorb). Free energy conserved in durable spore code.
+  # Returns endowment code; dead/G0/spark-only → 0.
+  METHOD spore
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 2 THEN
+      RET 0
+    END
+    LET de = e - 1
+    IF de < 1 THEN
+      RET 0
+    END
+    SETF THIS energy 1
+    GETF THIS reserve
+    LET r = LAST_N
+    LET dr = r
+    SETF THIS reserve 0
+    SETF THIS ready 0
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+
+  # Lyse: altruistic apoptosis / holocrine trophic bequeath to the commons.
+  # Packs full active energy + reserve as code=e*1000+r then clears life (die path).
+  # No thr/G0 gate — stressed or resting cells may still feed colony cascade.
+  # Yield conserved when receiver inherit(code). ATP/pmf/pcr/heat shed (not in code;
+  # same packing surface as fission/bud/spore). Distinct from die (discards wealth),
+  # gift (keeps alive, energy-only, retains spark), spore/bud/fission (mother lives),
+  # after_div, scavenge, spare/invest. Usability: AGI models PCD nutrient recycling.
+  # Returns endowment code; dead → 0; empty wealth still dies cleanly → 0.
+
+  # Secrete: merocrine/apocrine trophic vesicle — partial bequeath while living.
+  # Packs up to n yield units as code=de*1000+dr. Drain order: active energy down to
+  # life spark 1, then reserve. Mother stays alive; ready recomputed vs threshold.
+  # No thr/G0 gate (stressed/resting cells may still nourish colony without PCD).
+  # Yield conserved when receiver inherit(code). ATP/pmf/pcr/heat untouched.
+  # Distinct from gift (energy-only, returns amt not code, no reserve path),
+  # lyse (full pack + die), spore (forced spark=1 full pack, stress survival),
+  # fission/bud (division ratios, thr gate), die (discards), bank/draw/scavenge.
+  # Usability: AGI meters colony trophic flow without killing the donor cell.
+  # Returns endowment code; dead/n<1/nothing transferable (e<=1 and r<=0) → 0.
+  METHOD secrete n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET need = n
+    LET de = 0
+    LET dr = 0
+    # energy-first, keep spark >= 1 when e >= 1
+    LET can_e = 0
+    IF e > 1 THEN
+      LET can_e = e - 1
+    END
+    IF can_e > need THEN
+      LET can_e = need
+    END
+    IF can_e < 0 THEN
+      LET can_e = 0
+    END
+    LET de = can_e
+    LET e = e - de
+    LET need = need - de
+    IF need > 0 THEN
+      LET dr = need
+      IF dr > r THEN
+        LET dr = r
+      END
+      IF dr < 0 THEN
+        LET dr = 0
+      END
+      LET r = r - dr
+      LET need = need - dr
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    SETF THIS energy e
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    LET code = de * 1000
+    LET code = code + dr
+    RET code
+  END
+
+  # Engulf: phagocytosis / endocytic trophic capture of an endowment vesicle or prey pack.
+  # Pays 1 active-energy membrane-remodel cost (keep spark: need energy >= 2), then absorbs
+  # code=de*1000+dr exactly like inherit (energy+=de, reserve+=dr; ready recompute).
+  # No thr/G0 gate on the absorb path after cost — stressed cells may still feed if they can pay.
+  # ATP/pmf/pcr/heat untouched. Distinct from inherit (zero-cost maternal dowry),
+  # feed (raw nutrient, no code), secrete/gift/lyse/spore (outbound), bank/draw/scavenge.
+  # Usability: AGI models predator–prey and vesicle uptake with explicit membrane work.
+  # Returns got=de+dr; dead/cost-fail/code<1/empty payload → 0 (no partial cost on fail).
+  METHOD engulf code
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF code < 1 THEN
+      RET 0
+    END
+    LET de = code / 1000
+    LET dr = code - de * 1000
+    IF de < 0 THEN
+      LET de = 0
+    END
+    IF dr < 0 THEN
+      LET dr = 0
+    END
+    LET got = de + dr
+    IF got < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # membrane cost 1; retain life spark
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 1
+    LET e = e + de
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + dr
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET got
+  END
+
+  # Digest: lysosomal processing of phagosome/cargo reserve into usable energy.
+  # Burns n reserve (cargo) through acid hydrolase path: +n energy, +1 heat byproduct.
+  # Pays no extra membrane energy beyond metabolic heat ledger (ATP/pmf/pcr untouched).
+  # Requires alive and n>=1 and reserve>=1. Ready recomputed vs threshold (G0 stays unready).
+  # Distinct from draw (1:1 reserve→energy, no heat), reclaim (heat→reserve reverse),
+  # scavenge (reserve→age discard), engulf (inbound code+membrane cost), feed (raw nutrient),
+  # bank (energy→reserve), secrete/lyse/gift (outbound). Completes phagocytosis trophic arc.
+  # Usability: AGI models endosome→lysosome yield after engulf without dual IF*P forms.
+  # Returns digested amount; dead/n<1/empty reserve → 0.
+  METHOD digest n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  METHOD lyse
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    GETF THIS reserve
+    LET r = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET code = e * 1000
+    LET code = code + r
+    LET got = e + r
+    SETF THIS alive 0
+    SETF THIS energy 0
+    SETF THIS ready 0
+    SETF THIS quiescent 0
+    SETF THIS reserve 0
+    SETF THIS atp 0
+    SETF THIS pmf 0
+    SETF THIS heat 0
+    SETF THIS pcr 0
+    IF got < 1 THEN
+      RET 0
+    END
+    RET code
+  END
+
+
+  # Pinocyte: fluid-phase endocytosis — membrane-paid uptake of ambient nutrient as cargo.
+  # Pays 1 active-energy membrane-remodel cost (keep spark: need energy >= 2), then
+  # deposits n into reserve (glycogen/cargo bank). Ready recomputed vs threshold.
+  # No thr/G0 gate after cost — stressed cells may still drink if they can pay membrane.
+  # ATP/pmf/pcr/heat untouched. Distinct from feed (direct energy, zero membrane cost),
+  # engulf (coded vesicle/prey pack), photosynth/photophos (light to energy/atp),
+  # bank (energy to reserve internal), digest (reserve to energy+heat), draw, scavenge.
+  # Usability: AGI models macropinocytosis / nutrient sipping before lysosomal digest.
+  # Returns n absorbed; dead/n<1/cost-fail -> 0 (no partial cost on fail).
+  METHOD pinocyte n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 1
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N + n
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET n
+  END
+
+
+  # Exocyte: fluid-phase exocytosis — membrane-paid export of reserve cargo to medium.
+  # Pays 1 active-energy membrane-remodel cost (keep spark: need energy >= 2), then
+  # sheds take=min(n,reserve) from reserve. Ready recomputed vs threshold.
+  # No thr/G0 gate after cost — stressed cells may still export if they can pay membrane.
+  # ATP/pmf/pcr/heat untouched. Distinct from pinocyte (inbound medium→reserve),
+  # secrete (energy-first coded vesicle pack, no separate membrane fee), gift (active
+  # energy only), digest (reserve→energy+heat), scavenge (reserve→age), bank/draw,
+  # lyse (death pack). Completes pinocyte↔exocyte free-energy cargo loop.
+  # Usability: AGI models vesicular export / cargo dumping without dual IF*P forms.
+  # Returns take exported; dead/n<1/empty reserve/cost-fail → 0 (no partial cost on fail).
+  METHOD exocyte n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    IF r < 1 THEN
+      RET 0
+    END
+    LET take = n
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    # membrane cost 1; retain life spark
+    IF e < 2 THEN
+      RET 0
+    END
+    LET e = e - 1
+    LET r = r - take
+    SETF THIS energy e
+    SETF THIS reserve r
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Autophagy: macroautophagy / self-catabolism — recycle worn biomass (age) into metabolic fuel.
+  # Burns take=min(n,age) age units → energy += take, heat += 1 (lysosomal self-digest tax).
+  # Internal double-membrane path: no active-energy membrane toll. reserve/atp/pmf/pcr untouched.
+  # Ready recomputed vs threshold (quiescent stays unready). Yield conserved into energy+heat.
+  # Distinct from repair (energy→shed age), scavenge (reserve→shed age), digest (reserve→energy+heat),
+  # respire (reserve→energy no heat), thaw (heat→energy), reclaim, cool, die/lyse.
+  # Usability: AGI models starvation survival — cell eats damaged organelles to keep the spark.
+  # Returns take recycled; dead/n<1/age<1 → 0.
+  METHOD autophagy n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET ag = ag - take
+    SETF THIS age ag
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mitophagy: selective mitochondrial autophagy — QC of worn mito biomass + gradient debris.
+  # Burns take=min(n,age) age → energy += take, heat += 1 (lysosomal self-digest tax).
+  # Also clears broken proton-gradient debris: pmf -= min(take, pmf) (no heat double-count).
+  # Selectivity tax: prefer 1 ATP if atp>=1; else pay 1 active energy (keep spark: need e>=2 before pay).
+  # Tax is paid only when take>=1; fail-closed before mutation if tax cannot be paid.
+  # reserve/pcr untouched. Ready recomputed vs threshold (quiescent stays unready).
+  # Distinct from autophagy (bulk, no tax, no pmf drain), repair (energy→shed age), scavenge
+  # (reserve→age), uncouple (pmf→heat only), digest (reserve→energy), respire.
+  # Usability: AGI models PINK1/Parkin-style mito QC — clear damaged powerhouses under stress.
+  # Returns take recycled; dead/n<1/age<1/tax-fail → 0.
+  METHOD mitophagy n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    # selectivity tax: ATP preferred, else active energy (keep spark)
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET paid_atp = 0
+    IF a >= 1 THEN
+      LET a = a - 1
+      SETF THIS atp a
+      LET paid_atp = 1
+    END
+    IF paid_atp == 0 THEN
+      GETF THIS energy
+      LET e0 = LAST_N
+      IF e0 < 2 THEN
+        RET 0
+      END
+      LET e0 = e0 - 1
+      SETF THIS energy e0
+    END
+    LET ag = ag - take
+    SETF THIS age ag
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET drain = take
+    IF drain > p THEN
+      LET drain = p
+    END
+    LET p = p - drain
+    SETF THIS pmf p
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Biogenesis: mitochondrial biogenesis (PGC-1α / NRF1-style OXPHOS rebuild).
+  # Invest take=min(n,atp,reserve) ATP + equal reserve (membrane/protein mass)
+  # → mint take nascent pmf (fresh cristae seeds) + heat += 1 (biosynthetic tax).
+  # Fail-closed before mutation if ATP or reserve cannot fund take>=1.
+  # energy/age/pcr untouched. Ready unchanged (pmf is not mitosis currency directly).
+  # Distinct from reverse (ATP→pmf, no reserve/heat), pump (energy→pmf), synthase (pmf→ATP),
+  # anabolize (ATP→reserve), mitophagy (age→energy + drain pmf), photosynth, uncouple.
+  # Completes mitophagy↔biogenesis free-energy QC loop — clear debris, then rebuild fleet.
+  # Usability: AGI models exercise/cold-induced mito expansion under ASSERT science boards.
+  # Returns take built; dead/n<1/empty atp or reserve → 0.
+  METHOD biogenesis n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    LET r = r - take
+    SETF THIS atp a
+    SETF THIS reserve r
+    GETF THIS pmf
+    LET p = LAST_N + take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    RET take
+  END
+
+
+
+  # Fusion: mitochondrial fusion (MFN1/2 + OPA1 GTPase networking).
+  # Pay take=min(n,atp,age) ATP → shed take age (matrix complementation QC) + heat += 1.
+  # pmf/reserve/energy/pcr untouched — content mixing holds the gradient, repairs phenotype.
+  # Fail-closed before mutation if ATP cannot fund take>=1 or age<1.
+  # Distinct from mitophagy (drains pmf + age→energy), biogenesis (ATP+reserve→pmf),
+  # repair (energy→age), renew (pmf→age), autophagy (bulk age→energy, no ATP tax), scavenge.
+  # Completes QC triad: mitophagy clear → biogenesis rebuild → fusion network complement.
+  # Usability: AGI models stress-induced mito networking / complementation under ASSERT boards.
+  # Returns take fused; dead/n<1/empty atp or age → 0.
+  METHOD fusion n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > ag THEN
+      LET take = ag
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET ag = ag - take
+    SETF THIS age ag
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    RET take
+  END
+
+  # Fragment: mitochondrial fission (DRP1/FIS1 dynamin-related GTPase).
+  # Pay take=min(n,atp) ATP → heat += 1 (constriction / membrane scission tax).
+  # Damaged-tip nick: lose min(take, age, pmf) pmf when cut frees worn foci (age held).
+  # Age is NOT shed here — mitophagy clears isolates after partition; fusion is the inverse network step.
+  # pmf nick only when age>=1 and pmf>=1 (young pristine network: ATP tax + heat, gradient held).
+  # Fail-closed before mutation if ATP cannot fund take>=1.
+  # Distinct from fusion (ATP→age shed, pmf held), mitophagy (age→energy + pmf drain + tax),
+  # biogenesis (ATP+reserve→pmf), uncouple (pmf→heat), cytokinesis fission (cell split endowment),
+  # autophagy/scavenge/repair/renew.
+  # Completes dynamics: fragment isolate → mitophagy clear → biogenesis rebuild → fusion network.
+  # Usability: AGI models stress-induced mito fragmentation / DRP1 under ASSERT boards.
+  # Returns take fragmented; dead/n<1/empty atp → 0.
+  METHOD fragment n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    # damaged-tip gradient nick (age held for downstream mitophagy)
+    GETF THIS age
+    LET ag = LAST_N
+    IF ag < 0 THEN
+      LET ag = 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET nick = take
+    IF nick > ag THEN
+      LET nick = ag
+    END
+    IF nick > p THEN
+      LET nick = p
+    END
+    IF nick > 0 THEN
+      LET p = p - nick
+      SETF THIS pmf p
+    END
+    RET take
+  END
+
+
+
+  # Tether: ER–mitochondria contact sites (MERCs / Mfn2–IP3R–VDAC–GRP75).
+  # Pay take=min(n,atp) ATP → heat += 1 (tether-complex assembly tax).
+  # Ca2+/lipid coupling yields take energy (dehydrogenase kick + phospholipid spark).
+  # pmf/age/reserve/pcr untouched — contacts organize flux without bulk rebuild or QC shed.
+  # Fail-closed before mutation if ATP cannot fund take>=1.
+  # Distinct from biogenesis (ATP+reserve→pmf mass), fusion (ATP→age shed), fragment (ATP→pmf nick),
+  # pump (energy→pmf), feed (free nutrient), synthase (pmf→ATP), reverse (ATP→pmf), photosynth.
+  # Completes organelle continuum: fragment/mitophagy/biogenesis/fusion dynamics + ER interface.
+  # Usability: AGI models MERCs / ER-mito free-energy coupling under ASSERT science boards.
+  # Returns take tethered; dead/n<1/empty atp → 0.
+  METHOD tether n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # MCU: mitochondrial Ca2+ uniporter (MCU/MICU1/EMRE complex).
+  # Spend take=min(n,pmf) proton-motive drive → heat += 1 (ion transit / buffering tax).
+  # Matrix Ca2+ activates PDH/ICD/OGDH dehydrogenases → mint take energy (TCA spark).
+  # atp/age/reserve/pcr untouched — electrophoretic Ca2+ entry organizes flux without ATP tax or QC shed.
+  # Fail-closed before mutation if pmf cannot fund take>=1.
+  # Distinct from tether (ATP→energy, pmf held), uncouple (pmf→heat only), synthase (pmf→ATP),
+  # reverse (ATP→pmf), pump (energy→pmf), oxidize/respire, biogenesis, fusion, fragment.
+  # Extends organelle continuum: MERCs deliver Ca2+; MCU admits it down ΔΨm into matrix catalysis.
+  # Usability: AGI models excitation-bioenergetic coupling / Ca2+-stimulated OXPHOS under ASSERT boards.
+  # Returns take admitted; dead/n<1/empty pmf → 0.
+  METHOD mcu n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    GETF THIS energy
+    LET e = LAST_N + take
+    SETF THIS energy e
+    GETF THIS quiescent
+    LET q = LAST_N
+    LET rd = 0
+    IF q == 0 THEN
+      GETF THIS threshold
+      LET th = LAST_N
+      IF th < 1 THEN
+        LET th = 10
+      END
+      IF e >= th THEN
+        LET rd = 1
+      END
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # NCLX: mitochondrial Na+/Ca2+ exchanger (NCLX/SLC8B1) + NHE coupling.
+  # Spend take=min(n,pmf) ΔΨm (net Ca2+/H+ efflux after MCU load) → heat += 1 (exchanger tax).
+  # energy/atp/age/reserve held — extrusion ends matrix Ca2+ TCA window without minting work currency.
+  # Fail-closed before mutation if pmf cannot fund take>=1.
+  # Distinct from mcu (pmf→energy TCA kick), uncouple (pmf→heat bulk take), synthase (pmf→ATP),
+  # reverse (ATP→pmf), tether (ATP→energy MERCs), pump (energy→pmf), fragment/fusion.
+  # Completes Ca2+ continuum: tether delivers → mcu admits (TCA spark) → nclx extrudes (reset).
+  # Usability: AGI models excitation-bioenergetic recovery / Ca2+ efflux under ASSERT boards.
+  # Returns take extruded; dead/n<1/empty pmf → 0.
+  METHOD nclx n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + 1
+    SETF THIS heat h
+    RET take
+  END
+
+
+  # MPTP: mitochondrial permeability transition pore (CypD–ANT–VDAC megapore).
+  # Collapse take=min(n,pmf) ΔΨm as bulk heat (pore open / solutes equilibrate) → heat += take.
+  # Injury mark: age += 1 once when take>=1 (matrix swelling / ROS / cytochrome c risk cue).
+  # energy/atp/reserve/pcr held — catastrophic gradient dump without minting work or TCA spark.
+  # Fail-closed before mutation if pmf cannot fund take>=1.
+  # Distinct from uncouple (controlled UCP leak, no age injury), nclx (pmf tax +1 heat, Ca efflux),
+  # mcu (pmf→energy TCA), synthase (pmf→ATP), reverse, tether, mitophagy, fragment.
+  # Pathophysiology after Ca2+ continuum overload: tether→mcu→nclx fail / excess → mptp open.
+  # Usability: AGI models permeability crisis / necrosis–apoptosis branch under ASSERT boards.
+  # Returns take collapsed; dead/n<1/empty pmf → 0.
+  METHOD mptp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS pmf
+    LET p = LAST_N
+    IF p < 0 THEN
+      LET p = 0
+    END
+    LET take = n
+    IF take > p THEN
+      LET take = p
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET p = p - take
+    SETF THIS pmf p
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS age
+    LET ag = LAST_N + 1
+    SETF THIS age ag
+    RET take
+  END
+
+
+
+
+
+
+  # MOMP: Bax/Bak mitochondrial outer membrane permeabilization.
+  # Spend take=min(n,atp) ATP (Bax/Bak oligomerization / pore scaffold) → heat += 1 assembly tax.
+  # IMS release injury: age += take (cytochrome c / SMAC/DIABLO / AIF cue toward apoptosome).
+  # pmf/energy/reserve/pcr held — OMM pores do not dump DYm (that is mPTP); gradient may already be flat.
+  # Fail-closed before mutation if atp cannot fund take>=1.
+  # Distinct from mptp (pmf→bulk heat + age+1, ATP held), mitophagy (recycle age+pmf→energy),
+  # fragment (fission nick pmf), die (zeros all), lyse (PCD pack), uncouple, nclx, mcu, tether.
+  # Continuum pathophys: tether→mcu→nclx→mptp overload → momp cyt-c release → apoptosis branch.
+  # Usability: AGI models intrinsic apoptosis priming / Bcl-2 family pores under ASSERT boards.
+  # Returns take released; dead/n<1/empty atp → 0.
+END

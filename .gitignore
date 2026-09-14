@@ -67,3 +67,38 @@ MEANINGFUL_ITER.json
 programs/evolve/gen_*.cubalc
 # Auto mesh crown spam (prefer unique science; old clones stay in history)
 # Note: new clones rejected by cube_lang_anti_bloat before commit
+
+# === PIN LITTER BAN (enforced) — never commit ===
+/SHIP_*
+/FEAT_HEAD
+/FEAT_HEAD*
+/HEAD_*
+/CUBALC_HEAD*
+/PINNED_HEAD*
+/MEANINGFUL_ITER
+/TIP_AFTER_PIN.txt
+state/archive/
+**/*.monolith.bak
+
+# pins anywhere
+SHIP_*
+**/SHIP_*
+FEAT_HEAD
+FEAT_HEAD*
+HEAD_NOW*
+HEAD_PIN*
+CUBALC_HEAD*
+PINNED_HEAD*
+ship/SHIP_*
+ship/FEAT_*
+ship/HEAD_*
+ship/PINNED_*
+ship/MEANINGFUL_ITER*
+state/FEAT_HEAD*
+state/HEAD_*
+state/PINNED_*
+state/MEANINGFUL_ITER
+state/meaningful_iter/FEAT_HEAD*
+state/meaningful_iter/MEANINGFUL_ITER
+!state/MEANINGFUL_ITER.json
+!state/meaningful_iter/MEANINGFUL_ITER.json

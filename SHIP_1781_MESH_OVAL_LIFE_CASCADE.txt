@@ -1,4 +1,0 @@
-SHIP 1781 OVAL mesh life-force PASS 102/0 + flagship 12/0
-MEANINGFUL_ITER=1781 VERSION=1.15.1259-usability
-proof=programs/proof/1781_smx_mesh_oval_life_force.cubalc
-cascade=programs/science/proof/1781_smx_mesh_oval_life_cascade.cubalc

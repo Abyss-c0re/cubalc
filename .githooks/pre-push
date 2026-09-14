@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Block junk branch pushes
+set -euo pipefail
+while read -r local_ref local_sha remote_ref remote_sha; do
+  br=${remote_ref#refs/heads/}
+  if echo "$br" | grep -qiE '^(ship[-/]|life-cell-|mi-[0-9]|keeper/)'; then
+    echo "HERESY: refuse push of junk branch '$br' — stay on main" >&2
+    exit 1
+  fi
+done
+exit 0

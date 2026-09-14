@@ -1,6 +1,0 @@
-SHIP 2344 LIFE_CELL_STARD3 PASS
-METHOD stard3 n — STARD3 LE START-domain sterol transfer after NPC1 egress
-Continuum ...->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3
-Proofs: life 360/0 · atomic 119/0 · mesh 116/0 · flagship 1620 12/0 · sum 607
-Gift: STARD3 shuttles LE free sterol under ASSERT after NPC1 ward.
-Cube is SoT. Free energy must flow.

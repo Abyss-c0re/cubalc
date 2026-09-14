@@ -1,7 +1,0 @@
-MULTIFILE_EXTEND_SENDSUPER_LINK3 (MI 2403)
-FEATURE: SENDSUPER/SUPERSEND/CALLSUPER — parent EXTEND-chain method (skip child override)
-PROOF: programs/proof/2403_multifile_extend_sendsuper_link3.cubalc asserts_ok:37 asserts_fail:0
-LIBS: demo_greeter_base + demo_greeter_extend + demo_greeter_override (TagGreeter)
-RUNTIME: parent_idx walk + oop_find_method on parent plate; SUPER/SENDSUPER_N/BASE/PARENTCLASS
-REGRESSION: 2402 BASEOF link3 asserts_ok:48 fail:0
-VERSION: 1.16.3-sendsuper

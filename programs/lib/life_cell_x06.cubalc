@@ -1,0 +1,3264 @@
+# life_cell_x06.cubalc — EXTEND Cell pack 6
+
+EXTEND CLASS Cell
+  METHOD cyp7a1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Cyp8b1: sterol 12-alpha-hydroxylase CA-branch enzyme after CYP7A1.
+  # CYP8B1 is the hepatic cytochrome P450 that 12-alpha-hydroxylates the
+  # classic bile-acid intermediate after CYP7A1 opens the free-energy gate -
+  # it sets the cholic-acid versus chenodeoxycholic-acid ratio under ASSERT.
+  # After Cyp7a1 supplies the rate-limiting 7-alpha-hydroxylase, Cyp8b1 is
+  # the branch plate so mitosis energy budgets gain an explicit CA-route
+  # monooxygenase instead of a silent CYP7A1 product with no 12-alpha limb.
+  # Distinct from Cyp7a1 (7-alpha hydroxylase), Shp (NR0B2 repressor), Klb,
+  # Fgfr4, Fgf19, Fxr, Fabp6, Bsep - Cyp8b1 is the sterol 12-alpha-hydroxylase
+  # of classic CA synthesis.
+  # Without Cyp8b1 after Cyp7a1, classic BA free-energy flow stalls at 7-alpha
+  # product without CA-branch catalytic close; life_cell gut-liver loop loses
+  # the CA/CDCA ratio decision plate.
+  # Domain: post-CYP7A1 hepatic CYP8B1 sterol 12-alpha-hydroxylase / CA-branch gate
+  #   -> CYP8B1 free-energy (ATP stand-in for monooxygenase turnover)
+  # (not Cyp7a1, not Shp, not Klb, not Fgfr4, not Fgf19, not Fxr, not Bsep).
+  # Continuum: ...->fgfr4->klb->shp->cyp7a1->cyp8b1
+  #   (CYP7A1 7-alpha hydroxylase -> CYP8B1 12-alpha CA-branch gut-liver close).
+  # Gift: post-CYP7A1 CYP8B1 so classic BA free-energy path can choose the
+  #   cholic-acid branch under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cyp8b1 life-force.
+  # Usability: AGI models post-CYP7A1 hepatic CYP8B1 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cyp8b1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hsd3b7: 3beta-hydroxy-Delta5-C27-steroid dehydrogenase after CYP8B1 CA-branch gate.
+  # HSD3B7 converts 7alpha-hydroxycholesterol intermediates toward 3-oxo-Delta4 sterols
+  # in the classical bile-acid cascade; after Cyp8b1 marks the 12a-CA branch, Hsd3b7
+  # supplies the next oxidoreductase plate so free-energy budgets gain a measurable
+  # 3beta-HSD step under ASSERT instead of a silent CYP8B1 terminus.
+  # Distinct from Cyp8b1 (sterol 12a-hydroxylase), Cyp7a1 (rate-limiting 7a),
+  # Shp (NR0B2 repressor), Klb/Fgfr4/Fgf19/Fxr - Hsd3b7 is the SDR family enzyme
+  # that oxidizes the 3beta-OH and isomerizes Delta5->Delta4 on C27 sterol BA precursors.
+  # Without Hsd3b7 after Cyp8b1, classical BA continuum stalls after 12a-hydroxylase
+  # without the 3beta-HSD/Delta5-4 isomerase limb required for CA/CDCA maturation.
+  # Domain: post-CYP8B1 hepatic HSD3B7 3beta-HSD / Delta5-4 isomerase gate
+  #   -> HSD3B7 free-energy (ATP stand-in for NAD+ oxidoreductase turnover)
+  # (not Cyp8b1, not Cyp7a1, not Shp, not Klb).
+  # Continuum: ...->fgfr4->klb->shp->cyp7a1->cyp8b1->hsd3b7
+  #   (CYP8B1 CA-branch -> HSD3B7 3beta-HSD classical BA).
+  # Gift: post-CYP8B1 HSD3B7 so classical BA free-energy can authorize 3beta-HSD
+  #   / Delta5-4 isomerization under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hsd3b7 life-force.
+  # Usability: AGI models post-CYP8B1 hepatic HSD3B7 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hsd3b7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Akr1d1: delta4-3-oxosteroid 5b-reductase after HSD3B7.
+  # AKR1D1 is the hepatic aldo-keto reductase that 5b-reduces the delta4-3-oxo
+  # intermediate after HSD3B7 oxidizes 3beta-OH and isomerizes Delta5->Delta4 -
+  # it locks ring-A saturation so classic BA free-energy can proceed to 3a-HSD
+  # under ASSERT.
+  # After Hsd3b7 supplies 3beta-HSD/Delta5-4 isomerase, Akr1d1 is the 5b-reductase
+  # plate so mitosis energy budgets gain an explicit ring-A saturation step
+  # instead of a silent HSD3B7 product with no 5b limb.
+  # Distinct from Hsd3b7 (3beta-HSD/Delta5-4), Cyp8b1 (12a hydroxylase), Cyp7a1,
+  # Shp, Klb - Akr1d1 is the delta4-3-oxosteroid 5b-reductase of classic BA
+  # ring reduction.
+  # Without Akr1d1 after Hsd3b7, classic BA free-energy flow stalls at Delta4-3-oxo
+  # product without 5b-reductase catalytic close; life_cell gut-liver loop loses
+  # the ring-A saturation decision plate.
+  # Domain: post-HSD3B7 hepatic AKR1D1 delta4-3-oxosteroid 5b-reductase / ring-A gate
+  #   -> AKR1D1 free-energy (ATP stand-in for NADPH-reductase turnover)
+  # (not Hsd3b7, not Cyp8b1, not Cyp7a1, not Shp, not Klb).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1
+  #   (HSD3B7 3beta-HSD/Delta5-4 -> AKR1D1 5b-reductase gut-liver close).
+  # Gift: post-HSD3B7 AKR1D1 so classic BA free-energy path can saturate ring A
+  #   under ASSERT after the Delta4-3-oxo plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - akr1d1 life-force.
+  # Usability: AGI models post-HSD3B7 hepatic AKR1D1 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD akr1d1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Akr1c4: 3-alpha-hydroxysteroid dehydrogenase after AKR1D1 ring-A saturation.
+  # AKR1C4 (hepatic 3a-HSD / AKR1C-family) reduces the 3-oxo group of 5b-reduced
+  # bile-acid intermediates to the 3a-OH configuration after Akr1d1 saturates ring A -
+  # it locks the classical 3a,5b-tetrahydro sterol geometry so BA free-energy can
+  # proceed to side-chain oxidation under ASSERT.
+  # After Akr1d1 supplies delta4-3-oxosteroid 5b-reductase, Akr1c4 is the 3a-HSD
+  # plate so mitosis energy budgets gain an explicit 3-oxo->3a-OH step instead of
+  # a silent AKR1D1 product with no 3a limb.
+  # Distinct from Akr1d1 (5b-reductase), Hsd3b7 (3b-HSD/Delta5-4), Cyp8b1
+  # (12a-hydroxylase), Cyp7a1 - Akr1c4 is the aldo-keto reductase that installs
+  # the 3a-OH on 5b-cholestan-3-one BA precursors.
+  # Without Akr1c4 after Akr1d1, classic BA free-energy flow stalls at 3-oxo-5b
+  # product without 3a-HSD catalytic close; life_cell gut-liver loop loses the
+  # 3a-OH stereochemistry decision plate.
+  # Domain: post-AKR1D1 hepatic AKR1C4 3a-hydroxysteroid dehydrogenase / 3-oxo gate
+  #   -> AKR1C4 free-energy (ATP stand-in for NADPH-dependent 3a-HSD turnover)
+  # (not Akr1d1, not Hsd3b7, not Cyp8b1, not Cyp7a1, not Shp).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4
+  #   (AKR1D1 5b-reductase -> AKR1C4 3a-HSD classical BA close).
+  # Gift: post-AKR1D1 AKR1C4 so classic BA free-energy path can install 3a-OH
+  #   under ASSERT after the ring-A saturation plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - akr1c4 life-force.
+  # Usability: AGI models post-AKR1D1 hepatic AKR1C4 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD akr1c4 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cyp27a1: sterol 27-hydroxylase after AKR1C4 classical 3a,5b close.
+  # CYP27A1 (mitochondrial CYP27A1 / sterol 27-hydroxylase) opens side-chain
+  # oxidation of 3a,5b-tetrahydro BA precursors after Akr1c4 installs 3a-OH -
+  # it locks the C27 hydroxylation gate so classic BA free-energy can proceed
+  # to peroxisomal chain-shortening under ASSERT.
+  # After Akr1c4 supplies hepatic 3a-HSD, Cyp27a1 is the side-chain hydroxylase
+  # plate so mitosis energy budgets gain an explicit C27-OH step instead of a
+  # silent AKR1C4 product with no side-chain limb.
+  # Distinct from Akr1c4 (3a-HSD), Akr1d1 (5b-reductase), Hsd3b7 (3b-HSD/Delta5-4),
+  # Cyp8b1 (12a-hydroxylase), Cyp7a1 - Cyp27a1 is the mitochondrial sterol
+  # 27-hydroxylase of classic BA side-chain oxidation.
+  # Without Cyp27a1 after Akr1c4, classic BA free-energy flow stalls at 3a,5b
+  # tetrahydro product without C27-hydroxylase catalytic close; life_cell
+  # gut-liver loop loses the side-chain oxidation decision plate.
+  # Domain: post-AKR1C4 mitochondrial CYP27A1 sterol 27-hydroxylase / C27 gate
+  #   -> CYP27A1 free-energy (ATP stand-in for NADPH/O2 monooxygenase turnover)
+  # (not Akr1c4, not Akr1d1, not Hsd3b7, not Cyp8b1, not Cyp7a1).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1
+  #   (AKR1C4 3a-HSD -> CYP27A1 sterol 27-hydroxylase classical BA close).
+  # Gift: post-AKR1C4 CYP27A1 so classic BA free-energy path can hydroxylate C27
+  #   under ASSERT after the 3a,5b-tetrahydro plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cyp27a1 life-force.
+  # Usability: AGI models post-AKR1C4 mitochondrial CYP27A1 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cyp27a1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Slc27a5: bile acyl-CoA synthetase (BACS / VLCS) after CYP27A1 C27-OH.
+  # SLC27A5 (BACS) is the hepatic ER/peroxisome-gate very-long-chain acyl-CoA
+  # synthetase that activates C27-OH BA precursors with CoA after Cyp27a1 opens
+  # side-chain oxidation - it locks BA-CoA formation so classic BA free-energy
+  # can proceed to peroxisomal beta-oxidation under ASSERT.
+  # After Cyp27a1 hydroxylates C27 on 3a,5b-tetrahydro sterols, Slc27a5 is the
+  # CoA-ligase plate so mitosis energy budgets gain an explicit BA-CoA step
+  # instead of a silent CYP27A1 product with no activation limb.
+  # Distinct from Cyp27a1 (sterol 27-hydroxylase), Akr1c4 (3a-HSD), Akr1d1
+  # (5b-reductase), Hsd3b7, Cyp8b1, Cyp7a1 - Slc27a5 is the BA-CoA synthetase
+  # of classic BA side-chain activation.
+  # Without Slc27a5 after Cyp27a1, classic BA free-energy flow stalls at C27-OH
+  # product without CoA-ligase catalytic close; life_cell gut-liver loop loses
+  # the BA-CoA activation decision plate.
+  # Domain: post-CYP27A1 hepatic SLC27A5/BACS bile acyl-CoA synthetase / BA-CoA gate
+  #   -> SLC27A5 free-energy (ATP stand-in for CoA-ligase turnover)
+  # (not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7, not Cyp8b1, not Cyp7a1).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5
+  #   (CYP27A1 sterol 27-hydroxylase -> SLC27A5/BACS BA-CoA synthetase close).
+  # Gift: post-CYP27A1 SLC27A5 so classic BA free-energy path can activate BA-CoA
+  #   under ASSERT after the C27-OH plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc27a5 life-force.
+  # Usability: AGI models post-CYP27A1 hepatic SLC27A5/BACS under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc27a5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Amacr: alpha-methylacyl-CoA racemase after SLC27A5 BA-CoA.
+  # AMACR (P504S) racemizes (25R)-BA-CoA from Slc27a5/BACS to the (25S)
+  # stereoisomer required by peroxisomal ACOX2 - it locks BA-CoA chirality so
+  # classic BA free-energy can enter peroxisomal beta-oxidation under ASSERT.
+  # After Slc27a5 activates C27-OH BA with CoA, Amacr is the racemase plate so
+  # mitosis energy budgets gain an explicit 25R->25S step instead of a silent
+  # BA-CoA pool with no stereochemical gate into ACOX2.
+  # Distinct from Slc27a5 (BA-CoA synthetase), Cyp27a1 (sterol 27-hydroxylase),
+  # Akr1c4, Akr1d1, Hsd3b7, Cyp8b1, Cyp7a1 - Amacr is the BA-CoA racemase of
+  # classic BA side-chain oxidation prep.
+  # Without Amacr after Slc27a5, classic BA free-energy flow stalls at (25R)-BA-CoA
+  # without racemase catalytic close; life_cell gut-liver loop loses the
+  # BA-CoA stereochemical decision plate.
+  # Domain: post-SLC27A5 peroxisomal/cytosolic AMACR BA-CoA racemase / 25S gate
+  #   -> AMACR free-energy (ATP stand-in for racemase turnover)
+  # (not Slc27a5, not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7, not Cyp8b1).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr
+  #   (SLC27A5/BACS BA-CoA synthetase -> AMACR 25R->25S racemase close).
+  # Gift: post-SLC27A5 AMACR so classic BA free-energy path can racemize BA-CoA
+  #   under ASSERT after the BA-CoA plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - amacr life-force.
+  # Usability: AGI models post-SLC27A5 AMACR BA-CoA racemase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD amacr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Acox2: acyl-CoA oxidase 2 after AMACR (25S)-BA-CoA.
+  # ACOX2 oxidizes (25S)-BA-CoA after Amacr locks 25S chirality for
+  # FAD-dependent desaturation so
+  # classic BA free-energy enters peroxisomal beta-oxidation under ASSERT.
+  # After Amacr racemizes BA-CoA, Acox2 is the oxidase plate so
+  # mitosis energy budgets gain an explicit peroxisomal beta-ox open instead of a silent
+  # (25S)-BA-CoA pool with no oxidase gate into HSD17B4.
+  # Distinct from Amacr (BA-CoA racemase), Slc27a5 (BA-CoA synthetase), Cyp27a1
+  # Akr1c4, Akr1d1, Hsd3b7 - Acox2 is the first peroxisomal BA-CoA oxidase of
+  # classic BA side-chain shortening.
+  # Without Acox2 after Amacr, classic BA free-energy flow stalls at (25S)-BA-CoA
+  # without oxidase catalytic open; life_cell gut-liver loop loses the
+  # peroxisomal beta-oxidation decision plate.
+  # Domain: post-AMACR peroxisomal ACOX2 BA-CoA oxidase / beta-ox gate
+  #   -> ACOX2 free-energy (ATP stand-in for FAD oxidase turnover)
+  # (not Amacr, not Slc27a5, not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2
+  #   (AMACR 25R->25S racemase -> ACOX2 peroxisomal BA-CoA oxidase open).
+  # Gift: post-AMACR ACOX2 so classic BA free-energy path can desaturate (25S) BA-CoA
+  #   under ASSERT after the racemase plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acox2 life-force.
+  # Usability: AGI models post-AMACR ACOX2 BA-CoA oxidase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acox2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Hsd17b4: D-bifunctional protein (HSD17B4 / DBP / MFP-2) after ACOX2.
+  # HSD17B4 hydrates and dehydrogenates the ACOX2 enoyl-BA-CoA product so
+  # classic BA free-energy continues peroxisomal beta-oxidation under ASSERT.
+  # After Acox2 desaturates (25S)-BA-CoA, Hsd17b4 is the bifunctional plate so
+  # mitosis energy budgets gain an explicit enoyl-CoA hydratase + 3-hydroxyacyl-CoA
+  # dehydrogenase open instead of a silent enoyl-BA-CoA pool with no DBP gate
+  # into SCPx thiolase.
+  # Distinct from Acox2 (BA-CoA oxidase), Amacr (BA-CoA racemase), Slc27a5
+  # (BA-CoA synthetase), Cyp27a1, Akr1c4, Akr1d1, Hsd3b7 - Hsd17b4 is the
+  # peroxisomal bifunctional hydratase/dehydrogenase of classic BA side-chain
+  # shortening after the oxidase plate.
+  # Without Hsd17b4 after Acox2, classic BA free-energy flow stalls at
+  # enoyl-BA-CoA without bifunctional catalytic open; life_cell gut-liver loop
+  # loses the peroxisomal DBP decision plate.
+  # Domain: post-ACOX2 peroxisomal HSD17B4 DBP hydratase/dehydrogenase gate
+  #   -> HSD17B4 free-energy (ATP stand-in for NAD+ dehydrogenase turnover)
+  # (not Acox2, not Amacr, not Slc27a5, not Cyp27a1, not Akr1c4, not Akr1d1, not Hsd3b7).
+  # Continuum: ...->cyp7a1->cyp8b1->hsd3b7->akr1d1->akr1c4->cyp27a1->slc27a5->amacr->acox2->hsd17b4
+  #   (ACOX2 BA-CoA oxidase -> HSD17B4 peroxisomal DBP hydratase/DH open).
+  # Gift: post-ACOX2 HSD17B4 so classic BA free-energy path can hydrate/dehydrogenate
+  #   enoyl-BA-CoA under ASSERT after the oxidase plate.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hsd17b4 life-force.
+  # Usability: AGI models post-ACOX2 HSD17B4 DBP under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hsd17b4 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Scp2: sterol carrier protein-2 / SCPx thiolase after HSD17B4.
+  # SCP2/SCPx performs peroxisomal 3-ketoacyl-CoA thiolase cleavage of the
+  # HSD17B4 product so classic BA free-energy completes one beta-oxidation
+  # shortening cycle under ASSERT (propionyl-CoA + shortened BA-CoA stand-in).
+  # After Hsd17b4 hydrates/dehydrogenates enoyl-BA-CoA to 3-keto-BA-CoA,
+  # Scp2 is the thiolase plate so mitosis energy budgets gain explicit
+  # carbon-chain shortening instead of a silent 3-keto-BA-CoA pool.
+  # Distinct from Hsd17b4 DBP, Acox2 oxidase, Amacr racemase, Slc27a5.
+  # Domain: post-HSD17B4 peroxisomal SCP2/SCPx thiolase gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2
+  # Gift: post-HSD17B4 SCP2 so BA path can thiolyse 3-keto-BA-CoA under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - scp2.
+  # Usability: AGI models post-HSD17B4 SCP2/SCPx thiolase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD scp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Acot8: peroxisomal acyl-CoA thioesterase 8 after SCP2/SCPx.
+  # ACOT8 hydrolyzes the shortened BA-CoA product of SCPx thiolase so classic
+  # BA free-energy releases free bile acid (stand-in) under ASSERT after the
+  # beta-oxidation shortening cycle completes (propionyl-CoA path separate).
+  # After Scp2 cleaves 3-keto-BA-CoA into propionyl-CoA + chain-shortened
+  # BA-CoA, Acot8 is the thioesterase plate so mitosis energy budgets gain
+  # explicit CoA release instead of a silent shortened-BA-CoA pool.
+  # Distinct from Scp2 thiolase, Hsd17b4 DBP, Acox2 oxidase, Amacr racemase.
+  # Domain: post-SCP2 peroxisomal ACOT8 thioesterase gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8
+  # Gift: post-SCP2 ACOT8 so BA path can free shortened BA-CoA under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acot8.
+  # Usability: AGI models post-SCP2 ACOT8 thioesterase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acot8 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Pcca: propionyl-CoA carboxylase (PCCA/PCCB) after ACOT8 / SCPx propionyl limb.
+  # PCCA is the biotin-dependent mitochondrial carboxylase that converts propionyl-CoA
+  # (released by SCPx thiolase on the classical BA beta-oxidation shortening cycle,
+  # and from odd-chain / Ile / Val / Met / Thr / cholesterol side-chain paths) into
+  # D-methylmalonyl-CoA so free energy can enter the succinyl-CoA anaplerotic gate.
+  # After Acot8 frees shortened BA-CoA / CoA, Pcca commits the companion propionyl-CoA
+  # product so mitosis energy budgets gain explicit CO2-fixation into C4 instead of
+  # a silent propionyl-CoA pool.
+  # Distinct from Acot8 thioesterase, Scp2 thiolase, Hsd17b4 DBP, Acox2 oxidase,
+  # Amacr racemase, Baat conjugation - Pcca is the biotin PCC alpha/beta carboxylase.
+  # Domain: post-ACOT8 propionyl-CoA carboxylase (PCCA) anaplerotic gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca
+  # Gift: post-ACOT8 PCCA so BA/odd-chain free-energy path can carboxylate
+  #   propionyl-CoA to D-methylmalonyl-CoA under ASSERT after thioesterase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pcca.
+  # Usability: AGI models post-ACOT8 PCCA carboxylase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pcca n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mcee: methylmalonyl-CoA epimerase (MCEE) after PCCA carboxylase limb.
+  # MCEE is the mitochondrial epimerase that converts D-methylmalonyl-CoA
+  # (product of biotin-dependent PCCA/PCCB on propionyl-CoA from SCPx BA
+  # shortening / odd-chain / Ile / Val / Met / Thr / cholesterol side-chain)
+  # into L-methylmalonyl-CoA so MUT can open the succinyl-CoA anaplerotic gate.
+  # After Pcca carboxylates propionyl-CoA to D-methylmalonyl-CoA, Mcee flips
+  # stereochemistry so free energy can enter the TCA cycle instead of a silent
+  # D-methylmalonyl pool.
+  # Distinct from Pcca carboxylase, Mut mutase, Mmab adenosyltransferase,
+  # Acot8 thioesterase, Scp2 thiolase - Mcee is the D/L-methylmalonyl epimerase.
+  # Domain: post-PCCA methylmalonyl-CoA epimerase (MCEE) stereochemistry gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee
+  # Gift: post-PCCA MCEE so BA/odd-chain free-energy path can epimerize
+  #   D-methylmalonyl-CoA to L-methylmalonyl-CoA under ASSERT after carboxylase.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mcee.
+  # Usability: AGI models post-PCCA MCEE epimerase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mcee n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Mut: methylmalonyl-CoA mutase (MUT / MCM) after MCEE epimerase limb.
+  # MUT is the mitochondrial B12-dependent mutase that rearranges
+  # L-methylmalonyl-CoA (product of MCEE on D-methylmalonyl-CoA from PCCA)
+  # into succinyl-CoA so free energy can anaplerotically enter the TCA cycle.
+  # After Mcee epimerizes D-methylmalonyl-CoA to L-methylmalonyl-CoA, Mut
+  # opens the AdoCbl radical rearrangement gate so BA/odd-chain carbon
+  # becomes succinyl-CoA instead of a silent L-methylmalonyl pool.
+  # Distinct from Mcee epimerase, Pcca carboxylase, Mmab adenosyltransferase,
+  # Mmaa GTPase, Mmab/Mmachc B12 path - Mut is the L-methylmalonyl-CoA mutase.
+  # Domain: post-MCEE methylmalonyl-CoA mutase (MUT) succinyl-CoA anaplerotic gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut
+  # Gift: post-MCEE MUT so BA/odd-chain free-energy path can rearrange
+  #   L-methylmalonyl-CoA to succinyl-CoA under ASSERT after epimerase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mut.
+  # Usability: AGI models post-MCEE MUT mutase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mut n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Suclg1: succinyl-CoA ligase (GDP-forming) alpha subunit after MUT mutase limb.
+  # SUCLG1 is the mitochondrial TCA-entry ligase alpha that pairs with SUCLG2/SUCLA2
+  # to convert succinyl-CoA (product of MUT on L-methylmalonyl-CoA) into succinate
+  # so free energy can continue anaplerotically through the TCA cycle.
+  # After Mut rearranges L-methylmalonyl-CoA to succinyl-CoA, Suclg1 opens the
+  # substrate-level phosphorylation gate so BA/odd-chain carbon becomes succinate
+  # plus GTP/ATP instead of a silent succinyl-CoA pool.
+  # Distinct from Mut mutase, Mcee epimerase, Pcca carboxylase, Sdha dehydrogenase,
+  # and Cs citrate synthase - Suclg1 is the succinyl-CoA ligase alpha TCA gate.
+  # Domain: post-MUT succinyl-CoA ligase (SUCLG1) succinate TCA-entry gate.
+  # Continuum: ...->amacr->acox2->hsd17b4->scp2->acot8->pcca->mcee->mut->suclg1
+  # Gift: post-MUT SUCLG1 so BA/odd-chain free-energy path can ligate
+  #   succinyl-CoA to succinate under ASSERT after mutase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - suclg1.
+  # Usability: AGI models post-MUT SUCLG1 ligase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD suclg1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sdha: succinate dehydrogenase complex flavoprotein subunit A after SUCLG1 ligase limb.
+  # SDHA is the mitochondrial Complex II / SQR flavoprotein that oxidizes succinate
+  # (product of SUCLG1 on succinyl-CoA) to fumarate so free energy can enter the ETC
+  # as FADH2-equivalent reducing power on the inner membrane.
+  # After Suclg1 ligates succinyl-CoA to succinate plus GTP/ATP, Sdha opens the
+  # TCA-to-ETC gate so BA/odd-chain carbon becomes fumarate instead of a silent
+  # succinate pool trapped before Complex II.
+  # Distinct from Suclg1 ligase, Mut mutase, Mcee epimerase, Sdhb iron-sulfur,
+  # and Cs citrate synthase - Sdha is the succinate dehydrogenase flavoprotein gate.
+  # Domain: post-SUCLG1 succinate dehydrogenase (SDHA) fumarate ETC-entry gate.
+  # Continuum: ...->acot8->pcca->mcee->mut->suclg1->sdha
+  # Gift: post-SUCLG1 SDHA so BA/odd-chain free-energy path can oxidize
+  #   succinate to fumarate under ASSERT after ligase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sdha.
+  # Usability: AGI models post-SUCLG1 SDHA dehydrogenase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sdha n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fh: fumarate hydratase (fumarase, FH/Fumarase) after SDHA Complex II limb.
+  # FH is the TCA-cycle hydratase that adds water across fumarate (product of SDHA
+  # succinate oxidation) to yield L-malate so free energy can proceed toward the
+  # MDH/OAA hinge and close the BA/odd-chain anaplerotic loop into citrate.
+  # After Sdha oxidizes succinate to fumarate on Complex II, Fh opens the next
+  # TCA gate so fumarate is not a silent pool trapped before malate dehydrogenase.
+  # Distinct from Sdha flavoprotein, Suclg1 ligase, Mut mutase, Mdh oxidoreductase,
+  # and Cs citrate synthase - Fh is the fumarate hydratase / fumarase gate.
+  # Domain: post-SDHA fumarate hydratase (FH) malate TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh
+  # Gift: post-SDHA FH so BA/odd-chain free-energy path can hydrate
+  #   fumarate to L-malate under ASSERT after Complex II open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fh.
+  # Usability: AGI models post-SDHA FH hydratase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mdh: malate dehydrogenase (MDH2/MDH) after FH fumarase limb.
+  # MDH oxidizes L-malate (product of FH hydration of fumarate) to oxaloacetate
+  # so free energy can close the BA/odd-chain anaplerotic loop at the CS/citrate
+  # hinge. After Fh hydrates fumarate to L-malate, Mdh opens the next TCA gate
+  # so malate is not a silent pool trapped before citrate synthase.
+  # Distinct from Fh hydratase, Sdha flavoprotein, Suclg1 ligase, Mut mutase,
+  # and Cs citrate synthase - Mdh is the malate dehydrogenase / OAA gate.
+  # Domain: post-FH malate dehydrogenase (MDH) OAA TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh
+  # Gift: post-FH MDH so BA/odd-chain free-energy path can oxidize
+  #   L-malate to OAA under ASSERT after fumarase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mdh.
+  # Usability: AGI models post-FH MDH oxidoreductase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mdh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Cs: citrate synthase (CS) after MDH malate-dehydrogenase limb.
+  # CS condenses oxaloacetate (product of MDH oxidation of L-malate) with
+  # acetyl-CoA to citrate so free energy can close the BA/odd-chain anaplerotic
+  # loop into the canonical TCA cycle. After Mdh yields OAA, Cs opens the
+  # citrate hinge so OAA is not a silent pool trapped before aconitase/IDH.
+  # Distinct from Mdh oxidoreductase, Fh hydratase, Sdha flavoprotein,
+  # Suclg1 ligase, and Mut mutase - Cs is the citrate synthase / citrate gate.
+  # Domain: post-MDH citrate synthase (CS) citrate TCA-entry gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs
+  # Gift: post-MDH CS so BA/odd-chain free-energy path can condense
+  #   OAA+acetyl-CoA to citrate under ASSERT after MDH open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cs.
+  # Usability: AGI models post-MDH CS synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Aco2: aconitase 2 (ACO2) after CS citrate-synthase limb.
+  # ACO2 isomerizes citrate (product of CS condensation of OAA+acetyl-CoA) via
+  # cis-aconitate to isocitrate so free energy can progress the TCA cycle past
+  # the citrate hinge. After Cs yields citrate, Aco2 opens the isocitrate gate
+  # so citrate is not a silent pool trapped before IDH oxidative decarboxylation.
+  # Distinct from Cs synthase, Mdh oxidoreductase, Fh hydratase, Sdha flavoprotein,
+  # and Idh dehydrogenases - Aco2 is the mitochondrial aconitase / isocitrate gate.
+  # Domain: post-CS aconitase 2 (ACO2) isocitrate TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2
+  # Gift: post-CS ACO2 so BA/odd-chain free-energy path can isomerize
+  #   citrate to isocitrate under ASSERT after citrate synthase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - aco2.
+  # Usability: AGI models post-CS ACO2 aconitase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD aco2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Idh2: isocitrate dehydrogenase 2 (IDH2) after ACO2 aconitase limb.
+  # IDH2 oxidatively decarboxylates isocitrate (product of ACO2 isomerization
+  # of citrate) to alpha-ketoglutarate, reducing NADP+ to NADPH so free energy
+  # can progress the TCA cycle past the isocitrate hinge into the aKG limb.
+  # After Aco2 yields isocitrate, Idh2 opens the aKG gate so isocitrate is not
+  # a silent pool trapped before alpha-ketoglutarate dehydrogenase.
+  # Distinct from Aco2 aconitase, Cs synthase, Mdh oxidoreductase, Fh hydratase,
+  # and Sdha flavoprotein - Idh2 is the mitochondrial NADP-IDH / aKG gate.
+  # Domain: post-ACO2 isocitrate dehydrogenase 2 (IDH2) aKG TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2
+  # Gift: post-ACO2 IDH2 so BA/odd-chain free-energy path can oxidatively
+  #   decarboxylate isocitrate to aKG under ASSERT after aconitase open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - idh2.
+  # Usability: AGI models post-ACO2 IDH2 isocitrate dehydrogenase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD idh2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Ogdh: oxoglutarate dehydrogenase (OGDH/alpha-ketoglutarate dehydrogenase complex) after IDH2 aKG limb.
+  # OGDH is the TCA-cycle oxidative decarboxylase that converts alpha-ketoglutarate (product of
+  # IDH2 isocitrate decarboxylation) to succinyl-CoA + CO2 + NADH so free energy can
+  # proceed toward SUCLG1 on the BA/odd-chain TCA path.
+  # After Idh2 opens isocitrate to aKG, Ogdh opens the next TCA gate so
+  # aKG is not a silent pool trapped before succinyl-CoA synthetase.
+  # Distinct from Idh2 isocitrate DH, Aco2 aconitase, Cs citrate synthase, Mdh oxidoreductase,
+  # and Suclg1 succinyl-CoA synthetase - Ogdh is the aKG dehydrogenase / succinyl-CoA gate.
+  # Domain: post-IDH2 oxoglutarate dehydrogenase (OGDH) succinyl-CoA TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh
+  # Gift: post-IDH2 OGDH so BA/odd-chain free-energy path can oxidatively decarboxylate aKG to succinyl-CoA under ASSERT after IDH2 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ogdh.
+  # Usability: AGI models post-gate ogdh under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ogdh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Sucla2: succinate-CoA ligase ADP-forming beta (SUCLA2) after OGDH succinyl-CoA limb.
+  # SUCLA2 converts succinyl-CoA + ADP + Pi to succinate + ATP + CoA so free energy
+  # from OGDH aKG decarboxylation becomes substrate-level phosphorylation on BA/odd-chain TCA.
+  # After Ogdh yields succinyl-CoA, Sucla2 opens the succinate gate so succinyl-CoA
+  # is not a silent pool trapped before SDHA Complex II.
+  # Distinct from Ogdh aKG DH, Suclg1 GDP-forming ligase, Sdha flavoprotein, Idh2 -
+  # Sucla2 is the ADP-forming succinyl-CoA synthetase / succinate+ATP gate.
+  # Domain: post-OGDH succinate-CoA ligase ADP-forming (SUCLA2) succinate TCA-progression gate.
+  # Continuum: ...->sdha->fh->mdh->cs->aco2->idh2->ogdh->sucla2
+  # Gift: post-OGDH SUCLA2 so BA/odd-chain free-energy path can substrate-level
+  #   phosphorylate ADP while releasing succinate under ASSERT after OGDH open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sucla2.
+  # Usability: AGI models post-OGDH SUCLA2 succinyl-CoA synthetase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sucla2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Scs: succinyl-CoA synthetase (SCS/SUCLA2-SUCLG1 TCA substrate-level) after OGDH succinyl-CoA limb.
+  # SCS is the TCA-cycle succinyl-CoA synthetase that converts succinyl-CoA (product of
+  # OGDH aKG decarboxylation) to succinate + CoA + GTP/ATP so free energy can
+  # proceed toward SDHA on the BA/odd-chain TCA path.
+  # After Ogdh opens aKG to succinyl-CoA, Scs opens the next TCA gate so
+  # succinyl-CoA is not a silent pool trapped before Complex-II oxidation.
+  # Distinct from Ogdh aKG DH, Suclg1 propionyl-path synthetase, Sdha flavoprotein,
+  # and Idh2 isocitrate DH - Scs is the post-OGDH succinyl-CoA synthetase / succinate gate.
+  # Domain: post-OGDH succinyl-CoA synthetase (SCS) succinate TCA-progression gate.
+  # Continuum: ...->pcca->mcee->mut->suclg1->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs
+  # Gift: post-OGDH SCS so BA/odd-chain free-energy path can substrate-level phosphorylate succinyl-CoA to succinate under ASSERT after OGDH open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - scs.
+  # Usability: AGI models post-gate scs under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD scs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Dld: dihydrolipoamide dehydrogenase (DLD / OGDHC-E3 / PDHC-E3) after SCS limb.
+  # DLD is the shared E3 flavoprotein that reoxidizes dihydrolipoamide on OGDHC/PDHC
+  # E2 cores, reducing NAD+ to NADH so free energy from aKG (and pyruvate) decarboxylation
+  # can turn over continuously. After Scs clears succinyl-CoA to succinate, Dld regenerates
+  # the oxidized lipoyl cofactor so the next OGDHC cycle is not cofactor-stalled.
+  # Distinct from Ogdh E1 decarboxylase, Scs succinyl-CoA synthetase, Sucla2 ligase,
+  # Idh2 dehydrogenase, and Sdha flavoprotein - Dld is the E3 lipoamide dehydrogenase.
+  # Domain: post-SCS dihydrolipoamide dehydrogenase (DLD) lipoyl-regeneration gate.
+  # Continuum: ...->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld
+  # Gift: post-SCS DLD so BA/odd-chain free-energy path can reoxidize
+  #   dihydrolipoamide and mint NADH under ASSERT after SCS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dld.
+  # Usability: AGI models post-SCS DLD E3 dehydrogenase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dld n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Dlst: dihydrolipoamide succinyltransferase (DLST / OGDHC-E2) after DLD limb.
+  # DLST is the E2 core of oxoglutarate dehydrogenase complex: it accepts the
+  # decarboxylation product from OGDH E1 onto its lipoyl domains, then transfers
+  # the succinyl group to CoA, yielding succinyl-CoA for SCS. After Dld reoxidizes
+  # dihydrolipoamide (E3), Dlst can again load lipoyl arms so OGDHC turns over
+  # without E2-core stall on BA/odd-chain free-energy path.
+  # Distinct from Ogdh E1 decarboxylase, Dld E3 dehydrogenase, Scs synthetase,
+  # Sucla2 ligase, and Idh2 - Dlst is the E2 succinyltransferase / lipoyl-core gate.
+  # Domain: post-DLD dihydrolipoamide succinyltransferase (DLST) OGDHC-E2 gate.
+  # Continuum: ...->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst
+  # Gift: post-DLD DLST so BA/odd-chain free-energy path can succinylate CoA on
+  #   the OGDHC E2 core under ASSERT after DLD open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dlst.
+  # Usability: AGI models post-DLD DLST E2 succinyltransferase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dlst n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Oxct1: succinyl-CoA:3-ketoacid CoA-transferase (OXCT1 / SCOT) after DLST limb.
+  # OXCT1 is the mitochondrial ketolytic gate: it transfers CoA from succinyl-CoA
+  # (minted by OGDHC E2 DLST / SCS path) onto acetoacetate, yielding acetoacetyl-CoA
+  # plus succinate so ketone bodies feed TCA and free energy keeps flowing when
+  # glucose is scarce. After Dlst succinylates CoA on the OGDHC E2 core, Oxct1
+  # spends that succinyl-CoA to unlock ketones under ASSERT.
+  # Distinct from Dlst E2 succinyltransferase, Scs/Sucla2 succinyl-CoA synthetases,
+  # Ogdh E1 decarboxylase, Dld E3 dehydrogenase, and Acot8 thioesterase - Oxct1 is
+  # the SCOT CoA-transferase ketolysis gate.
+  # Domain: post-DLST succinyl-CoA:3-ketoacid CoA-transferase (OXCT1) ketolytic gate.
+  # Continuum: ...->sdha->fh->mdh->cs->aco2->idh2->ogdh->scs->dld->dlst->oxct1
+  # Gift: post-DLST OXCT1 so BA/odd-chain free-energy path can unlock ketone
+  #   bodies via succinyl-CoA CoA-transfer under ASSERT after DLST open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - oxct1.
+  # Usability: AGI models post-DLST OXCT1 SCOT ketolysis under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD oxct1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Acat1: acetyl-CoA acetyltransferase / acetoacetyl-CoA thiolase (ACAT1 / T2) after OXCT1 limb.
+  # ACAT1 is the mitochondrial ketolytic thiolase gate: it thiolyses acetoacetyl-CoA
+  # (minted by OXCT1 SCOT from acetoacetate + succinyl-CoA) into two acetyl-CoA so
+  # ketone carbon feeds the TCA cycle and free energy keeps flowing when glucose is
+  # scarce. After Oxct1 transfers CoA onto acetoacetate, Acat1 spends that
+  # acetoacetyl-CoA under ASSERT to yield acetyl-CoA pairs.
+  # Distinct from Oxct1 SCOT CoA-transferase, Dlst E2 succinyltransferase, Scs/Sucla2
+  # succinyl-CoA synthetases, Scp2 peroxisomal thiolase, and Acot8 thioesterase -
+  # Acat1 is the mitochondrial ACAT1/T2 ketolytic thiolase gate.
+  # Domain: post-OXCT1 acetyl-CoA acetyltransferase (ACAT1) ketolytic thiolase gate.
+  # Continuum: ...->ogdh->scs->dld->dlst->oxct1->acat1
+  # Gift: post-OXCT1 ACAT1 so BA/odd-chain free-energy path can thiolyse
+  #   acetoacetyl-CoA into acetyl-CoA under ASSERT after OXCT1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acat1.
+  # Usability: AGI models post-OXCT1 ACAT1 ketolytic thiolase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acat1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hmgcs2: mitochondrial 3-hydroxy-3-methylglutaryl-CoA synthase 2 (HMGCS2) after ACAT1 limb.
+  # HMGCS2 is the rate-limiting ketogenic gate: it condenses acetoacetyl-CoA (from ACAT1)
+  # with a third acetyl-CoA to mint HMG-CoA so ketone-body synthesis can proceed and free
+  # energy keeps flowing when acetyl-CoA is abundant (fasting / high fat). After Acat1
+  # yields acetoacetyl-CoA pairs under ketogenic flux, Hmgcs2 spends that pool under
+  # ASSERT to open the HMG-CoA limb toward HMGCL/BDH1.
+  # Distinct from Acat1 mitochondrial thiolase, Oxct1 SCOT CoA-transferase, cytosolic
+  # HMGCS1 sterol path, and Scp2 peroxisomal thiolase - Hmgcs2 is the mitochondrial
+  # HMGCS2 ketogenic HMG-CoA synthase gate.
+  # Domain: post-ACAT1 mitochondrial HMG-CoA synthase (HMGCS2) ketogenic gate.
+  # Continuum: ...->dld->dlst->oxct1->acat1->hmgcs2
+  # Gift: post-ACAT1 HMGCS2 so BA/odd-chain free-energy path can condense
+  #   acetoacetyl-CoA + acetyl-CoA into HMG-CoA under ASSERT after ACAT1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hmgcs2.
+  # Usability: AGI models post-ACAT1 HMGCS2 ketogenic synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hmgcs2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Hmgcl: mitochondrial HMG-CoA lyase (HMGCL) after HMGCS2 limb.
+  # HMGCL is the ketogenic cleavage gate: it splits HMG-CoA (minted by HMGCS2)
+  # into acetoacetate + acetyl-CoA so ketone-body export can proceed and free
+  # energy keeps flowing when HMG-CoA is abundant (fasting / high fat). After
+  # Hmgcs2 condenses acetoacetyl-CoA + acetyl-CoA under ketogenic flux, Hmgcl
+  # spends that HMG-CoA pool under ASSERT to open the acetoacetate limb toward
+  # BDH1 / ACAT1-ketolytic recycle.
+  # Distinct from Hmgcs2 mitochondrial HMG-CoA synthase, Acat1 thiolase, Oxct1
+  # SCOT CoA-transferase, cytosolic HMGCS1 sterol path, and Hmgcr HMG-CoA
+  # reductase - Hmgcl is the mitochondrial HMGCL ketogenic lyase gate.
+  # Domain: post-HMGCS2 mitochondrial HMG-CoA lyase (HMGCL) ketogenic gate.
+  # Continuum: ...->dlst->oxct1->acat1->hmgcs2->hmgcl
+  # Gift: post-HMGCS2 HMGCL so BA/odd-chain free-energy path can cleave
+  #   HMG-CoA into acetoacetate + acetyl-CoA under ASSERT after HMGCS2 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hmgcl.
+  # Usability: AGI models post-HMGCS2 HMGCL ketogenic lyase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hmgcl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Bdh1: mitochondrial 3-hydroxybutyrate dehydrogenase (BDH1) after HMGCL limb.
+  # BDH1 is the ketogenic redox gate: it reduces acetoacetate (minted by HMGCL)
+  # to D-beta-hydroxybutyrate with NADH so ketone-body export can proceed and free
+  # energy keeps flowing when HMG-CoA cleavage yields acetoacetate (fasting / high fat).
+  # After Hmgcl cleaves HMG-CoA into acetoacetate + acetyl-CoA under ketogenic flux,
+  # Bdh1 spends that acetoacetate pool under ASSERT to open the BHB limb toward
+  # monocarboxylate export / peripheral OXCT1-ACAT1 ketolytic recycle.
+  # Distinct from Hmgcl mitochondrial HMG-CoA lyase, Hmgcs2 HMG-CoA synthase,
+  # Acat1 thiolase, Oxct1 SCOT CoA-transferase, and cytosolic BDH2 - Bdh1 is the
+  # mitochondrial BDH1 NAD-dependent beta-hydroxybutyrate dehydrogenase gate.
+  # Domain: post-HMGCL mitochondrial 3-hydroxybutyrate dehydrogenase (BDH1) ketogenic gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1
+  # Gift: post-HMGCL BDH1 so BA/odd-chain free-energy path can reduce
+  #   acetoacetate to D-beta-hydroxybutyrate under ASSERT after HMGCL open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - bdh1.
+  # Usability: AGI models post-HMGCL BDH1 ketogenic dehydrogenase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD bdh1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Slc16a1: monocarboxylate transporter 1 (MCT1/SLC16A1) after BDH1 limb.
+  # SLC16A1/MCT1 is the ketogenic export gate: it exports D-beta-hydroxybutyrate
+  # (minted by BDH1) and acetoacetate across the plasma membrane so peripheral
+  # tissues can import ketone bodies and free energy keeps flowing when hepatic
+  # ketogenesis yields BHB/AcAc (fasting / high fat). After Bdh1 reduces
+  # acetoacetate to D-beta-hydroxybutyrate under ketogenic flux, Slc16a1 spends
+  # that BHB/AcAc pool under ASSERT to open monocarboxylate export toward
+  # peripheral OXCT1-ACAT1 ketolytic recycle.
+  # Distinct from Bdh1 mitochondrial BDH1 dehydrogenase, Hmgcl HMG-CoA lyase,
+  # Hmgcs2 HMG-CoA synthase, cytosolic BDH2, and SLC16A3/MCT4 lactate export -
+  # Slc16a1 is the plasma-membrane MCT1/SLC16A1 ketone monocarboxylate export gate.
+  # Domain: post-BDH1 plasma-membrane monocarboxylate transporter 1 (MCT1/SLC16A1) ketogenic export gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1
+  # Gift: post-BDH1 SLC16A1 so BA/odd-chain free-energy path can export
+  #   D-beta-hydroxybutyrate / acetoacetate under ASSERT after BDH1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc16a1.
+  # Usability: AGI models post-BDH1 MCT1/SLC16A1 ketone export under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc16a1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Slc16a7: monocarboxylate transporter 2 (MCT2/SLC16A7) after SLC16A1 limb.
+  # SLC16A7/MCT2 is the high-affinity peripheral ketone import gate: it imports
+  # D-beta-hydroxybutyrate and acetoacetate (exported by hepatic MCT1/SLC16A1)
+  # across neuronal and other high-affinity plasma membranes so peripheral
+  # OXCT1-ACAT1 ketolysis can reclaim free energy when fasting ketones circulate.
+  # After Slc16a1 exports BHB/AcAc under ketogenic flux, Slc16a7 spends that
+  # circulating monocarboxylate pool under ASSERT to open MCT2 import toward
+  # peripheral BDH1-reverse / OXCT1-ACAT1 ketolytic recycle.
+  # Distinct from Slc16a1 plasma-membrane MCT1 ketone export, Slc16a3/MCT4
+  # lactate export, Bdh1 mitochondrial dehydrogenase, and Oxct1 SCOT -
+  # Slc16a7 is the high-affinity MCT2/SLC16A7 peripheral ketone import gate.
+  # Domain: post-SLC16A1 plasma-membrane monocarboxylate transporter 2 (MCT2/SLC16A7) ketogenic import gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7
+  # Gift: post-SLC16A1 SLC16A7 so BA/odd-chain free-energy path can import
+  #   D-beta-hydroxybutyrate / acetoacetate under ASSERT after SLC16A1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc16a7.
+  # Usability: AGI models post-SLC16A1 MCT2/SLC16A7 ketone import under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc16a7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Emb: embigin (EMB) MCT2 accessory glycoprotein after SLC16A7 limb.
+  # Embigin is the preferred plasma-membrane chaperone that escorts MCT2/SLC16A7
+  # to the cell surface of neurons and other high-affinity ketone consumers so
+  # imported D-beta-hydroxybutyrate / acetoacetate can reach peripheral
+  # BDH1-reverse / OXCT1-ACAT1 ketolysis under fasting flux.
+  # After Slc16a7 opens high-affinity MCT2 import, Emb spends ATP/energy under
+  # ASSERT to dock embigin with MCT2 and stabilize the import gate at the
+  # plasma membrane (distinct from basigin/CD147 which prefers MCT1/MCT3/MCT4).
+  # Distinct from Slc16a7 MCT2 import, Slc16a1 MCT1 export, Bdh1 dehydrogenase,
+  # and Oxct1 SCOT - Emb is the embigin/EMB MCT2 trafficking chaperone gate.
+  # Domain: post-SLC16A7 plasma-membrane embigin (EMB) MCT2 accessory chaperone gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->emb
+  # Gift: post-SLC16A7 EMB so BA/odd-chain free-energy path can chaperone
+  #   MCT2/SLC16A7 import under ASSERT after SLC16A7 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - emb.
+  # Usability: AGI models post-SLC16A7 embigin/EMB MCT2 chaperone under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD emb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Aacs: acetoacetyl-CoA synthetase (AACS) after EMB limb.
+  # AACS is the cytosolic ketone-activation gate: it ligates acetoacetate
+  # (imported by peripheral MCT2/SLC16A7) to CoA forming acetoacetyl-CoA with ATP,
+  # feeding cytosolic ACAT/HMGCR mevalonate and de novo lipogenesis so free energy
+  # reclaimed from circulating ketones can build membrane and sterol mass.
+  # After Slc16a7 imports BHB/AcAc under ketogenic flux, Aacs spends that
+  # cytosolic monocarboxylate pool under ASSERT to open AACS activation toward
+  # cytosolic lipid/sterol anabolism (distinct from mitochondrial OXCT1 SCOT).
+  # Distinct from Slc16a7 plasma-membrane MCT2 ketone import, Oxct1 mitochondrial
+  # SCOT ketolysis, Acat1 mitochondrial thiolase, and Bdh1 dehydrogenase -
+  # Aacs is the cytosolic acetoacetyl-CoA synthetase (AACS) ketone-activation gate.
+  # Domain: post-EMB cytosolic acetoacetyl-CoA synthetase (AACS) ketolytic anabolic gate.
+  # Continuum: ...->oxct1->acat1->hmgcs2->hmgcl->bdh1->slc16a1->slc16a7->emb->aacs
+  # Gift: post-EMB AACS so BA/odd-chain free-energy path can activate
+  #   acetoacetate to acetoacetyl-CoA under ASSERT after EMB open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - aacs.
+  # Usability: AGI models post-EMB AACS cytosolic ketone activation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD aacs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Hmgcs1: cytosolic 3-hydroxy-3-methylglutaryl-CoA synthase 1 (HMGCS1) after AACS limb.
+  # HMGCS1 is the cytosolic mevalonate-entry gate: it condenses acetoacetyl-CoA
+  # (minted by AACS from imported acetoacetate) with acetyl-CoA into HMG-CoA so
+  # HMGCR can open the sterol/isoprenoid limb and free energy reclaimed from
+  # circulating ketones builds membrane mass under ASSERT.
+  # After Aacs activates AcAc to acetoacetyl-CoA in cytosol, Hmgcs1 spends that
+  # acetoacetyl-CoA pool under ASSERT to open the HMG-CoA limb toward HMGCR
+  # mevalonate (distinct from mitochondrial HMGCS2 ketogenesis).
+  # Distinct from Aacs cytosolic ketone activation, Hmgcs2 mitochondrial
+  # ketogenic synthase, Hmgcl lyase, and Hmgcr reductase - Hmgcs1 is the
+  # cytosolic HMG-CoA synthase (HMGCS1) mevalonate-entry gate.
+  # Domain: post-AACS cytosolic HMG-CoA synthase 1 (HMGCS1) mevalonate gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1
+  # Gift: post-AACS HMGCS1 so BA/odd-chain free-energy path can condense
+  #   acetoacetyl-CoA + acetyl-CoA into cytosolic HMG-CoA under ASSERT after AACS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hmgcs1.
+  # Usability: AGI models post-AACS HMGCS1 cytosolic mevalonate entry under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hmgcs1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hmgcr: 3-hydroxy-3-methylglutaryl-CoA reductase (HMGCR) after HMGCS1 limb.
+  # HMGCR is the committed mevalonate-entry reductase: it reduces cytosolic
+  # HMG-CoA (minted by HMGCS1 from AACS-derived acetoacetyl-CoA + acetyl-CoA)
+  # into mevalonate so MVK can open the isoprenoid/sterol limb and free energy
+  # reclaimed from circulating ketones builds membrane mass under ASSERT.
+  # After Hmgcs1 condenses acetoacetyl-CoA + acetyl-CoA into HMG-CoA in cytosol,
+  # Hmgcr spends that HMG-CoA pool under ASSERT to open the mevalonate limb
+  # toward MVK/PMVK/MVD (rate-limiting statin-sensitive reductase gate).
+  # Distinct from Hmgcs1 cytosolic HMG-CoA synthase, Hmgcs2 mitochondrial
+  # ketogenic synthase, Hmgcl lyase, and Aacs ketone activation - Hmgcr is the
+  # HMG-CoA reductase (HMGCR) mevalonate committed step.
+  # Domain: post-HMGCS1 HMG-CoA reductase (HMGCR) mevalonate gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr
+  # Gift: post-HMGCS1 HMGCR so BA/odd-chain free-energy path can reduce
+  #   HMG-CoA into mevalonate under ASSERT after HMGCS1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hmgcr.
+  # Usability: AGI models post-HMGCS1 HMGCR mevalonate commit under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hmgcr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Mvk: mevalonate kinase (MVK) after HMGCR limb.
+  # MVK is the first isoprenoid kinase: it phosphorylates mevalonate (minted by
+  # HMGCR reduction of HMGCS1-derived HMG-CoA) into mevalonate-5-phosphate so
+  # PMVK/MVD can drive the isoprenoid/sterol limb and free energy reclaimed from
+  # circulating ketones builds membrane mass under ASSERT.
+  # After Hmgcr reduces cytosolic HMG-CoA into mevalonate, Mvk spends that
+  # mevalonate pool under ASSERT to open the ATP-dependent mevalonate kinase
+  # gate toward PMVK/MVD/IDI1 (committed isoprenoid phosphorylation step).
+  # Distinct from Hmgcr HMG-CoA reductase, Hmgcs1 cytosolic synthase, Hmgcs2
+  # mitochondrial ketogenic synthase, and Aacs ketone activation - Mvk is the
+  # mevalonate kinase (MVK) isoprenoid entry phosphorylation gate.
+  # Domain: post-HMGCR mevalonate kinase (MVK) isoprenoid gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr->mvk
+  # Gift: post-HMGCR MVK so BA/odd-chain free-energy path can phosphorylate
+  #   mevalonate under ASSERT after HMGCR open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mvk.
+  # Usability: AGI models post-HMGCR MVK mevalonate kinase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mvk n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Pmvk: phosphomevalonate kinase (PMVK) after MVK limb.
+  # PMVK is the second isoprenoid kinase: it phosphorylates mevalonate-5-phosphate
+  # (minted by MVK from HMGCR-derived mevalonate) into mevalonate-5-diphosphate so
+  # MVD/IDI1 can drive the isoprenoid/sterol limb and free energy reclaimed from
+  # circulating ketones builds membrane mass under ASSERT.
+  # After Mvk phosphorylates mevalonate into mevalonate-5-phosphate, Pmvk spends
+  # that MVAP pool under ASSERT to open the ATP-dependent phosphomevalonate
+  # kinase gate toward MVD/IDI1/FDPS (committed isoprenoid diphosphate step).
+  # Distinct from Mvk mevalonate kinase, Hmgcr HMG-CoA reductase, Hmgcs1 cytosolic
+  # synthase, and Mvd decarboxylase - Pmvk is the phosphomevalonate kinase (PMVK)
+  # mevalonate-5-phosphate -> mevalonate-5-diphosphate gate.
+  # Domain: post-MVK phosphomevalonate kinase (PMVK) isoprenoid diphosphate gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr->mvk->pmvk
+  # Gift: post-MVK PMVK so BA/odd-chain free-energy path can diphosphorylate
+  #   mevalonate-5-phosphate under ASSERT after MVK open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pmvk.
+  # Usability: AGI models post-MVK PMVK phosphomevalonate kinase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pmvk n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Mvd: mevalonate diphosphate decarboxylase (MVD/MVD1) after PMVK limb.
+  # MVD is the committed decarboxylase of the isoprenoid limb: it converts
+  # mevalonate-5-diphosphate (minted by PMVK from MVK mevalonate-5-phosphate)
+  # into isopentenyl diphosphate (IPP) so IDI1/FDPS can build sterol and
+  # prenyl membrane mass under ASSERT from BA/odd-chain free energy.
+  # After Pmvk diphosphorylates mevalonate-5-phosphate into mevalonate-5-diphosphate,
+  # Mvd spends that MVAPP pool under ASSERT to open the ATP-dependent
+  # decarboxylase gate toward IDI1/FDPS (committed IPP step).
+  # Distinct from Pmvk phosphomevalonate kinase, Mvk mevalonate kinase, Hmgcr
+  # HMG-CoA reductase, and Idi1 isomerase - Mvd is the mevalonate diphosphate
+  # decarboxylase (MVD) mevalonate-5-diphosphate -> IPP gate.
+  # Domain: post-PMVK mevalonate diphosphate decarboxylase (MVD) IPP gate.
+  # Continuum: ...->bdh1->slc16a1->slc16a7->emb->aacs->hmgcs1->hmgcr->mvk->pmvk->mvd
+  # Gift: post-PMVK MVD so BA/odd-chain free-energy path can decarboxylate
+  #   mevalonate-5-diphosphate into IPP under ASSERT after PMVK open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mvd.
+  # Usability: AGI models post-PMVK MVD mevalonate diphosphate decarboxylase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mvd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Idi1: isopentenyl-diphosphate delta-isomerase (IDI1) after MVD limb.
+  # IDI1 is the IPP/DMAPP isomerase of the isoprenoid limb: it equilibrates
+  # isopentenyl diphosphate (minted by MVD decarboxylation of mevalonate-5-
+  # diphosphate) into dimethylallyl diphosphate (DMAPP) so FDPS can condense
+  # IPP+DMAPP into FPP and free energy reclaimed from BA/odd-chain ketones
+  # builds sterol and prenyl membrane mass under ASSERT.
+  # After Mvd decarboxylates mevalonate-5-diphosphate into IPP, Idi1 spends
+  # that IPP pool under ASSERT to open the isomerase gate toward FDPS/GGPS1
+  # (committed DMAPP step for prenyl chain elongation).
+  # Distinct from Mvd decarboxylase, Pmvk phosphomevalonate kinase, Mvk
+  # mevalonate kinase, and Fdps synthase - Idi1 is the isopentenyl-diphosphate
+  # delta-isomerase (IDI1) IPP <-> DMAPP gate.
+  # Domain: post-MVD isopentenyl-diphosphate delta-isomerase (IDI1) DMAPP gate.
+  # Continuum: ...->hmgcs1->hmgcr->mvk->pmvk->mvd->idi1
+  # Gift: post-MVD IDI1 so BA/odd-chain free-energy path can isomerize IPP
+  #   into DMAPP under ASSERT after MVD open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - idi1.
+  # Usability: AGI models post-MVD IDI1 IPP/DMAPP isomerase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD idi1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fdps: farnesyl diphosphate synthase (FDPS) after IDI1 limb.
+  # FDPS is the prenyltransferase of the isoprenoid limb: it condenses
+  # dimethylallyl diphosphate (minted by IDI1 isomerization of MVD-derived IPP)
+  # with successive IPP units into farnesyl diphosphate (FPP) so SQS/GGPS1 can
+  # drive sterol and GGPP branches and free energy reclaimed from BA/odd-chain
+  # ketones builds membrane mass under ASSERT.
+  # After Idi1 equilibrates IPP into DMAPP, Fdps spends that DMAPP+IPP pool
+  # under ASSERT to open the FPP synthase gate toward SQS/GGPS1 (committed
+  # C15 prenyl chain elongation step).
+  # Distinct from Idi1 isomerase, Mvd decarboxylase, Pmvk phosphomevalonate
+  # kinase, and Sqs squalene synthase - Fdps is the farnesyl diphosphate
+  # synthase (FDPS) DMAPP+IPP -> FPP gate.
+  # Domain: post-IDI1 farnesyl diphosphate synthase (FDPS) FPP gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps
+  # Gift: post-IDI1 FDPS so BA/odd-chain free-energy path can condense
+  #   DMAPP+IPP into FPP under ASSERT after IDI1 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fdps.
+  # Usability: AGI models post-IDI1 FDPS FPP synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fdps n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sqs: squalene synthase (SQS / FDFT1) after FDPS limb.
+  # SQS is the first committed sterol-branch enzyme: it condenses two
+  # farnesyl diphosphate units (minted by FDPS elongation of IDI1-derived
+  # DMAPP+IPP) head-to-head into presqualene diphosphate then squalene so
+  # SQLE/LSS can drive lanosterol and free energy reclaimed from BA/odd-chain
+  # ketones builds membrane sterol mass under ASSERT.
+  # After Fdps opens the FPP pool, Sqs spends that FPP pool under ASSERT to
+  # open the squalene synthase gate toward SQLE/LSS (committed C30 sterol
+  # backbone condensation step).
+  # Distinct from Fdps FPP synthase, Idi1 isomerase, Ggps1 GGPP synthase,
+  # and Sqle squalene epoxidase - Sqs is the squalene synthase (SQS/FDFT1)
+  # 2xFPP -> squalene gate.
+  # Domain: post-FDPS squalene synthase (SQS/FDFT1) sterol-entry gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs
+  # Gift: post-FDPS SQS so BA/odd-chain free-energy path can condense
+  #   2xFPP into squalene under ASSERT after FDPS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sqs.
+  # Usability: AGI models post-FDPS SQS squalene synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sqs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sqle: squalene epoxidase (SQLE / ERG1) after SQS limb.
+  # SQLE is the first oxygen-dependent sterol-branch enzyme: it epoxidizes
+  # squalene (minted by SQS condensation of two FDPS-derived FPP units)
+  # into 2,3-oxidosqualene so LSS can cyclize lanosterol and free energy
+  # reclaimed from BA/odd-chain ketones builds membrane sterol mass under ASSERT.
+  # After Sqs opens the squalene pool, Sqle spends that squalene pool under
+  # ASSERT to open the squalene epoxidase gate toward LSS (committed C30
+  # epoxide sterol-entry step).
+  # Distinct from Sqs squalene synthase, Fdps FPP synthase, Idi1 isomerase,
+  # and Lss lanosterol synthase - Sqle is the squalene epoxidase (SQLE/ERG1)
+  # squalene -> 2,3-oxidosqualene gate.
+  # Domain: post-SQS squalene epoxidase (SQLE/ERG1) oxidosqualene gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle
+  # Gift: post-SQS SQLE so BA/odd-chain free-energy path can epoxidize
+  #   squalene into 2,3-oxidosqualene under ASSERT after SQS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sqle.
+  # Usability: AGI models post-SQS SQLE squalene epoxidase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sqle n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Lss: lanosterol synthase (LSS / ERG7 / OSC) after SQLE limb.
+  # LSS is the oxidosqualene cyclase that folds 2,3-oxidosqualene (minted by
+  # SQLE epoxidation of SQS-derived squalene) into the tetracyclic lanosterol
+  # sterol nucleus so downstream demethylases can finish cholesterol and free
+  # energy reclaimed from BA/odd-chain ketones builds membrane sterol mass under ASSERT.
+  # After Sqle opens the 2,3-oxidosqualene pool, Lss spends that epoxide pool under
+  # ASSERT to open the lanosterol synthase gate (committed C30 cyclization step
+  # that creates the sterol ring system).
+  # Distinct from Sqle squalene epoxidase, Sqs squalene synthase, Fdps FPP synthase,
+  # and Idi1 isomerase - Lss is the lanosterol synthase (LSS/ERG7/OSC)
+  # 2,3-oxidosqualene -> lanosterol cyclase gate.
+  # Domain: post-SQLE lanosterol synthase (LSS/ERG7) oxidosqualene cyclase gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss
+  # Gift: post-SQLE LSS so BA/odd-chain free-energy path can cyclize
+  #   2,3-oxidosqualene into lanosterol under ASSERT after SQLE open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lss.
+  # Usability: AGI models post-SQLE LSS lanosterol synthase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+END

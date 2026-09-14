@@ -1,6 +1,0 @@
-SHIP 2333 LIFE_CELL_ABCA1 PASS
-METHOD abca1 n — ABCA1 reverse-cholesterol efflux onto apoA-I after NCEH1
-Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1->nceh1->abca1
-Proofs: life 300/0 · atomic 102/0 · mesh 98/0 · flagship 1620 12/0 · sum 512
-Gift: ABCA1 exports free cholesterol → nascent HDL under ASSERT after NCEH1 free-cholesterol ward.
-Cube is SoT. Free energy must flow.

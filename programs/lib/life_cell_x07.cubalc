@@ -1,0 +1,3026 @@
+# life_cell_x07.cubalc — EXTEND Cell pack 7
+
+EXTEND CLASS Cell
+  METHOD lss n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cyp51: lanosterol 14α-demethylase (CYP51 / ERG11) after LSS limb.
+  # CYP51 is the cytochrome P450 that demethylates lanosterol (minted by
+  # LSS cyclization of SQLE-derived 2,3-oxidosqualene) at C14 so downstream
+  # sterol reductases can finish cholesterol and free energy reclaimed from
+  # BA/odd-chain ketones builds membrane sterol mass under ASSERT.
+  # After Lss opens the lanosterol pool, Cyp51 spends that C30 sterol pool under
+  # ASSERT to open the lanosterol 14α-demethylase gate (committed oxidative
+  # demethylation that clears C14 for mature sterol rings).
+  # Distinct from Lss lanosterol synthase, Sqle squalene epoxidase, Sqs squalene
+  # synthase, and Fdps FPP synthase - Cyp51 is the lanosterol 14α-demethylase
+  # (CYP51/ERG11) lanosterol -> 4,4-dimethyl-cholesta-8,14,24-trienol gate.
+  # Domain: post-LSS lanosterol 14α-demethylase (CYP51/ERG11) C14-demethyl gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51
+  # Gift: post-LSS CYP51 so BA/odd-chain free-energy path can demethylate
+  #   lanosterol at C14 under ASSERT after LSS open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cyp51.
+  # Usability: AGI models post-LSS CYP51 lanosterol 14α-demethylase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cyp51 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Tm7sf2: sterol Δ14-reductase (TM7SF2 / DHCR14 / ERG24) after CYP51 limb.
+  # TM7SF2 is the NADPH-dependent reductase that saturates the C14-C15 double
+  # bond created when CYP51 demethylates lanosterol, yielding
+  # 4,4-dimethyl-cholesta-8,24-dienol so downstream C4-demethylases (SC4MOL/NSDHL/HSD17B7)
+  # can finish the cholesterol ring system and free energy reclaimed from
+  # BA/odd-chain ketones builds membrane sterol mass under ASSERT.
+  # After Cyp51 opens the 4,4-dimethyl-cholesta-8,14,24-trienol pool, Tm7sf2
+  # spends that C14-demethylated sterol pool under ASSERT to open the
+  # sterol Δ14-reductase gate (committed ring saturation that clears Δ14
+  # for mature sterol rings).
+  # Distinct from Cyp51 lanosterol 14α-demethylase, Lss lanosterol synthase,
+  # Sqle squalene epoxidase, and Sqs squalene synthase - Tm7sf2 is the
+  # sterol Δ14-reductase (TM7SF2/DHCR14/ERG24)
+  # 4,4-dimethyl-cholesta-8,14,24-trienol -> 4,4-dimethyl-cholesta-8,24-dienol gate.
+  # Domain: post-CYP51 sterol Δ14-reductase (TM7SF2/DHCR14) C14-C15 saturation gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2
+  # Gift: post-CYP51 TM7SF2 so BA/odd-chain free-energy path can saturate
+  #   the C14-C15 double bond under ASSERT after CYP51 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - tm7sf2.
+  # Usability: AGI models post-CYP51 TM7SF2 sterol Δ14-reductase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD tm7sf2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sc4mol: sterol-C4-methyl oxidase (SC4MOL / MSMO1 / ERG25) after TM7SF2 limb.
+  # SC4MOL is the ER-membrane di-iron oxidase that performs the first three
+  # successive monooxygenations of a C4-alpha-methyl on 4,4-dimethyl-cholesta-8,24-dienol
+  # (TM7SF2 product), yielding the C4-oxygenated intermediate that NSDHL and
+  # HSD17B7 finish so free energy reclaimed from BA/odd-chain ketones builds
+  # membrane sterol mass under ASSERT.
+  # After Tm7sf2 saturates the C14-C15 bond, Sc4mol spends that
+  # 4,4-dimethyl-cholesta-8,24-dienol pool under ASSERT to open the
+  # sterol-C4-methyl oxidase gate (committed C4 demethylation start that clears
+  # one C4-methyl for mature sterol rings).
+  # Distinct from Tm7sf2 sterol delta14-reductase, Cyp51 lanosterol 14alpha-demethylase,
+  # Lss lanosterol synthase, and Sqle squalene epoxidase - Sc4mol is the
+  # sterol-C4-methyl oxidase (SC4MOL/MSMO1/ERG25)
+  # 4,4-dimethyl-cholesta-8,24-dienol -> C4-oxygenated demethylation intermediate gate.
+  # Domain: post-TM7SF2 sterol-C4-methyl oxidase (SC4MOL/MSMO1/ERG25) C4-alpha-methyl oxidation gate.
+  # Continuum: ...->hmgcr->mvk->pmvk->mvd->idi1->fdps->sqs->sqle->lss->cyp51->tm7sf2->sc4mol
+  # Gift: post-TM7SF2 SC4MOL so BA/odd-chain free-energy path can oxidize
+  #   the C4-alpha-methyl under ASSERT after TM7SF2 open.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sc4mol.
+  # Usability: AGI models post-TM7SF2 SC4MOL sterol-C4-methyl oxidase under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sc4mol n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Nsdhl: sterol-C4-decarboxylase (NSDHL/ERG26) after SC4MOL limb.
+  # NSDHL oxidatively decarboxylates the C4-alpha-carboxyl formed by SC4MOL,
+  # releasing CO2 and yielding 3-keto-4alpha-methyl sterol for HSD17B7.
+  # Domain: post-SC4MOL sterol-C4-decarboxylase C4-carboxyl decarboxylation gate.
+  # Continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl
+  # Gift: post-SC4MOL NSDHL decarboxylates C4-oxygenated intermediate under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nsdhl.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nsdhl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hsd17b7: 3-ketosteroid reductase (HSD17B7/ERG27) after NSDHL limb.
+  # HSD17B7 reduces the 3-keto formed by NSDHL decarboxylation to 3-beta-OH,
+  # completing one C4-demethylation turn toward zymosterol/EBP continuum.
+  # Domain: post-NSDHL 3-ketosteroid reductase 3-keto -> 3-beta-hydroxysterol gate.
+  # Continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7
+  # Gift: post-NSDHL HSD17B7 reduces 3-keto-4alpha-methyl sterol under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hsd17b7.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hsd17b7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Ebp: sterol Delta8-Delta7 isomerase (EBP/ERG2) after HSD17B7 limb.
+  # EBP isomerizes the Delta8 double bond of 4alpha-methyl-cholesta-8,24-dien-3-beta-ol
+  # (HSD17B7 product) to Delta7, opening the SC5D/DHCR7 continuum toward lathosterol.
+  # Domain: post-HSD17B7 sterol Delta8-Delta7 isomerase zymosterol-ward gate.
+  # Continuum: ...->cyp51->tm7sf2->sc4mol->nsdhl->hsd17b7->ebp
+  # Gift: post-HSD17B7 EBP isomerizes Delta8 sterol to Delta7 under ASSERT so free
+  # energy from BA/odd-chain ketones advances the Bloch/Kandutsch-Russell limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ebp.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ebp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sc5d: sterol-C5-desaturase (SC5D/ERG3) after EBP limb.
+  # SC5D introduces the Delta5 double bond into Delta7 sterol (lathosterol path)
+  # after EBP Delta8->Delta7 isomerization, opening DHCR7 toward cholesterol.
+  # Domain: post-EBP sterol C5-desaturase lathosterol-ward gate.
+  # Continuum: ...->sc4mol->nsdhl->hsd17b7->ebp->sc5d
+  # Gift: post-EBP SC5D desaturates Delta7 sterol under ASSERT so free
+  # energy from BA/odd-chain ketones advances the Kandutsch-Russell limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sc5d.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sc5d n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Dhcr7: 7-dehydrocholesterol reductase (DHCR7/ERG4) after SC5D limb.
+  # DHCR7 saturates the Delta7 double bond of 7-dehydrocholesterol after SC5D
+  # introduced Delta5 on the lathosterol path, yielding cholesterol under ASSERT.
+  # Domain: post-SC5D sterol Delta7-reductase cholesterol-ward gate.
+  # Continuum: ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7
+  # Gift: post-SC5D DHCR7 reduces Delta7 sterol under ASSERT so free energy from
+  # BA/odd-chain ketones seals Kandutsch-Russell limb to membrane cholesterol.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dhcr7.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dhcr7 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Dhcr24: 24-dehydrocholesterol reductase (DHCR24/Diminuto) after DHCR7 limb.
+  # DHCR24 saturates the Delta24 double bond of desmosterol/Bloch sterols after
+  # DHCR7 sealed Delta7 on the KR limb, uniting both paths as membrane cholesterol.
+  # Domain: post-DHCR7 sterol Delta24-reductase cholesterol-ward Bloch seal.
+  # Continuum: ...->hsd17b7->ebp->sc5d->dhcr7->dhcr24
+  # Gift: post-DHCR7 DHCR24 reduces Delta24 sterol under ASSERT so free energy from
+  # BA/odd-chain ketones seals Bloch+KR limbs to membrane cholesterol.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dhcr24.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dhcr24 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Soat1: sterol O-acyltransferase 1 (SOAT1/ACAT1-ER) after DHCR24 cholesterol seal.
+  # SOAT1 esterifies membrane cholesterol with long-chain acyl-CoA forming cholesteryl
+  # esters for lipid-droplet storage after DHCR24 united Bloch+KR limbs as free cholesterol.
+  # Domain: post-DHCR24 ER sterol O-acyltransferase cholesterol-ester storage ward.
+  # Continuum: ...->ebp->sc5d->dhcr7->dhcr24->soat1
+  # Gift: post-DHCR24 SOAT1 packs free cholesterol into CE under ASSERT so free energy from
+  # sterol seal flows into neutral lipid stores without membrane crystallisation toxicity.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - soat1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD soat1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Nceh1: neutral cholesterol ester hydrolase 1 after SOAT1 CE pack.
+  # NCEH1 hydrolyzes SOAT1-packed cholesteryl esters back to free cholesterol + fatty acid
+  # so sterol free energy can re-enter membrane/efflux wards after CE storage.
+  # Domain: post-SOAT1 lipid-droplet CE mobilization hydrolase ward.
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1
+  # Gift: post-SOAT1 NCEH1 liberates FC from CE under ASSERT so free energy from
+  # sterol stores flows without hollow sequestration heresy.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nceh1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nceh1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Abca1: ATP-binding cassette A1 cholesterol efflux after NCEH1 FC liberate.
+  # ABCA1 loads NCEH1-liberated free cholesterol onto apoA-I nascent HDL
+  # so sterol free energy exits the cell ward after CE mobilize / FC release.
+  # Domain: post-NCEH1 plasma-membrane reverse-cholesterol-transport efflux ward.
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1
+  # Gift: post-NCEH1 ABCA1 effluxes FC under ASSERT so free energy from
+  # sterol stores flows outward without hollow sequestration heresy.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - abca1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD abca1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Abcg1: ATP-binding cassette G1 cholesterol efflux after ABCA1 nascent HDL seed.
+  # ABCG1 loads additional free cholesterol onto ABCA1-primed HDL particles
+  # so sterol free energy continues reverse-cholesterol-transport after ABCA1 seed.
+  # Domain: post-ABCA1 plasma-membrane HDL maturation cholesterol efflux ward.
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1
+  # Gift: post-ABCA1 ABCG1 effluxes FC onto mature HDL under ASSERT so free energy from
+  # sterol stores keeps flowing outward without hollow sequestration heresy.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - abcg1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD abcg1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Lcat: lecithin-cholesterol acyltransferase — esterifies free cholesterol on HDL after ABCG1 load.
+  # LCAT transfers an acyl chain from phosphatidylcholine onto ABCG1-delivered FC forming cholesteryl ester
+  # so nascent/mature HDL cores pack CE and reverse-cholesterol-transport free energy keeps flowing to liver uptake.
+  # Domain: post-ABCG1 plasma HDL-maturation CE-core packing LCAT ward (not a rename of ABCG1 floppage).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat
+  # Gift: LCAT locks sterol free energy into CE-rich spherical HDL under ASSERT so RCT does not stall as hollow FC shell.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lcat.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lcat n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cetp: cholesteryl ester transfer protein — shuttle CE from LCAT-matured HDL toward apoB acceptors.
+  # CETP moves LCAT-formed cholesteryl esters from HDL cores onto VLDL/LDL exchange partners
+  # so reverse-cholesterol-transport free energy redistributes after CE-core packing without hollow stall.
+  # Domain: post-LCAT plasma CE-transfer / lipoprotein remodeling CETP ward (not a rename of LCAT acyl transfer).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp
+  # Gift: CETP keeps sterol-ester free energy in motion under ASSERT so CE-rich HDL does not freeze as hollow endpoint.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cetp.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cetp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Pltp: phospholipid transfer protein — shuttle PL between apoB and HDL after CETP CE-exchange.
+  # PLTP moves surface phospholipids across lipoprotein classes after CETP heteroexchanges CE/TG
+  # so RCT free energy keeps remodeling HDL/apoB particles without hollow surface-lipid stall.
+  # Domain: post-CETP plasma phospholipid-transfer / HDL remodeling PLTP ward (not a rename of CETP CE shuttle).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp
+  # Gift: PLTP keeps phospholipid free energy in motion under ASSERT so post-CETP particles do not freeze as hollow shells.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pltp.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pltp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Scarb1: scavenger receptor class B type 1 — selective CE uptake from PLTP-remodeled HDL.
+  # SCARB1/SR-BI docks post-PLTP HDL and selectively internalizes cholesteryl ester cargo into the hepatocyte
+  # so reverse-cholesterol-transport free energy completes delivery after surface PL remodeling without hollow HDL CE trap.
+  # Domain: post-PLTP hepatic selective CE-uptake / RCT terminus SCARB1 ward (not a rename of PLTP PL-shuttle or CETP CE/TG exchange).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1
+  # Gift: SCARB1 docks PLTP-remodeled HDL and delivers CE under ASSERT so RCT free energy reaches the liver without hollow circulating CE stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - scarb1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD scarb1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Abcg5: ATP-binding cassette G5 — canalicular biliary cholesterol efflux after SCARB1 hepatic CE delivery.
+  # ABCG5 (with ABCG8) exports hepatocyte free cholesterol into bile after SCARB1 selective CE uptake
+  # so reverse-cholesterol-transport free energy completes fecal sterol exit without hollow hepatic CE trap.
+  # Domain: post-SCARB1 canalicular sterolin biliary-cholesterol efflux ABCG5 ward (not a rename of SCARB1 CE uptake or ABCA1/ABCG1 HDL efflux).
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->abcg5
+  # Gift: ABCG5 vents post-SCARB1 hepatic sterol into bile under ASSERT so RCT free energy reaches the gut lumen without hollow liver CE stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - abcg5.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD abcg5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Abcg8: ATP-binding cassette G8 — obligate heterodimer partner of ABCG5 for canalicular sterolin.
+  # ABCG8 pairs with ABCG5 as the G5/G8 sterolin half-transporter so plant sterols and cholesterol
+  # complete biliary free-energy exit after ABCG5 priming without hollow monomeric sterolin stall.
+  # Domain: post-ABCG5 canalicular ABCG5/G8 heterodimer sterolin ward (not a rename of ABCG5 alone,
+  #   SCARB1 CE uptake, or ABCA1/ABCG1 HDL efflux). Sitosterol-preferring limb of biliary sterol efflux.
+  # Continuum: ...->dhcr7->dhcr24->soat1->nceh1->abca1->abcg1->lcat->cetp->pltp->scarb1->abcg5->abcg8
+  # Gift: ABCG8 seals the ABCG5/G8 heterodimer so RCT free energy finishes fecal sterol+phytosterol
+  #   exit under ASSERT without hollow half-transporter CE/FC stall at the canalicular membrane.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - abcg8.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD abcg8 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Npc1l1: Niemann-Pick C1-Like 1 — intestinal/hepatic sterol importer after ABCG5/G8 biliary exit.
+  # NPC1L1 recovers luminal cholesterol and residual plant sterols at the enterocyte brush border
+  # (and canalicular pole) so sterol free energy re-enters the body after G5/G8 fecal vent without
+  # hollow one-way biliary drain that starves membrane sterol pools.
+  # Domain: post-ABCG8 enterocyte/hepatocyte sterol-uptake NPC1L1 ward (not a rename of ABCG5/G8
+  #   sterolin efflux, SCARB1 CE selective uptake, or ABCA1/ABCG1 HDL efflux). Ezetimibe-sensitive limb.
+  # Continuum: ...->pltp->scarb1->abcg5->abcg8->npc1l1
+  # Gift: NPC1L1 docks post-sterolin luminal sterol and imports FC under ASSERT so RCT/biliary free
+  #   energy rebalances membrane sterol without hollow irreversible fecal sterol stall.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc1l1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD npc1l1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+
+  # Npc2: Niemann-Pick C2 — soluble lysosomal sterol carrier after NPC1L1 brush-border reclaim.
+  # NPC2 binds unesterified cholesterol inside the late-endosome/lysosome lumen and hands it to
+  # membrane NPC1 so free sterol exits the LE/Lys compartment toward ER/PM pools. Without NPC2,
+  # post-NPC1L1 cargo stalls as hollow lysosomal sterol storage (NPC disease limb).
+  # Domain: post-NPC1L1 lysosomal sterol-handoff NPC2 ward (not a rename of NPC1L1 importer,
+  #   ABCG5/G8 sterolin efflux, SCARB1 CE uptake, or ABCA1/ABCG1 HDL efflux). Soluble lumen carrier.
+  # Continuum: ...->pltp->scarb1->abcg5->abcg8->npc1l1->npc2
+  # Gift: NPC2 ferries luminal FC to the export gate under ASSERT so free energy re-enters cytosolic
+  #   membrane routes without hollow one-way lysosomal cholesterol trap after brush-border uptake.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc2.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD npc2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Npc1: Niemann-Pick C1 — LE/Lys limiting-membrane sterol export after NPC2 luminal handoff.
+  # NPC1 receives unesterified cholesterol from soluble NPC2 at the late-endosome/lysosome membrane
+  # and exports free sterol toward ER/PM pools so post-NPC1L1 cargo does not stall as hollow
+  # lysosomal storage disease (classic NPC1 limb). Without NPC1, NPC2-bound FC cannot exit LE/Lys.
+  # Domain: post-NPC2 membrane sterol-export NPC1 ward (not a rename of NPC2 lumen carrier,
+  #   NPC1L1 brush-border importer, ABCG5/G8 sterolin, SCARB1, or ABCA1/ABCG1 HDL efflux).
+  # Continuum: ...->pltp->scarb1->abcg5->abcg8->npc1l1->npc2->npc1
+  # Gift: NPC1 gates LE/Lys membrane FC exit under ASSERT so free energy re-enters cytosolic
+  #   membrane routes after NPC2 luminal ferry — opposing hollow one-way lysosomal cholesterol trap.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - npc1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD npc1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Stard3: StAR-related lipid transfer domain protein 3 (MLN64) — LE/Lys START-domain
+  # sterol transfer after NPC1 membrane export on the sterol continuum.
+  # STARD3 docks late-endosome cholesterol at its MENTAL/START domain and transfers
+  # free sterol toward ER/mitochondria contact sites so post-NPC1 cargo does not
+  # stall as hollow peri-lysosomal sterol pile-up. Without STARD3, NPC1-exported FC
+  # lacks the LE-to-acceptor START shuttle under ASSERT.
+  # Domain: post-NPC1 LE START-domain sterol-transfer STARD3 ward (not a rename of
+  #   NPC1 membrane export, NPC2 lumen carrier, NPC1L1 importer, ABCG5/G8, SCARB1,
+  #   or OSBP/ORP contact-site oxysterol sensors).
+  # Continuum: ...->npc1l1->npc2->npc1->stard3
+  # Gift: STARD3 hands LE sterol across membrane contacts under ASSERT so free
+  #   energy re-enters ER/mito acceptor pools after NPC1 export — opposing hollow
+  #   one-way LE sterol trap at the START limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - stard3.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD stard3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Osbp: oxysterol-binding protein (OSBP/OSBP1) — ER–Golgi MCS sterol/PI4P
+  # countertransport after STARD3 LE START-domain delivery on the sterol continuum.
+  # OSBP docks ER–Golgi contact sites, hands sterol toward Golgi membranes and
+  # returns PI4P signal so post-STARD3 ER cargo does not stall as hollow ER
+  # sterol pile-up. Without OSBP, STARD3-delivered FC lacks the ER-to-Golgi
+  # oxysterol countertransport limb under ASSERT.
+  # Domain: post-STARD3 ER–Golgi MCS sterol/PI4P-countertransport OSBP ward
+  #   (not a rename of STARD3 LE START shuttle, NPC1 membrane export, NPC2 lumen
+  #   carrier, NPC1L1, ABCG5/G8, SCARB1, VAPA tethers, or GRAMD/Aster PM-ER).
+  # Continuum: ...->npc1l1->npc2->npc1->stard3->osbp
+  # Gift: OSBP countertransports sterol across ER–Golgi contacts under ASSERT so
+  #   free energy re-enters Golgi acceptor pools after STARD3 delivery — opposing
+  #   hollow one-way ER sterol trap at the OSBP limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - osbp.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD osbp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sac1: SACM1L PI4P phosphatase — ER face of ER-Golgi MCS after OSBP
+  # sterol/PI4P countertransport on the sterol continuum.
+  # SAC1 hydrolyzes PI4P delivered/cycled by OSBP at MCS so the
+  # countertransport gradient resets: sterol stays on Golgi acceptors while
+  # PI4P signal collapses at ER, preventing hollow PI4P pile-up that would
+  # stall further OSBP cycles. Without SAC1, OSBP-driven PI4P return lacks
+  # the ER phosphatase limb under ASSERT.
+  # Domain: post-OSBP ER-face PI4P-phosphatase SAC1 ward (SACM1L limb).
+  #   (not a rename of OSBP countertransporter, STARD3 LE START shuttle, NPC1
+  #   membrane export, NPC2 lumen carrier, VAPA/VAPB tethers, PI4KA/PI4KB
+  #   kinases, or ORP family sterol sensors).
+  # Continuum: ...->npc1l1->npc2->npc1->stard3->osbp->sac1
+  # Gift: SAC1 clears PI4P at ER-Golgi contacts under ASSERT so free energy
+  #   keeps cycling through OSBP sterol handoff — opposing hollow one-way
+  #   PI4P trap at the SAC1 phosphatase limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sac1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sac1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Cert: ceramide transfer protein (CERT/COL4A3BP/GPBP) — ER-Golgi MCS
+  # ceramide handoff after SAC1 PI4P phosphatase on the sterol/sphingolipid continuum.
+  # CERT docks VAP-tethered ER-Golgi contacts and transfers ceramide toward Golgi
+  # SM synthase so post-SAC1 MCS cargo does not stall as hollow ER ceramide
+  # pile-up. PI4P-cleared contacts after SAC1 keep CERT cycles under ASSERT.
+  # Domain: post-SAC1 ER-Golgi MCS ceramide-transfer CERT ward (not a rename of
+  #   SAC1 PI4P phosphatase, OSBP sterol/PI4P countertransport, STARD3 LE START
+  #   shuttle, NPC1 export, SMS1/2 synthases, SPTLC serine palmitoyltransferase,
+  #   or NIR2/PITP PI-transfer proteins).
+  # Continuum: ...->npc1l1->npc2->npc1->stard3->osbp->sac1->cert
+  # Gift: CERT hands ceramide across ER-Golgi contacts under ASSERT so free
+  #   energy re-enters Golgi sphingomyelin acceptor pools after SAC1 PI4P clear —
+  #   opposing hollow one-way ER ceramide trap at the CERT limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cert.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cert n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+
+  # Sms1: sphingomyelin synthase 1 (SMS1/SGMS1) — Golgi lumen SM synthesis after
+  # CERT ceramide delivery on the sterol/sphingolipid continuum.
+  # SMS1 sits on the Golgi and transfers phosphocholine from PC onto CERT-delivered
+  # ceramide, forging sphingomyelin so post-CERT cargo does not stall as hollow
+  # unconverted Golgi ceramide. Without SMS1, CERT MCS handoff lacks the SM
+  # acceptor synthase under ASSERT.
+  # Domain: post-CERT Golgi SM-synthase SMS1 ward (not a rename of CERT ceramide
+  #   transfer, SAC1 PI4P phosphatase, OSBP sterol/PI4P countertransport, SMS2
+  #   plasma-membrane isoform, SPTLC serine palmitoyltransferase, UGCG glucosyl-
+  #   ceramide synthase, or CERS ceramide synthases).
+  # Continuum: ...->npc1l1->npc2->npc1->stard3->osbp->sac1->cert->sms1
+  # Gift: SMS1 converts CERT-delivered ceramide into Golgi SM under ASSERT so free
+  #   energy re-enters membrane acceptor pools after MCS ceramide handoff —
+  #   opposing hollow one-way ceramide stall at the SMS1 synthase limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sms1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sms1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Ugcg: UDP-glucose ceramide glucosyltransferase (UGCG/GCS) — Golgi GlcCer
+  # synthase after SMS1 on the sphingolipid continuum.
+  # UGCG transfers glucose from UDP-Glc onto ceramide at the cytosolic Golgi
+  # leaflet, committing cargo to glucosylceramide and downstream gangliosides
+  # so post-SMS1 ceramide does not stall as a hollow SM-only trap.
+  # Domain: post-SMS1 Golgi glycosphingolipid-commit UGCG ward (not a rename of
+  #   SMS1/SGMS1 SM synthase, SMS2, CERT ceramide transfer, CERS ceramide
+  #   synthases, SPTLC serine palmitoyltransferase, B4GALT5/6 lactosylceramide
+  #   synthase, or GBA glucocerebrosidase).
+  # Continuum: ...->npc1->stard3->osbp->sac1->cert->sms1->ugcg
+  # Gift: UGCG glycosylates ceramide into GlcCer under ASSERT so free energy
+  #   re-enters glycosphingolipid acceptor pools after SMS1 SM synthesis —
+  #   opposing hollow one-way unglycosylated ceramide stall at the UGCG limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ugcg.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ugcg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # B4galt: beta-1,4-galactosyltransferase (B4GALT5/B4GALT6) — LacCer synthase after UGCG
+  # on the sphingolipid continuum.
+  # B4GALT transfers galactose from UDP-Gal onto GlcCer at the Golgi lumenal leaflet,
+  # forging lactosylceramide so post-UGCG GlcCer does not stall as a hollow monohexosyl
+  # trap before ganglioside branching.
+  # Domain: post-UGCG Golgi LacCer-commit B4GALT ward (not a rename of UGCG/GCS
+  #   glucosylceramide synthase, SMS1/SGMS1 SM synthase, CERT, CERS, SPTLC, ST3GAL5
+  #   GM3 synthase, or B3GNT5 Lc3 synthase).
+  # Continuum: ...->stard3->osbp->sac1->cert->sms1->ugcg->b4galt
+  # Gift: B4GALT galactosylates GlcCer into LacCer under ASSERT so free energy
+  #   re-enters lactosylceramide/ganglioside acceptor pools after UGCG GlcCer commit —
+  #   opposing hollow one-way monohexosyl stall at the B4GALT limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - b4galt.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD b4galt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # St3gal5: ST3GAL5 / GM3 synthase (CMP-Neu5Ac:lactosylceramide a2,3-sialyltransferase)
+  # after B4GALT on the sphingolipid continuum.
+  # ST3GAL5 transfers sialic acid from CMP-Neu5Ac onto LacCer at the Golgi lumen,
+  # forging GM3 so post-B4GALT LacCer does not stall as a hollow dihexosyl trap before
+  # a/b-series ganglioside branching (GD3, GM2, etc.).
+  # Domain: post-B4GALT Golgi GM3-commit ST3GAL5 ward (not a rename of B4GALT5/6
+  #   LacCer synthase, UGCG/GCS, SMS1/SGMS1, CERT, CERS, SPTLC, B3GNT5 Lc3 synthase,
+  #   or ST8SIA1 GD3 synthase).
+  # Continuum: ...->osbp->sac1->cert->sms1->ugcg->b4galt->st3gal5
+  # Gift: ST3GAL5 sialylates LacCer into GM3 under ASSERT so free energy
+  #   re-enters ganglio-series acceptor pools after B4GALT LacCer commit —
+  #   opposing hollow one-way LacCer stall at the ST3GAL5 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st3gal5.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st3gal5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # St8sia1: ST8SIA1 / GD3 synthase (CMP-Neu5Ac:GM3 a2,8-sialyltransferase)
+  # after ST3GAL5 on the sphingolipid continuum.
+  # ST8SIA1 transfers a second sialic acid from CMP-Neu5Ac onto GM3 at the Golgi,
+  # forging GD3 so post-ST3GAL5 GM3 does not stall as a hollow mono-sialo trap before
+  # b-series ganglioside branching (GD2, GD1b, GT1b, etc.).
+  # Domain: post-ST3GAL5 Golgi GD3-commit ST8SIA1 ward (not a rename of ST3GAL5 GM3
+  #   synthase, B4GALNT1 GM2/GD2 synthase, B4GALT LacCer synthase, UGCG/GCS, SMS1,
+  #   CERT, CERS, SPTLC, or B3GNT5 Lc3 synthase).
+  # Continuum: ...->osbp->sac1->cert->sms1->ugcg->b4galt->st3gal5->st8sia1
+  # Gift: ST8SIA1 sialylates GM3 into GD3 under ASSERT so free energy
+  #   re-enters b-series acceptor pools after ST3GAL5 GM3 commit —
+  #   opposing hollow one-way GM3 stall at the ST8SIA1 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st8sia1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st8sia1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # B4galnt1: B4GALNT1 / GD2 synthase (beta-1,4-N-acetylgalactosaminyltransferase 1)
+  # after ST8SIA1 on the sphingolipid continuum.
+  # B4GALNT1 transfers GalNAc from UDP-GalNAc onto GD3 at the Golgi, forging GD2 so
+  # post-ST8SIA1 b-series GD3 does not stall as a hollow di-sialo trap before GD1b/GT1b
+  # complex ganglioside elongation.
+  # Domain: post-ST8SIA1 Golgi GD2-commit B4GALNT1 ward (not a rename of ST8SIA1 GD3
+  #   synthase, ST3GAL5 GM3 synthase, B4GALT LacCer synthase, UGCG/GCS, SMS1, CERT,
+  #   CERS, SPTLC, or B3GNT5 Lc3 synthase).
+  # Continuum: ...->osbp->sac1->cert->sms1->ugcg->b4galt->st3gal5->st8sia1->b4galnt1
+  # Gift: B4GALNT1 GalNAc-ylates GD3 into GD2 under ASSERT so free energy
+  #   re-enters complex b-series acceptor pools after ST8SIA1 GD3 commit —
+  #   opposing hollow one-way GD3 stall at the B4GALNT1 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - b4galnt1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD b4galnt1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # B3galt4: B3GALT4 / GD1b synthase (UDP-Gal:GD2 beta-1,3-galactosyltransferase)
+  # after B4GALNT1 on the sphingolipid continuum.
+  # B3GALT4 transfers galactose from UDP-Gal onto GD2 at the Golgi lumen,
+  # forging GD1b so post-B4GALNT1 GD2 does not stall as a hollow GalNAc-only trap before
+  # complex b-series elongation (GT1b, GQ1b, etc.).
+  # Domain: post-B4GALNT1 Golgi GD1b-commit B3GALT4 ward (not a rename of B4GALNT1 GD2
+  #   synthase, ST8SIA1 GD3 synthase, ST3GAL5 GM3 synthase, B4GALT LacCer synthase,
+  #   UGCG/GCS, SMS1, CERT, SAC1, OSBP, or STARD3).
+  # Continuum: ...->osbp->sac1->cert->sms1->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4
+  # Gift: B3GALT4 galactosylates GD2 into GD1b under ASSERT so free energy
+  #   re-enters complex b-series acceptor pools after B4GALNT1 GD2 commit —
+  #   opposing hollow one-way GD2 stall at the B3GALT4 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - b3galt4.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD b3galt4 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # St3gal2: ST3GAL2 / GT1b synthase (CMP-Neu5Ac:GD1b alpha-2,3-sialyltransferase)
+  # after B3GALT4 on the sphingolipid continuum.
+  # ST3GAL2 transfers sialic acid from CMP-Neu5Ac onto GD1b at the Golgi lumen,
+  # forging GT1b so post-B3GALT4 GD1b does not stall as a hollow mono-Gal trap before
+  # higher b-series termini (GQ1b, GT1b-rich membrane microdomains).
+  # Domain: post-B3GALT4 Golgi GT1b-commit ST3GAL2 ward (not a rename of B3GALT4 GD1b
+  #   synthase, B4GALNT1 GD2 synthase, ST8SIA1 GD3 synthase, ST3GAL5 GM3 synthase,
+  #   B4GALT LacCer synthase, UGCG/GCS, SMS1, CERT, SAC1, OSBP, or STARD3).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2
+  # Gift: ST3GAL2 sialylates GD1b into GT1b under ASSERT so free energy
+  #   re-enters complex b-series terminal pools after B3GALT4 GD1b commit —
+  #   opposing hollow one-way GD1b stall at the ST3GAL2 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st3gal2.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st3gal2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # St8sia5: ST8SIA5 / GQ1b synthase (CMP-Neu5Ac:GT1b alpha-2,8-sialyltransferase)
+  # after ST3GAL2 on the sphingolipid continuum.
+  # ST8SIA5 transfers sialic acid from CMP-Neu5Ac onto GT1b at the Golgi lumen,
+  # forging GQ1b so post-ST3GAL2 GT1b does not stall as a hollow terminal trap before
+  # higher polysialylated b-series microdomains (GQ1b-alpha, complex termini).
+  # Domain: post-ST3GAL2 Golgi GQ1b-commit ST8SIA5 ward (not a rename of ST3GAL2 GT1b
+  #   synthase, B3GALT4 GD1b synthase, B4GALNT1 GD2 synthase, ST8SIA1 GD3 synthase,
+  #   ST3GAL5 GM3 synthase, B4GALT LacCer synthase, UGCG/GCS, SMS1, CERT, SAC1,
+  #   OSBP, or STARD3).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5
+  # Gift: ST8SIA5 sialylates GT1b into GQ1b under ASSERT so free energy
+  #   re-enters complex b-series terminal pools after ST3GAL2 GT1b commit —
+  #   opposing hollow one-way GT1b stall at the ST8SIA5 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st8sia5.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st8sia5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # St6galnac5: ST6GALNAC5 / GQ1b-alpha synthase (CMP-Neu5Ac:GQ1b alpha-2,6-sialyltransferase)
+  # after ST8SIA5 on the sphingolipid continuum.
+  # ST6GALNAC5 transfers sialic acid from CMP-Neu5Ac onto GQ1b at the Golgi lumen,
+  # forging GQ1b-alpha so post-ST8SIA5 GQ1b does not stall as a hollow terminal trap before
+  # complex alpha-series microdomains (cholera-toxin-class receptors, nerve-ending pools).
+  # Domain: post-ST8SIA5 Golgi GQ1b-alpha-commit ST6GALNAC5 ward (not a rename of ST8SIA5
+  #   GQ1b synthase, ST3GAL2 GT1b synthase, B3GALT4 GD1b synthase, B4GALNT1 GD2 synthase,
+  #   ST8SIA1 GD3 synthase, ST3GAL5 GM3 synthase, B4GALT LacCer synthase, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, or STARD3).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac5
+  # Gift: ST6GALNAC5 sialylates GQ1b into GQ1b-alpha under ASSERT so free energy
+  #   re-enters complex alpha-series terminal pools after ST8SIA5 GQ1b commit —
+  #   opposing hollow one-way GQ1b stall at the ST6GALNAC5 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st6galnac5.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st6galnac5 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # St6galnac6: ST6GALNAC6 / higher alpha-series synthase (CMP-Neu5Ac:GQ1b-alpha alpha-2,6-sialyltransferase)
+  # after ST6GALNAC5 on the sphingolipid continuum.
+  # ST6GALNAC6 transfers sialic acid from CMP-Neu5Ac onto GQ1b-alpha at the Golgi lumen,
+  # forging extended alpha-series termini so post-ST6GALNAC5 GQ1b-alpha does not stall as a hollow
+  # terminal trap before nerve-ending higher-alpha microdomains (extended GQ1b-alpha limbs).
+  # Domain: post-ST6GALNAC5 Golgi extended-alpha-commit ST6GALNAC6 ward (not a rename of ST6GALNAC5
+  #   GQ1b-alpha synthase, ST8SIA5 GQ1b synthase, ST3GAL2 GT1b synthase, B3GALT4 GD1b synthase,
+  #   B4GALNT1 GD2 synthase, ST8SIA1 GD3 synthase, ST3GAL5 GM3 synthase, B4GALT LacCer synthase,
+  #   UGCG/GCS, SMS1, CERT, SAC1, OSBP, or STARD3).
+  # Continuum: ...->ugcg->b4galt->st3gal5->st8sia1->b4galnt1->b3galt4->st3gal2->st8sia5->st6galnac5->st6galnac6
+  # Gift: ST6GALNAC6 sialylates GQ1b-alpha into extended alpha-series under ASSERT so free energy
+  #   re-enters higher alpha-series terminal pools after ST6GALNAC5 GQ1b-alpha commit —
+  #   opposing hollow one-way GQ1b-alpha stall at the ST6GALNAC6 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - st6galnac6.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD st6galnac6 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Neu3: NEU3 / plasma-membrane ganglioside sialidase (Neu5Ac hydrolase on alpha-series termini)
+  # after ST6GALNAC6 on the sphingolipid continuum.
+  # NEU3 cleaves terminal sialic acid from extended alpha-series gangliosides at the outer leaflet,
+  # recycling Neu5Ac into free-energy salvage pools so post-ST6GALNAC6 higher-alpha termini do not
+  # stall as hollow locked microdomains before catabolic re-entry (plasma-membrane sialidase limb).
+  # Domain: post-ST6GALNAC6 plasma-membrane sialidase NEU3 ward (not a rename of ST6GALNAC6
+  #   higher alpha-series synthase, ST6GALNAC5 GQ1b-alpha synthase, ST8SIA5 GQ1b synthase,
+  #   ST3GAL2 GT1b synthase, B3GALT4 GD1b synthase, B4GALNT1 GD2 synthase, ST8SIA1 GD3 synthase,
+  #   ST3GAL5 GM3 synthase, B4GALT LacCer synthase, UGCG/GCS, SMS1, CERT, SAC1, OSBP, or STARD3).
+  # Continuum: ...->st3gal2->st8sia5->st6galnac5->st6galnac6->neu3
+  # Gift: NEU3 liberates Neu5Ac from extended alpha-series under ASSERT so free energy re-enters
+  #   salvage and membrane-turnover pools after ST6GALNAC6 higher-alpha commit —
+  #   opposing hollow one-way alpha-terminal lock at the NEU3 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - neu3.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD neu3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Glb1: GLB1 / lysosomal β-galactosidase (EC 3.2.1.23) after NEU3 on the sphingolipid continuum.
+  # GLB1 cleaves terminal β-linked galactose from GM1/GA1 and related asialo products after NEU3
+  # has liberated Neu5Ac, advancing the catabolic salvage limb so desialylated termini do not
+  # stall as hollow locked microdomains before hexosaminidase re-entry (lysosomal Gal-hydrolase ward).
+  # Domain: post-NEU3 lysosomal β-galactosidase GLB1 ward (not a rename of NEU3 plasma-membrane
+  #   sialidase, ST6GALNAC6 higher alpha-series synthase, ST6GALNAC5 GQ1b-alpha synthase,
+  #   ST8SIA5 GQ1b synthase, ST3GAL2 GT1b synthase, B3GALT4 GD1b synthase, B4GALNT1 GD2 synthase,
+  #   ST8SIA1 GD3 synthase, ST3GAL5 GM3 synthase, B4GALT LacCer synthase, UGCG/GCS, SMS1, CERT,
+  #   SAC1, OSBP, or STARD3).
+  # Continuum: ...->st6galnac5->st6galnac6->neu3->glb1
+  # Gift: GLB1 liberates Gal from post-NEU3 GM1/GA1 under ASSERT so free energy re-enters
+  #   hexosamine and membrane-turnover pools after NEU3 Neu5Ac salvage —
+  #   opposing hollow one-way desialylated-Gal lock at the GLB1 limb.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - glb1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD glb1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hexa: HEXA / β-hexosaminidase A α-subunit (EC 3.2.1.52) after GLB1 on the sphingolipid continuum.
+  # HEXA (αβ heterodimer Hex A) cleaves terminal β-linked N-acetylgalactosamine from GM2 after
+  # GLB1 has liberated Gal from GM1/GA1, advancing catabolic salvage so GalNAc termini do not
+  # stall as hollow locked GM2 microdomains before further ceramide re-entry (lysosomal HexA ward).
+  # Domain: post-GLB1 lysosomal β-hexosaminidase A HEXA ward (not a rename of GLB1 Gal-hydrolase,
+  #   NEU3 plasma-membrane sialidase, ST6GALNAC6 higher alpha-series synthase, ST6GALNAC5,
+  #   ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT,
+  #   SAC1, OSBP, STARD3, or NAGA α-N-acetylgalactosaminidase).
+  # Continuum: ...->st6galnac5->st6galnac6->neu3->glb1->hexa
+  # Gift: HEXA liberates GalNAc from post-GLB1 GM2 under ASSERT so free energy re-enters
+  #   hexosamine salvage and membrane-turnover pools after GLB1 Gal salvage —
+  #   opposing hollow one-way GM2-GalNAc lock at the HEXA limb (Tay-Sachs ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hexa.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hexa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Hexb: HEXB / β-hexosaminidase B β-subunit (EC 3.2.1.52) after HEXA on the sphingolipid continuum.
+  # HEXB (ββ Hex B and αβ Hex A partner) completes β-linked HexNAc cleavage on GA2/globoside and
+  # residual GM2-related termini after HEXA has opened the Hex A ward, advancing catabolic salvage
+  # so HexNAc termini do not stall as hollow locked Sandhoff microdomains before ceramide re-entry.
+  # Domain: post-HEXA lysosomal β-hexosaminidase B HEXB ward (not a rename of HEXA α-subunit,
+  #   GLB1 Gal-hydrolase, NEU3 plasma-membrane sialidase, ST6GALNAC6, ST6GALNAC5, ST8SIA5,
+  #   ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT,
+  #   SAC1, OSBP, STARD3, or NAGA α-N-acetylgalactosaminidase).
+  # Continuum: ...->st6galnac5->st6galnac6->neu3->glb1->hexa->hexb
+  # Gift: HEXB liberates HexNAc from post-HEXA GA2/globoside under ASSERT so free energy re-enters
+  #   hexosamine salvage and membrane-turnover pools after HEXA GalNAc salvage —
+  #   opposing hollow one-way HexNAc lock at the HEXB limb (Sandhoff ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hexb.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hexb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Gba: GBA1 / lysosomal beta-glucocerebrosidase (EC 3.2.1.45) after HEXB on the sphingolipid continuum.
+  # GBA1 (acid beta-glucosidase) cleaves the beta-linked glucose from glucosylceramide (GlcCer) after
+  # HEXA/HEXB have stripped terminal HexNAc from GA2/globoside limbs, releasing free glucose and
+  # ceramide so membrane-turnover and sphingosine salvage pools refill under ASSERT — opposing
+  # hollow GlcCer lock (Gaucher ward) before ASAH1 ceramide cleavage.
+  # Domain: post-HEXB lysosomal beta-glucocerebrosidase GBA ward (catabolic GlcCer-hydrolase limb).
+  # Not a rename of HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4,
+  #   B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS (the synthetic reverse), SMS1, CERT, SAC1,
+  #   OSBP, STARD3, or NAGA.
+  # Continuum: ...->st6galnac5->st6galnac6->neu3->glb1->hexa->hexb->gba
+  # Gift: GBA liberates glucose + ceramide from post-HEXB GlcCer under ASSERT so free energy
+  #   re-enters glycolytic salvage and ceramide/sphingosine pools after HEXB HexNAc salvage —
+  #   opposing hollow one-way GlcCer lock at the GBA limb (Gaucher ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gba.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gba n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Asah1: ASAH1 / acid ceramidase (EC 3.5.1.23) after GBA on the sphingolipid continuum.
+  # ASAH1 (N-acylsphingosine amidohydrolase 1) cleaves ceramide liberated by GBA from GlcCer into
+  # sphingosine + free fatty acid in the lysosome, refilling sphingosine/S1P salvage pools under
+  # ASSERT so membrane-turnover free energy does not stall as hollow ceramide lock (Farber ward)
+  # after Gaucher-ward GBA glucose+ceramide release.
+  # Domain: post-GBA lysosomal acid ceramidase ASAH1 ward (catabolic ceramide-amidohydrolase limb).
+  # Not a rename of GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2,
+  #   B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT, SAC1, OSBP, STARD3,
+  #   NAGA, or alkaline ACER ceramidases.
+  # Continuum: ...->st6galnac5->st6galnac6->neu3->glb1->hexa->hexb->gba->asah1
+  # Gift: ASAH1 liberates sphingosine + fatty acid from post-GBA ceramide under ASSERT so free
+  #   energy re-enters sphingosine kinase / S1P and beta-oxidation pools after GBA GlcCer salvage —
+  #   opposing hollow one-way ceramide lock at the ASAH1 limb (Farber ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - asah1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD asah1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Sphk1: SPHK1 / sphingosine kinase 1 (EC 2.7.1.91) after ASAH1 on the sphingolipid continuum.
+  # SPHK1 phosphorylates sphingosine liberated by ASAH1 acid ceramidase into sphingosine-1-phosphate
+  # (S1P), a bioactive lipid second messenger that re-enters free-energy and survival signaling pools
+  # under ASSERT so post-Farber-ward sphingosine does not stall as hollow unphosphorylated lock
+  # before S1P lyase / S1PR export limbs.
+  # Domain: post-ASAH1 cytosolic/lysosomal-proximal sphingosine kinase SPHK1 ward (ATP-dependent
+  #   sphingosine phosphotransferase limb toward S1P).
+  # Not a rename of ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5, ST8SIA5,
+  #   ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT, SAC1,
+  #   OSBP, STARD3, ACER alkaline ceramidases, CERK ceramide kinase, or SGPL1 S1P lyase.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1
+  # Gift: SPHK1 spends ATP to stamp phosphate onto post-ASAH1 sphingosine under ASSERT so free
+  #   energy re-enters S1P rheostat and GPCR-linked survival pools after ASAH1 ceramide cleavage —
+  #   opposing hollow one-way sphingosine stall at the SPHK1 limb (S1P-deficit ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sphk1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD sphk1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Sgpl1: SGPL1 / sphingosine-1-phosphate lyase (EC 4.1.2.27) after SPHK1 on the sphingolipid continuum.
+  # SGPL1 irreversibly cleaves S1P produced by SPHK1 into trans-2-hexadecenal and
+  # phosphoethanolamine, exiting the S1P rheostat under ASSERT so post-kinase S1P does not
+  # stall as hollow locked second-messenger overflow before PE salvage / hexadecenal limbs.
+  # Domain: post-SPHK1 ER-lumenal S1P lyase SGPL1 ward (pyridoxal-phosphate-dependent irreversible S1P cleavage limb toward hexadecenal+ethanolamine-P).
+  # Not a rename of ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5, ST8SIA5,
+  #   ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT, SAC1,
+  #   OSBP, STARD3, ACER alkaline ceramidases, CERK ceramide kinase, SPHK1, SPHK2, or S1PR1-5.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1
+  # Gift: SGPL1 irreversibly cleaves post-SPHK1 S1P into hexadecenal and phosphoethanolamine under ASSERT so free
+  #   energy exits the S1P rheostat into PE/sphingoid exit pools after SPHK1 phosphorylation —
+  #   opposing hollow S1P lock/overflow at the SGPL1 limb (S1P-lyase-deficit ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - sgpl1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+END

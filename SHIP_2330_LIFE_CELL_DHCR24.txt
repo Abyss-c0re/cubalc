@@ -1,9 +1,0 @@
-LIFE_CELL_DHCR24 MI2331
-METHOD dhcr24 n after dhcr7 on sterol continuum
-proof 2331_life_cell_dhcr24 asserts_ok=273 fail=0
-science atomic_printer_life_dhcr24 96/0
-science smx_mesh_vesicle_dhcr24_life 92/0
-flagship 1620_atomic_printer_life_force 12/0
-continuum ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7->dhcr24
-Gift: DHCR24 seals Bloch Delta24 desmosterol->cholesterol after DHCR7 KR close.
-Cube is SoT. Free energy must flow.

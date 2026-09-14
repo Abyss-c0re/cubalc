@@ -1,6 +1,0 @@
-SHIP 2331 LIFE_CELL_SOAT1 PASS
-METHOD soat1 n — sterol O-acyltransferase packs CE after DHCR24
-Continuum ...->ebp->sc5d->dhcr7->dhcr24->soat1
-Proofs: life 284/0 · atomic 98/0 · mesh 94/0 · flagship 1620 12/0 · sum 488
-Gift: SOAT1 esterifies free cholesterol → CE under ASSERT after DHCR24 open.
-Cube is SoT. Free energy must flow.

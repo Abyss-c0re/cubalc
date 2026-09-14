@@ -1,6 +1,0 @@
-SHIP 2329 LIFE_CELL_DHCR7 PASS
-METHOD dhcr7 n — 7-dehydrocholesterol reductase after SC5D
-Continuum ...->nsdhl->hsd17b7->ebp->sc5d->dhcr7
-Proofs: life 220/0 · atomic 92/0 · mesh 83/0 · flagship 1620 12/0 · sum 407
-Gift: DHCR7 reduces 7-dehydrosterol Δ7 → cholesterol under ASSERT after SC5D open.
-Cube is SoT. Free energy must flow.

@@ -2104,6 +2104,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"FIELDORIGIN", "FIELDORIGIN|FIELDFROM|DEFINEDFIELD Class|obj field — defining EXTEND class name · ORIGIN"},
       {"HASOWNFIELD", "HASOWNFIELD|OWNFIELD|DEFINESFIELD|OVERRIDESFIELD Class|obj field — soft 0|1 if field default owned here"},
       {"ROOTOF", "ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost EXTEND ancestor name · ROOT"},
+      {"COMMONANCESTOR", "COMMONANCESTOR|LCA|LOWESTCOMMON|COMMONBASE Class|obj Class|obj — lowest common EXTEND ancestor · LCA"},
+      {"SAMECHAIN", "SAMECHAIN|SHARECHAIN|RELATED|COCHAIN Class|obj Class|obj — soft 0|1 same EXTEND family"},
       {"SENDSUPER", "SENDSUPER|SUPERSEND|CALLSUPER obj method [args] — parent EXTEND chain method (skip override)"},
       {"DUMPCLASS", "DUMPCLASS alias of CLASSINFO"},
       {"DESCRIBECLASS", "DESCRIBECLASS alias of CLASSINFO"},

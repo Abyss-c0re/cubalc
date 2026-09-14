@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Reject ADDING pin litter — deletions of pins are required healing
+set -euo pipefail
+# ACR = Added, Copied, Renamed — not Deleted
+bad=$(git diff --cached --name-only --diff-filter=ACR | grep -E '(^|/)(SHIP_|FEAT_HEAD|HEAD_|CUBALC_HEAD|PINNED_HEAD|TIP_AFTER_PIN)' || true)
+# also block new root MEANINGFUL_ITER (not state/)
+bad2=$(git diff --cached --name-only --diff-filter=ACR | grep -E '^MEANINGFUL_ITER(\.json)?$' || true)
+if [[ -n "$bad$bad2" ]]; then
+  echo "HERESY: refuse commit of pin litter:" >&2
+  echo "$bad$bad2" >&2
+  echo "Use state/MEANINGFUL_ITER.json only. Deleting pins is OK." >&2
+  exit 1
+fi
+msg_file=$(git rev-parse --git-path COMMIT_EDITMSG 2>/dev/null || true)
+if [[ -f "${msg_file:-}" ]]; then
+  subj=$(head -1 "$msg_file" || true)
+  if echo "$subj" | grep -qiE 'chore\(mi\).*(self-pin|exact self-pin|pin MEANINGFUL|seal.*pin)|chore\(ship\).*pin'; then
+    real=$(git diff --cached --name-only --diff-filter=ACR | grep -E '^(src/|include/|programs/(lib|book|proof|p2p)/|docs/|samples/)' || true)
+    if [[ -z "$real" ]]; then
+      echo "HERESY: pin-only chore(mi) commit refused" >&2
+      exit 1
+    fi
+  fi
+fi
+exit 0

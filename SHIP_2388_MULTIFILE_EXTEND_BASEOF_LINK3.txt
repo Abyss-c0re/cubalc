@@ -1,6 +1,0 @@
-MULTIFILE_EXTEND_BASEOF_LINK3 (MI 2388)
-FEATURE: BASEOF/HASPARENT + CLASSINFO parent on multi-file CLASS EXTEND three-unit link
-PROOF: programs/proof/2402_multifile_extend_baseof_link3.cubalc asserts_ok:48 asserts_fail:0
-LIBS: demo_greeter_base + demo_greeter_extend + demo_loud_greeter
-RUNTIME: EXTEND reopen, CLASS Child EXTEND Parent (parent_idx), ISOF chain, CLASSINFO parent bag/JSON
-VERSION: 1.16.2-usability

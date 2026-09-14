@@ -1,8 +1,0 @@
-SHIP 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
-VERSION=1.16.4-parents-rootof
-MI=2404
-HEAD=622badc76c6b528195917ed5de5a909e5baf7353
-PROOF=programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
-ASSERTS_OK=85
-ASSERTS_FAIL=0
-STATUS=PASS

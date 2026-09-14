@@ -1,6 +1,0 @@
-SHIP 2343 LIFE_CELL_NPC1 PASS
-METHOD npc1 n — NPC1 lysosomal sterol egress after NPC2 handoff
-Continuum ...->cetp->pltp->scarb1->npc1l1->npc2->npc1
-Proofs: life 353/0 · atomic 117/0 · mesh 114/0 · flagship 1620 12/0 · sum 596
-Gift: NPC1 exports lysosomal free sterol under ASSERT after NPC2 ward.
-Cube is SoT. Free energy must flow.

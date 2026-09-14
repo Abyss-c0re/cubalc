@@ -1,6 +1,0 @@
-SHIP 2345 LIFE_CELL_OSBP PASS
-METHOD osbp n — OSBP ER-Golgi MCS sterol/PI4P counterexchange after STARD3
-Continuum ...->cetp->pltp->scarb1->npc1l1->npc2->npc1->stard3->osbp
-Proofs: life 365/0 · atomic 121/0 · mesh 118/0 · flagship 1620 12/0 · sum 616
-Gift: OSBP counterexchanges sterol at ER-Golgi MCS under ASSERT after STARD3 ward.
-Cube is SoT. Free energy must flow.

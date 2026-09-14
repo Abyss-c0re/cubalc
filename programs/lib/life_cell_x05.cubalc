@@ -1,0 +1,3421 @@
+# life_cell_x05.cubalc — EXTEND Cell pack 5
+
+EXTEND CLASS Cell
+  METHOD pepd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PepN: cytoplasmic aminopeptidase N after PepD dipeptidase.
+  # PepN (aminopeptidase N / PepN metallopeptidase) clears residual oligopeptides
+  # and N-terminal residues after PepD frees L-Ala + L-Glu from YcjG-epimerized
+  # dipeptides, returning bulk amino-acid free-energy into central catabolism and
+  # re-entry pools under murein-turnover stress. Distinct from PepD (L-Ala-L-Glu
+  # dipeptidase), YcjG (L-Ala-D/L-Glu epimerase), MpaA (gamma-D-Glu-mDAP amidase),
+  # LdcA, Mpl, AmpD, AmiA/B/C - PepN is the broad-specificity cytoplasmic
+  # aminopeptidase gate downstream of PepD dipeptide hydrolysis.
+  # Without PepN after PepD, residual oligopeptide stems stall and the recycling
+  # continuum loses its terminal aminopeptidase free-energy release branch.
+  # Domain: post-PepD PepN cytoplasmic aminopeptidase N / oligopeptide hydrolase
+  # (not PepD, not YcjG, not MpaA, not LdcA, not Mpl, not AmpD, not Ami family).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn
+  #   (PepD L-Ala-L-Glu dipeptidase -> PepN aminopeptidase N).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepN catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepn life-force.
+  # Usability: AGI models post-PepD PepN aminopeptidase recycling gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepn n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PepQ: Xaa-Pro dipeptidase (prolidase) after PepN aminopeptidase N.
+  # PepQ (Xaa-Pro dipeptidase / prolidase) cleaves Xaa-Pro dipeptides that
+  # PepN cannot finish — proline's secondary amine stalls broad aminopeptidases.
+  # After PepN clears residual oligopeptide N-termini, imino-dipeptides remain;
+  # PepQ opens the Xaa-Pro bond so free Pro and partner amino acids re-enter
+  # central catabolism and murein / collagen-like recycling under turnover stress.
+  # Distinct from PepN (broad aminopeptidase N), PepD (L-Ala-L-Glu dipeptidase),
+  # YcjG, MpaA, LdcA, Mpl, AmpD — PepQ is the proline-specialist cytoplasmic
+  # dipeptidase gate downstream of PepN.
+  # Without PepQ after PepN, Xaa-Pro stems stall and the recycling continuum
+  # loses its prolidase free-energy release branch.
+  # Domain: post-PepN PepQ Xaa-Pro dipeptidase / prolidase
+  # (not PepN, not PepD, not YcjG, not MpaA, not LdcA, not Mpl, not AmpD).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq
+  #   (PepN aminopeptidase N -> PepQ Xaa-Pro dipeptidase / prolidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepQ catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepq life-force.
+  # Usability: AGI models post-PepN PepQ prolidase recycling gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepq n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PepP: Xaa-Pro aminopeptidase P after PepQ prolidase.
+  # PepP (aminopeptidase P / Xaa-Pro aminopeptidase) cleaves the N-terminal
+  # Xaa from longer Xaa-Pro-Yaa... peptides that PepQ cannot touch — PepQ is
+  # dipeptide-only prolidase; PepP processively frees the Xaa when Pro sits
+  # at P1' on tri- and oligopeptides from murein / collagen-like turnover.
+  # After PepQ opens residual Xaa-Pro dipeptides, uncleaved Xaa-Pro stems on
+  # longer fragments still stall broad aminopeptidases; PepP releases free AA
+  # so Pro-containing oligopeptide recycling completes under turnover stress.
+  # Distinct from PepQ (Xaa-Pro dipeptidase / prolidase), PepN (broad
+  # aminopeptidase N), PepD (L-Ala-L-Glu dipeptidase), YcjG, MpaA, LdcA, Mpl —
+  # PepP is the Xaa-Pro aminopeptidase gate downstream of PepQ.
+  # Without PepP after PepQ, Xaa-Pro-Yaa oligopeptides stall and the recycling
+  # continuum loses its aminopeptidase-P free-energy release branch.
+  # Domain: post-PepQ PepP Xaa-Pro aminopeptidase P / oligopeptide hydrolase
+  # (not PepQ, not PepN, not PepD, not YcjG, not MpaA, not LdcA, not Mpl).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa
+  #   (PepQ Xaa-Pro dipeptidase / prolidase -> PepP Xaa-Pro aminopeptidase P).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepP catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepp life-force.
+  # Usability: AGI models post-PepQ PepP Xaa-Pro aminopeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # PepA: leucyl aminopeptidase A after PepP Xaa-Pro aminopeptidase P.
+  # PepA (aminopeptidase A / PepA) is a broad-specificity zinc metallopeptidase
+  # that cleaves remaining N-terminal residues from oligopeptides after the
+  # proline-specialized PepQ/PepP gates finish Xaa-Pro stems. PepP frees Xaa
+  # when Pro sits at P1' on longer fragments; residual non-Pro N-termini still
+  # need a general leucyl aminopeptidase so free AA fully re-enter metabolism.
+  # Distinct from PepP (Xaa-Pro aminopeptidase P), PepQ (Xaa-Pro dipeptidase /
+  # prolidase), PepN (aminopeptidase N), PepD (L-Ala-L-Glu dipeptidase), YcjG,
+  # MpaA, LdcA, Mpl — PepA is the broad leucyl aminopeptidase gate downstream
+  # of PepP on the murein peptide recycling continuum.
+  # Without PepA after PepP, residual non-Pro N-termini stall and the recycling
+  # continuum loses its general aminopeptidase-A free-energy release branch.
+  # Domain: post-PepP PepA leucyl aminopeptidase A / broad N-terminal hydrolase
+  # (not PepP, not PepQ, not PepN, not PepD, not YcjG, not MpaA, not LdcA, not Mpl).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa
+  #   (PepP Xaa-Pro aminopeptidase P -> PepA leucyl aminopeptidase A).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepA catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepa life-force.
+  # Usability: AGI models post-PepP PepA leucyl aminopeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # PepB: aminopeptidase B after PepA leucyl aminopeptidase A.
+  # PepB (aminopeptidase B / PepB) is an arginine/lysine-preferring
+  # aminopeptidase that cleaves basic N-terminal residues left after PepA
+  # has stripped bulk hydrophobic/neutral stems from murein oligopeptides.
+  # PepA opens general N-termini; residual Arg/Lys N-termini still need PepB
+  # so cationic free AA fully re-enter the metabolic reserve bank.
+  # Distinct from PepA (leucyl aminopeptidase A), PepP (Xaa-Pro aminopeptidase P),
+  # PepQ (prolidase), PepN (aminopeptidase N), PepD, YcjG, MpaA, LdcA, Mpl —
+  # PepB is the basic-residue aminopeptidase gate downstream of PepA on the
+  # murein peptide recycling continuum.
+  # Without PepB after PepA, basic N-termini stall and the recycling continuum
+  # loses its cationic free-energy release branch.
+  # Domain: post-PepA PepB aminopeptidase B / Arg-Lys N-terminal hydrolase
+  # (not PepA, not PepP, not PepQ, not PepN, not PepD, not YcjG, not MpaA).
+  # Continuum: ...->ldca->mpaa->ycjg->pepd->pepn->pepq->pepp->pepa->pepb
+  #   (PepA leucyl aminopeptidase A -> PepB aminopeptidase B).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepB catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepb life-force.
+  # Usability: AGI models post-PepA PepB aminopeptidase B gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PepE: alpha-aspartyl dipeptidase after PepB aminopeptidase B.
+  # PepE (peptidase E / alpha-aspartyl dipeptidase) specifically hydrolyzes
+  # dipeptides with N-terminal L-Asp (Asp-Xaa) that remain after PepB has
+  # cleared basic Arg/Lys stems from murein-derived oligopeptides. Aspartyl
+  # dipeptides are poor PepB substrates; PepE opens that acidic branch so
+  # free Asp + partner AA re-enter central nitrogen and TCA-linked pools.
+  # Distinct from PepB (Arg/Lys aminopeptidase B), PepA (leucyl aminopeptidase A),
+  # PepD (L-Ala-D/L-Glu dipeptidase), PepN, PepP, PepQ, MpaA, YcjG —
+  # PepE is the Asp-Xaa dipeptidase gate downstream of PepB on the murein
+  # peptide recycling continuum.
+  # Without PepE after PepB, Asp-Xaa dipeptides stall and the recycling
+  # continuum loses its acidic free-energy release branch.
+  # Domain: post-PepB PepE alpha-aspartyl dipeptidase / Asp-Xaa hydrolase
+  # (not PepB, not PepA, not PepD, not PepN, not PepP, not PepQ, not MpaA).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe
+  #   (PepB aminopeptidase B -> PepE alpha-aspartyl dipeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepE catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepe life-force.
+  # Usability: AGI models post-PepB PepE Asp-Xaa dipeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepe n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # PepT: tripeptidase after PepE alpha-aspartyl dipeptidase.
+  # PepT (peptidase T / tripeptidase) hydrolyzes tripeptides released during
+  # murein-peptide recycling after PepE has cleared Asp-Xaa dipeptides from the
+  # acidic branch. PepT opens the tripeptide gate so dipeptide + free AA re-enter
+  # PepA/PepB/PepD/PepE/PepN routes and central nitrogen pools under turnover.
+  # Distinct from PepE (Asp-Xaa dipeptidase), PepB (Arg/Lys aminopeptidase B),
+  # PepA (leucyl aminopeptidase A), PepD, PepN, PepP, PepQ, PepF —
+  # PepT is the tripeptide hydrolase gate downstream of PepE on the murein
+  # peptide recycling continuum.
+  # Without PepT after PepE, tripeptides stall and the recycling continuum
+  # loses its tripeptide free-energy release branch.
+  # Domain: post-PepE PepT tripeptidase / tripeptide hydrolase
+  # (not PepE, not PepB, not PepA, not PepD, not PepN, not PepP, not PepQ).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept
+  #   (PepE alpha-aspartyl dipeptidase -> PepT tripeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepT catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pept life-force.
+  # Usability: AGI models post-PepE PepT tripeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pept n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PepF: oligopeptidase F after PepT tripeptidase.
+  # PepF (oligopeptidase F / PepF metallopeptidase) cleaves longer oligopeptides
+  # that remain after PepT has opened the tripeptide gate. PepT finishes
+  # tripeptides to dipeptide + free AA; residual tetra- and longer murein-derived
+  # oligopeptides still stall unless PepF processively trims them into PepT/PepA/
+  # PepB/PepD/PepE/PepN substrates under turnover stress.
+  # Distinct from PepT (tripeptidase), PepE (Asp-Xaa dipeptidase), PepB (Arg/Lys
+  # aminopeptidase B), PepA (leucyl aminopeptidase A), PepD, PepN, PepP, PepQ —
+  # PepF is the oligopeptide hydrolase gate downstream of PepT on the murein
+  # peptide recycling continuum.
+  # Without PepF after PepT, oligopeptides stall and the recycling continuum
+  # loses its oligopeptidase free-energy release branch.
+  # Domain: post-PepT PepF oligopeptidase F / oligopeptide hydrolase
+  # (not PepT, not PepE, not PepB, not PepA, not PepD, not PepN, not PepP, not PepQ).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf
+  #   (PepT tripeptidase -> PepF oligopeptidase F).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PepF catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pepf life-force.
+  # Usability: AGI models post-PepT PepF oligopeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pepf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # PepDF / PDF: peptide deformylase after PepF oligopeptidase F.
+  # PDF (peptide deformylase, def) hydrolyzes the N-formyl group from initiator
+  # N-formylmethionine on nascent and recycled peptides once PepF has opened the
+  # oligopeptide gate. Formyl removal is obligatory before methionine aminopeptidase
+  # can expose mature N-termini; without PDF, fMet stalls, MAP is blocked, and free
+  # formate/Met nitrogen cannot re-enter one-carbon and amino-acid pools under
+  # translation + murein turnover stress.
+  # Distinct from PepF (oligopeptidase F), PepT (tripeptidase), PepE (Asp-Xaa
+  # dipeptidase), PepA/B/D/N/P/Q, IF2 (fMet-tRNA delivery), translate (elongation),
+  # cleave (ER signal peptidase) — PDF is the deformylase free-energy gate on the
+  # post-PepF continuum that unlocks N-terminal maturation.
+  # Domain: post-PepF peptide deformylase / N-formyl hydrolase
+  # (not PepF, not PepT, not IF2, not MAP, not translate, not cleave).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf
+  #   (PepF oligopeptidase F -> PDF peptide deformylase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Fe2+-PDF catalytic cycle + formate release.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pdf life-force.
+  # Usability: AGI models post-PepF PDF deformylase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pdf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MAP: methionine aminopeptidase after PDF peptide deformylase.
+  # MAP (methionine aminopeptidase / MetAP) cleaves initiator methionine from
+  # deformylated N-termini once PDF has removed the N-formyl group. MAP opens
+  # mature N-termini so residual peptides re-enter PepA/B/D/E/N/T/F routes and
+  # free Met returns to translation and one-carbon-linked pools under turnover.
+  # Distinct from PDF (peptide deformylase), PepF (oligopeptidase F), PepT
+  # (tripeptidase), PepA (leucyl aminopeptidase A), PepN, IF2, translate,
+  # cleave — MAP is the post-deformylase Met aminopeptidase gate on the
+  # murein / translation N-terminal maturation continuum.
+  # Without MAP after PDF, deformylated Met-Xaa stems stall and the continuum
+  # loses its methionine aminopeptidase free-energy release branch.
+  # Domain: post-PDF MAP methionine aminopeptidase / initiator-Met hydrolase
+  # (not PDF, not PepF, not PepT, not PepA, not PepN, not IF2, not translate).
+  # Continuum: ...->pepd->pepn->pepq->pepp->pepa->pepb->pepe->pept->pepf->pdf->map
+  #   (PDF peptide deformylase -> MAP methionine aminopeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MAP catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - map life-force.
+  # Usability: AGI models post-PDF MAP methionine aminopeptidase gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD map n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # NatA: N-terminal acetyltransferase after MAP methionine aminopeptidase.
+  # NatA (Naa10/Ard1·Naa15/Nat1 complex) transfers acetyl-CoA onto the new
+  # N-terminus once MAP has cleaved initiator methionine. Acetylation seals
+  # mature N-termini, tunes half-life under the N-end rule, and gates peptide
+  # fate so free-energy accounting of translation products stays coherent under
+  # turnover stress.
+  # Distinct from MAP (methionine aminopeptidase), PDF (peptide deformylase),
+  # PepA/B/N (aminopeptidases), IF2, translate, cleave — NatA is the post-MAP
+  # N-terminal acetyltransferase gate on the N-terminal maturation continuum.
+  # Without NatA after MAP, bare N-termini stall and the continuum loses its
+  # acetyl-CoA free-energy seal branch.
+  # Domain: post-MAP NatA N-terminal acetyltransferase / acetyl-CoA N-acyl transfer
+  # (not MAP, not PDF, not PepA, not PepN, not IF2, not translate, not cleave).
+  # Continuum: ...->pepf->pdf->map->nata
+  #   (MAP methionine aminopeptidase -> NatA N-terminal acetyltransferase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for acetyl-CoA NatA catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nata life-force.
+  # Usability: AGI models post-MAP NatA N-terminal acetylation gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nata n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # NatB: N-terminal acetyltransferase after MAP, sibling of NatA.
+  # NatB (Naa20/Nat3 · Naa25/Mdm20) transfers acetyl-CoA onto Met-starting
+  # acidic/amide N-termini (Met-Glu/Asp/Asn/Gln) once MAP has acted or when
+  # initiator Met is retained as the NatB substrate stem. Distinct substrate
+  # gate from NatA (which seals small-residue N-termini after Met cleavage).
+  # Distinct from NatA (Naa10·Naa15), MAP, PDF, PepA/B/N, IF2, translate,
+  # cleave — NatB is the post-MAP Met-acidic N-terminal acetyltransferase
+  # branch on the N-terminal maturation continuum.
+  # Without NatB after MAP/NatA continuum, Met-Glu/Asp stems stall and free
+  # energy accounting loses the NatB acetyl-CoA seal branch.
+  # Domain: post-MAP NatB N-terminal acetyltransferase / Met-Xaa acetyl-CoA
+  # (not NatA, not MAP, not PDF, not PepA, not PepN, not IF2, not translate).
+  # Continuum: ...->pepf->pdf->map->nata->natb
+  #   (NatA N-terminal acetyltransferase -> NatB Met-acidic N-acetyltransferase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for acetyl-CoA NatB catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - natb life-force.
+  # Usability: AGI models post-MAP NatB N-terminal acetylation gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD natb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # NatC: N-terminal acetyltransferase after NatB on the MAP/Nat continuum.
+  # NatC (Naa30/Mak3 · Naa35/Mak10 · Naa38/Mak31) transfers acetyl-CoA onto
+  # Met-hydrophobic N-termini (Met-Leu/Ile/Phe/Trp/Tyr) when initiator Met is
+  # retained as the NatC substrate stem. Distinct substrate gate from NatA
+  # (small residues after Met cleavage) and NatB (Met-Glu/Asp/Asn/Gln stems).
+  # Distinct from NatA, NatB, MAP, PDF, PepA/B/N, IF2, translate, cleave —
+  # NatC is the post-NatB Met-hydrophobic N-terminal acetyltransferase branch
+  # on the N-terminal maturation continuum.
+  # Without NatC after MAP/NatA/NatB continuum, Met-Leu/Ile/Phe stems stall and
+  # free energy accounting loses the NatC acetyl-CoA seal branch.
+  # Domain: post-NatB NatC N-terminal acetyltransferase / Met-hydrophobic
+  # acetyl-CoA (not NatA, not NatB, not MAP, not PDF, not PepN, not IF2).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc
+  #   (NatB Met-acidic N-acetyltransferase -> NatC Met-hydrophobic N-Ac).
+  # Pay take=min(n,atp,energy) - ATP stand-in for acetyl-CoA NatC catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - natc life-force.
+  # Usability: AGI models post-NatB NatC N-terminal acetylation gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD natc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # NatE: Naa50 N-terminal acetyltransferase after NatC on the MAP/Nat continuum.
+  # NatE (Naa50 / San) is the catalytic NAT often docked on NatA (Naa10·Naa15)
+  # yet chemically distinct: it transfers acetyl-CoA onto Met-hydrophobic
+  # N-termini (Met-Leu/Ile/Phe/Tyr/Trp/Lys) as a free or NatA-associated unit.
+  # Distinct substrate/complex gate from NatA (small residues post-MAP), NatB
+  # (Met-Glu/Asp/Asn/Gln), and NatC (Naa30·Naa35·Naa38 Mak complex).
+  # Distinct from NatA, NatB, NatC, MAP, PDF, PepA/B/N, IF2, translate, cleave —
+  # NatE is the post-NatC Naa50 N-terminal acetyltransferase branch on the
+  # N-terminal maturation continuum.
+  # Without NatE after MAP/NatA/NatB/NatC continuum, Naa50 Met-hydrophobic seals
+  # stall and free energy accounting loses the NatE acetyl-CoA branch.
+  # Domain: post-NatC NatE/Naa50 N-terminal acetyltransferase / Met-hydrophobic
+  # acetyl-CoA (not NatA, not NatB, not NatC, not MAP, not PDF, not PepN).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate
+  #   (NatC Met-hydrophobic N-Ac -> NatE/Naa50 Met-hydrophobic N-Ac seal).
+  # Pay take=min(n,atp,energy) - ATP stand-in for acetyl-CoA NatE catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nate life-force.
+  # Usability: AGI models post-NatC NatE/Naa50 N-terminal acetylation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nate n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MetE: cobalamin-independent methionine synthase after NatE N-terminal seal.
+  # MetE (MetE / Met6) transfers a methyl group from 5-methyltetrahydrofolate
+  # onto L-homocysteine, regenerating L-methionine without cobalamin (B12).
+  # Distinct from NatA/B/C/E (N-terminal acetyltransferases), MAP, PDF, PepF,
+  # MetK (SAM synthetase), LuxS (AI-2), MtnN (MTA/SAH nucleosidase) — MetE is
+  # the folate-dependent Met recycle gate on the one-carbon / Met continuum.
+  # Without MetE after N-terminal maturation, homocysteine stalls and free
+  # energy accounting loses the B12-independent methionine synthase branch.
+  # Domain: post-NatE MetE cobalamin-independent methionine synthase / Hcy+CH3-THF
+  # (not NatE, not NatA, not MetK, not LuxS, not MtnN, not MAP, not PDF).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete
+  #   (NatE/Naa50 Met-hydrophobic N-Ac -> MetE B12-independent Met synthase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MetE methyl-transfer cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mete life-force.
+  # Usability: AGI models post-NatE MetE methionine regeneration under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mete n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # MetK: methionine adenosyltransferase (SAM synthetase) after MetE.
+  # MetK (MetK / MAT) condenses L-methionine + ATP -> S-adenosyl-L-methionine
+  # (SAM) + Pi + PPi. SAM is the universal methyl donor for one-carbon traffic.
+  # Distinct from MetE (B12-independent Met synthase), NatE/NatA/B/C (N-Ac),
+  # MAP, PDF, PepF, LuxS, MtnN, SpeD — MetK is the Met->SAM gate after MetE
+  # regenerates methionine from homocysteine + 5-methyl-THF.
+  # Without MetK after MetE, free Met stalls and methylome / polyamine /
+  # quorum precursors lose their SAM headgate; free energy accounting loses
+  # the ATP->SAM activation branch.
+  # Domain: post-MetE MetK SAM synthetase / Met+ATP->SAM (not MetE, not MetH,
+  # not NatE, not LuxS, not SpeD, not MtnN).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk
+  #   (MetE B12-independent Met recycle -> MetK SAM synthetase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MetK SAM synthesis cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - metk life-force.
+  # Usability: AGI models post-MetE MetK SAM production under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD metk n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # AhcY: S-adenosylhomocysteine hydrolase after MetK SAM synthetase.
+  # AhcY (SAHH / AhcY) hydrolyzes S-adenosyl-L-homocysteine (SAH) into
+  # adenosine + L-homocysteine. SAH is the spent methyl-transfer product of
+  # SAM; AhcY clears SAH product inhibition and feeds Hcy back toward MetE.
+  # Distinct from MetK (SAM synthetase), MetE (Met synthase), LuxS (AI-2 from
+  # SRH), MtnN (MTA/SAH nucleosidase), SpeD (SAM decarboxylase) — AhcY is the
+  # reversible SAH hydrolase gate that closes the methionine cycle after MetK.
+  # Without AhcY after MetK, SAH accumulates, methyltransferases stall under
+  # product inhibition, and free energy accounting loses the SAH->Hcy recycle.
+  # Domain: post-MetK AhcY SAH hydrolase / SAH->Ado+Hcy (not MetK, not MetE,
+  # not LuxS, not MtnN, not SpeD, not NatE).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy
+  #   (MetK SAM synthetase -> AhcY SAH hydrolase / Met cycle close).
+  # Pay take=min(n,atp,energy) - ATP stand-in for AhcY NAD+ redox cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ahcy life-force.
+  # Usability: AGI models post-MetK AhcY SAH clearance under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ahcy n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cbs: cystathionine-beta-synthase after AhcY SAH hydrolase.
+  # Cbs (CBS / Cys4) condenses L-homocysteine + L-serine -> L-cystathionine + H2O
+  # (PLP-dependent beta-replacement). Homocysteine cleared by AhcY from SAH must
+  # enter the transsulfuration gate; Cbs commits Hcy toward cysteine rather than
+  # exclusive MetE remethylation, balancing methyl cycle vs sulfur amino-acid pool.
+  # Distinct from AhcY (SAH hydrolase), MetE (Hcy remethylation), MetK (SAM
+  # synthetase), LuxS (AI-2 from SRH), MtnN (MTA/SAH nucleosidase), SpeD (SAM
+  # decarboxylase) — Cbs is the Hcy+Ser -> cystathionine commitment after AhcY.
+  # Without Cbs after AhcY, Hcy either stalls or floods only the Met recycle,
+  # and free energy accounting loses the transsulfuration branch to cysteine.
+  # Domain: post-AhcY Cbs cystathionine-beta-synthase / Hcy+Ser->cystathionine
+  # (not AhcY, not MetE, not MetK, not Cgl/Cth, not LuxS, not MtnN).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs
+  #   (AhcY SAH hydrolase -> Cbs cystathionine-beta-synthase / transsulfuration gate).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Cbs PLP beta-replacement cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cbs life-force.
+  # Usability: AGI models post-AhcY Cbs transsulfuration under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cbs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cgl: cystathionine-gamma-lyase after Cbs cystathionine-beta-synthase.
+  # Cgl (CTH / MetC / Cys3) cleaves L-cystathionine -> L-cysteine + 2-oxobutanoate + NH3
+  # (PLP-dependent gamma-elimination). Cbs commits Hcy+Ser into cystathionine; Cgl
+  # opens that thioether so the cell harvests free cysteine for Fe-S clusters,
+  # glutathione precursors, and protein thiols — completing reverse transsulfuration.
+  # Distinct from Cbs (Hcy+Ser->cystathionine), AhcY (SAH hydrolase), MetE (Hcy
+  # remethylation), MetK (SAM synthetase), LuxS (AI-2), MtnN (MTA/SAH nucleosidase),
+  # SpeD (SAM decarboxylase) — Cgl is the cystathionine -> cysteine lyase after Cbs.
+  # Without Cgl after Cbs, cystathionine stalls and sulfur amino-acid free energy
+  # never reaches the cysteine pool the cell spends on redox and Fe-S life-force.
+  # Domain: post-Cbs Cgl cystathionine-gamma-lyase / cystathionine->cysteine
+  # (not Cbs, not AhcY, not MetE, not MetK, not CseA, not LuxS, not MtnN).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl
+  #   (Cbs cystathionine-beta-synthase -> Cgl cystathionine-gamma-lyase / Cys harvest).
+  # Pay take=min(n,atp,energy) - ATP stand-in for Cgl PLP gamma-elimination cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cgl life-force.
+  # Usability: AGI models post-Cbs Cgl cysteine harvest under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cgl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # GshA: glutamate-cysteine ligase after Cgl cystathionine-gamma-lyase.
+  # GshA (GCLC / GshA / gamma-GCS) ligates L-glutamate + L-cysteine + ATP ->
+  # gamma-L-glutamyl-L-cysteine + ADP + Pi (rate-limiting first step of
+  # glutathione biosynthesis). Cgl harvests free cysteine from cystathionine;
+  # GshA commits that Cys into the gamma-Glu-Cys dipeptide that GshB later
+  # seals with glycine into GSH — the cell's master thiol redox buffer.
+  # Distinct from Cgl (cystathionine->cysteine lyase), Cbs (Hcy+Ser->cystathionine),
+  # AhcY (SAH hydrolase), GshB (glutathione synthetase), Gor/Gsr (GSSG reductase),
+  # Gpx (GSH peroxidase) — GshA is the Cys+Glu ATP-dependent gamma-ligase after Cgl.
+  # Without GshA after Cgl, free cysteine stalls as a monomer pool and never enters
+  # the glutathione free-energy shield that protects Fe-S clusters and protein thiols.
+  # Domain: post-Cgl GshA glutamate-cysteine ligase / Cys+Glu->gamma-Glu-Cys
+  # (not Cgl, not Cbs, not GshB, not Gor, not Gpx, not TrxB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha
+  #   (Cgl cystathionine-gamma-lyase -> GshA glutamate-cysteine ligase / GSH gate).
+  # Pay take=min(n,atp,energy) - ATP stand-in for GshA gamma-ligase ATP hydrolysis.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gsha life-force.
+  # Usability: AGI models post-Cgl GshA glutathione-gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gsha n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # GshB: glutathione synthetase after GshA glutamate-cysteine ligase.
+  # GshB (GSS / GshB / glutathione synthase) ligates gamma-L-glutamyl-L-cysteine
+  # + glycine + ATP -> glutathione (GSH) + ADP + Pi — the second and final step
+  # of de novo GSH biosynthesis. GshA opens the gate with gamma-Glu-Cys; GshB
+  # seals that dipeptide with glycine into the tripeptide thiol that buffers
+  # cellular free-energy redox (GSH/GSSG), detoxifies electrophiles, and
+  # protects Fe-S clusters under oxidative load.
+  # Distinct from GshA (Cys+Glu gamma-ligase), Cgl (cystathionine->cysteine),
+  # Cbs (Hcy+Ser->cystathionine), Gor/Gsr (GSSG reductase), Gpx (GSH peroxidase),
+  # Gst (glutathione S-transferase) — GshB is the ATP-dependent glycine ligase
+  # that finishes GSH after GshA.
+  # Without GshB after GshA, gamma-Glu-Cys stalls as a dipeptide pool and the
+  # master thiol free-energy shield never completes — mitosis under ROS fails.
+  # Domain: post-GshA GshB glutathione synthetase / gamma-Glu-Cys+Gly->GSH
+  # (not GshA, not Cgl, not Cbs, not Gor, not Gpx, not Gst, not TrxB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb
+  #   (GshA glutamate-cysteine ligase -> GshB glutathione synthetase / GSH seal).
+  # Pay take=min(n,atp,energy) - ATP stand-in for GshB glycine-ligase ATP hydrolysis.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gshb life-force.
+  # Usability: AGI models post-GshA GshB glutathione seal under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gshb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Gor: glutathione disulfide reductase after GshB glutathione synthetase.
+  # Gor (Gor / Gsr / glutathione reductase) reduces GSSG + NADPH + H+ ->
+  # 2 GSH + NADP+ regenerating the reduced thiol pool after GshB seals de novo
+  # GSH. Oxidative load converts 2 GSH -> GSSG; Gor restores GSH so the free-
+  # energy redox buffer can cycle without depleting the tripeptide shield.
+  # Distinct from GshB (gamma-Glu-Cys+Gly->GSH synthetase), GshA (Cys+Glu gamma-
+  # ligase), Gpx (GSH peroxidase 2GSH+ROOH->GSSG), Gst (GSH S-transferase),
+  # TrxB (thioredoxin reductase) — Gor is the NADPH-dependent GSSG reductase
+  # that finishes the GSH/GSSG free-energy cycle after GshB.
+  # Without Gor after GshB, GSH oxidizes to GSSG and stalls; the master thiol
+  # shield collapses under ROS and mitosis free-energy fails.
+  # Domain: post-GshB Gor glutathione disulfide reductase / GSSG->2GSH
+  # (not GshB, not GshA, not Gpx, not Gst, not TrxB, not Cgl).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor
+  #   (GshB glutathione synthetase -> Gor GSSG reductase / GSH recycle).
+  # Pay take=min(n,atp,energy) - energy stand-in for NADPH-driven disulfide reduction.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gor life-force.
+  # Usability: AGI models post-GshB Gor GSH-recycle under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gor n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Gpx: glutathione peroxidase after Gor GSSG reductase.
+  # Gpx (Gpx / BtuE / glutathione peroxidase) catalyzes 2 GSH + ROOH ->
+  # GSSG + ROH + H2O clearing peroxides with the reduced GSH pool Gor restores after
+  # GshB. After Gor regenerates 2 GSH, Gpx spends that thiol shield on peroxide detox so
+  # Fe-S clusters, membranes, and mitosis free-energy stay intact under ROS load.
+  # Distinct from Gor (GSSG+NADPH->2GSH reductase), GshB (gamma-Glu-Cys+Gly->GSH),
+  # GshA (Cys+Glu gamma-ligase), Gst (GSH S-transferase), KatG/KatE (catalase),
+  # AhpC (alkyl hydroperoxide reductase), TrxB (thioredoxin reductase) — Gpx is the
+  # GSH-dependent peroxidase that consumes 2 GSH into GSSG after Gor recycle.
+  # Without Gpx after Gor, peroxides accumulate even with a full GSH pool; the
+  # glutathione free-energy shield never engages its detox limb and oxidative stall wins.
+  # Domain: post-Gor Gpx glutathione peroxidase / 2GSH+ROOH->GSSG
+  # (not Gor, not GshB, not GshA, not Gst, not Kat, not AhpC, not TrxB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx
+  #   (Gor GSSG reductase -> Gpx glutathione peroxidase / peroxide detox).
+  # Pay take=min(n,atp,energy) - energy stand-in for GSH-driven peroxide reduction work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gpx life-force.
+  # Usability: AGI models post-Gor Gpx peroxide-detox under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gpx n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Gst: glutathione S-transferase after Gpx glutathione peroxidase.
+  # Gst (Gst / glutathione S-transferase) conjugates GSH + electrophilic RX ->
+  # GS-R + HX, phase-II detox that spends the reduced GSH pool Gor restores and
+  # Gpx preserves under peroxide load. After Gpx clears ROOH with 2 GSH, Gst
+  # routes residual electrophiles into mercapturic-acid precursors so membranes,
+  # Fe-S clusters, and mitosis free-energy stay intact under xenobiotic stress.
+  # Distinct from Gpx (2GSH+ROOH->GSSG peroxidase), Gor (GSSG+NADPH->2GSH),
+  # GshB (gamma-Glu-Cys+Gly->GSH), GshA (Cys+Glu gamma-ligase), KatG/KatE (catalase),
+  # AhpC (alkyl hydroperoxide reductase), TrxB (thioredoxin reductase) — Gst is the
+  # GSH-dependent S-transferase that conjugates electrophiles after Gpx peroxide detox.
+  # Without Gst after Gpx, electrophiles accumulate even with a full GSH/peroxide shield;
+  # the glutathione free-energy shield never engages its conjugation limb and adduct stall wins.
+  # Domain: post-Gpx Gst glutathione S-transferase / GSH+RX->GS-R
+  # (not Gpx, not Gor, not GshB, not GshA, not Kat, not AhpC, not TrxB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst
+  #   (Gpx glutathione peroxidase -> Gst glutathione S-transferase / electrophile conjugation).
+  # Pay take=min(n,atp,energy) - energy stand-in for GSH-driven conjugation work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - gst life-force.
+  # Usability: AGI models post-Gpx Gst electrophile-conjugation under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD gst n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Ggt: gamma-glutamyltransferase after Gst glutathione S-transferase.
+  # Ggt (Ggt / gamma-glutamyltransferase / CD224) cleaves the gamma-glutamyl bond of
+  # GSH and GS-conjugates: GS-R -> Cys-Gly-R + Glu, releasing glutamate and a cysteinylglycine
+  # conjugate that dipeptidases convert toward mercapturic-acid export. After Gst conjugates
+  # electrophiles onto GSH, Ggt starts extracellular/lytic processing so adducts leave the
+  # free-energy shield instead of stalling as trapped GS-R.
+  # Distinct from Gst (GSH+RX->GS-R S-transferase), Gpx (2GSH+ROOH->GSSG), Gor (GSSG->2GSH),
+  # GshB/GshA (GSH synthesis), PepN/PepD (peptidases), Mrp/ABC exporters — Ggt is the
+  # gamma-glutamyl cleavage limb that opens GS-conjugates after Gst conjugation.
+  # Without Ggt after Gst, GS-conjugates accumulate; the glutathione free-energy shield never
+  # engages its mercapturic export limb and conjugate stall wins.
+  # Domain: post-Gst Ggt gamma-glutamyltransferase / GS-R -> Cys-Gly-R + Glu
+  # (not Gst, not Gpx, not Gor, not GshB, not GshA, not PepN, not Mrp).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt
+  #   (Gst glutathione S-transferase -> Ggt gamma-glutamyltransferase / conjugate cleavage).
+  # Pay take=min(n,atp,energy) - energy stand-in for gamma-glutamyl cleavage work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ggt life-force.
+  # Usability: AGI models post-Gst Ggt conjugate-cleavage under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ggt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Dug1: cysteinylglycine dipeptidase after Ggt gamma-glutamyltransferase.
+  # Dug1 (Dug1 / Cys-Gly dipeptidase / DUG1) hydrolyzes the Cys-Gly peptide bond of
+  # cysteinylglycine conjugates left by Ggt: Cys-Gly-R -> Cys-R + Gly, releasing free
+  # glycine and a cysteine-S conjugate that N-acetyltransferases convert toward
+  # mercapturic-acid export. After Ggt cleaves GS-R into Cys-Gly-R + Glu, Dug1 finishes
+  # dipeptide breakdown so adducts do not stall as trapped Cys-Gly-R.
+  # Distinct from Ggt (GS-R -> Cys-Gly-R + Glu gamma-glutamyl cleavage), Gst (GSH+RX->GS-R),
+  # PepD/PepN (general peptidases), Gpx/Gor (GSH redox), GshA/GshB (GSH synthesis) - Dug1 is
+  # the Cys-Gly dipeptidase limb that opens Ggt products toward mercapturic completion.
+  # Without Dug1 after Ggt, Cys-Gly conjugates accumulate; the glutathione free-energy
+  # shield never finishes its mercapturic export limb and dipeptide stall wins.
+  # Domain: post-Ggt Dug1 cysteinylglycine dipeptidase / Cys-Gly-R -> Cys-R + Gly
+  # (not Ggt, not Gst, not PepD, not PepN, not Gpx, not Gor, not GshB).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1
+  #   (Ggt gamma-glutamyltransferase -> Dug1 Cys-Gly dipeptidase / conjugate dipeptide cleavage).
+  # Pay take=min(n,atp,energy) - energy stand-in for Cys-Gly dipeptide hydrolysis work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dug1 life-force.
+  # Usability: AGI models post-Ggt Dug1 Cys-Gly cleavage under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dug1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Nat8: Cys-S-conjugate N-acetyltransferase after Dug1 cysteinylglycine dipeptidase.
+  # Nat8 (Nat8 / Cys-S-conjugate N-acetyltransferase / mercapturic NAT) transfers acetyl-CoA
+  # onto the free amino group of cysteine-S conjugates left by Dug1: Cys-R + AcCoA -> NAc-Cys-R
+  # (mercapturic acid) + CoA, sealing the adduct for export. After Dug1 cleaves Cys-Gly-R into
+  # Cys-R + Gly, Nat8 finishes N-acetylation so conjugates leave as mercapturates instead of
+  # stalling as free Cys-S adducts.
+  # Distinct from Dug1 (Cys-Gly-R -> Cys-R + Gly dipeptidase), Ggt (GS-R -> Cys-Gly-R + Glu),
+  # Gst (GSH+RX->GS-R), NatA/B/C/E (protein N-terminal acetyltransferases), Gpx/Gor (GSH redox),
+  # GshA/GshB (GSH synthesis) - Nat8 is the Cys-S-conjugate N-acetyltransferase limb that seals
+  # Dug1 products into mercapturic acids for export.
+  # Without Nat8 after Dug1, Cys-S conjugates accumulate; the glutathione free-energy shield
+  # never finishes its mercapturic export limb and free Cys-adduct stall wins.
+  # Domain: post-Dug1 Nat8 Cys-S-conjugate N-acetyltransferase / Cys-R + AcCoA -> NAc-Cys-R + CoA
+  # (not Dug1, not Ggt, not Gst, not NatA, not NatB, not NatC, not NatE, not Gpx, not Gor).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8
+  #   (Dug1 Cys-Gly dipeptidase -> Nat8 Cys-S-conjugate N-acetyltransferase / mercapturic seal).
+  # Pay take=min(n,atp,energy) - energy stand-in for acetyl-CoA Nat8 catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nat8 life-force.
+  # Usability: AGI models post-Dug1 Nat8 mercapturic N-acetylation under ASSERT.
+  # Cube is SoT. Free energy must flow.
+  METHOD nat8 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cdo1: cysteine dioxygenase after Nat8 mercapturic seal.
+  # Cdo1 (CDO1 / cysteine dioxygenase type 1) dioxygenates free L-cysteine:
+  # Cys + O2 -> cysteine sulfinic acid (CSA). Opens the taurine biosynthetic limb
+  # after the glutathione mercapturic export path sealed by Nat8. Without Cdo1,
+  # cysteine never commits to CSA and CSAD/hypotaurine/taurine free-energy flow stalls.
+  # Distinct from Nat8 (Cys-S-conjugate N-acetyltransferase), Cbs/Cgl (transsulfuration),
+  # GshA/GshB/Gor/Gpx/Gst/Ggt/Dug1 (GSH shield), AhcY (SAH hydrolase) — Cdo1 is the
+  # cysteine thiol dioxygenase that yields CSA for CSAD.
+  # Domain: post-Nat8 Cdo1 cysteine dioxygenase / Cys + O2 -> CSA
+  # (not Nat8, not Csad, not Cbs, not Cgl, not Gst).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1
+  #   (Nat8 mercapturic seal -> Cdo1 cysteine dioxygenase / CSA commitment).
+  # Pay take=min(n,atp,energy) - energy stand-in for O2/Fe2+ Cdo1 catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cdo1 life-force.
+  # Usability: AGI models post-Nat8 Cdo1 cysteine->CSA under ASSERT.
+  # Cube is SoT. Free energy must flow.
+  METHOD cdo1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Csad: cysteine sulfinic acid decarboxylase after Cdo1 cysteine dioxygenase.
+  # Csad (CSAD / cysteine sulfinic acid decarboxylase / CAD) decarboxylates CSA:
+  # cysteine sulfinic acid -> hypotaurine + CO2, committing the taurine biosynthetic
+  # limb after Cdo1. Hypotaurine is later oxidized to taurine; without Csad after Cdo1,
+  # CSA accumulates and taurine free-energy osmolyte/conjugate flow never opens.
+  # Distinct from Cdo1 (Cys->CSA dioxygenase), Nat8 (mercapturic NAT), Gad (Glu decarboxylase),
+  # SpeD (SAM decarboxylase), Cbs/Cgl (transsulfuration) — Csad is the CSA decarboxylase
+  # that yields hypotaurine after Cdo1.
+  # Domain: post-Cdo1 Csad CSA decarboxylase / CSA -> hypotaurine + CO2
+  # (not Cdo1, not Nat8, not Gad, not SpeD, not Cbs).
+  # Continuum: ...->pepf->pdf->map->nata->natb->natc->nate->mete->metk->ahcy->cbs->cgl->gsha->gshb->gor->gpx->gst->ggt->dug1->nat8->cdo1->csad
+  #   (Cdo1 cysteine dioxygenase -> Csad CSA decarboxylase / hypotaurine commitment).
+  # Pay take=min(n,atp,energy) - energy stand-in for PLP-dependent Csad catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - csad life-force.
+  # Usability: AGI models post-Cdo1 Csad CSA->hypotaurine under ASSERT.
+  # Cube is SoT. Free energy must flow.
+  METHOD csad n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fmo1: flavin monooxygenase hypotaurine oxidase after Csad CSA decarboxylase.
+  # Fmo1 (FMO1 / flavin-containing monooxygenase 1 stand-in) oxidizes hypotaurine
+  # from Csad -> taurine + H2O, finishing the oxidative cysteine-disposal limb
+  # into the taurine osmolyte/bile-conjugate pool after Csad opens CSA -> hypotaurine.
+  # After Csad decarboxylates Cdo1 product CSA, Fmo1 commits the sulfur pool to
+  # taurine so mitosis energy budgets gain the finished osmolyte reserve instead
+  # of stalling as hypotaurine backlog on the glutathione shield edge.
+  # Distinct from Csad (CSA->hypotaurine decarboxylase), Cdo1 (Cys+O2->CSA),
+  # Dug1 (Cys-Gly dipeptidase), Nat8 (mercapturic N-acetyl), Gst/Gpx/Gor (GSH
+  # cycle), GshA/GshB (GSH build), Cbs/Cgl (trans-sulfuration) - Fmo1 is the
+  # FAD-dependent monooxygenase that turns Csad product hypotaurine into taurine.
+  # Without Fmo1 after Csad, hypotaurine accumulates even with open decarboxylase
+  # gates; the glutathione free-energy shield never finishes Cys disposal into
+  # taurine and life_cell osmolyte budgets stay sulfur-choked.
+  # Domain: post-Csad Fmo1 hypotaurine monooxygenase / hypotaurine + O2 -> taurine
+  # (not Csad, not Cdo1, not Dug1, not Nat8, not Gst, not Gpx, not Gor, not Cbs).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1
+  #   (Csad CSA decarboxylase -> Fmo1 hypotaurine oxidase / taurine finish).
+  # Pay take=min(n,atp,energy) - energy stand-in for FAD monooxygenase O2 work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fmo1 life-force.
+  # Usability: AGI models post-Csad Fmo1 hypotaurine->taurine under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fmo1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Baat: bile acid-CoA:amino acid N-acyltransferase after Fmo1 taurine finish.
+  # Baat (BAAT / bile acid-CoA:amino acid N-acyltransferase) conjugates Fmo1
+  # product taurine with bile acid-CoA -> taurocholate + CoA, committing the
+  # finished osmolyte into the bile-salt export pool after hypotaurine oxidase
+  # closes Cys disposal into taurine.
+  # After Fmo1 oxidizes Csad hypotaurine -> taurine, Baat N-acylates cholyl-CoA
+  # (or other bile acid-CoA) with that taurine so mitosis energy budgets gain a
+  # conjugated bile-salt reserve instead of free taurine backlog on the shield.
+  # Distinct from Fmo1 (hypotaurine monooxygenase), Csad (CSA decarboxylase),
+  # Cdo1 (Cys dioxygenase), Dug1 (Cys-Gly dipeptidase), Nat8 (mercapturic
+  # N-acetyl), Gst/Gpx/Gor (GSH cycle), GshA/GshB (GSH build), Cbs/Cgl
+  # (trans-sulfuration) - Baat is the cytosolic N-acyltransferase that couples
+  # Fmo1 taurine into tauro-conjugated bile salts for lipid/sterol traffic.
+  # Without Baat after Fmo1, taurine accumulates even with open monooxygenase
+  # gates; the glutathione free-energy shield never finishes Cys disposal into
+  # exportable taurocholate and life_cell bile-conjugate budgets stay open-loop.
+  # Domain: post-Fmo1 Baat taurine N-acyltransferase / bile acid-CoA + taurine
+  #   -> taurocholate + CoA
+  # (not Fmo1, not Csad, not Cdo1, not Dug1, not Nat8, not Gst, not Gpx, not Gor).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat
+  #   (Fmo1 hypotaurine oxidase -> Baat taurine N-acyltransferase / taurocholate).
+  # Pay take=min(n,atp,energy) - energy stand-in for CoA-thioester N-acyl work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - baat life-force.
+  # Usability: AGI models post-Fmo1 Baat taurine->taurocholate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD baat n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Bsep: canalicular bile salt export pump (ABCB11) after Baat taurocholate.
+  # Bsep (BSEP / ABCB11 / bile salt export pump) is the ATP-binding cassette
+  # transporter that exports Baat product taurocholate (and other conjugated
+  # bile salts) across the canalicular membrane into bile, closing the
+  # Cys-disposal -> taurine -> taurocholate limb into true extracellular
+  # bile-salt flux after N-acyltransferase finishes conjugation.
+  # After Baat couples Fmo1 taurine to bile acid-CoA -> taurocholate + CoA,
+  # Bsep commits that conjugate out of the cytosol so mitosis energy budgets
+  # gain an exported bile-salt sink instead of intracellular taurocholate
+  # backlog on the glutathione free-energy shield.
+  # Distinct from Baat (taurine N-acyltransferase), Fmo1 (hypotaurine
+  # monooxygenase), Csad (CSA decarboxylase), Cdo1 (Cys dioxygenase), Dug1
+  # (Cys-Gly dipeptidase), Nat8 (mercapturic N-acetyl), Gst/Gpx/Gor (GSH
+  # cycle) - Bsep is the canalicular ABC transporter that pumps Baat
+  # taurocholate into bile for lipid/sterol traffic and enterohepatic return.
+  # Without Bsep after Baat, taurocholate accumulates even with open
+  # conjugation gates; life_cell bile-export budgets stay open-loop and the
+  # free-energy shield never finishes Cys disposal into canalicular flux.
+  # Domain: post-Baat Bsep canalicular bile salt export / taurocholate + ATP
+  #   -> extracellular bile salt + ADP + Pi
+  # (not Baat, not Fmo1, not Csad, not Cdo1, not Dug1, not Nat8, not Gst).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep
+  #   (Baat taurine N-acyltransferase -> Bsep canalicular bile salt export).
+  # Gift: exported taurocholate sink after conjugation so sterol/lipid traffic
+  #   and mitosis budgets close the Cys-disposal loop into bile.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - bsep life-force.
+  # Usability: AGI models post-Baat Bsep taurocholate export under ASSERT.
+
+  METHOD bsep n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Ntcp: Na+-taurocholate cotransporting polypeptide after Bsep canalicular export.
+  # Ntcp (NTCP / SLC10A1) is the basolateral Na+-dependent bile-salt importer that
+  # reclaims circulating taurocholate into the hepatocyte after Bsep has exported
+  # Baat conjugates into canalicular bile, closing the enterohepatic free-energy
+  # recirculation loop on life_cell.
+  # After Bsep secretes Baat taurocholate into bile, Ntcp recovers portal bile salts
+  # so mitosis energy budgets gain a recycled conjugate pool instead of one-way
+  # export drain on the glutathione Cys-disposal stream.
+  # Distinct from Bsep (canalicular ABCB11 export), Baat (taurine N-acyltransferase),
+  # Fmo1 (hypotaurine oxidase), Csad (CSA decarboxylase), Cdo1 (Cys dioxygenase),
+  # Nat8 (mercapturic NAT), Gst/Gpx/Gor (GSH cycle) - Ntcp is the basolateral
+  # SLC10A1 symporter that imports bile salts with sodium after canalicular export.
+  # Without Ntcp after Bsep, exported taurocholate never re-enters the hepatocyte;
+  # enterohepatic free-energy recirculation stalls and life_cell bile budgets
+  # stay one-pass export only.
+  # Domain: post-Bsep Ntcp basolateral bile-salt uptake / 2 Na+ + taurocholate in
+  # (not Bsep, not Baat, not Fmo1, not Csad, not Cdo1, not Nat8, not Gst).
+  # Continuum: ...->ggt->dug1->nat8->cdo1->csad->fmo1->baat->bsep->ntcp
+  #   (Bsep canalicular export -> Ntcp basolateral reuptake / enterohepatic close).
+  # Pay take=min(n,atp,energy) - energy stand-in for Na+ gradient / SLC10 work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ntcp life-force.
+  # Usability: AGI models post-Bsep Ntcp taurocholate reuptake under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ntcp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Oatp1b1: basolateral organic anion transporting polypeptide (SLCO1B1) after Ntcp.
+  # Oatp1b1 (OATP1B1 / SLCO1B1 / LST-1) is the basolateral organic anion
+  # uptake transporter that imports bilirubin glucuronides, steroid conjugates,
+  # drugs, and other organic anions (including some bile-salt species) into the
+  # hepatocyte after Ntcp opens Na+-coupled taurocholate reclaim — broadening
+  # basolateral anion traffic beyond strict bile-salt symport.
+  # After Ntcp reclaims Bsep-exported taurocholate with Na+, Oatp1b1 commits
+  # Na+-independent organic-anion uptake so mitosis energy budgets gain a
+  # general basolateral anion inlet instead of Ntcp-only bile-salt bottleneck
+  # on the glutathione free-energy shield.
+  # Distinct from Ntcp (Na+-taurocholate cotransport SLC10A1), Bsep (canalicular
+  # ABC export), Baat (taurine N-acyltransferase), Fmo1/Csad/Cdo1/Dug1/Nat8
+  # (Cys-disposal limb), Gst/Gpx/Gor (GSH cycle) - Oatp1b1 is the basolateral
+  # SLCO1B1 carrier for broad organic-anion uptake and drug/bilirubin clearance.
+  # Without Oatp1b1 after Ntcp, basolateral anion traffic stays bile-salt-narrow;
+  # life_cell organic-anion uptake budgets stay open-loop and free-energy shield
+  # never finishes enterohepatic return into multi-anion clearance.
+  # Domain: post-Ntcp Oatp1b1 basolateral organic anion uptake /
+  #   extracellular organic anion -> cytosolic anion (facilitated/exchange)
+  # (not Ntcp, not Bsep, not Baat, not Fmo1, not Csad, not Cdo1, not Dug1).
+  # Continuum: ...->fmo1->baat->bsep->ntcp->oatp1b1
+  #   (Ntcp basolateral Na+-TC uptake -> Oatp1b1 basolateral organic anion uptake).
+  # Gift: broad basolateral organic-anion inlet after Ntcp so bilirubin/drug
+  #   conjugates and multi-anion clearance close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - oatp1b1 life-force.
+  # Usability: AGI models post-Ntcp Oatp1b1 organic-anion uptake under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD oatp1b1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Mrp2: multidrug resistance-associated protein 2 (ABCC2) after Oatp1b1 uptake.
+  # Mrp2 (MRP2 / ABCC2 / cMOAT) is the canalicular ATP-binding cassette exporter that
+  # secretes Oatp1b1-imported organic anions (bilirubin diglucuronide, glutathione
+  # conjugates, sulfated bile salts and related OA-) into bile, closing the basolateral
+  # uptake -> canalicular export organic-anion limb after enterohepatic Ntcp/Oatp reclaim.
+  # After Oatp1b1 broadens basolateral organic-anion traffic beyond Na+-taurocholate,
+  # Mrp2 commits those conjugates across the canaliculus so mitosis energy budgets gain
+  # an exported OA sink instead of intracellular anion backlog on the free-energy shield.
+  # Distinct from Oatp1b1 (SLCO1B1 basolateral OA uptake), Ntcp (SLC10A1 Na+-TC symport),
+  # Bsep (ABCB11 bile-salt export), Baat (taurine N-acyltransferase), Fmo1/Csad/Cdo1
+  # (Cys->taurine limb), Gst/Gpx/Gor (GSH cycle) - Mrp2 is the canalicular ABCC2 pump
+  # that exports organic anions after Oatp1b1 has imported them basolaterally.
+  # Without Mrp2 after Oatp1b1, organic anions accumulate even with open basolateral
+  # gates; life_cell OA-export budgets stay open-loop and multi-substrate detox never
+  # finishes into canalicular flux beside Bsep bile-salt export.
+  # Domain: post-Oatp1b1 Mrp2 canalicular organic-anion export / OA- + ATP
+  #   -> extracellular bile OA- + ADP + Pi
+  # (not Oatp1b1, not Ntcp, not Bsep, not Baat, not Fmo1, not Gst).
+  # Continuum: ...->fmo1->baat->bsep->ntcp->oatp1b1->mrp2
+  #   (Oatp1b1 basolateral OA uptake -> Mrp2 canalicular OA export).
+  # Pay take=min(n,atp,energy) - energy stand-in for ABC ATPase / ABCC2 work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mrp2 life-force.
+  # Usability: AGI models post-Oatp1b1 Mrp2 organic-anion export under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mrp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Mrp3: basolateral organic-anion / bile-salt efflux (ABCC3 / cMOAT2) after Mrp2.
+  # Mrp3 (ABCC3 / MRP3 / cMOAT2) is the basolateral ATP-binding-cassette exporter
+  # that pumps bilirubin glucuronides, glutathione conjugates, and bile-salt
+  # species back toward sinusoidal blood when canalicular Mrp2 flux is saturated
+  # or blocked — the compensatory basolateral overflow after Mrp2 commits
+  # apical multi-anion export into bile.
+  # After Mrp2 clears organic anions canalicularly, Mrp3 opens a basolateral
+  # ABC overflow so mitosis energy budgets gain a sinusoidal rescue outlet
+  # instead of a single-point canalicular choke on the glutathione free-energy
+  # shield and enterohepatic return loop.
+  # Distinct from Mrp2 (ABCC2 canalicular export), Bsep (ABCB11 bile-salt
+  # export), Oatp1b1 (SLCO1B1 basolateral uptake), Ntcp (SLC10A1 Na+-TC uptake),
+  # Baat/Fmo1/Csad/Cdo1/Dug1/Nat8 (Cys-disposal limb), Gst/Gpx/Gor (GSH cycle) -
+  # Mrp3 is the basolateral ABCC3 carrier for organic-anion / bile-salt overflow
+  # and conjugated-bilirubin rescue into blood when canalicular export lags.
+  # Without Mrp3 after Mrp2, basolateral anion rescue stays closed; life_cell
+  # organic-anion export budgets stay canalicular-only and free-energy shield
+  # never finishes compensatory sinusoidal clearance after apical ABC export.
+  # Domain: post-Mrp2 Mrp3 basolateral organic anion / bile-salt efflux /
+  #   cytosolic organic anion + ATP -> sinusoidal organic anion (ABC export)
+  # (not Mrp2, not Bsep, not Oatp1b1, not Ntcp, not Baat, not Fmo1, not Csad).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3
+  #   (Mrp2 canalicular organic anion export -> Mrp3 basolateral overflow export).
+  # Gift: basolateral ABC overflow after Mrp2 so bilirubin/drug conjugates and
+  #   bile-salt rescue close enterohepatic free-energy flow when bile lags.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mrp3 life-force.
+  # Usability: AGI models post-Mrp2 Mrp3 organic-anion overflow under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mrp3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Ostα/β: heteromeric organic solute transporter (SLC51A/B) after Mrp3.
+  # Ostα-Ostβ (OST / SLC51A-SLC51B) is the basolateral bile-acid facilitator that
+  # exports reclaimed bile salts from enterocytes and cholangiocytes into blood,
+  # completing the enterohepatic return limb after canalicular Bsep/Mrp2 export
+  # and basolateral Mrp3 overflow. After Mrp3 opens ABCC3 sinusoidal rescue,
+  # Ost finishes the basolateral bile-salt outlet so intestinally and biliary-
+  # reclaimed acids re-enter portal/systemic free-energy circulation instead of
+  # trapping inside the epithelium.
+  # Distinct from Mrp3 (ABCC3 OA/bile-salt ABC overflow), Mrp2 (ABCC2 canalicular
+  # OA export), Bsep (ABCB11 canalicular bile-salt export), Oatp1b1 (SLCO1B1
+  # basolateral OA uptake), Ntcp (SLC10A1 Na+-TC uptake), Baat (bile-acid-CoA:amino
+  # acid N-acyltransferase) — Ostα/β is the facilitated basolateral bile-salt
+  # exit that closes enterohepatic recirculation after ABC limbs.
+  # Without Ost after Mrp3, basolateral bile-salt return stays ABC-only; life_cell
+  # enterohepatic free-energy loop never finishes facilitated sinusoidal exit
+  # after compensatory Mrp3 overflow.
+  # Domain: post-Mrp3 Ostα/β basolateral bile-salt efflux /
+  #   cytosolic bile salt -> sinusoidal bile salt (facilitated heteromer)
+  # (not Mrp3, not Mrp2, not Bsep, not Oatp1b1, not Ntcp, not Baat).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost
+  #   (Mrp3 basolateral ABC overflow -> Ostα/β basolateral bile-salt exit).
+  # Gift: facilitated basolateral bile-salt outlet after Mrp3 so reclaimed acids
+  #   re-enter blood and close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - ost life-force.
+  # Usability: AGI models post-Mrp3 Ostα/β bile-salt exit under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ost n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Asbt: apical Na+-dependent bile-acid transporter (SLC10A2 / IBAT) after Ost.
+  # Asbt (ASBT / IBAT / SLC10A2) is the apical brush-border sodium-bile-acid
+  # cotransporter that reclaims lumenal conjugated bile salts into enterocytes
+  # (and cholangiocytes) after Ost finishes basolateral facilitated exit.
+  # After Ost opens basolateral bile-salt exit into blood, Asbt commits apical
+  # Na+-coupled uptake from the gut lumen so mitosis energy budgets gain a
+  # closed intestinal reclaim inlet instead of an open-loop lumenal bile-salt
+  # sink on the enterohepatic free-energy circuit.
+  # Distinct from Ost (SLC51A/B basolateral facilitated exit), Ntcp (SLC10A1
+  # hepatocyte basolateral Na+-TC uptake), Bsep (ABCB11 canalicular export),
+  # Mrp3 (ABCC3 basolateral ABC overflow), Mrp2 (ABCC2 canalicular OA export),
+  # Oatp1b1 (SLCO1B1 basolateral OA uptake) - Asbt is the apical SLC10A2
+  # Na+-bile-acid symporter that starts intestinal bile-salt reclaim.
+  # Without Asbt after Ost, lumenal bile salts stay unreclaimed; life_cell
+  # enterohepatic free-energy loop never finishes apical intestinal uptake
+  # after basolateral Ost exit closes the epithelial transit limb.
+  # Domain: post-Ost Asbt apical Na+-bile-acid uptake /
+  #   lumenal bile salt + Na+ -> cytosolic bile salt (secondary active symport)
+  # (not Ost, not Ntcp, not Bsep, not Mrp3, not Mrp2, not Oatp1b1).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt
+  #   (Ost basolateral bile-salt exit -> Asbt apical Na+-bile-acid uptake).
+  # Gift: apical Na+-coupled bile-salt reclaim after Ost so lumenal acids
+  #   re-enter epithelium and close enterohepatic free-energy flow.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - asbt life-force.
+  # Usability: AGI models post-Ost Asbt apical bile-salt uptake under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD asbt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Fabp6: ileal bile-acid binding protein (IBABP / ILBP / Gastrotropin) after Asbt.
+  # Fabp6 (FABP6 / IBABP / ILBP) is the cytosolic ileal lipid-binding protein that
+  # shuttles conjugated bile salts from the apical Asbt inlet across the enterocyte
+  # cytosol toward basolateral Ost exit, completing the epithelial transit limb of
+  # enterohepatic circulation after Asbt reclaims lumenal acids.
+  # After Asbt opens apical Na+-bile-acid uptake, Fabp6 commits cytosolic buffering
+  # and vectorial handoff so mitosis energy budgets gain an intracellular bile-salt
+  # carrier instead of an unbuffered apical sink that never reaches Ost.
+  # Distinct from Asbt (SLC10A2 apical Na+-bile-acid symport), Ost (SLC51A/B
+  # basolateral facilitated exit), Ntcp (SLC10A1 hepatocyte Na+-TC uptake),
+  # Bsep (ABCB11 canalicular export), Mrp3 (ABCC3 basolateral ABC overflow),
+  # Mrp2 (ABCC2 canalicular OA export) - Fabp6 is the cytosolic FABP family
+  # bile-acid binder that bridges apical reclaim to basolateral exit.
+  # Without Fabp6 after Asbt, reclaimed bile salts stay unshuttled; life_cell
+  # enterohepatic free-energy loop never finishes cytosolic transit after apical
+  # Asbt uptake opens the intestinal reclaim inlet.
+  # Domain: post-Asbt Fabp6 cytosolic bile-acid binding / shuttle /
+  #   cytosolic bile salt -> bound FABP6 complex (intracellular carrier)
+  # (not Asbt, not Ost, not Ntcp, not Bsep, not Mrp3, not Mrp2).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6
+  #   (Asbt apical Na+-bile-acid uptake -> Fabp6 cytosolic bile-acid shuttle).
+  # Gift: cytosolic IBABP shuttle after Asbt so reclaimed lumenal acids
+  #   cross epithelium and close enterohepatic free-energy flow toward Ost.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fabp6 life-force.
+  # Usability: AGI models post-Asbt Fabp6 cytosolic bile-salt shuttle under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fabp6 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Fxr: farnesoid X receptor (NR1H4 / BAR) after Fabp6.
+  # Fxr (NR1H4 / bile acid receptor) is the nuclear receptor that senses
+  # conjugated bile salts delivered by Fabp6/IBABP and transcriptionally
+  # gates bile-acid synthesis, transport, and enterohepatic free-energy
+  # recirculation after cytosolic shuttle completes epithelial transit.
+  # After Fabp6 opens the cytosolic IBABP carrier, Fxr commits ligand-activated
+  # nuclear sensing so mitosis energy budgets gain a bile-salt transcription
+  # governor instead of an unsignaled cytosolic sink that never feeds back
+  # onto Cyp7a1/Bsep/Ost/Ibabp expression limbs.
+  # Distinct from Fabp6 (IBABP cytosolic bile-acid shuttle), Asbt (SLC10A2
+  # apical Na+-bile-acid symport), Ost (SLC51A/B basolateral exit),
+  # Bsep (ABCB11 canalicular export), Ntcp (SLC10A1 hepatocyte uptake),
+  # Mrp3 (ABCC3 basolateral overflow) - Fxr is the NR1H4 nuclear bile-acid
+  # sensor that closes the enterohepatic sensing limb after Fabp6 delivery.
+  # Without Fxr after Fabp6, shuttled bile salts stay unsensed; life_cell
+  # enterohepatic free-energy loop never finishes nuclear feedback after
+  # cytosolic IBABP opens the intracellular carrier limb.
+  # Domain: post-Fabp6 Fxr nuclear bile-acid sensing /
+  #   bound FABP6 bile salt -> NR1H4 transcriptional gate (nuclear receptor)
+  # (not Fabp6, not Asbt, not Ost, not Bsep, not Ntcp, not Mrp3).
+  # Continuum: ...->baat->bsep->ntcp->oatp1b1->mrp2->mrp3->ost->asbt->fabp6->fxr
+  #   (Fabp6 cytosolic bile-acid shuttle -> Fxr nuclear bile-acid receptor).
+  # Gift: NR1H4 nuclear sensing after Fabp6 so reclaimed acids
+  #   gate synthesis/transport and close enterohepatic free-energy feedback.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fxr life-force.
+  # Usability: AGI models post-Fabp6 Fxr nuclear bile-salt sensing under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fxr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Fgf19: fibroblast growth factor 19 enterokine after FXR/NR1H4 nuclear BA sense.
+  # FGF19 (FGF15 in mouse) is the ileal hormone induced when ligand-bound FXR opens
+  # the nuclear BA decision plate — the endocrine free-energy signal that travels
+  # portal blood to hepatic FGFR4/beta-Klotho and represses Cyp7a1 BA synthesis,
+  # closing gut-liver feedback after Fabp6 shuttle and FXR receptor work.
+  # After FXR commits nuclear BA sensing, Fgf19 secretes the enterokine so mitosis
+  # energy budgets gain an endocrine feedback limb instead of a silent nuclear
+  # receptor decision that never leaves the enterocyte.
+  # Distinct from Fxr (NR1H4 nuclear BA receptor), Fabp6 (IBABP cytosolic shuttle),
+  # Asbt (SLC10A2 apical uptake), Ost (SLC51 basolateral exit), Shp/Nr0b2 (hepatic
+  # FXR partner) — Fgf19 is the secreted FGF family enterokine that carries the
+  # post-FXR gut decision to liver FGFR4.
+  # Without Fgf19 after Fxr, nuclear BA sensing stays cell-autonomous; life_cell
+  # gut-liver free-energy loop never authorizes endocrine repression of hepatic
+  # BA synthesis after FXR opens the nuclear gate.
+  # Domain: post-FXR FGF19 enterokine secretion / nuclear BA-FXR decision
+  #   -> portal FGF19 endocrine signal (ATP stand-in for translation/secretion)
+  # (not Fxr, not Fabp6, not Asbt, not Ost, not Shp, not Cyp7a1).
+  # Continuum: ...->mrp2->mrp3->ost->asbt->fabp6->fxr->fgf19
+  #   (FXR nuclear BA receptor decision -> FGF19 enterokine gut-liver feedback).
+  # Gift: post-FXR FGF19 enterokine so nuclear free-energy decision can authorize
+  #   FGF19-class repression signals back to hepatic BA synthesis under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fgf19 life-force.
+  # Usability: AGI models post-FXR FGF19 enterokine under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fgf19 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Fgfr4: hepatic FGF receptor 4 after FGF19 enterokine arrives portal.
+  # FGFR4 (with beta-Klotho co-receptor) is the hepatocyte surface receptor that
+  # binds ileal FGF19 and opens the free-energy gate for SHP/NR0B2 induction and
+  # CYP7A1 repression - closing gut-liver BA feedback after FXR->FGF19 secretion.
+  # After FGF19 travels portal blood, Fgfr4 receives the enterokine so mitosis
+  # energy budgets gain a hepatic receptor limb instead of a silent circulating
+  # hormone that never docks on liver parenchyma.
+  # Distinct from Fgf19 (ileal enterokine), Fxr (NR1H4 nuclear BA receptor),
+  # Fabp6 (IBABP shuttle), Klb/beta-Klotho (FGFR4 co-receptor), Shp/Nr0b2
+  # (FXR partner repressor), Cyp7a1 (BA synthesis enzyme) - Fgfr4 is the RTK
+  # that transduces post-FGF19 portal signal into hepatic free-energy decision.
+  # Without Fgfr4 after Fgf19, portal enterokine never authorizes hepatic BA
+  # synthesis repression; life_cell gut-liver free-energy loop stalls at blood.
+  # Domain: post-FGF19 hepatic FGFR4 receptor / portal enterokine docking
+  #   -> FGFR4 RTK free-energy gate (ATP stand-in for receptor activation)
+  # (not Fgf19, not Fxr, not Fabp6, not Klb, not Shp, not Cyp7a1).
+  # Continuum: ...->asbt->fabp6->fxr->fgf19->fgfr4
+  #   (FGF19 enterokine -> hepatic FGFR4 receptor gut-liver close).
+  # Gift: post-FGF19 FGFR4 so portal free-energy signal can authorize hepatic
+  #   BA-synthesis repression under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - fgfr4 life-force.
+  # Usability: AGI models post-FGF19 hepatic FGFR4 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fgfr4 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Klb: beta-Klotho co-receptor after FGFR4 hepatic RTK docks FGF19.
+  # KLB (beta-Klotho) is the hepatocyte co-receptor that pairs with FGFR4 so
+  # portal FGF19 can form a ternary FGFR4/KLB/FGF19 complex and open the
+  # free-energy gate for SHP/NR0B2 induction and CYP7A1 repression — without
+  # KLB, FGFR4 alone cannot authorize gut-liver BA feedback.
+  # After Fgfr4 presents the RTK, Klb supplies the obligatory co-receptor so
+  # mitosis energy budgets gain a hepatic co-receptor limb instead of a lone
+  # FGFR4 that never forms a productive FGF19 holocomplex on parenchyma.
+  # Distinct from Fgfr4 (hepatic FGF RTK), Fgf19 (ileal enterokine), Fxr
+  # (NR1H4 nuclear BA receptor), Fabp6 (IBABP shuttle), Shp/Nr0b2 (repressor),
+  # Cyp7a1 (BA synthesis enzyme) - Klb is the co-receptor scaffold that makes
+  # post-FGFR4 portal signal competent for hepatic free-energy decision.
+  # Without Klb after Fgfr4, FGFR4 RTK never authorizes ternary enterokine
+  # docking; life_cell gut-liver free-energy loop stalls at receptor without
+  # co-receptor.
+  # Domain: post-FGFR4 hepatic beta-Klotho co-receptor / ternary complex gate
+  #   -> KLB co-receptor free-energy (ATP stand-in for co-receptor engagement)
+  # (not Fgfr4, not Fgf19, not Fxr, not Fabp6, not Shp, not Cyp7a1).
+  # Continuum: ...->asbt->fabp6->fxr->fgf19->fgfr4->klb
+  #   (FGFR4 RTK -> beta-Klotho co-receptor gut-liver close).
+  # Gift: post-FGFR4 KLB so hepatic free-energy receptor can authorize ternary
+  #   FGF19/FGFR4/KLB BA-synthesis repression under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - klb life-force.
+  # Usability: AGI models post-FGFR4 hepatic beta-Klotho under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD klb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Shp: small heterodimer partner (NR0B2) after KLB ternary FGFR4/FGF19/KLB docks.
+  # SHP (NR0B2) is the orphan nuclear receptor induced when hepatic FGFR4/KLB
+  # holocomplex opens the free-energy gate after portal FGF19 arrives - SHP
+  # partners FXR and represses CYP7A1 so bile-acid synthesis drops under ASSERT.
+  # After Klb completes the ternary co-receptor complex, Shp supplies the
+  # transcriptional repressor limb so mitosis energy budgets gain a hepatic
+  # NR0B2 decision plate instead of a silent RTK holocomplex that never
+  # rewrites BA-synthesis genes.
+  # Distinct from Klb (beta-Klotho co-receptor), Fgfr4 (hepatic FGF RTK),
+  # Fgf19 (ileal enterokine), Fxr (NR1H4 nuclear BA receptor), Fabp6 (IBABP),
+  # Cyp7a1 (rate-limiting BA synthesis enzyme) - Shp is the NR0B2 repressor
+  # that converts post-KLB portal signal into CYP7A1 transcriptional brake.
+  # Without Shp after Klb, ternary FGF19/FGFR4/KLB never authorizes BA-synthesis
+  # repression; life_cell gut-liver free-energy loop stalls at co-receptor
+  # without nuclear repressor output.
+  # Domain: post-KLB hepatic SHP/NR0B2 repressor / CYP7A1 brake gate
+  #   -> SHP free-energy (ATP stand-in for repressor induction)
+  # (not Klb, not Fgfr4, not Fgf19, not Fxr, not Fabp6, not Cyp7a1).
+  # Continuum: ...->asbt->fabp6->fxr->fgf19->fgfr4->klb->shp
+  #   (KLB co-receptor -> SHP/NR0B2 repressor gut-liver close).
+  # Gift: post-KLB SHP so ternary FGF19/FGFR4/KLB free-energy complex can
+  #   induce NR0B2 and authorize CYP7A1 repression under ASSERT.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - shp life-force.
+  # Usability: AGI models post-KLB hepatic SHP/NR0B2 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD shp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Cyp7a1: cholesterol 7α-hydroxylase after SHP/NR0B2 repressor docks.
+  # CYP7A1 is the rate-limiting hepatic enzyme of classical bile-acid synthesis;
+  # after Shp (NR0B2) is induced by the FGF19/FGFR4/KLB ternary holocomplex,
+  # SHP partners FXR and transcriptionally represses CYP7A1 so BA production
+  # drops and free-energy budgets stop over-committing sterol to BA under ASSERT.
+  # After Shp supplies the nuclear repressor, Cyp7a1 is the repressed effector
+  # limb so mitosis energy budgets gain a BA-synthesis brake plate instead of a
+  # repressor that never touches the sterol-to-BA flux gene.
+  # Distinct from Shp (NR0B2 repressor), Klb (beta-Klotho), Fgfr4 (FGF RTK),
+  # Fgf19 (ileal enterokine), Fxr (NR1H4), Fabp6 (IBABP) - Cyp7a1 is the
+  # rate-limiting BA-synthesis enzyme whose repression closes gut-liver feedback.
+  # Without Cyp7a1 after Shp, NR0B2 never authorizes BA-synthesis brake output;
+  # life_cell gut-liver free-energy loop stalls at repressor without enzyme gate.
+  # Domain: post-SHP hepatic CYP7A1 BA-synthesis enzyme / repression effector gate
+  #   -> CYP7A1 free-energy (ATP stand-in for repressed synthesis flux)
+  # (not Shp, not Klb, not Fgfr4, not Fgf19, not Fxr, not Fabp6).
+  # Continuum: ...->fabp6->fxr->fgf19->fgfr4->klb->shp->cyp7a1
+  #   (SHP/NR0B2 repressor -> CYP7A1 BA-synthesis enzyme gut-liver close).
+  # Gift: post-SHP CYP7A1 so NR0B2 free-energy brake can authorize BA-synthesis
+  #   repression under ASSERT and keep sterol flux accountable.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cyp7a1 life-force.
+  # Usability: AGI models post-SHP hepatic CYP7A1 under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+END

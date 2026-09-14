@@ -1,0 +1,1508 @@
+# life_cell_x08.cubalc — EXTEND Cell pack 8
+
+EXTEND CLASS Cell
+  METHOD sgpl1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Aldh3a2: ALDH3A2 / fatty aldehyde dehydrogenase (FALDH, EC 1.2.1.48) after SGPL1 on the sphingolipid continuum.
+  # ALDH3A2 NAD+-dependent oxidation of trans-2-hexadecenal (SGPL1 lyase product) to trans-2-hexadecenoic acid
+  # under ASSERT so post-lyase aldehyde does not stall as hollow toxic aldehyde lock before PE / fatty-acid
+  # salvage and beta-oxidation re-entry limbs (Sjogren-Larsson / FALDH-deficit ward).
+  # Domain: post-SGPL1 ER/peroxisome-proximal fatty aldehyde dehydrogenase ALDH3A2 ward (NAD-dependent
+  #   hexadecenal to hexadecenoate limb toward acyl-CoA / PE continuum exit).
+  # Not a rename of SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5, ST8SIA5,
+  #   ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT, SAC1,
+  #   OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, or PCYT2/ETNK1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2
+  # Gift: ALDH3A2 oxidizes post-SGPL1 hexadecenal into hexadecenoate under ASSERT so free
+  #   energy exits the S1P-lyase aldehyde pool into fatty-acid / PE salvage after irreversible S1P cleavage —
+  #   opposing hollow toxic aldehyde lock at the ALDH3A2 limb (Sjogren-Larsson ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - aldh3a2.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD aldh3a2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Acsl1: ACSL1 / long-chain acyl-CoA synthetase 1 (EC 6.2.1.3) after ALDH3A2 on the sphingolipid continuum.
+  # ACSL1 ATP-dependent activation of ALDH3A2 product trans-2-hexadecenoate into trans-2-hexadecenoyl-CoA
+  # under ASSERT so post-FALDH fatty acid does not stall as hollow free-acid lock before beta-oxidation /
+  # PE remodeling re-entry limbs (acyl-CoA salvage ward after Sjogren-Larsson aldehyde clearance).
+  # Domain: post-ALDH3A2 ER/OMM-proximal long-chain acyl-CoA synthetase ACSL1 ward (hexadecenoate
+  #   to hexadecenoyl-CoA limb toward beta-oxidation / PE continuum exit).
+  # Not a rename of ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6, ST6GALNAC5,
+  #   ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1, CERT, SAC1,
+  #   OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1
+  # Gift: ACSL1 activates post-ALDH3A2 hexadecenoate into hexadecenoyl-CoA under ASSERT so free
+  #   energy exits the FALDH fatty-acid pool into beta-oxidation / PE salvage after aldehyde clearance —
+  #   opposing hollow free-acid lock at the ACSL1 limb (acyl-CoA salvage ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acsl1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acsl1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Cpt1a: CPT1A / carnitine palmitoyltransferase 1A (EC 2.3.1.21) after ACSL1 on the sphingolipid continuum.
+  # CPT1A transfers ACSL1 product hexadecenoyl-CoA onto L-carnitine forming hexadecenoyl-carnitine
+  # under ASSERT so outer-mitochondrial-membrane acyl-CoA does not stall as hollow CoA-lock before
+  # CACT/CPT2 matrix entry limbs (carnitine shuttle gate after acyl-CoA salvage ward).
+  # Domain: post-ACSL1 OMM carnitine palmitoyltransferase CPT1A ward (hexadecenoyl-CoA to
+  #   hexadecenoyl-carnitine limb toward CACT/CPT2 beta-oxidation matrix entry).
+  # Not a rename of ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6,
+  #   ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1,
+  #   CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CPT2, CACT/SLC25A20,
+  #   or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a
+  # Gift: CPT1A conjugates post-ACSL1 hexadecenoyl-CoA to carnitine under ASSERT so free energy
+  #   exits the OMM acyl-CoA pool into the carnitine shuttle toward matrix beta-oxidation —
+  #   opposing hollow CoA-lock at the CPT1A limb (carnitine shuttle gate ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cpt1a.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cpt1a n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Slc25a20: SLC25A20 / CACT carnitine-acylcarnitine translocase (TC 2.A.29) after CPT1A on the sphingolipid continuum.
+  # SLC25A20 exchanges CPT1A product hexadecenoyl-carnitine for matrix carnitine across the IMM forming
+  # matrix hexadecenoyl-carnitine under ASSERT so OMM acyl-carnitine does not stall as hollow shuttle-lock before
+  # CPT2 matrix CoA-reload limbs (IMM carnitine shuttle translocase ward after CPT1A gate).
+  # Domain: post-CPT1A IMM carnitine-acylcarnitine translocase SLC25A20/CACT ward (hexadecenoyl-carnitine
+  #   cytosol/IMS to matrix limb toward CPT2 beta-oxidation CoA-reload).
+  # Not a rename of CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3, ST6GALNAC6,
+  #   ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS, SMS1,
+  #   CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CPT2, CPT1A,
+  #   or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20
+  # Gift: SLC25A20 translocates post-CPT1A hexadecenoyl-carnitine into the matrix under ASSERT so free energy
+  #   exits the IMS acyl-carnitine pool into matrix CPT2 beta-oxidation entry —
+  #   opposing hollow shuttle-lock at the CACT limb (IMM carnitine-acylcarnitine translocase ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - slc25a20.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD slc25a20 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cpt2: CPT2 / carnitine palmitoyltransferase 2 (EC 2.3.1.21) after SLC25A20/CACT on the sphingolipid continuum.
+  # CPT2 transfers matrix hexadecenoyl-carnitine back onto CoA forming hexadecenoyl-CoA under ASSERT so
+  # matrix acyl-carnitine does not stall as hollow CoA-reload-lock before beta-oxidation spiral limbs
+  # (matrix CPT2 CoA-reload ward after CACT IMM entry).
+  # Domain: post-SLC25A20 matrix carnitine palmitoyltransferase CPT2 ward (hexadecenoyl-carnitine to
+  #   hexadecenoyl-CoA limb toward ACADVL/HADHA beta-oxidation spiral).
+  # Not a rename of SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2
+  # Gift: CPT2 reloads post-CACT hexadecenoyl-carnitine onto matrix CoA under ASSERT so free energy
+  #   exits the matrix acyl-carnitine pool into beta-oxidation acyl-CoA entry —
+  #   opposing hollow CoA-reload-lock at the CPT2 limb (matrix carnitine palmitoyltransferase ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cpt2.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cpt2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Acadvl: ACADVL / very-long-chain acyl-CoA dehydrogenase (EC 1.3.8.9) after CPT2 on the sphingolipid continuum.
+  # ACADVL dehydrogenates matrix hexadecenoyl-CoA at C2-C3 forming trans-2-hexadecenoyl-CoA under ASSERT so
+  # matrix acyl-CoA does not stall as hollow beta-oxidation-entry-lock before HADHA trifunctional spiral limbs
+  # (matrix VLCAD FAD-dependent first turn after CPT2 CoA-reload ward).
+  # Domain: post-CPT2 matrix very-long-chain acyl-CoA dehydrogenase ACADVL ward (hexadecenoyl-CoA to
+  #   trans-2-enoyl-CoA limb toward HADHA/HADHB mitochondrial trifunctional beta-oxidation spiral).
+  # Not a rename of CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl
+  # Gift: ACADVL FAD-oxidizes post-CPT2 hexadecenoyl-CoA under ASSERT so free energy
+  #   exits the matrix acyl-CoA pool into the beta-oxidation enoyl-CoA spiral —
+  #   opposing hollow beta-ox-entry-lock at the ACADVL limb (matrix VLCAD ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - acadvl.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD acadvl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Hadha: HADHA / mitochondrial trifunctional protein alpha (EC 4.2.1.17 + EC 1.1.1.211) after ACADVL on the sphingolipid continuum.
+  # HADHA hydrates post-ACADVL trans-2-enoyl-CoA to L-3-hydroxyacyl-CoA then NAD+-dehydrogenates to 3-ketoacyl-CoA under ASSERT so
+  # matrix enoyl-CoA does not stall as hollow beta-ox-hydratase-lock before HADHB thiolase spiral limbs
+  # (MTP-alpha bifunctional enoyl hydration + 3-hydroxyacyl dehydrogenation after VLCAD ward).
+  # Domain: post-ACADVL matrix trifunctional protein HADHA ward (trans-2-enoyl-CoA to 3-ketoacyl-CoA limb toward HADHB thiolase beta-oxidation spiral).
+  # Not a rename of ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha
+  # Gift: HADHA hydrates and NAD+-oxidizes post-ACADVL enoyl-CoA under ASSERT so free energy
+  #   exits the matrix enoyl-CoA pool into the 3-ketoacyl-CoA thiolase spiral —
+  #   opposing hollow beta-ox-hydratase-lock at the HADHA limb (matrix MTP-alpha ward).
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - hadha.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD hadha n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Hadhb: HADHB / mitochondrial trifunctional protein beta (EC 2.3.1.16) after HADHA on the sphingolipid continuum.
+  # HADHB thiolyses post-HADHA 3-ketoacyl-CoA with free CoA yielding acetyl-CoA plus chain-shortened acyl-CoA under ASSERT so
+  # matrix 3-ketoacyl-CoA does not stall as hollow beta-ox-thiolase-lock before acetyl-CoA TCA/ketone limbs
+  # (MTP-beta 3-ketoacyl-CoA thiolase after MTP-alpha HADHA ward).
+  # Domain: post-HADHA matrix trifunctional protein HADHB ward (3-ketoacyl-CoA to acetyl-CoA + acyl-CoA(n-2) limb of the beta-oxidation spiral).
+  # Not a rename of HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1 as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb
+  # Gift: HADHB thiolyses post-HADHA 3-ketoacyl-CoA under ASSERT so free energy
+  #   exits the matrix ketoacyl-CoA pool into acetyl-CoA release and the shortened acyl-CoA spiral —
+  #   opposing hollow beta-ox-thiolase-lock at the MTP-beta ward.
+  METHOD hadhb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Etfdh: ETFDH / electron transfer flavoprotein dehydrogenase (EC 1.5.5.1) after HADHB on the sphingolipid continuum.
+  # ETFDH oxidizes reduced ETF (ETFA/ETFB) carrying FADH2-equivalents from ACADVL/ACAD spiral limbs and reduces ubiquinone under ASSERT so
+  # matrix beta-ox reducing power does not stall as hollow etf-quinone-lock before respiratory-chain free-energy flow
+  # (ETF-QO ward coupling MTP/VLCAD spiral electrons into CoQ after HADHB thiolase acetyl-CoA release).
+  # Domain: post-HADHB matrix ETF dehydrogenase ETFDH ward (reduced-ETF to ubiquinol limb draining beta-oxidation spiral electrons into ETC).
+  # Not a rename of HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh
+  # Gift: ETFDH transfers post-HADHB beta-ox ETF electrons under ASSERT so free energy
+  #   exits the matrix reduced-ETF pool into ubiquinol and the respiratory spiral —
+  #   opposing hollow etf-quinone-lock at the ETF-QO ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - etfdh.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD etfdh n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # Uqcrc1: UQCRC1 / ubiquinol-cytochrome c reductase core protein 1 (Complex III subunit 1, EC 7.1.1.8 limb) after ETFDH on the sphingolipid continuum.
+  # UQCRC1 scaffolds the bc1 core so ubiquinol from ETFDH/ETF-QO and Complex I/II limbs transfers electrons to cytochrome c under ASSERT —
+  # free energy does not stall as hollow Q-cycle-lock before cytochrome-c oxidase (post-ETF-QO respiratory Complex III ward).
+  # Domain: post-ETFDH inner-membrane Complex III core UQCRC1 ward (ubiquinol to cyt-c limb draining ETF-QO ubiquinol into ETC Q-cycle).
+  # Not a rename of ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1
+  # Gift: UQCRC1 conducts post-ETFDH ubiquinol electrons under ASSERT so free energy
+  #   exits the Q-pool into cytochrome c and the downstream COX spiral —
+  #   opposing hollow Q-cycle-lock at the Complex III core ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - uqcrc1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD uqcrc1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cycs: CYCS / cytochrome c, somatic (electron shuttle heme protein) after UQCRC1 on the sphingolipid continuum.
+  # CYCS accepts electrons from the Complex III bc1 core (UQCRC1 ward) and donates them to Complex IV under ASSERT —
+  # free energy does not stall as hollow cyt-c-gap before cytochrome-c oxidase (post-Complex-III mobile carrier ward).
+  # Domain: post-UQCRC1 intermembrane cytochrome c CYCS ward (bc1 to COX limb draining Q-cycle electrons into COX).
+  # Not a rename of UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/COX4I1/MT-CO1 as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs
+  # Gift: CYCS shuttles post-UQCRC1 bc1 electrons under ASSERT so free energy
+  #   exits the intermembrane cyt-c pool into COX and the downstream O2 limb —
+  #   opposing hollow cyt-c-gap at the mobile carrier ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cycs.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cycs n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Cox4i1: COX4I1 / cytochrome c oxidase subunit 4 isoform 1 (Complex IV nuclear core) after CYCS on the sphingolipid continuum.
+  # COX4I1 scaffolds the COX holocomplex so electrons from the CYCS mobile carrier reduce O2 under ASSERT —
+  # free energy does not stall as hollow COX-gap before the terminal O2/H2O limb (post-cyt-c Complex IV ward).
+  # Domain: post-CYCS inner-membrane Complex IV COX4I1 ward (cyt-c to O2 limb draining mobile-carrier electrons into terminal oxidase).
+  # Not a rename of CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1 as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1
+  # Gift: COX4I1 scaffolds Complex IV under ASSERT so free energy
+  #   exits the cyt-c pool into O2 reduction and the proton-pump limb —
+  #   opposing hollow COX-gap at the terminal oxidase ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cox4i1.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cox4i1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Atp5f1a: ATP5F1A / ATP synthase F1 subunit alpha (Complex V catalytic core) after COX4I1 on the sphingolipid continuum.
+  # ATP5F1A scaffolds the F1 ATPase so PMF from the COX4I1 terminal oxidase drives ATP under ASSERT —
+  # free energy does not stall as hollow ATP-synthase-gap after O2 reduction (post-COX Complex V ward).
+  # Domain: post-COX4I1 inner-membrane Complex V ATP5F1A ward (PMF to ATP limb draining terminal-oxidase protons into F1 catalysis).
+  # Not a rename of COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5F1B/ATP5F1C/ATP5PB/ATP5MC1/ATP5ME as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a
+  # Gift: ATP5F1A scaffolds Complex V under ASSERT so free energy
+  #   exits the COX PMF pool into ATP synthesis —
+  #   opposing hollow ATP-synthase-gap at the F1 catalytic ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1a.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1a n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Atp5f1b: ATP5F1B / ATP synthase F1 subunit beta (Complex V catalytic core) after ATP5F1A on the sphingolipid continuum.
+  # ATP5F1B pairs with ATP5F1A in the F1 hexamer so ADP+Pi condensation under PMF completes ATP under ASSERT —
+  # free energy does not stall as hollow F1-beta-gap after alpha scaffolding (post-ATP5F1A F1 beta ward).
+  # Domain: post-ATP5F1A inner-membrane Complex V ATP5F1B ward (F1 beta catalytic limb sealing alpha-beta pairs for rotary ATP synthesis).
+  # Not a rename of ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5F1C/ATP5PB/ATP5MC1/ATP5ME/ATP5PO as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b
+  # Gift: ATP5F1B seals F1 beta catalysis under ASSERT so free energy
+  #   exits the alpha-scaffold pool into ADP phosphorylation —
+  #   opposing hollow F1-beta-gap at the rotary catalytic ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1b.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1b n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+
+  # Atp5f1c: ATP5F1C / ATP synthase F1 subunit gamma (Complex V rotor stalk) after ATP5F1B on the sphingolipid continuum.
+  # ATP5F1C transmits c-ring torque into the F1 alpha-beta hexamer so rotary catalysis under PMF completes ATP under ASSERT —
+  # free energy does not stall as hollow F1-gamma-gap after beta catalysis (post-ATP5F1B F1 gamma ward).
+  # Domain: post-ATP5F1B inner-membrane Complex V ATP5F1C ward (F1 gamma rotor stalk coupling Fo torque to alpha-beta catalytic sites).
+  # Not a rename of ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5PB/ATP5MC1/ATP5ME/ATP5PO/ATP5PD as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c
+  # Gift: ATP5F1C couples Fo rotor torque under ASSERT so free energy
+  #   exits the beta-catalysis pool into rotary stalk work —
+  #   opposing hollow F1-gamma-gap at the rotor catalytic ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1c.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1c n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # Atp5f1d: ATP5F1D / ATP synthase F1 subunit delta (Complex V stator tether) after ATP5F1C on the sphingolipid continuum.
+  # ATP5F1D anchors the F1 catalytic head to the peripheral stalk so OSCP-coupled stator geometry under PMF completes ATP under ASSERT —
+  # free energy does not stall as hollow F1-delta-gap after gamma rotor work (post-ATP5F1C F1 delta ward).
+  # Domain: post-ATP5F1C inner-membrane Complex V ATP5F1D ward (F1 delta subunit tethering alpha/beta hexamer to peripheral stalk so Fo torque turns rotor not stator).
+  # Not a rename of ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5PB/ATP5MC1/ATP5ME/ATP5PO/ATP5PD/ATP5PF as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d
+  # Gift: ATP5F1D tethers F1 to the stator under ASSERT so free energy
+  #   exits the gamma-rotor pool into fixed-head catalysis —
+  #   opposing hollow F1-delta-gap at the peripheral-stalk ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1d.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1d n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Atp5f1e: ATP5F1E / ATP synthase F1 subunit epsilon (Complex V rotor-stator regulator) after ATP5F1D on the sphingolipid continuum.
+  # ATP5F1E couples the F1 delta tether to gamma-rotor inhibition geometry so PMF-driven catalysis under ASSERT does not reverse into hollow F1-epsilon-gap —
+  # free energy completes forward ATP after stator tether work (post-ATP5F1D F1 epsilon ward).
+  # Domain: post-ATP5F1D inner-membrane Complex V ATP5F1E ward (F1 epsilon subunit regulating gamma rotor vs stator so Fo torque yields net ATP not futile hydrolysis).
+  # Not a rename of ATP5F1D, ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5PB/ATP5MC1/ATP5ME/ATP5PO/ATP5PD/ATP5PF as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d->atp5f1e
+  # Gift: ATP5F1E regulates F1 rotor under ASSERT so free energy
+  #   exits the delta-tether pool into forward ATP synthesis —
+  #   opposing hollow F1-epsilon-gap at the rotor-stator ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1e.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1e n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Atp5po: ATP5PO / ATP synthase peripheral stalk subunit OSCP (oligomycin sensitivity-conferring protein) after ATP5F1E on the sphingolipid continuum.
+  # ATP5PO couples the F1 epsilon rotor-stator regulator to the Fo peripheral stalk so PMF torque transmits into F1 catalysis under ASSERT without hollow OSCP-gap —
+  # free energy completes stalk-tethered ATP after epsilon ward work (post-ATP5F1E OSCP peripheral stalk ward).
+  # Domain: post-ATP5F1E inner-membrane Complex V ATP5PO ward (OSCP / ATP5O peripheral stalk subunit linking F1 head to Fo b-subunit so oligomycin-sensitive coupling yields net ATP not uncoupled spin).
+  # Not a rename of ATP5F1E, ATP5F1D, ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5PB/ATP5MC1/ATP5ME/ATP5PD/ATP5PF as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d->atp5f1e->atp5po
+  # Gift: ATP5PO seals the peripheral stalk under ASSERT so free energy
+  #   exits the epsilon-regulator pool into oligomycin-sensitive ATP synthesis —
+  #   opposing hollow OSCP-gap at the F1-Fo coupling ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5po.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5po n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Atp5pb: ATP5PB / ATP synthase peripheral stalk-membrane subunit b after ATP5PO on the sphingolipid continuum.
+  # ATP5PB anchors the OSCP-capped peripheral stalk into the inner membrane so Fo torque transmits through the stalk into F1 under ASSERT without hollow stalk-b-gap —
+  # free energy completes membrane-tethered stalk coupling after OSCP ward work (post-ATP5PO peripheral stalk-b ward).
+  # Domain: post-ATP5PO inner-membrane Complex V ATP5PB ward (subunit b / ATP5F membrane span linking Fo to OSCP so oligomycin-sensitive coupling yields net ATP not detached stalk).
+  # Not a rename of ATP5PO, ATP5F1E, ATP5F1D, ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5MC1/ATP5ME/ATP5PD/ATP5PF as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d->atp5f1e->atp5po->atp5pb
+  # Gift: ATP5PB seals the membrane arm of the peripheral stalk under ASSERT so free energy
+  #   exits the OSCP pool into membrane-anchored oligomycin-sensitive ATP synthesis —
+  #   opposing hollow stalk-b-gap at the Fo-OSCP coupling ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5pb.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5pb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # Atp5pd: ATP5PD / ATP synthase peripheral stalk subunit d after ATP5PB on the sphingolipid continuum.
+  # ATP5PD braces the OSCP-capped stalk between membrane-anchored subunit b and F1 so torque stays oligomycin-sensitive under ASSERT without hollow stalk-d-gap —
+  # free energy completes d-subunit linker coupling after peripheral stalk-b ward work (post-ATP5PB stalk-d ward).
+  # Domain: post-ATP5PB soluble peripheral-stalk Complex V ATP5PD ward (subunit d / ATP5H linking b-OSCP to F1 so coupling yields net ATP not fractured stalk).
+  # Not a rename of ATP5PB, ATP5PO, ATP5F1E, ATP5F1D, ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5MC1/ATP5ME/ATP5PF as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d->atp5f1e->atp5po->atp5pb->atp5pd
+  # Gift: ATP5PD seals the d-subunit linker of the peripheral stalk under ASSERT so free energy
+  #   exits the subunit-b pool into F1-coupled oligomycin-sensitive ATP synthesis —
+  #   opposing hollow stalk-d-gap at the b-OSCP-F1 coupling ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5pd.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5pd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Atp5pf: ATP5PF / ATP synthase peripheral stalk subunit F6 after ATP5PD on the sphingolipid continuum.
+  # ATP5PF cements the F6 linker of the peripheral stalk so OSCP-b-d torque reaches F1 under ASSERT without hollow stalk-f6-gap —
+  # free energy completes F6 coupling after peripheral stalk-d ward work (post-ATP5PD stalk-f6 ward).
+  # Domain: post-ATP5PD soluble peripheral-stalk Complex V ATP5PF ward (subunit F6 linking d-b-OSCP to F1 so coupling yields net ATP not fractured stalk).
+  # Not a rename of ATP5PD, ATP5PB, ATP5PO, ATP5F1E, ATP5F1D, ATP5F1C, ATP5F1B, ATP5F1A, COX4I1, CYCS, UQCRC1, ETFDH, HADHB, HADHA, ACADVL, CPT2, SLC25A20, CPT1A, ACSL1, ALDH3A2, SGPL1, SPHK1, ASAH1, GBA, HEXB, HEXA, GLB1, NEU3,
+  #   ST6GALNAC6, ST6GALNAC5, ST8SIA5, ST3GAL2, B3GALT4, B4GALNT1, ST8SIA1, ST3GAL5, B4GALT, UGCG/GCS,
+  #   SMS1, CERT, SAC1, OSBP, STARD3, ACER, CERK, SPHK2, S1PR1-5, ACSL3/4/5/6, CPT1B/C, CACT/SLC25A20,
+  #   ACADM/ACADS/ECHS1/HADH/ACAT1/ETFA/ETFB/UQCRFS1/UQCRB/UQCRQ/CYC1/MT-CYB/MT-CO1/MT-CO2/MT-CO3/COX5A/COX5B/COX6A1/COX6B1/COX7A1/COX8A/SURF1/SCO1/ATP5MC1/ATP5ME/ATP5PD as hollow duals, or PCYT2/ETNK1/CEPT1 PE branch enzymes.
+  # Continuum: ...->neu3->glb1->hexa->hexb->gba->asah1->sphk1->sgpl1->aldh3a2->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->hadhb->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1b->atp5f1c->atp5f1d->atp5f1e->atp5po->atp5pb->atp5pd->atp5pf
+  # Gift: ATP5PF seals the F6 linker of the peripheral stalk under ASSERT so free energy
+  #   exits the subunit-d pool into F1-coupled oligomycin-sensitive ATP synthesis —
+  #   opposing hollow stalk-f6-gap at the b-d-OSCP-F1 coupling ward.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5pf.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5pf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+END

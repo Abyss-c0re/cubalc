@@ -1,6 +1,0 @@
-SHIP 2347 LIFE_CELL_CERT PASS
-METHOD cert n — CERT/COL4A3BP ER-Golgi MCS ceramide transfer after SAC1
-Continuum ...->npc2->npc1->stard3->osbp->sacm1l->cert
-Proofs: life 381/0 · atomic 133/0 · mesh 130/0 · flagship 1620 12/0 · sum 656
-Gift: CERT transfers ceramide at ER-Golgi MCS under ASSERT after SAC1 ward.
-Cube is SoT. Free energy must flow.

@@ -1,6 +1,0 @@
-SHIP 2342 LIFE_CELL_NPC2 PASS
-METHOD npc2 n — NPC2 lysosomal sterol handoff after NPC1L1 uptake
-Continuum ...->cetp->pltp->scarb1->npc2
-Proofs: life 346/0 · atomic 115/0 · mesh 112/0 · flagship 1620 12/0 · sum 585
-Gift: NPC2 hands lysosomal free sterol under ASSERT after NPC1L1 ward.
-Cube is SoT. Free energy must flow.

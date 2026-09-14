@@ -1,0 +1,3378 @@
+# life_cell_x03.cubalc — EXTEND Cell pack 3
+
+EXTEND CLASS Cell
+  METHOD glycosyl n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET thr = thr + take
+    IF thr > 1000 THEN
+      LET thr = 1000
+    END
+    SETF THIS threshold thr
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # TRIM: post-glycosyl ER glucosidase I/II (GCS1 / GANAB) sequential outer-Glc
+  # trimming of Glc3Man9GlcNAc2 → Glc1Man9GlcNAc2 monoglucosylated glycan that
+  # opens calnexin/calreticulin (CNX/CRT) lectin entry (post-glycosyl trim; not
+  # multipotent stream, not GRN fate lock, not growth-cone path sp+ alone, not
+  # synaptogenesis thr+ contact, not release quantal thr-, not reuptake clearance
+  # energy+, not refill VGLUT pack, not dock HOPS tethering, not arm NSF priming,
+  # not clamp complexin clamp, not trigger Ca fusion, not pore SNARE zipper, not
+  # mix content dump, not collapse coat uncoat, not retrieve CME membrane bank,
+  # not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST en-bloc N-glycan transfer).
+  # HEAT += take (each GLS I terminal-Glc cut / GLS II middle-Glc cut / CNX handoff
+  #   step dissipates as glucosidase work).
+  # ENERGY -= take (trim burns active metabolic pool into glucose scission; kin to
+  #   glycosyl energy- but raises CNX-client setpoint bank instead of thr QC mark).
+  # ATP -= take (GLS I/II catalytic cycle / glucosidase–CNX handoff nucleotide cost).
+  # SETPOINT rises: sp = min(1000, sp + take) — monoglucosylated CNX/CRT client
+  #   occupancy / folding-cycle load bank (distinct from transloc sp+ Sec61 nascent-
+  #   chain entry before cleave/glycosyl, and from clamp sp+ SNARE hold).
+  # AGE/RESERVE/THRESHOLD/PMF/PCR HELD — trim is post-glycosyl Glc trim after OST
+  #   sealed the N-glycan, not anabolic age repair, not free-AA reserve spend, not
+  #   thr QC mark (glycosyl), not EE proton bank, not phosphagen pcr (cleave).
+  # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx.
+  # Signature: heat+n energy-n atp-n sp+n; age+reserve+thr+pmf+pcr held — trim life-force.
+  # Usability: AGI models post-glycosyl GLS I/II trim / CNX entry under ASSERT.
+  # Returns take trimmed; dead/n<1/empty atp|energy -> 0.
+  METHOD trim n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 0 THEN
+      LET sp = 0
+    END
+    LET sp = sp + take
+    IF sp > 1000 THEN
+      LET sp = 1000
+    END
+    SETF THIS setpoint sp
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # CNX: post-trim calnexin/calreticulin lectin folding-cycle / monoglucosylated client engagement.
+  # Spend take=min(n,atp,energy,setpoint) — ATP + metabolic fuel + CNX-client occupancy
+  # fund calnexin/calreticulin lectin binding + ERp57 PDI oxidoreductase folding after
+  # TRIM has produced the monoglucosylated Glc1Man9GlcNAc2 CNX entry glycoform
+  # (post-trim cnx; not multipotent stream, not GRN fate lock, not growth-cone path
+  # sp+, not synaptogenesis thr+ contact, not release quantal thr-, not reuptake
+  # clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not arm NSF
+  # priming, not clamp complexin clamp, not trigger Ca fusion, not pore SNARE zipper,
+  # not mix content dump, not collapse coat uncoat, not retrieve CME membrane bank,
+  # not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS
+  # I/II CNX-entry load raise — cnx discharges that client bank into folding work).
+  # HEAT += take (each CNX/CRT lectin on-rate / ERp57 reshuffle / BiP ATPase dwell
+  #   dissipates as folding-cycle work).
+  # ENERGY -= take (cnx burns active metabolic pool into lectin-chaperone folding;
+  #   kin to trim energy- but discharges sp client bank instead of raising it).
+  # ATP -= take (BiP/GRP78 ATPase cycle co-chaperoning the CNX-bound client).
+  # SETPOINT falls: sp = sp - take — monoglucosylated CNX-client occupancy bank
+  #   is consumed as lectin engages and folds the cargo (distinct from trim sp+
+  #   GLS entry load, trigger sp- synaptotagmin unclamp, and clamp sp+ SNARE hold).
+  # AGE/RESERVE/THRESHOLD/PMF/PCR HELD — cnx is post-trim lectin folding after GLS
+  #   sealed monoglucosylated entry, not anabolic age repair, not free-AA reserve
+  #   spend, not thr QC mark (glycosyl), not EE proton bank, not phosphagen pcr.
+  # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx.
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx.
+  # Signature: heat+n energy-n atp-n sp-n; age+reserve+thr+pmf+pcr held — cnx life-force.
+  # Usability: AGI models post-trim CNX/CRT folding-cycle engagement under ASSERT.
+  # Returns take engaged; dead/n<1/empty atp|energy|setpoint -> 0.
+  METHOD cnx n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS setpoint
+    LET sp = LAST_N
+    IF sp < 0 THEN
+      LET sp = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > sp THEN
+      LET take = sp
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET sp = sp - take
+    SETF THIS setpoint sp
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # UGGT: post-cnx UGGT1 (UGGT / UGCGL1) quality-control reglucosylation of misfolded
+  # glycoprotein clients — re-attaches a single glucose to Man9GlcNAc2 so the client
+  # re-enters the CNX/CRT lectin folding cycle (post-cnx uggt; not multipotent stream,
+  # not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+ contact, not
+  # release quantal thr-, not reuptake clearance energy+, not refill VGLUT pack, not
+  # dock HOPS tethering, not arm NSF priming, not clamp complexin clamp, not trigger
+  # Ca fusion, not pore SNARE zipper, not mix content dump, not collapse coat uncoat,
+  # not retrieve CME membrane bank, not acidify EE proton pump, not mature Rab5->Rab7
+  # identity, not recruit M6PR hydrolase cargo, not activate cathepsin arming thr-,
+  # not degrade substrate cut age- pcr+, not export lumen->cytosol pcr- reserve+, not
+  # translate reserve- age- ribosome rebuild, not transloc sp+ Sec61 channel gating,
+  # not cleave pcr+ SPC signal-peptide scission, not glycosyl thr+ OST N-glycan mark,
+  # not trim sp+ GLS monoglucosylation open, not cnx sp- lectin client discharge).
+  # Spend take=min(n,atp,energy,pcr) — ATP + metabolic fuel + local ~P/phosphagen bank
+  # fund UGGT1 catalytic reglucosylation after CNX has released a still-misfolded
+  # client (post-cnx uggt; UDP-Glc donor coupled to ER redox / energy charge).
+  # HEAT += take (each UGGT1 glucose-transfer / QC sensing step dissipates as
+  #   glycosyltransferase work).
+  # ENERGY -= take (uggt burns active metabolic pool into reglucosylation work; kin to
+  #   cnx energy- but holds setpoint and spends phosphagen pcr bank instead of CNX
+  #   client occupancy sp bank).
+  # ATP -= take (UGGT1 / ER QC ATP-coupled catalytic cycle).
+  # PCR falls: pcr = pcr - take — UDP-Glc / ~P donor drawn from local phosphagen bank
+  #   (distinct from cleave pcr+ signal-peptide credit, degrade pcr+ hydrolase salvage,
+  #   export pcr- cytosol dump, mix pcr- content dilution, charge_pcr direct fill).
+  # AGE/RESERVE/THRESHOLD/PMF/SETPOINT HELD — uggt is post-cnx QC reglucosylation that
+  #   re-opens the CNX cycle without raising secretory sp, thr latency, or age repair.
+  # Ready recomputed from energy vs threshold after energy spend (quiescent forces 0).
+  # Fail-closed before mutation if atp/energy/pcr cannot fund take>=1.
+  # Continuum: ...->export->translate->transloc->cleave->glycosyl->trim->cnx->uggt->mann.
+  # Signature: heat+n energy-n atp-n pcr-n; age+reserve+thr+pmf+sp held — uggt life-force.
+  # Usability: AGI models ER glycoprotein QC reglucosylation under ASSERT boards.
+  # Returns take reglucosylated; dead/n<1/empty atp|energy|pcr → 0.
+  METHOD uggt n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET pc = LAST_N
+    IF pc < 0 THEN
+      LET pc = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > pc THEN
+      LET take = pc
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET pc = pc - take
+    SETF THIS pcr pc
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MANN: post-uggt ER α-mannosidase I (ERManI / MAN1B1) slow Man9→Man8 demannosylation
+  # that times out persistent CNX/UGGT cycles and primes OS-9/XTP3-B ERAD recognition
+  # (post-uggt mann; not multipotent stream, not GRN fate lock, not growth-cone path
+  # sp+, not synaptogenesis thr+ contact, not release quantal thr-, not reuptake
+  # clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not arm NSF
+  # priming, not clamp complexin clamp, not trigger Ca fusion, not pore SNARE zipper,
+  # not mix content dump, not collapse coat uncoat, not retrieve CME membrane bank,
+  # not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS
+  # monoglucosylation open, not cnx sp- lectin client discharge, not uggt pcr-
+  # UGGT1 reglucosylation).
+  # Spend take=min(n,atp,energy) — ATP + metabolic fuel fund ERManI catalytic
+  # demannosylation after UGGT has looped a still-misfolded client (post-uggt mann;
+  # slow timer distinct from GLS glucose trim).
+  # HEAT += take (each ERManI mannose-hydrolysis / timer tick dissipates as
+  #   glycoside-hydrolase work).
+  # ENERGY -= take (mann burns active metabolic pool into demannosylation work; kin to
+  #   glycosyl/trim energy- but raises thr ERAD-susceptibility timer instead of thr
+  #   OST mark or sp CNX-entry bank).
+  # ATP -= take (ERManI / ER QC ATP-coupled catalytic dwell).
+  # THRESHOLD rises: thr = thr + take — mannose-trimmed glycan raises ERAD
+  #   susceptibility / OS-9 recognition timer (distinct from glycosyl thr+ OST mark,
+  #   activate thr- cathepsin arming, synapse thr+ contact, release thr- quantal dump).
+  # AGE/RESERVE/PMF/SETPOINT/PCR HELD — mann is post-uggt slow demannosylation that
+  #   advances the ERAD timer without spending CNX-client sp or phosphagen pcr banks,
+  #   and without anabolic age rebuild or reserve draw.
+  # Continuum: ...->glycosyl->trim->cnx->uggt->mann.
+  # Signature: heat+n energy-n atp-n thr+n; age+reserve+pmf+sp+pcr held — mann life-force.
+  METHOD mann n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS threshold
+    LET thr = LAST_N + take
+    SETF THIS threshold thr
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # OS9: post-mann OS-9 / XTP3-B (ERLEC1) MRH-domain lectin recognition of Man8-trimmed
+  # glycoprotein clients for ERAD handoff — binds demannosylated N-glycans after ERManI
+  # has raised the thr ERAD-susceptibility timer and commits the client toward
+  # SEL1L/HRD1 ubiquitination (post-mann os9; not multipotent stream, not GRN fate lock,
+  # not growth-cone path sp+, not synaptogenesis thr+ contact, not release quantal thr-,
+  # not reuptake clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not
+  # arm NSF priming, not clamp complexin clamp, not trigger Ca fusion, not pore SNARE
+  # zipper, not mix content dump, not collapse coat uncoat, not retrieve CME membrane
+  # bank, not acidify EE proton pump, not mature Rab5->Rab7 identity, not recruit M6PR
+  # hydrolase cargo, not activate cathepsin arming thr-, not degrade substrate cut
+  # age- pcr+, not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave pcr+ SPC
+  # signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS
+  # monoglucosylation open, not cnx sp- lectin client discharge, not uggt pcr-
+  # UGGT1 reglucosylation, not mann thr+ ERManI demannosylation timer).
+  # Spend take=min(n,atp,energy,threshold) — ATP + metabolic fuel + mann-raised thr
+  # ERAD-susceptibility bank fund OS-9/XTP3-B MRH lectin engagement after MANN has
+  # produced the Man8GlcNAc2 glycoform (post-mann os9; recognition commits the timer
+  # into bound ERAD-client state and charges local phosphagen for downstream HRD1).
+  # HEAT += take (each OS-9/XTP3-B lectin-binding / ERAD-commit step dissipates as
+  #   quality-control recognition work).
+  # ENERGY -= take (os9 burns active metabolic pool into lectin recognition work; kin
+  #   to mann energy- but consumes thr ERAD timer instead of raising it).
+  # ATP -= take (OS-9 / ERQC ATP-coupled lectin dwell and SEL1L scaffold contact).
+  # THRESHOLD falls: thr = thr - take — mannose-timer bank is spent into committed
+  #   OS-9-bound ERAD recognition (distinct from mann thr+ timer raise, glycosyl thr+
+  #   OST mark, activate thr- cathepsin arming, synapse thr+ contact).
+  # PCR rises: pcr = pcr + take — recognition charges local ~P / Ub-prep phosphagen
+  #   bank for downstream HRD1 E3 work (distinct from uggt pcr- spend, cleave pcr+,
+  #   degrade age- pcr+, export pcr-).
+  # AGE/RESERVE/PMF/SETPOINT HELD — os9 is post-mann ERAD lectin commit that spends
+  #   thr timer and charges pcr without anabolic age rebuild, reserve draw, pmf drain,
+  #   or CNX-client sp bank motion.
+  # Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9.
+  # Signature: heat+n energy-n atp-n thr-n pcr+n; age+reserve+pmf+sp held — os9 life-force.
+  # Usability: AGI models post-mann OS-9/XTP3-B ERAD lectin recognition under ASSERT.
+  # Returns take recognized; dead/n<1/empty atp|energy|thr -> 0.
+  METHOD os9 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > thr THEN
+      LET take = thr
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET thr = thr - take
+    SETF THIS threshold thr
+    GETF THIS pcr
+    LET pc = LAST_N
+    IF pc < 0 THEN
+      LET pc = 0
+    END
+    LET pc = pc + take
+    IF pc > 1000 THEN
+      LET pc = 1000
+    END
+    SETF THIS pcr pc
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # HRD: post-os9 SEL1L/HRD1 (SYVN1) ERAD E3 ubiquitin-ligase commit — scaffold+RING
+  # transfer of Ub onto OS-9/XTP3-B-bound Man8 clients after lectin recognition has
+  # charged the local pcr Ub-prep phosphagen bank (post-os9 hrd; not multipotent stream,
+  # not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+ contact, not
+  # release quantal thr-, not reuptake clearance energy+, not refill VGLUT pack, not
+  # dock HOPS tethering, not arm NSF priming, not clamp complexin clamp, not trigger Ca
+  # fusion, not pore SNARE zipper, not mix content dump, not collapse coat uncoat, not
+  # retrieve CME membrane bank, not acidify EE proton pump, not mature Rab5->Rab7
+  # identity, not recruit M6PR hydrolase cargo, not activate cathepsin arming thr-, not
+  # degrade substrate cut age- pcr+, not export lumen->cytosol pcr- reserve+, not
+  # translate reserve- age- ribosome rebuild, not transloc sp+ Sec61 channel gating, not
+  # cleave pcr+ SPC signal-peptide scission, not glycosyl thr+ OST N-glycan mark, not
+  # trim sp+ GLS monoglucosylation open, not cnx sp- lectin client discharge, not uggt
+  # pcr- UGGT1 reglucosylation, not mann thr+ ERManI demannosylation timer, not os9 thr-
+  # pcr+ OS-9/XTP3-B lectin commit).
+  # Spend take=min(n,atp,energy,pcr) — ATP + metabolic fuel + os9-charged pcr Ub-prep
+  # bank fund SEL1L scaffold / HRD1 RING Ub transfer after OS9 has bound the Man8
+  # client (post-os9 hrd; E3 commit spends the phosphagen prep into conjugated Ub mark).
+  # HEAT += take (each HRD1 Ub-transfer / E2~E3 catalytic dwell dissipates as ERAD
+  #   ubiquitination work).
+  # ENERGY -= take (hrd burns active metabolic pool into E3 ligase work; kin to os9
+  #   energy- but consumes pcr Ub-prep instead of thr ERAD timer).
+  # ATP -= take (HRD1 / SEL1L ATP-coupled ubiquitination and retrotranslocon priming).
+  # PCR falls: pcr = pcr - take — os9-charged Ub-prep phosphagen is spent into actual
+  #   poly-Ub conjugation on the ERAD client (distinct from os9 pcr+ charge, uggt pcr-
+  #   UGGT spend, cleave pcr+ SPC, degrade age- pcr+, export pcr-).
+  # AGE/RESERVE/PMF/SETPOINT/THRESHOLD HELD — hrd is post-os9 E3 commit that spends
+  #   pcr without anabolic age rebuild, reserve draw, pmf drain, CNX-client sp motion,
+  #   or thr timer rewrite (timer already committed by os9).
+  # Continuum: ...->glycosyl->trim->cnx->uggt->mann->os9->hrd.
+  # Signature: heat+n energy-n atp-n pcr-n; age+reserve+pmf+sp+thr held — hrd life-force.
+  # Usability: AGI models post-os9 SEL1L/HRD1 ERAD ubiquitination under ASSERT.
+  # Returns take ubiquitinated; dead/n<1/empty atp|energy|pcr -> 0.
+  METHOD hrd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET pc = LAST_N
+    IF pc < 0 THEN
+      LET pc = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > pc THEN
+      LET take = pc
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET pc = pc - take
+    SETF THIS pcr pc
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # VCP: post-hrd p97/VCP (valosin-containing protein / Cdc48) AAA+ ATPase
+  # retrotranslocation extractase — hexameric unfoldase pulls HRD1-ubiquitinated
+  # Man8 clients from the ER membrane into the cytosol with Ufd1-Npl4 cofactors
+  # after SEL1L/HRD1 has conjugated the Ub mark (post-hrd vcp; not multipotent
+  # stream, not GRN fate lock, not growth-cone path sp+, not synaptogenesis thr+
+  # contact, not release quantal thr-, not reuptake clearance energy+, not refill
+  # VGLUT pack, not dock HOPS tethering, not arm NSF priming, not clamp complexin
+  # clamp, not trigger Ca fusion, not pore SNARE zipper, not mix content dump, not
+  # collapse coat uncoat, not retrieve CME membrane bank, not acidify EE proton
+  # pump, not mature Rab5->Rab7 identity, not recruit M6PR hydrolase cargo, not
+  # activate cathepsin arming thr-, not degrade substrate cut age- pcr+, not export
+  # lumen->cytosol pcr- reserve+, not translate reserve- age- ribosome rebuild, not
+  # transloc sp+ Sec61 channel gating, not cleave pcr+ SPC signal-peptide scission,
+  # not glycosyl thr+ OST N-glycan mark, not trim sp+ GLS monoglucosylation open,
+  # not cnx sp- lectin client discharge, not uggt pcr- UGGT1 reglucosylation, not
+  # mann thr+ ERManI demannosylation timer, not os9 thr- pcr+ OS-9/XTP3-B lectin
+  # commit, not hrd pcr- SEL1L/HRD1 E3 Ub transfer).
+  # Spend take=min(n,atp,energy) — ATP + metabolic fuel fund p97 AAA+ unfoldase
+  # cycles after HRD has Ub-marked the OS-9-bound client (post-hrd vcp; extraction
+  # returns the polypeptide as cytosolic cargo bank for proteasome handoff).
+  # HEAT += take (each p97 ATP-hydrolysis / unfoldase dwell dissipates as
+  #   retrotranslocation mechanical work).
+  # ENERGY -= take (vcp burns active metabolic pool into AAA+ extraction work;
+  #   kin to hrd energy- but does not spend the pcr Ub-prep bank).
+  # ATP -= take (p97 hexamer is a dedicated AAA+ ATPase; ~6 ATP per extraction
+  #   stroke under physiological load).
+  # RESERVE rises: reserve = min(1000, reserve + take) — extracted polypeptide
+  #   joins the cytosolic substrate bank (distinct from export pcr- reserve+ AA
+  #   efflux, retrieve membrane bank, recruit hydrolase cargo, reuptake transmitter).
+  # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — vcp is post-hrd mechanical extraction
+  #   that neither ages the cell nor retunes ERAD timers / phosphagen prep.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp.
+  # Signature: heat+n energy-n atp-n reserve+n; age+pmf+sp+thr+pcr held — vcp life-force.
+  METHOD vcp n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # PSM: post-vcp 26S proteasome (AAA+ 19S RP + 20S CP) degradation of
+  # VCP-extracted Ub-marked clients — unfolds and cleaves the cytosolic
+  # substrate bank that p97 deposited after HRD1 ERAD (post-vcp psm; not
+  # multipotent stream, not GRN fate lock, not growth-cone path sp+, not
+  # synaptogenesis thr+ contact, not release quantal thr-, not reuptake
+  # clearance energy+, not refill VGLUT pack, not dock HOPS tethering, not
+  # arm NSF priming, not clamp complexin clamp, not trigger Ca fusion, not
+  # pore SNARE zipper, not mix content dump, not collapse coat uncoat, not
+  # retrieve CME membrane bank, not acidify EE proton pump, not mature
+  # Rab5->Rab7 identity, not recruit M6PR hydrolase cargo, not activate
+  # cathepsin arming thr-, not degrade lysosomal substrate cut age- pcr+,
+  # not export lumen->cytosol pcr- reserve+, not translate reserve- age-
+  # ribosome rebuild, not transloc sp+ Sec61 channel gating, not cleave
+  # pcr+ SPC signal-peptide scission, not glycosyl thr+ OST N-glycan mark,
+  # not trim sp+ GLS monoglucosylation open, not cnx sp- lectin client
+  # discharge, not uggt pcr- UGGT1 reglucosylation, not mann thr+ ERManI
+  # demannosylation timer, not os9 thr- MRH lectin commit, not hrd pcr-
+  # SEL1L/HRD1 Ub mark, not vcp reserve+ AAA+ retrotranslocation extract).
+  # Spend take=min(n,atp,energy,reserve) — ATP + metabolic fuel + VCP-
+  # deposited cytosolic substrate bank fund 26S proteasome processive
+  # degradation after VCP has extracted the HRD1-Ub client (post-vcp psm;
+  # proteolytic commit clears the reserve bank into peptide products).
+  # HEAT += take (each 19S unfoldase / 20S proteolytic dwell dissipates as
+  #   proteasomal degradation work).
+  # ENERGY -= take (psm burns active metabolic pool into AAA+ unfoldase +
+#   pepr n              post-psm cytosolic peptidase AA salvage — pay min(n,atp,energy) → heat+n energy-n atp-n reserve+n; age/pmf/sp/thr/pcr held; free-AA recovery after 26S oligopeptides
+  #   CP gate work; kin to vcp energy- but consumes the reserve substrate
+  #   bank instead of raising it).
+  # ATP -= take (26S is ATP-dependent; 19S RPT1-6 hexamer hydrolyzes ATP
+  #   per translocation stroke under physiological load).
+  # RESERVE falls: reserve = reserve - take — extracted polypeptide
+  #   substrate is consumed by the proteasome (distinct from vcp reserve+
+  #   extract deposit, export pcr- reserve+ AA efflux, retrieve membrane
+  #   bank, recruit hydrolase cargo, reuptake transmitter).
+  # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — psm is post-vcp proteolytic
+  #   clearance that neither ages the cell nor retunes ERAD timers /
+  #   phosphagen prep (distinct from degrade age- pcr+ lysosomal cut).
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
+  # Signature: heat+n energy-n atp-n reserve-n; age+pmf+sp+thr+pcr held — psm life-force.
+  METHOD psm n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PEPR: post-psm cytosolic peptidase / oligopeptide hydrolase salvage —
+  # thimet oligopeptidase (THOP1), TPPII, and puromycin-sensitive aminopeptidase
+  # cleave 26S-released oligopeptides to free amino acids that re-enter the
+  # reserve anabolic bank after PSM has consumed the Ub-client substrate.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
+  # Pay take=min(n,atp,energy) — ATP fuels AAA-adjacent peptidase processivity
+  # and metabolic energy pays hydrolysis work; reserve RISES by take as free AA
+  # salvage (distinct from psm reserve- substrate burn, export pcr- reserve+
+  # lysosomal efflux, reclaim heat- reserve+, scavenge reserve- energy+,
+  # translate reserve- ribosome rebuild).
+  # AGE/PMF/SETPOINT/THRESHOLD/PCR HELD — pepr is post-proteasomal AA recovery
+  # that neither ages the cell nor retunes ERAD timers / phosphagen prep.
+  # Signature: heat+n energy-n atp-n reserve+n; age+pmf+sp+thr+pcr held — pepr life-force.
+  METHOD pepr n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # AARS: post-pepr aminoacyl-tRNA synthetase (aaRS) charging —
+  # class I/II synthetases condense free AA (salvaged by PEPR after 26S
+  # oligopeptide hydrolysis) onto cognate tRNA: AA + tRNA + ATP ->
+  # AA-tRNA + AMP + PPi. Restores ternary-complex substrate for ribosomes
+  # after ERAD/proteasome/peptidase salvage continuum.
+  # Continuum: ...->trim->cnx->uggt->mann->os9->hrd->vcp->psm->pepr->aars->eftu->ptc.
+  # Pay take=min(n,atp,energy,reserve) — ATP drives aminoacyl-adenylate
+  # formation; metabolic energy pays editing-domain proofreading; reserve
+  # FALLS as free AA are esterified onto tRNA (inverse of pepr reserve+
+  # salvage; distinct from psm reserve- substrate burn without tRNA, from
+  # translate reserve- ribosome rebuild age-, from export pcr- reserve+).
+  # PCR rises: pcr = min(1000, pcr + take) — AMP/PPi phosphagen-adjacent
+  # echo of aaRS adenylate chemistry (distinct from cleave pcr+ SPC scission,
+  # degrade age- pcr+, uggt pcr- UDP-Glc draw).
+  # AGE/PMF/SETPOINT/THRESHOLD HELD — aars charges tRNA without aging the
+  # cell or retuning ERAD timers / division threshold.
+  # Signature: heat+n energy-n atp-n reserve-n pcr+n; age+pmf+sp+thr held — aars life-force.
+  # Usability: AGI models post-pepr aaRS tRNA charging under ASSERT boards.
+  METHOD aars n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > r THEN
+      LET take = r
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET r = r - take
+    SETF THIS reserve r
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET c = c + take
+    IF c > 1000 THEN
+      LET c = 1000
+    END
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # EFTU: post-aars EF-Tu·GTP·AA-tRNA ternary-complex A-site delivery —
+  # elongation factor EF-Tu (EF1A) escorts aars-charged aminoacyl-tRNA into the
+  # ribosomal A site; codon–anticodon match triggers GTP hydrolysis and EF-Tu
+  # release so peptidyl transfer can proceed. Closes the salvage→recharge→deliver
+  # loop after ERAD/proteasome/peptidase/aaRS continuum.
+  # Continuum: ...->os9->hrd->vcp->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
+  # EF-Tu GTPase proofreading cycle; metabolic energy pays accommodation work;
+  # reserve HELD (AA already esterified on tRNA by aars; distinct from aars
+  # reserve- charge, pepr reserve+ salvage, translate reserve- age- rebuild,
+  # psm reserve- substrate burn, export pcr- reserve+).
+  # PCR falls: pcr = pcr - take — GTP→GDP+Pi echo of EF-Tu hydrolysis (inverse
+  # of aars pcr+ adenylate; distinct from uggt pcr- UDP-Glc, cleave pcr+ SPC).
+  # AGE/PMF/SETPOINT/THRESHOLD/RESERVE HELD — eftu delivers ternary complex
+  # without aging the cell or retuning ERAD timers / division threshold / AA bank.
+  # Signature: heat+n energy-n atp-n pcr-n; age+pmf+sp+thr+reserve held — eftu life-force.
+  # Usability: AGI models post-aars EF-Tu delivery under ASSERT boards.
+  METHOD eftu n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # PTC: post-eftu peptidyl-transferase center peptide-bond formation —
+  # ribosomal 23S/28S PTC catalyzes nucleophilic attack of A-site AA-tRNA
+  # alpha-amine on P-site peptidyl-tRNA carbonyl, forging the peptide bond and
+  # transferring the chain to the A-site tRNA (no NTP hydrolysis at the PTC
+  # itself; GTPases already paid at eftu delivery). Extends nascent chain after
+  # salvage->charge->deliver continuum.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3->rrf.
+  # Pay take=min(n,energy) — only metabolic reorganization / desolvation work
+  # at the PTC active site; ATP HELD (no aaRS adenylate); PCR HELD (EF-Tu GTP
+  # already burned at eftu); RESERVE HELD (AA still esterified on tRNA until
+  # bond forms; chain stays ribosome-tethered — distinct from aars reserve-
+  # charge, pepr reserve+ salvage, eftu pcr- delivery, translate reserve- age-
+  # rebuild, psm reserve- substrate burn).
+  # HEAT += take (each aminolysis / peptide-bond condensation dissipates).
+  # AGE/PMF/SETPOINT/THRESHOLD/ATP/PCR/RESERVE HELD — ptc forges bonds without
+  # aging the cell, retuning ERAD timers / division threshold, or spending
+  # NTP / AA bank beyond prior eftu delivery.
+  # Signature: heat+n energy-n; age+pmf+sp+thr+atp+pcr+reserve held — ptc life-force.
+  # Usability: AGI models post-eftu PTC peptide-bond formation under ASSERT boards.
+  METHOD ptc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # EFG: post-ptc EF-G·GTP ribosomal translocation / mRNA–tRNA ratchet —
+  # elongation factor EF-G (EF2) binds the post-peptidyl-transfer ribosome and
+  # hydrolyzes GTP to drive hybrid-state tRNA resolution: deacylated tRNA from
+  # P→E, peptidyl-tRNA from A→P, and mRNA advance by one codon. Unlocks the next
+  # A-site for eftu delivery after ptc peptide-bond formation.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Pay take=min(n,atp,energy,pcr) — ATP/GTP-adjacent phosphagen (pcr) fuels the
+  # EF-G GTPase power stroke; metabolic energy pays ratchet/unlocked-domain work;
+  # reserve HELD (nascent chain already elongated at ptc; AA bank untouched —
+  # distinct from aars reserve- charge, pepr reserve+ salvage, ptc energy-only
+  # bond forge, eftu pcr- delivery, translate reserve- age- rebuild).
+  # PCR falls: pcr = pcr - take — GTP→GDP+Pi echo of EF-G hydrolysis (same class
+  # as eftu pcr-; inverse of aars pcr+ adenylate; distinct from uggt pcr- UDP-Glc).
+  # AGE/PMF/SETPOINT/THRESHOLD/RESERVE HELD — efg ratchets the ribosome without
+  # aging the cell or retuning ERAD timers / division threshold / AA bank.
+  # Signature: heat+n energy-n atp-n pcr-n; age+pmf+sp+thr+reserve held — efg life-force.
+  # Usability: AGI models post-ptc EF-G translocation under ASSERT boards.
+  METHOD efg n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # RF1: post-efg class-I release factor (RF1/RF2/eRF1) peptide-chain release —
+  # stop codon in the A site (placed by efg mRNA ratchet) is decoded by RF1/RF2
+  # (or eRF1). The universally conserved GGQ motif inserts into the PTC and
+  # catalyzes hydrolytic cleavage of the ester bond linking the completed
+  # nascent chain to P-site tRNA — releasing free polypeptide. No GTP is burned
+  # by RF1 itself (RF3 GTPase ejects RF1 afterward; modeled separately).
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Pay take=min(n,energy) — metabolic energy pays RF domain docking / GGQ
+  # insertion conformational work; ATP/PCR HELD (not aaRS adenylate, not EF-G
+  # or EF-Tu GTPase power stroke). RESERVE rises: reserve = min(1000, reserve+take)
+  # — released completed chain banks into the product/AA-adjacent pool (inverse
+  # of aars reserve- charge and translate reserve- rebuild; same class as pepr
+  # reserve+ salvage but WITHOUT atp- — pure catalytic ester hydrolysis).
+  # AGE/PMF/SETPOINT/THRESHOLD/ATP/PCR HELD — rf1 releases chain without aging
+  # the cell, retuning division threshold, or drawing phosphagen.
+  # Signature: heat+n energy-n reserve+n; atp+pcr+age+pmf+sp+thr held — rf1 life-force.
+  # Usability: AGI models post-efg stop-codon peptide release under ASSERT boards.
+  METHOD rf1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # RF3: post-rf1 class-II release factor RF3·GTP (eRF3) ejectase —
+  # after RF1/RF2 GGQ ester hydrolysis releases the completed chain, RF3·GTP
+  # binds the RF1·ribosome complex; GTP hydrolysis drives conformational
+  # rearrangement that ejects class-I RF from the A site and primes the
+  # post-termination complex for ribosome recycling (RRF/EF-G next).
+  # No peptide bond / no chain bank here — pure GTPase power stroke like efg/eftu.
+  # Continuum: ...->psm->pepr->aars->eftu->ptc->efg->rf1->rf3.
+  # Pay take=min(n,atp,energy,pcr) — ATP stands in for GTP·RF3 hydrolysis;
+  # PCR drawn as phosphagen/GTP-pool couple (same class as efg/eftu GTPase).
+  # RESERVE HELD (chain already banked by rf1). AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n atp-n pcr-n; age+reserve+pmf+sp+thr held — rf3 life-force.
+  # Usability: AGI models post-rf1 RF3 ejectase under ASSERT boards.
+  METHOD rf3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # RRF: post-rf3 ribosome recycling factor RRF + EF-G·GTP —
+  # after RF3 ejects class-I RF from the A site, RRF binds the empty A site of
+  # the post-termination complex; EF-G·GTP then drives 70S → 50S + 30S split.
+  # IF3 binds 30S, releasing mRNA and deacylated tRNA so subunits re-enter
+  # initiation. Domain: ribosome recycling (not peptide bond, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf.
+  # Pay take=min(n,atp,energy,pcr) — ATP stands in for EF-G·GTP hydrolysis on
+  # the RRF·ribosome complex; PCR is the phosphagen/GTP couple (efg/rf3 class).
+  # RESERVE +take: salvaged mRNA/tRNA/AA capacity re-enters the metabolic bank
+  # (unique vs rf3 which holds reserve — chain already released by rf1).
+  # AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n atp-n pcr-n reserve+n; age+pmf+sp+thr held — rrf life-force.
+  # Usability: AGI models post-rf3 RRF subunit split under ASSERT boards.
+  METHOD rrf n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    GETF THIS pcr
+    LET c = LAST_N
+    IF c < 0 THEN
+      LET c = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take > c THEN
+      LET take = c
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    LET c = c - take
+    SETF THIS pcr c
+    GETF THIS reserve
+    LET r = LAST_N
+    IF r < 0 THEN
+      LET r = 0
+    END
+    LET r = r + take
+    IF r > 1000 THEN
+      LET r = 1000
+    END
+    SETF THIS reserve r
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # IF3: post-rrf initiation factor IF3 (anti-association) —
+  # after RRF·EF-G·GTP splits 70S → 50S + 30S, IF3 binds the 30S platform
+  # and blocks premature 50S re-joining; this stabilizes free 30S so mRNA and
+  # deacylated tRNA fully leave and the subunit re-enters the initiation pool.
+  # Domain: ribosome initiation anti-association (not GTPase split, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3.
+  # Pay take=min(n,energy) — pure binding/steric work; no EF-G·GTP stand-in
+  # (that was rrf). ATP/PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n; age+atp+pcr+reserve+pmf+sp+thr held — if3 life-force.
+  # Usability: AGI models post-rrf IF3 30S gate under ASSERT boards.
+  METHOD if3 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # IF2: post-if3 IF2·GTP + fMet-tRNA 30S PIC assembly gate (NCIF2).
+  # Continuum after if3 (IF3 keeps free 30S -> IF2·GTP escorts fMet-tRNAfMet into
+  # P-site of 30S preinitiation complex with mRNA start codon; IF1 assists A-site block).
+  # Domain: initiation ternary docking (not 30S anti-association, not RRF split, not RF ejectase).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3->if2.
+  # Pay take=min(n,energy) — pure binding/GTPase-poise work; ATP/PCR/RESERVE HELD.
+  # AGE/PMF/SETPOINT/THRESHOLD HELD. heat+n energy-n signature (if2 life-force).
+  # Usability: AGI models post-if3 IF2 30S PIC under ASSERT boards. Cube is SoT.
+  # Free energy must flow. Returns take; else 0.
+  METHOD if2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+
+  # IF1: post-if2 initiation factor IF1 (A-site block on 30S PIC) —
+  # after IF2·GTP escorts fMet-tRNAfMet into the 30S P-site, IF1 occupies the
+  # 30S A site and blocks premature aminoacyl-tRNA entry while assisting IF2
+  # in 30S preinitiation complex fidelity until 50S joining.
+  # Domain: initiation A-site occlusion (not IF2 ternary docking, not IF3
+  # anti-association, not FtsZ Z-ring, not RRF split).
+  # Continuum: ...->efg->rf1->rf3->rrf->if3->if2->if1.
+  # Pay take=min(n,energy) — pure binding/steric work; ATP/PCR/RESERVE HELD.
+  # AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n energy-n; age+atp+pcr+reserve+pmf+sp+thr held — if1 life-force.
+  # Usability: AGI models post-if2 IF1 A-site gate under ASSERT boards. Cube is SoT.
+  # Free energy must flow. Returns take; else 0.
+  METHOD if1 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # FtsZ: bacterial Z-ring GTPase — midcell cytokinetic scaffold before fission.
+  # FtsZ·GTP polymers form the contractile Z-ring at midcell; GTP hydrolysis
+  # drives treadmilling that recruits septal PG synthases (FtsI/PBP3) and
+  # constricts the division plane. Domain: pre-fission Z-ring constriction
+  # (not fission endowment split, not mito DRP1 fragment, not ribosome IF*).
+  # Continuum: ...->rrf->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (PIC → ring → wall → amidase → EnvC → FtsN → split).
+  # Pay take=min(n,atp,energy) — GTP/ATP stand-in for FtsZ GTPase cycles.
+  # PCR/RESERVE HELD (not phosphagen recycling work). AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsz life-force.
+  # Usability: AGI models Z-ring energy gate under ASSERT boards before cytokinesis.
+  METHOD ftsz n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # FtsI: PBP3 septal peptidoglycan synthase — divisome wall ingrowth after Z-ring.
+  # FtsZ·GTP treadmilling recruits FtsI/PBP3 (and FtsW lipid-II flippase partner)
+  # to the midcell ring; FtsI polymerizes septal PG that drives envelope invagination
+  # toward fission. Domain: pre-fission septal PG synthase (not FtsZ GTPase ring,
+  # not mito DRP1 fragment, not ribosome IF*, not fission endowment split).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
+  # Pay take=min(n,atp,energy) — ATP/GTP stand-in for PG polymerization + flippase.
+  # PCR/RESERVE HELD (lipid-II pool not spent here). AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsi life-force.
+  # Usability: AGI models septal PG energy gate under ASSERT boards before cytokinesis.
+  METHOD ftsi n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # AmiC: septal peptidoglycan amidase — daughter separation after FtsI PG wall.
+  # AmiC/AmiA (N-acetylmuramoyl-L-alanine amidases) cleave stem peptides in septal
+  # PG polymerized by FtsI/PBP3; EnvC/NlpD activate AmiC at midcell so daughters
+  # split without lysis. Domain: post-septal-PG wall cleavage (not FtsI synthase,
+  # not FtsZ GTPase ring, not mito DRP1 fragment, not ribosome IF*, not fission endowment).
+  # Continuum: ...->if3->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (ring → wall → amidase → EnvC → FtsN → FtsK → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for amidase activation + remodel work.
+  # PCR/RESERVE HELD (peptide fragments not banked here). AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — amic life-force.
+  # Usability: AGI models septal amidase energy gate under ASSERT boards before cytokinesis.
+  METHOD amic n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # EnvC: LytM activator of AmiC septal amidase — daughter split without lysis.
+  # EnvC (with NlpD) is a periplasmic LytM/M23 factor recruited to midcell; it
+  # activates AmiC/AmiA amidases that cleave septal PG after FtsI wall ingrowth.
+  # Without EnvC, amidases stay latent and filaments fail to separate.
+  # Domain: post-AmiC midcell amidase activation (not AmiC catalysis itself,
+  # not FtsI synthase, not FtsZ GTPase ring, not mito DRP1, not ribosome IF*,
+  # not fission endowment split).
+  # Continuum: ...->if2->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (wall → amidase → EnvC → FtsN → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for EnvC recruitment + activation work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — envc life-force.
+  # Usability: AGI models EnvC activation energy gate under ASSERT boards before cytokinesis.
+  METHOD envc n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # FtsN: SPOR-domain late divisome trigger — constriction after EnvC activation.
+  # FtsN is the essential late recruit whose periplasmic SPOR domain binds denuded
+  # PG; it signals that amidase priming (EnvC/AmiC) is ready and flips the
+  # divisome into processive septal constriction before cytokinesis.
+  # Domain: post-EnvC constriction go-signal (not EnvC LytM activation itself,
+  # not AmiC catalysis, not FtsI synthase, not FtsZ GTPase ring, not mito DRP1,
+  # not ribosome IF*, not fission endowment split).
+  # Continuum: ...->ftsz->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (amidase → EnvC → FtsN → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for FtsN SPOR docking + signal work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsn life-force.
+  # Usability: AGI models FtsN constriction-go energy gate under ASSERT before fission.
+  METHOD ftsn n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # FtsK: DNA translocase — septum chromosome clearance after FtsN go-signal.
+  # FtsK hexameric AAA+ pumps dsDNA away from the division plane so the septum
+  # can close without bisecting the nucleoid; XerCD dif recombination partner.
+  # Domain: septal DNA translocation (not FtsN SPOR trigger, not FtsZ ring,
+  # not AmiC amidase, not EnvC activator, not fission endowment split).
+  # Continuum: ...->ftsi->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (go → clear DNA → resolve dimers → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for FtsK motor translocation cycles.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — ftsk life-force.
+  # Usability: AGI models FtsK nucleoid-clearance energy gate under ASSERT after FtsN.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD ftsk n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # XerCD: dif site-specific recombinase — chromosome dimer resolution after FtsK.
+  # XerC/XerD tyrosine recombinases act at the dif site; FtsK motor arrival licenses
+  # strand exchange so dimeric chromosomes unknot into monomers before septum closure.
+  # Domain: post-FtsK dif recombination (not FtsK AAA+ translocation itself, not FtsN
+  # SPOR go-signal, not AmiC amidase, not EnvC activator, not fission endowment split).
+  # Continuum: ...->amic->envc->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission (clear DNA → resolve dimers → split).
+  # Pay take=min(n,atp,energy) — ATP stand-in for XerCD synaptic complex + ligation work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — xercd life-force.
+  # Usability: AGI models XerCD dimer-resolution energy gate under ASSERT after FtsK.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD xercd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # Tol-Pal: outer-membrane constriction complex after XerCD dimer resolution.
+  # TolQ/TolR harness PMF at the IM; TolA spans periplasm to Pal lipoprotein on
+  # the OM so the outer membrane invaginates in lockstep with septal PG closure.
+  # Without Tol-Pal, OM blebs and daughter cells fail envelope scission.
+  # Domain: post-XerCD OM cytokinetic coupling (not XerCD dif recombination,
+  # not FtsK AAA+ DNA pump, not FtsN SPOR go-signal, not AmiC amidase, not
+  # fission endowment energy split itself).
+  # Continuum: ...->ftsn->ftsk->xercd->tolpal->cpob->lpob->fission
+  #   (clear DNA -> resolve dimers -> pull OM -> couple PG/OM -> split).
+  # Pay take=min(n,atp,energy) - ATP/PMF stand-in for TolQ rotor + TolA-Pal tug.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - tolpal life-force.
+  # Usability: AGI models Tol-Pal OM-constriction energy gate under ASSERT after XerCD.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD tolpal n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+  # CpoB: PBP1B-TolA coordinator - OM/PG constriction couple after Tol-Pal.
+  # CpoB (YbgF) binds TolA in the periplasm and regulates PBP1B (MrcB) so septal
+  # PG synthesis stays in register with Tol-Pal outer-membrane invagination.
+  # Without CpoB, OM and PG advance out of phase and envelope integrity fails.
+  # Domain: post-Tol-Pal PG-OM coupling (not Tol-Pal motor itself, not XerCD
+  # dif recombination, not FtsK DNA pump, not FtsN SPOR go-signal, not AmiC
+  # amidase, not fission endowment energy split).
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->fission
+  #   (resolve dimers -> pull OM -> couple PG/OM -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for CpoB-TolA-PBP1B coordination.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - cpob life-force.
+  # Usability: AGI models CpoB PG-OM couple energy gate under ASSERT after Tol-Pal.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD cpob n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # LpoB: OM lipoprotein activator of PBP1B - stimulates septal PG after CpoB.
+  # LpoB (YraM) spans the periplasm from the outer membrane and docks PBP1B (MrcB),
+  # activating both GT (glycosyltransferase) and TP (transpeptidase) so septal
+  # PG is polymerized in phase with CpoB-TolA OM invagination.
+  # Without LpoB, PBP1B idles and the PG wall lags OM pull — envelope tears.
+  # Domain: post-CpoB PBP1B activation (not CpoB TolA couple itself, not Tol-Pal
+  # motor, not XerCD dif, not FtsK DNA pump, not FtsN SPOR, not AmiC amidase,
+  # not fission endowment energy split).
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->fission
+  #   (resolve dimers -> pull OM -> couple PG/OM -> activate PBP1B -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LpoB-PBP1B GT/TP activation.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lpob life-force.
+  # Usability: AGI models LpoB PBP1B activator energy gate under ASSERT after CpoB.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lpob n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Pbp1B: bifunctional aPBP septal PG synthase after LpoB GT/TP activation.
+  # PBP1B (MrcB) polymerizes septal peptidoglycan: GT extends glycan strands from
+  # lipid II and TP cross-links peptides so the wall thickens in register with
+  # LpoB-docked activation and CpoB-TolA OM invagination.
+  # Without PBP1B catalytic burn, activated enzyme still yields no septal PG —
+  # envelope cannot close before fission.
+  # Domain: post-LpoB PBP1B catalysis (not LpoB docking itself, not CpoB TolA couple,
+  # not Tol-Pal motor, not XerCD dif, not FtsK DNA pump, not FtsN SPOR, not AmiC
+  # amidase, not fission endowment energy split).
+  # Continuum: ...->ftsk->xercd->tolpal->cpob->lpob->pbp1b->fission
+  #   (resolve dimers -> pull OM -> couple PG/OM -> activate PBP1B -> synth PG -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PBP1B GT/TP catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pbp1b life-force.
+  # Usability: AGI models PBP1B septal PG synthase energy gate under ASSERT after LpoB.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pbp1b n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # DedD: SPOR-domain septal PG sensor after Pbp1B synthase.
+  # DedD binds nascent septal peptidoglycan (denuded glycan / stem peptides
+  # exposed by PBP1B GT/TP polymerization) and stabilizes late divisome
+  # constriction in register with FtsN SPOR and envelope closure.
+  # Without DedD PG-sensing burn, PBP1B-made septum still lacks the late
+  # SPOR tether that couples wall growth to constriction before fission.
+  # Domain: post-Pbp1B DedD SPOR PG sensor (not PBP1B catalysis itself, not
+  # LpoB docking, not FtsN SPOR recruit, not AmiC amidase, not EnvC, not
+  # CpoB-TolA couple, not Tol-Pal motor, not XerCD dif, not FtsK DNA pump,
+  # not fission endowment energy split).
+  # Continuum: ...->tolpal->cpob->lpob->pbp1b->dedd->damx->fission
+  #   (couple PG/OM -> activate PBP1B -> synth PG -> sense septal PG -> DamX SPOR -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for DedD SPOR binding / tether cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - dedd life-force.
+  # Usability: AGI models DedD septal PG sensor energy gate under ASSERT after Pbp1B.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD dedd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # DamX: SPOR-domain septal PG binder after DedD sensor.
+  # DamX docks denuded septal peptidoglycan via its C-terminal SPOR domain,
+  # reinforcing DedD/FtsN SPOR tethers so late constriction stays in register
+  # with PBP1B-made wall before cytokinesis endowment split.
+  # Without DamX SPOR burn, DedD-sensed septum still lacks the second SPOR
+  # binder that stabilizes envelope closure prior to fission.
+  # Domain: post-DedD DamX SPOR PG binder (not DedD sensor itself, not PBP1B
+  # catalysis, not LpoB docking, not FtsN SPOR recruit, not AmiC amidase, not
+  # EnvC, not CpoB-TolA couple, not Tol-Pal motor, not XerCD dif, not FtsK
+  # DNA pump, not fission endowment energy split).
+  # Continuum: ...->cpob->lpob->pbp1b->dedd->damx->fission
+  #   (synth PG -> sense septal PG -> DamX SPOR bind -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for DamX SPOR binding cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - damx life-force.
+  # Usability: AGI models DamX septal SPOR binder energy gate under ASSERT after DedD.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD damx n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # RlpA: SPOR-guided septal PG lytic TG after DamX binder.
+  # RlpA (rare lipoprotein A) is a periplasmic SPOR-associated lytic
+  # transglycosylase that cleaves glycan strands in denuded septal PG after
+  # DamX/DedD SPOR tethers mark the late septum. Cleavage thins the wall so
+  # daughters can separate without lysis once amidases have opened stem peptides.
+  # Without RlpA lytic-TG burn, DamX-bound septum still lacks glycan strand
+  # cleavage that finishes envelope scission before fission endowment.
+  # Domain: post-DamX RlpA septal lytic TG (not DamX SPOR binder itself, not
+  # DedD sensor, not PBP1B catalysis, not LpoB docking, not FtsN SPOR recruit,
+  # not AmiC amidase, not EnvC LytM, not CpoB-TolA couple, not Tol-Pal motor,
+  # not XerCD dif, not FtsK DNA pump, not fission endowment energy split).
+  # Continuum: ...->lpob->pbp1b->dedd->damx->rlpa->fission
+  #   (sense PG -> DamX SPOR bind -> RlpA glycan cleave -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for RlpA lytic-TG catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - rlpa life-force.
+  # Usability: AGI models RlpA septal lytic-TG energy gate under ASSERT after DamX.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD rlpa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # NlpD: OM LytM septal amidase activator after RlpA lytic TG.
+  # NlpD (new lipoprotein D) is an outer-membrane LytM/lysostaphin-factor
+  # lipoprotein that specifically activates the septal amidase AmiC once
+  # RlpA/DamX/DedD SPOR marks and glycan cleavage have prepared denuded PG.
+  # Activation couples final stem-peptide cutting to RlpA glycan thinning so
+  # daughters separate cleanly before fission endowment energy split.
+  # Without NlpD LytM burn, RlpA-cleaved septum still lacks the AmiC-activating
+  # OM cue that finishes envelope scission prior to cytokinesis endowment.
+  # Domain: post-RlpA NlpD LytM AmiC activator (not RlpA lytic TG itself, not
+  # DamX SPOR binder, not DedD sensor, not AmiC catalysis, not EnvC LytM for
+  # AmiA/B, not FtsN SPOR recruit, not PBP1B catalysis, not LpoB docking, not
+  # CpoB-TolA, not Tol-Pal motor, not XerCD dif, not FtsK DNA pump, not fission
+  # endowment energy split).
+  # Continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
+  #   (DamX SPOR bind -> RlpA glycan cleave -> NlpD AmiC activate -> scission -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for NlpD LytM activation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - nlpd life-force.
+  # Usability: AGI models NlpD septal LytM activator energy gate under ASSERT after RlpA.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD nlpd n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # Scission: terminal envelope PG scission after NlpD AmiC activation.
+  # After NlpD LytM activates AmiC and RlpA has thinned glycan strands on
+  # DamX/DedD-marked septal PG, scission is the free-energy gate that commits
+  # full envelope partition into two closed poles before cytokinesis endowment.
+  # Without scission burn, NlpD-activated septum still lacks the terminal cut
+  # commitment that finishes daughter separation prior to fission endowment.
+  # Domain: post-NlpD envelope scission (not NlpD LytM activator itself, not
+  # RlpA lytic TG, not DamX SPOR binder, not DedD sensor, not AmiC catalysis,
+  # not EnvC, not FtsN SPOR, not PBP1B, not LpoB, not CpoB-TolA, not Tol-Pal,
+  # not XerCD, not FtsK, not fission endowment energy split).
+  # Continuum: ...->damx->rlpa->nlpd->scission->fispay
+  #   (RlpA cleave -> NlpD AmiC activate -> envelope scission -> split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for terminal scission work.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - scission life-force.
+  # Usability: AGI models terminal septal scission energy gate under ASSERT after NlpD.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD scission n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # FisPay: cytokinesis endowment energy split after Scission PG cut.
+  # Terminal division energy gate after scission has severed septal PG
+  # (NlpD AmiC activation + RlpA glycan thinning + DamX/DedD SPOR marks).
+  # Burns ATP/energy stand-in for split machinery that partitions cytoplasm
+  # and reseals poles. Without this burn, scission-finished envelope lacks
+  # the energy-gated cytokinesis commit that yields two living cells.
+  # Domain: post-scission cytokinesis endowment energy split (not zero-arg
+  # fission maternal code pack, not inherit unpack, not scission PG cut,
+  # not NlpD LytM AmiC activator, not RlpA lytic TG, not DamX SPOR binder,
+  # not DedD sensor, not AmiC catalysis, not EnvC, not FtsN, not PBP1B,
+  # not LpoB, not CpoB-TolA, not Tol-Pal, not XerCD, not FtsK).
+  # Continuum: ...->pbp1b->dedd->damx->rlpa->nlpd->scission->fispay
+  #   (scission PG cut -> fispay endowment energy split).
+  # Pay take=min(n,atp,energy) - ATP stand-in for fission endowment cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held.
+  # Usability: AGI models post-scission cytokinesis energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD fispay n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # RodA: SEDS-family PG polymerase — rod elongation restart after FisPay split.
+  # After cytokinesis endowment (fispay) partitions daughters, RodA (with PBP2)
+  # polymerizes sidewall peptidoglycan so each newborn rod recovers length and
+  # diameter. SEDS (shape, elongation, division, sporulation) proteins flip and
+  # extend glycan strands processively; without RodA burn, post-split cells stay
+  # septum-biased spheres and fail shape homeostasis before the next Z-ring.
+  # Domain: post-fispay SEDS rod PG polymerase (not fispay endowment energy split,
+  # not scission PG cut, not NlpD LytM, not RlpA lytic TG, not PBP1B bifunctional
+  # synthase, not FtsI septal PBP3, not FtsW septal SEDS partner, not DamX SPOR,
+  # not DedD sensor, not AmiC, not EnvC, not LpoB, not CpoB-TolA).
+  # Continuum: ...->damx->rlpa->nlpd->scission->fispay->roda->mreb
+  #   (fispay endowment split -> RodA sidewall elongation -> MreB scaffold).
+  # Pay take=min(n,atp,energy) — ATP stand-in for SEDS polymerization cycles.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — roda life-force.
+  # Usability: AGI models post-cytokinesis rod elongation energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD roda n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MreB: actin-like elongasome cytoskeletal scaffold after RodA SEDS.
+  # MreB forms membrane-associated filaments that organize the RodA/PBP2
+  # elongasome along the sidewall so glycan polymerization is circumferential
+  # and length-wise, not septal. Without MreB scaffold burn, RodA polymerase
+  # still lacks spatial routing and rods lose shape homeostasis after FisPay.
+  # Domain: post-RodA MreB cytoskeletal scaffold (not RodA SEDS polymerase
+  # itself, not PBP2 TP partner, not fispay endowment, not scission PG cut,
+  # not NlpD LytM, not RlpA lytic TG, not FtsZ ring, not FtsI septal PBP3,
+  # not DamX SPOR, not DedD sensor, not AmiC, not EnvC, not LpoB).
+  # Continuum: ...->damx->rlpa->nlpd->scission->fispay->roda->mreb->mrec
+  #   (RodA sidewall PG polymerize -> MreB scaffold -> MreC periplasmic partner).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MreB filament treadmilling.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mreb life-force.
+  # Usability: AGI models post-RodA MreB scaffold energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mreb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MreC: periplasmic elongasome scaffold partner after MreB.
+  # MreC is a bitopic periplasmic protein that bridges MreB cytoplasmic
+  # filaments to RodA/PBP2 PG synthases so sidewall insertion stays coherent.
+  # Without MreC partner burn, MreB filaments still lack the periplasmic
+  # coupler that docks the elongasome polymerase set after RodA restart.
+  # Domain: post-MreB MreC periplasmic partner (not MreB actin scaffold itself,
+  # not RodA SEDS polymerase, not PBP2 TP, not MreD, not RodZ, not fispay
+  # endowment, not scission PG cut, not NlpD LytM, not RlpA lytic TG, not FtsZ,
+  # not FtsI septal PBP3, not DamX SPOR, not DedD, not AmiC, not EnvC, not LpoB).
+  # Continuum: ...->fispay->roda->mreb->mrec
+  #   (MreB filament scaffold -> MreC periplasmic elongasome partner).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MreC partner docking cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - mrec life-force.
+  # Usability: AGI models post-MreB MreC partner energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mrec n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # MreD: inner-membrane elongasome stabilizer after MreC dock.
+  # MreD is a polytopic IM protein that stabilizes the MreC–PBP2–RodA
+  # complex so circumferential PG synthesis stays processive; without MreD
+  # burn, MreC dock cannot lock the elongasome and rods bulge after split.
+  # Domain: post-mrec IM elongasome stabilizer (not MreC periplasmic partner,
+  # not MreB cytoskeletal scaffold, not RodA SEDS polymerase, not PBP2 TPase,
+  # not fispay endowment, not scission PG cut, not FtsI septal PBP3, not
+  # PBP1B, not LpoB, not RodZ, not NlpD, not RlpA, not DamX/DedD).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz
+  #    (MreC periplasmic dock -> MreD IM stabilizer lock -> RodZ tether).
+  # Pay take=min(n,atp,energy) — ATP stand-in for MreD stabilizer cycles.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — mred life-force.
+  # Usability: AGI models post-MreC MreD stabilizer energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD mred n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+  # RodZ: bitopic MreB–membrane tether after MreD stabilizer lock.
+  # RodZ is a bitopic IM protein whose cytoplasmic helix binds MreB
+  # filaments while the periplasmic domain couples to PBP2, tethering
+  # the elongasome scaffold to the inner membrane so rod geometry
+  # holds after MreD locks the complex. Without RodZ tether burn,
+  # MreB filaments detach and sidewall PG insertion loses polarity.
+  # Domain: post-mred bitopic MreB membrane tether (not MreD IM
+  # stabilizer, not MreC periplasmic partner, not MreB actin scaffold,
+  # not RodA SEDS polymerase, not PBP2 TPase, not fispay endowment,
+  # not scission PG cut, not FtsZ, not FtsI septal PBP3, not PBP1B,
+  # not LpoB, not NlpD, not RlpA, not DamX/DedD).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
+  #   (MreD IM stabilizer lock -> RodZ bitopic MreB membrane tether).
+  # Pay take=min(n,atp,energy) — ATP stand-in for RodZ tether cycles.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held — rodz life-force.
+  # Usability: AGI models post-MreD RodZ tether energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD rodz n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PBP2: monofunctional TPase elongasome partner (MrdA) after RodZ.
+  # PBP2/MrdA is the monofunctional D,D-transpeptidase that crosslinks
+  # sidewall PG strands polymerized by RodA SEDS after RodZ tethers MreB
+  # to the IM and MreD stabilizes the MreBCD complex.
+  # Without PBP2 TPase burn, RodA glycan strands still lack the peptide
+  # bridge crosslinks that lock rod shape after RodZ membrane tether.
+  # Domain: post-RodZ PBP2/MrdA monofunctional TP (not RodZ tether itself,
+  # not MreD IM stabilizer, not MreC periplasmic partner, not MreB scaffold,
+  # not RodA SEDS polymerase, not PBP1B bifunctional aPBP, not FtsI PBP3,
+  # not LpoA/LpoB, not fispay, not scission, not NlpD, not RlpA, not DamX).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2
+  #   (RodZ bitopic MreB tether -> PBP2/MrdA monofunctional TP crosslink).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PBP2 TPase cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pbp2 life-force.
+  # Usability: AGI models post-RodZ PBP2 TPase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pbp2 n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+  # PBP1A: bifunctional aPBP elongasome partner (MrcA) after PBP2.
+  # PBP1A/MrcA is the class-A bifunctional GT/TP that polymerizes and
+  # crosslinks sidewall PG in parallel with PBP2/MrdA monofunctional TPase
+  # after RodZ tethers MreB and RodA SEDS feeds lipid-II strands.
+  # Without PBP1A GT/TP burn, PBP2 crosslinks alone leave glycan growth
+  # under-provisioned and rod elongation stalls after monofunctional TP.
+  # Domain: post-PBP2 PBP1A/MrcA bifunctional aPBP (not PBP2 monofunctional
+  # TPase itself, not RodZ tether, not MreD IM stabilizer, not MreC partner,
+  # not MreB scaffold, not RodA SEDS, not PBP1B septal aPBP, not FtsI PBP3,
+  # not LpoA/LpoB activators, not fispay, not scission, not NlpD, not RlpA).
+  # Continuum: ...->fispay->roda->mreb->mrec->mred->rodz->pbp2->pbp1a
+  #   (PBP2/MrdA monofunctional TP -> PBP1A/MrcA bifunctional GT/TP sidewall).
+  # Pay take=min(n,atp,energy) - ATP stand-in for PBP1A GT/TP catalytic cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - pbp1a life-force.
+  # Usability: AGI models post-PBP2 PBP1A bifunctional aPBP energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD pbp1a n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # LpoA: OM lipoprotein activator of PBP1A after PBP1A bifunctional aPBP.
+  # LpoA is the outer-membrane lipoprotein that docks the PBP1A UB2H domain
+  # and stimulates class-A GT/TP activity so sidewall PG synthesis keeps pace
+  # with elongasome demand after PBP1A/MrcA catalytic burn.
+  # Without LpoA activation burn, PBP1A remains under-stimulated and rod PG
+  # expansion stalls despite bifunctional GT/TP presence.
+  # Domain: post-PBP1A LpoA OM activator (not PBP1A catalysis itself, not PBP2
+  # monofunctional TPase, not RodZ tether, not LpoB/PBP1B septal activator,
+  # not CpoB, not MreBCD, not RodA SEDS, not fispay, not scission, not NlpD).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa
+  #   (PBP1A/MrcA bifunctional GT/TP -> LpoA OM lipoprotein activator).
+  # Pay take=min(n,atp,energy) - ATP stand-in for LpoA-PBP1A activation cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - lpoa life-force.
+  # Usability: AGI models post-PBP1A LpoA activator energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD lpoa n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
+
+
+  # MepS: OM DD-endopeptidase (Spr) after LpoA PBP1A activation.
+  # MepS/Spr is the outer-membrane DD-endopeptidase that cleaves peptide
+  # cross-links in existing sidewall PG so new strands polymerized by the
+  # LpoA-stimulated PBP1A elongasome can insert without stress fracture.
+  # Without MepS cleavage burn, LpoA-activated PG synthesis packs against
+  # uncleaved sacculus and rod expansion stalls despite activator presence.
+  # Domain: post-LpoA MepS/Spr OM DD-endopeptidase (not LpoA activator itself,
+  # not PBP1A catalysis, not MepM/MepH redundant endopeptidases, not Slt lytic
+  # TG, not LpoB/PBP1B septal path, not NlpD amidase activator, not scission).
+  # Continuum: ...->roda->mreb->mrec->mred->rodz->pbp2->pbp1a->lpoa->meps
+  #   (LpoA OM lipoprotein activator -> MepS/Spr OM DD-endopeptidase).
+  # Pay take=min(n,atp,energy) - ATP stand-in for MepS cross-link cleavage cycle.
+  # PCR/RESERVE HELD. AGE/PMF/SETPOINT/THRESHOLD HELD.
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - meps life-force.
+  # Usability: AGI models post-LpoA MepS endopeptidase energy gate under ASSERT.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+END

@@ -1,8 +1,0 @@
-SHIP LIFE_CELL_ST6GALNAC6 MI=2357 VERSION=1.15.1857-usability
-feat=5ecff7fc211210bacfbaa5b21541e81f76238cd4
-proof=programs/proof/2357_life_cell_st6galnac6.cubalc
-asserts: life=400 atomic=140 mesh=137 flagship=12 total=689 fail=0
-continuum: ...->st8sia5->st6galnac6
-domain: post-ST8SIA5 GQ1b-alpha synthase ward
-gift: ST6GALNAC6 GQ1b -> GQ1b-alpha under ASSERT
-status=PASS sealed=true

@@ -1,7 +1,0 @@
-LIFE_CELL_SC5D MI2328
-METHOD sc5d n after ebp on sterol continuum
-proof 2328_life_cell_sc5d asserts_ok=219 fail=0
-science atomic_printer_life_sc5d 91/0
-science smx_mesh_vesicle_sc5d_life 82/0
-flagship 1620_atomic_printer_life_force 12/0
-continuum ...->nsdhl->hsd17b7->ebp->sc5d
