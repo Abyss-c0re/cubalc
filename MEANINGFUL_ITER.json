@@ -40,15 +40,15 @@
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1,
   "feat_head": "ea291a12c75abeae5d9e16b2719d27fac40cf392",
-  "head": "e9d7365b926d28d5a8298c2d734c140656c9b33d",
-  "HEAD": "e9d7365b926d28d5a8298c2d734c140656c9b33d",
-  "tip": "e9d7365b926d28d5a8298c2d734c140656c9b33d",
+  "head": "9208965bf45fe95410b54a35e94ecf289595ed9a",
+  "HEAD": "9208965bf45fe95410b54a35e94ecf289595ed9a",
+  "tip": "9208965bf45fe95410b54a35e94ecf289595ed9a",
   "ts": 1789358356.5608609,
   "FEAT_HEAD": "ea291a12c75abeae5d9e16b2719d27fac40cf392",
-  "TIP": "e9d7365b926d28d5a8298c2d734c140656c9b33d",
-  "pin": "e9d7365b926d28d5a8298c2d734c140656c9b33d",
-  "tip_short": "e9d7365b9",
+  "TIP": "9208965bf45fe95410b54a35e94ecf289595ed9a",
+  "pin": "9208965bf45fe95410b54a35e94ecf289595ed9a",
+  "tip_short": "9208965bf",
   "HEAD_short": "6723c7b4b9",
   "feat_commit": "ea291a12c",
-  "pinned_head": "e9d7365b926d28d5a8298c2d734c140656c9b33d"
+  "pinned_head": "9208965bf45fe95410b54a35e94ecf289595ed9a"
 }
