@@ -1,7 +1,7 @@
-SHIP 2407 MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
-VERSION=1.16.7-fieldorigin-hasownfield
-MI=2407
-PROOF=programs/proof/2407_multifile_extend_fieldorigin_hasownfield_link3.cubalc
-FORMS=FIELDORIGIN|FIELDFROM|DEFINEDFIELD|FIELDOWNER|SOURCEFIELD|WHEREFIELD + HASOWNFIELD|OWNFIELD|DEFINESFIELD|OVERRIDESFIELD
-LIB=programs/lib/demo_greeter_loudtag.cubalc
-LAW=cube_is_sot; free_energy_must_flow; hollow_we_heresy; ct101_forever
+MI 2407 MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
+VERSION 1.16.7-fieldorigin-hasownfield
+HEAD 4acca0c15cff25321cf5e282a0b7f81d37651c34
+FEAT 27a0f050450e501a433a50d6459d1fd1dec047fe
+proof programs/proof/2407_multifile_extend_fieldorigin_hasownfield_link3.cubalc
+asserts_ok 77 asserts_fail 0 PASS
+forms FIELDORIGIN HASOWNFIELD (+aliases)
