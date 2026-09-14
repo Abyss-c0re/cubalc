@@ -1,3 +1,14 @@
+## MI 2415 — MULTIFILE_EXTEND_NTHPARENT_HEIGHTOF_LEAFCOUNT_LINK3
+- VERSION `1.16.16-nthparent-heightof-leafcount`
+- NTHPARENT/PARENTAT + HEIGHTOF + LEAFCOUNT multi-file CLASS EXTEND probes
+- Proof: programs/proof/2415_multifile_extend_nthparent_heightof_leafcount_link3.cubalc
+- asserts_ok=63 asserts_fail=0
+
+## MI 2414 — MULTIFILE_EXTEND_DESCENDANTS_ISLEAF_NTHCHILD_LINK3
+- VERSION `1.16.15-descendants-isleaf-nthchild`
+- DESCENDANTS bag + ISLEAF/HASCHILDREN + FIRST/LAST/NTHCHILD multi-file CLASS EXTEND
+- Proof: programs/proof/2414_multifile_extend_descendants_isleaf_nthchild_link3.cubalc
+
 
 ## MI 2407 — MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
 - VERSION `1.16.7-fieldorigin-hasownfield`

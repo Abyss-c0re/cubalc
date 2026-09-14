@@ -1,3 +1,11 @@
+## 1.16.16-nthparent-heightof-leafcount — MI 2415 MULTIFILE_EXTEND_NTHPARENT_HEIGHTOF_LEAFCOUNT_LINK3
+
+- **NTHPARENT** / PARENTAT / ANCESTORAT — ancestor N steps up (0 = immediate parent); soft empty OOB
+- **HEIGHTOF** / TREEHEIGHT / HEIGHT_OF — longest downward EXTEND path (leaf height 0)
+- **LEAFCOUNT** / COUNTLEAVES / NLEAVES — leaf classes in subtree (self counts if leaf)
+- Freed LEAFCOUNT alias from COUNTFLAT plate path so class-tree LEAFCOUNT owns the form
+- Proof: `programs/proof/2415_multifile_extend_nthparent_heightof_leafcount_link3.cubalc` asserts_ok=63 fail=0
+
 ## 1.16.14-siblings-haschild-hasdescendant — MI 2413 MULTIFILE_EXTEND_SIBLINGS_HASCHILD_HASDESCENDANT_LINK3
 
 - **SIBLINGS** / COSUBS / PEERCLASSES / SAMEPARENT Class|obj — newline bag of peer classes sharing parent_idx (excl. self) · SIBLINGS_N

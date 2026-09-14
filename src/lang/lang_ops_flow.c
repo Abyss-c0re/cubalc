@@ -19124,6 +19124,194 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
 
+  /* NTHPARENT|PARENTAT + HEIGHTOF + LEAFCOUNT (multifile EXTEND)
+   * NTHPARENT Class|obj N — ancestor N steps up (0 = immediate parent). Soft empty OOB.
+   * HEIGHTOF Class|obj — longest downward EXTEND path length (leaf height 0).
+   * LEAFCOUNT Class|obj — number of leaf classes in subtree (self counts if leaf).
+   * Dual of NTHCHILD/DEPTHOF/DESCENDANTS. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NTHPARENT") || kw(&L->cur, "PARENTAT") ||
+      kw(&L->cur, "ANCESTORAT") || kw(&L->cur, "NTH_PARENT") ||
+      kw(&L->cur, "PARENT_AT") || kw(&L->cur, "SUPERAT") ||
+      kw(&L->cur, "NTHSUPER") || kw(&L->cur, "NTHANC") ||
+      kw(&L->cur, "HEIGHTOF") || kw(&L->cur, "TREEHEIGHT") ||
+      kw(&L->cur, "SUBTREEHEIGHT") || kw(&L->cur, "HEIGHT_OF") ||
+      kw(&L->cur, "CLASSHEIGHT") || kw(&L->cur, "HEIGHTCLASS") ||
+      kw(&L->cur, "GETHEIGHT") || kw(&L->cur, "TREE_HEIGHT") ||
+      kw(&L->cur, "LEAFCOUNT") || kw(&L->cur, "COUNTLEAVES") ||
+      kw(&L->cur, "NLEAVES") || kw(&L->cur, "LEAF_COUNT") ||
+      kw(&L->cur, "NUMLEAVES") || kw(&L->cur, "COUNT_LEAVES") ||
+      kw(&L->cur, "LEAVESN") || kw(&L->cur, "N_LEAVES")) {
+    int want_nthp = kw(&L->cur, "NTHPARENT") || kw(&L->cur, "PARENTAT") ||
+                    kw(&L->cur, "ANCESTORAT") || kw(&L->cur, "NTH_PARENT") ||
+                    kw(&L->cur, "PARENT_AT") || kw(&L->cur, "SUPERAT") ||
+                    kw(&L->cur, "NTHSUPER") || kw(&L->cur, "NTHANC");
+    int want_height = kw(&L->cur, "HEIGHTOF") || kw(&L->cur, "TREEHEIGHT") ||
+                      kw(&L->cur, "SUBTREEHEIGHT") || kw(&L->cur, "HEIGHT_OF") ||
+                      kw(&L->cur, "CLASSHEIGHT") || kw(&L->cur, "HEIGHTCLASS") ||
+                      kw(&L->cur, "GETHEIGHT") || kw(&L->cur, "TREE_HEIGHT");
+    int want_leafc = kw(&L->cur, "LEAFCOUNT") || kw(&L->cur, "COUNTLEAVES") ||
+                     kw(&L->cur, "NLEAVES") || kw(&L->cur, "LEAF_COUNT") ||
+                     kw(&L->cur, "NUMLEAVES") || kw(&L->cur, "COUNT_LEAVES") ||
+                     kw(&L->cur, "LEAVESN") || kw(&L->cur, "N_LEAVES");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, hit = 0, n = 0, idx_want = -1, guard = 0;
+    const char *opname = want_nthp ? "NTHPARENT"
+                         : want_height ? "HEIGHTOF"
+                                       : "LEAFCOUNT";
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_nthp ? "NTHPARENT Class|obj N"
+                         : (want_height ? "HEIGHTOF Class|obj"
+                                        : "LEAFCOUNT Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (want_nthp) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "POS") || kw(&L->cur, "UP"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx_want = (int)L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx_want = (int)vv->val;
+        else { fail(vm, "NTHPARENT Class|obj N"); return -1; }
+        lex_next(L);
+      } else { fail(vm, "NTHPARENT Class|obj N"); return -1; }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (want_nthp) {
+      char namebuf[48];
+      int pi;
+      namebuf[0] = 0;
+      hit = 0;
+      if (cda && ai >= 0 && idx_want >= 0) {
+        pi = cda->parent_idx;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          if (idx_want == 0) {
+            snprintf(namebuf, sizeof namebuf, "%s", vm->classes[pi].name);
+            hit = 1;
+            break;
+          }
+          idx_want--;
+          pi = vm->classes[pi].parent_idx;
+        }
+      }
+      var_set_str(vm, "LAST", namebuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", namebuf);
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_str(vm, "NTHPARENT", namebuf);
+      var_set_str(vm, "PARENTAT", namebuf);
+      var_set_str(vm, "ANCESTOR", namebuf);
+      var_set_num(vm, "NTHPARENT_N", hit ? 1 : 0);
+      var_set_num(vm, "PARENTAT_N", hit ? 1 : 0);
+      n = hit ? 1 : 0;
+    } else if (want_height) {
+      int best = 0;
+      if (cda && ai >= 0) {
+        int stack_i[512];
+        int stack_d[512];
+        int sp = 0;
+        stack_i[sp] = ai;
+        stack_d[sp] = 0;
+        sp++;
+        guard = 0;
+        while (sp > 0 && guard++ < CUBALC_MAX_CLASSES * 4) {
+          int cur, depth;
+          sp--;
+          cur = stack_i[sp];
+          depth = stack_d[sp];
+          if (depth > best) best = depth;
+          for (i = 0; i < vm->n_classes; i++) {
+            if (vm->classes[i].parent_idx == cur) {
+              if (sp < 512) {
+                stack_i[sp] = i;
+                stack_d[sp] = depth + 1;
+                sp++;
+              }
+            }
+          }
+        }
+      }
+      n = (cda && ai >= 0) ? best : 0;
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_num(vm, "HEIGHT", n);
+      var_set_num(vm, "HEIGHTOF_N", n);
+      var_set_num(vm, "TREEHEIGHT_N", n);
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", n);
+      var_set_str(vm, "LAST", vm->last_str);
+    } else {
+      int queue[512];
+      int qh = 0, qt = 0;
+      int seen[512];
+      int leaves = 0;
+      for (i = 0; i < 512; i++) seen[i] = 0;
+      if (cda && ai >= 0) {
+        queue[qt++] = ai;
+        seen[ai] = 1;
+        while (qh < qt) {
+          int cur = queue[qh++];
+          int nk = 0;
+          if (cur < 0 || cur >= vm->n_classes) continue;
+          for (i = 0; i < vm->n_classes; i++) {
+            if (vm->classes[i].parent_idx == cur) {
+              nk++;
+              if (!seen[i] && qt < 512) {
+                seen[i] = 1;
+                queue[qt++] = i;
+              }
+            }
+          }
+          if (nk == 0) leaves++;
+        }
+      }
+      n = leaves;
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_num(vm, "LEAFCOUNT_N", n);
+      var_set_num(vm, "LEAVES_N", n);
+      var_set_num(vm, "NLEAVES_N", n);
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", n);
+      var_set_str(vm, "LAST", vm->last_str);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d hit=%d\n", opname, a, n, hit);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.

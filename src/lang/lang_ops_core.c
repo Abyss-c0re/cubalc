@@ -54434,7 +54434,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
   if (kw(&L->cur,"HASFLAT") || kw(&L->cur,"ANYFLAT") || kw(&L->cur,"MHASFLAT") ||
       kw(&L->cur,"PLATE_HASFLAT") || kw(&L->cur,"HITFLAT") ||
       kw(&L->cur,"COUNTFLAT") || kw(&L->cur,"NFLAT") || kw(&L->cur,"MCOUNTFLAT") ||
-      kw(&L->cur,"PLATE_COUNTFLAT") || kw(&L->cur,"NCFLAT") || kw(&L->cur,"LEAFCOUNT")) {
+      kw(&L->cur,"PLATE_COUNTFLAT") || kw(&L->cur,"NCFLAT")) {
     char plate[CUBALC_HOST_STR_MAX], needle[192];
     char from_name[96], from_src[CUBALC_HOST_STR_MAX];
     cubalc_host_result hr;
@@ -54447,7 +54447,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
       if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
     if (strcmp(op0, "COUNTFLAT") == 0 || strcmp(op0, "NFLAT") == 0 ||
         strcmp(op0, "MCOUNTFLAT") == 0 || strcmp(op0, "PLATE_COUNTFLAT") == 0 ||
-        strcmp(op0, "NCFLAT") == 0 || strcmp(op0, "LEAFCOUNT") == 0)
+        strcmp(op0, "NCFLAT") == 0)
       is_count = 1;
 
     lex_next(L);
