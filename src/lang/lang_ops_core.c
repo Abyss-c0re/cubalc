@@ -2099,6 +2099,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"PARENTS", "PARENTS|SUPERCHAIN|ANCESTORS Class|obj — full EXTEND parent chain bag · PARENTS_N"},
       {"HASANCESTOR", "HASANCESTOR|INCHAIN|EXTENDSFROM Class|obj Ancestor — soft 0|1 parent-chain membership"},
       {"DEPTHOF", "DEPTHOF|CHAINDEPTH|PARENTDEPTH Class|obj — EXTEND parent chain depth · DEPTH"},
+      {"METHODORIGIN", "METHODORIGIN|DEFINEDIN|ORIGINOF Class|obj method — defining EXTEND class name · ORIGIN"},
+      {"OVERRIDES", "OVERRIDES|ISOVERRIDE|HASOWNMETHOD Class|obj method — soft 0|1 if method body owned here"},
       {"ROOTOF", "ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost EXTEND ancestor name · ROOT"},
       {"SENDSUPER", "SENDSUPER|SUPERSEND|CALLSUPER obj method [args] — parent EXTEND chain method (skip override)"},
       {"DUMPCLASS", "DUMPCLASS alias of CLASSINFO"},

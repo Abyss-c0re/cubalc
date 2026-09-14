@@ -3,6 +3,13 @@
 - DEPTHOF|CHAINDEPTH|PARENTDEPTH|EXTENDDEPTH Class|obj — numeric EXTEND depth (PARENTS_N)
 - Proof 2405 multifile LoudTag depth-2 chain + demo_greeter_loudtag; asserts gate BASEOF/PARENTS/ROOTOF/ISOF/SENDSUPER
 
+## 1.16.6-methodorigin-overrides — MI 2406 MULTIFILE_EXTEND_METHODORIGIN_OVERRIDES_LINK3
+
+- **METHODORIGIN** / DEFINEDIN / ORIGINOF / METHODOWNER / WHEREDEFINED Class|obj method — nearest EXTEND class that owns method body · ORIGIN
+- **OVERRIDES** / ISOVERRIDE / HASOWNMETHOD Class|obj method — soft 0|1 if method body defined on this class (not pure inherit)
+- Multifile Greeter→TagGreeter→LoudTag + LoudGreeter branch proof: `programs/proof/2406_multifile_extend_methodorigin_overrides_link3.cubalc` (68 asserts PASS)
+- Complements HASANCESTOR/DEPTHOF/BASEOF/SENDSUPER chain usability
+
 ## 1.16.4-parents-rootof — MI 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
 
 - PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN Class|obj — full EXTEND parent chain bag · PARENTS_N/CHAIN_N

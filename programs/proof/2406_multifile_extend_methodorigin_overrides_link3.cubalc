@@ -1,0 +1,158 @@
+# Proof 2406 — MULTIFILE_EXTEND_METHODORIGIN_OVERRIDES_LINK3
+# Three-unit multi-file CLASS EXTEND/link + METHODORIGIN + OVERRIDES probes.
+# Complements HASANCESTOR/DEPTHOF + HASMETHOD + SENDSUPER.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# METHODORIGIN — defining class on chain
+METHODORIGIN LoudTag hi
+ASSERT OK == 1
+ASSERT LAST == "LoudTag" "LoudTag owns hi"
+ASSERT ORIGIN == "LoudTag"
+ASSERT METHODORIGIN == "LoudTag"
+ASSERT METHODORIGIN_N == 1
+ASSERT OVERRIDE_N == 1
+
+METHODORIGIN LoudTag mark
+ASSERT LAST == "LoudTag" "introduced mark"
+ASSERT INTRODUCED_N == 1
+ASSERT OVERRIDE_N == 0
+
+METHODORIGIN LoudTag set_tag
+ASSERT LAST == "TagGreeter" "set_tag from mid"
+ASSERT METHODORIGIN_N == 1
+ASSERT INHERITED_N == 1
+
+METHODORIGIN LoudTag bump
+ASSERT LAST == "Greeter" "bump from root"
+ASSERT ORIGIN == "Greeter"
+ASSERT INHERITED_N == 1
+
+METHODORIGIN TagGreeter hi
+ASSERT LAST == "TagGreeter" "mid owns hi override"
+ASSERT OVERRIDE_N == 1
+
+METHODORIGIN TagGreeter bump
+ASSERT LAST == "Greeter"
+
+METHODORIGIN Greeter hi
+ASSERT LAST == "Greeter" "root owns hi"
+ASSERT INTRODUCED_N == 1
+
+# aliases
+DEFINEDIN LoudTag hi
+ASSERT LAST == "LoudTag" "DEFINEDIN alias"
+ORIGINOF LoudTag bump
+ASSERT LAST == "Greeter" "ORIGINOF alias"
+METHODOWNER LoudTag set_tag
+ASSERT LAST == "TagGreeter"
+WHEREDEFINED LoudTag mark
+ASSERT LAST == "LoudTag"
+
+# OVERRIDES — soft own-body flag
+OVERRIDES LoudTag hi
+ASSERT OK == 1
+ASSERT LAST_N == 1 "LoudTag overrides hi"
+ASSERT OVERRIDES_N == 1
+
+OVERRIDES LoudTag bump
+ASSERT LAST_N == 0 "bump not owned here"
+ASSERT OVERRIDES_N == 0
+
+OVERRIDES LoudTag mark
+ASSERT LAST_N == 1 "mark introduced counts own"
+
+OVERRIDES TagGreeter hi
+ASSERT LAST_N == 1
+
+OVERRIDES TagGreeter bump
+ASSERT LAST_N == 0
+
+OVERRIDES Greeter hi
+ASSERT LAST_N == 1 "root introduces hi"
+
+# aliases
+HASOWNMETHOD LoudTag hi
+ASSERT LAST_N == 1
+ISOVERRIDE LoudTag bump
+ASSERT LAST_N == 0
+OWNMETHOD LoudTag mark
+ASSERT LAST_N == 1
+
+# missing method soft
+METHODORIGIN LoudTag no_such_method
+ASSERT OK == 1
+ASSERT LAST == ""
+ASSERT METHODORIGIN_N == 0
+OVERRIDES LoudTag no_such_method
+ASSERT LAST_N == 0
+
+# live instance path
+NEW LoudTag lt "atlas"
+ASSERT OK == 1
+METHODORIGIN lt hi
+ASSERT LAST == "LoudTag" "obj METHODORIGIN"
+OVERRIDES lt hi
+ASSERT LAST_N == 1
+METHODORIGIN lt bump
+ASSERT LAST == "Greeter" "obj inherit origin"
+OVERRIDES lt bump
+ASSERT LAST_N == 0
+
+# other branch LoudGreeter
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+METHODORIGIN LoudGreeter hi
+ASSERT LAST == "Greeter" "branch inherits hi"
+OVERRIDES LoudGreeter hi
+ASSERT LAST_N == 0
+METHODORIGIN LoudGreeter shout
+ASSERT LAST == "LoudGreeter"
+OVERRIDES LoudGreeter shout
+ASSERT LAST_N == 1
+METHODORIGIN LoudGreeter mark
+ASSERT LAST == "LoudGreeter"
+
+# HASMETHOD still true across chain
+HASMETHOD LoudTag bump
+ASSERT LAST_N == 1
+HASMETHOD LoudTag hi
+ASSERT LAST_N == 1
+
+# SENDSUPER still flows after probes
+SEND lt set_tag "link3"
+SENDSUPER lt hi
+ASSERT LAST == "link3" "SENDSUPER after METHODORIGIN"
+METHODORIGIN lt hi
+ASSERT LAST == "LoudTag" "origin stable"
+
+# BASEOF/DEPTHOF still hold
+BASEOF LoudTag
+ASSERT LAST == "TagGreeter"
+DEPTHOF LoudTag
+ASSERT LAST_N == 2
+HASANCESTOR LoudTag Greeter
+ASSERT LAST_N == 1
+
+PRINT "multifile_extend_methodorigin_overrides_link3 ok"
+ASSERT OK == 1

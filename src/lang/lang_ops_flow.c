@@ -17570,6 +17570,205 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* METHODORIGIN|DEFINEDIN|ORIGINOF|METHODOWNER|OWNEROF|METHODCLASS Class|obj method
+   * multi-file EXTEND/link usability: nearest class that defines method.
+   * LAST = class name. Soft empty if missing.
+   * OVERRIDES|ISOVERRIDE|HASOWNMETHOD Class|obj method soft 0|1 own body. */
+  if (kw(&L->cur, "METHODORIGIN") || kw(&L->cur, "DEFINEDIN") ||
+      kw(&L->cur, "ORIGINOF") || kw(&L->cur, "METHODOWNER") ||
+      kw(&L->cur, "OWNEROF") || kw(&L->cur, "METHODCLASS") ||
+      kw(&L->cur, "WHEREDEFINED") || kw(&L->cur, "METHODFROM") ||
+      kw(&L->cur, "SOURCEMETHOD") || kw(&L->cur, "METHOD_ORIGIN") ||
+      kw(&L->cur, "OVERRIDES") || kw(&L->cur, "ISOVERRIDE") ||
+      kw(&L->cur, "HASEOWN") || kw(&L->cur, "HASOWNMETHOD") ||
+      kw(&L->cur, "OWNMETHOD") || kw(&L->cur, "IS_OVERRIDE") ||
+      kw(&L->cur, "DEFINESMETHOD") || kw(&L->cur, "HAS_OWN_METHOD")) {
+    int want_flag = kw(&L->cur, "OVERRIDES") || kw(&L->cur, "ISOVERRIDE") ||
+                    kw(&L->cur, "HASEOWN") || kw(&L->cur, "HASOWNMETHOD") ||
+                    kw(&L->cur, "OWNMETHOD") || kw(&L->cur, "IS_OVERRIDE") ||
+                    kw(&L->cur, "DEFINESMETHOD") || kw(&L->cur, "HAS_OWN_METHOD");
+    char a[48], mname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    const char *origin = "";
+    int own = 0, inherited = 0, guard = 0, pi;
+    int found = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "OVERRIDES Class|obj method"
+                         : "METHODORIGIN Class|obj method");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "METHOD") || kw(&L->cur, "METH") || kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "OVERRIDES Class|obj method"
+                         : "METHODORIGIN Class|obj method");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else if (strcmp(id, "LAST") == 0)
+        snprintf(mname, sizeof mname, "%s", vm->last_str);
+      else
+        snprintf(mname, sizeof mname, "%s", id);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      MethodDef *md_self = oop_find_method(cd, mname);
+      if (md_self) {
+        MethodDef *md_par = NULL;
+        pi = cd->parent_idx;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          ClassDef *pw = &vm->classes[pi];
+          MethodDef *pm = oop_find_method(pw, mname);
+          if (pm) { md_par = pm; break; }
+          pi = pw->parent_idx;
+        }
+        if (!md_par) {
+          own = 1;
+          origin = cd->name;
+          found = 1;
+        } else if (md_self->body != md_par->body || md_self->len != md_par->len) {
+          own = 1;
+          inherited = 1;
+          origin = cd->name;
+          found = 1;
+        } else {
+          inherited = 1;
+          pi = cd->parent_idx;
+          guard = 0;
+          origin = "";
+          while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+            ClassDef *pw = &vm->classes[pi];
+            MethodDef *pm = oop_find_method(pw, mname);
+            if (!pm) { pi = pw->parent_idx; continue; }
+            if (pm->body == md_self->body && pm->len == md_self->len) {
+              origin = pw->name;
+              if (pw->parent_idx >= 0 && pw->parent_idx < vm->n_classes) {
+                MethodDef *gp = NULL;
+                int gpi = pw->parent_idx, gg = 0;
+                while (gpi >= 0 && gpi < vm->n_classes && gg++ < CUBALC_MAX_CLASSES) {
+                  ClassDef *gw = &vm->classes[gpi];
+                  gp = oop_find_method(gw, mname);
+                  if (gp) break;
+                  gpi = gw->parent_idx;
+                }
+                if (!gp || gp->body != pm->body || gp->len != pm->len) {
+                  found = 1;
+                  break;
+                }
+              } else {
+                found = 1;
+                break;
+              }
+              pi = pw->parent_idx;
+              continue;
+            } else {
+              found = 1;
+              break;
+            }
+          }
+          if (!found && origin[0]) found = 1;
+        }
+      } else {
+        pi = cd->parent_idx;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          ClassDef *pw = &vm->classes[pi];
+          MethodDef *pm = oop_find_method(pw, mname);
+          if (pm) {
+            origin = pw->name;
+            inherited = 1;
+            found = 1;
+            break;
+          }
+          pi = pw->parent_idx;
+        }
+      }
+    }
+    if (want_flag) {
+      var_set_num(vm, "LAST_N", own ? 1 : 0);
+      vm->last_n = own ? 1 : 0;
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", own ? "1" : "0");
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "OVERRIDES_N", own ? 1 : 0);
+      var_set_num(vm, "HASOWNMETHOD_N", own ? 1 : 0);
+      var_set_num(vm, "OWNMETHOD_N", own ? 1 : 0);
+    } else {
+      var_set_str(vm, "LAST", origin);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", origin);
+      var_set_str(vm, "ORIGIN", origin);
+      var_set_str(vm, "METHODORIGIN", origin);
+      var_set_str(vm, "DEFINEDIN", origin);
+      var_set_str(vm, "OWNER", origin);
+      var_set_str(vm, "METHODCLASS", origin);
+      var_set_num(vm, "LAST_N", found && origin[0] ? 1 : 0);
+      vm->last_n = found && origin[0] ? 1 : 0;
+      var_set_num(vm, "METHODORIGIN_N", found && origin[0] ? 1 : 0);
+      var_set_num(vm, "DEFINEDIN_N", found && origin[0] ? 1 : 0);
+    }
+    var_set_str(vm, "METHOD", mname);
+    if (cd) var_set_str(vm, "CLASS", cd->name);
+    var_set_num(vm, "HASMETHOD_N", (found || own) ? 1 : 0);
+    if (own && inherited) {
+      var_set_num(vm, "INHERITED_N", 1);
+      var_set_num(vm, "OVERRIDE_N", 1);
+      var_set_num(vm, "INTRODUCED_N", 0);
+    } else if (own) {
+      var_set_num(vm, "INHERITED_N", 0);
+      var_set_num(vm, "OVERRIDE_N", 0);
+      var_set_num(vm, "INTRODUCED_N", 1);
+    } else if (inherited) {
+      var_set_num(vm, "INHERITED_N", 1);
+      var_set_num(vm, "OVERRIDE_N", 0);
+      var_set_num(vm, "INTRODUCED_N", 0);
+    } else {
+      var_set_num(vm, "INHERITED_N", 0);
+      var_set_num(vm, "OVERRIDE_N", 0);
+      var_set_num(vm, "INTRODUCED_N", 0);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s.%s -> origin=%s own=%d\n",
+              want_flag ? "OVERRIDES" : "METHODORIGIN", a, mname,
+              origin[0] ? origin : "-", own);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).

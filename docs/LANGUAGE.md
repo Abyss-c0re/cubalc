@@ -170,3 +170,8 @@ Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
 
 | HASANCESTOR | soft 0|1 if Ancestor on EXTEND parent walk (not self) |
 | DEPTHOF | EXTEND parent-chain depth · DEPTH |
+
+## MI 2406 method origin probe
+
+| METHODORIGIN | defining EXTEND class for method · ORIGIN/DEFINEDIN |
+| OVERRIDES | soft 0|1 if method body owned on Class|obj (not pure inherit) |
