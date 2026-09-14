@@ -38,3 +38,10 @@ Proof asserts_ok 85 fail 0. VERSION 1.16.4-parents-rootof.
 - proof programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
 - complements BASEOF (immediate) + SENDSUPER (parent method)
 
+
+# MI 2406 MULTIFILE_EXTEND_METHODORIGIN_OVERRIDES_LINK3
+
+METHODORIGIN/OVERRIDES defining-class + own-body probes on multi-file CLASS EXTEND link3.
+Proof asserts_ok 68 fail 0. VERSION 1.16.6-methodorigin-overrides.
+- proof programs/proof/2406_multifile_extend_methodorigin_overrides_link3.cubalc
+- complements HASANCESTOR/DEPTHOF + HASMETHOD + SENDSUPER

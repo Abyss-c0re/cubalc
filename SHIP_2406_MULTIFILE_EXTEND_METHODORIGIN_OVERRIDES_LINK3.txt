@@ -1,6 +1,8 @@
 SHIP 2406 MULTIFILE_EXTEND_METHODORIGIN_OVERRIDES_LINK3
 VERSION=1.16.6-methodorigin-overrides
 MI=2406
+HEAD=984bfefa5b97ff2d3d9ef711d896866072d257e6
+FEAT=984bfefa5b97ff2d3d9ef711d896866072d257e6
 PROOF=programs/proof/2406_multifile_extend_methodorigin_overrides_link3.cubalc
 ASSERTS_OK=68
 ASSERTS_FAIL=0
