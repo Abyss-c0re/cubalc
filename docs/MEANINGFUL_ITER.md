@@ -1,3 +1,9 @@
+
+## MI 2407 — MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
+- VERSION `1.16.7-fieldorigin-hasownfield`
+- FIELDORIGIN + HASOWNFIELD multi-file CLASS EXTEND field origin probes
+- Proof: programs/proof/2407_multifile_extend_fieldorigin_hasownfield_link3.cubalc
+
 feature LIFE_CELL_SACM1L version 1.15.1846-usability PASS prior OSBP
 # MEANINGFUL_ITER 2345
 

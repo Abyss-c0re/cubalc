@@ -1,3 +1,11 @@
+## 1.16.7-fieldorigin-hasownfield — MI 2407 MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
+
+- **FIELDORIGIN** / FIELDFROM / DEFINEDFIELD / FIELDOWNER / SOURCEFIELD / WHEREFIELD Class|obj field — nearest EXTEND class that owns field default · ORIGIN
+- **HASOWNFIELD** / OWNFIELD / DEFINESFIELD / OVERRIDESFIELD Class|obj field — soft 0|1 if field default defined on this class (not pure inherit)
+- Multifile Greeter→TagGreeter→LoudTag + LoudGreeter branch; tag override mid-chain; bang introduced leaf
+- Complements METHODORIGIN/OVERRIDES + HASFIELD + BASEOF/DEPTHOF
+- Proof `programs/proof/2407_multifile_extend_fieldorigin_hasownfield_link3.cubalc`
+
 ## 1.16.5-hasancestor-depthof
 - HASANCESTOR|INCHAIN|EXTENDSFROM|DERIVESFROM|ISAEXTEND Class|obj Ancestor — soft 0|1 EXTEND parent-chain probe (not self)
 - DEPTHOF|CHAINDEPTH|PARENTDEPTH|EXTENDDEPTH Class|obj — numeric EXTEND depth (PARENTS_N)

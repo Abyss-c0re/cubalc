@@ -1,0 +1,174 @@
+# Proof 2407 — MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
+# Three-unit multi-file CLASS EXTEND/link + FIELDORIGIN + HASOWNFIELD probes.
+# Complements METHODORIGIN/OVERRIDES + HASANCESTOR/DEPTHOF + HASFIELD.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# FIELDORIGIN — defining class on chain
+FIELDORIGIN LoudTag bang
+ASSERT OK == 1
+ASSERT LAST == "LoudTag" "LoudTag introduces bang"
+ASSERT ORIGIN == "LoudTag"
+ASSERT FIELDORIGIN == "LoudTag"
+ASSERT FIELDORIGIN_N == 1
+ASSERT INTRODUCED_N == 1
+ASSERT OVERRIDE_N == 0
+
+FIELDORIGIN LoudTag name
+ASSERT LAST == "Greeter" "name from root"
+ASSERT ORIGIN == "Greeter"
+ASSERT INHERITED_N == 1
+ASSERT FIELDORIGIN_N == 1
+
+FIELDORIGIN LoudTag hits
+ASSERT LAST == "Greeter"
+ASSERT INHERITED_N == 1
+
+FIELDORIGIN LoudTag tag
+ASSERT LAST == "TagGreeter" "tag default overridden mid"
+ASSERT ORIGIN == "TagGreeter"
+ASSERT FIELDORIGIN_N == 1
+ASSERT OVERRIDE_N == 1
+ASSERT INHERITED_N == 1
+
+FIELDORIGIN TagGreeter tag
+ASSERT LAST == "TagGreeter" "mid owns tag override"
+ASSERT OVERRIDE_N == 1
+
+FIELDORIGIN TagGreeter name
+ASSERT LAST == "Greeter"
+
+FIELDORIGIN Greeter name
+ASSERT LAST == "Greeter" "root owns name"
+ASSERT INTRODUCED_N == 1
+
+FIELDORIGIN Greeter tag
+ASSERT LAST == "Greeter" "root introduces tag"
+
+# aliases
+FIELDFROM LoudTag bang
+ASSERT LAST == "LoudTag" "FIELDFROM alias"
+DEFINEDFIELD LoudTag name
+ASSERT LAST == "Greeter" "DEFINEDFIELD alias"
+FIELDOWNER LoudTag tag
+ASSERT LAST == "TagGreeter"
+SOURCEFIELD LoudTag hits
+ASSERT LAST == "Greeter"
+WHEREFIELD LoudTag bang
+ASSERT LAST == "LoudTag"
+
+# HASOWNFIELD — soft own-slot flag
+HASOWNFIELD LoudTag bang
+ASSERT OK == 1
+ASSERT LAST_N == 1 "LoudTag owns bang"
+ASSERT HASOWNFIELD_N == 1
+
+HASOWNFIELD LoudTag name
+ASSERT LAST_N == 0 "name not owned here"
+ASSERT HASOWNFIELD_N == 0
+
+HASOWNFIELD LoudTag tag
+ASSERT LAST_N == 0 "tag owned mid not leaf"
+
+HASOWNFIELD TagGreeter tag
+ASSERT LAST_N == 1 "mid owns tag override"
+
+HASOWNFIELD TagGreeter name
+ASSERT LAST_N == 0
+
+HASOWNFIELD Greeter name
+ASSERT LAST_N == 1 "root introduces name"
+
+HASOWNFIELD Greeter tag
+ASSERT LAST_N == 1
+
+# aliases
+OWNFIELD LoudTag bang
+ASSERT LAST_N == 1
+DEFINESFIELD TagGreeter tag
+ASSERT LAST_N == 1
+OVERRIDESFIELD TagGreeter tag
+ASSERT LAST_N == 1
+OWNFIELD LoudTag name
+ASSERT LAST_N == 0
+
+# missing field soft
+FIELDORIGIN LoudTag no_such_field
+ASSERT OK == 1
+ASSERT LAST == ""
+ASSERT FIELDORIGIN_N == 0
+HASOWNFIELD LoudTag no_such_field
+ASSERT LAST_N == 0
+
+# live instance path
+NEW LoudTag lt "atlas"
+ASSERT OK == 1
+FIELDORIGIN lt bang
+ASSERT LAST == "LoudTag" "obj FIELDORIGIN"
+HASOWNFIELD lt bang
+ASSERT LAST_N == 1
+FIELDORIGIN lt name
+ASSERT LAST == "Greeter" "obj inherit origin"
+HASOWNFIELD lt name
+ASSERT LAST_N == 0
+FIELDORIGIN lt tag
+ASSERT LAST == "TagGreeter" "obj override origin"
+
+# other branch LoudGreeter
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+FIELDORIGIN LoudGreeter bang
+ASSERT LAST == "LoudGreeter"
+HASOWNFIELD LoudGreeter bang
+ASSERT LAST_N == 1
+FIELDORIGIN LoudGreeter name
+ASSERT LAST == "Greeter" "branch inherits name"
+HASOWNFIELD LoudGreeter name
+ASSERT LAST_N == 0
+FIELDORIGIN LoudGreeter tag
+ASSERT LAST == "Greeter" "no mid override on branch"
+
+# HASFIELD still true across chain
+HASFIELD LoudTag bang
+ASSERT LAST_N == 1
+HASFIELD LoudTag name
+ASSERT LAST_N == 1
+HASFIELD LoudTag tag
+ASSERT LAST_N == 1
+
+# METHODORIGIN still holds after field probes
+METHODORIGIN lt hi
+ASSERT LAST == "LoudTag"
+OVERRIDES lt hi
+ASSERT LAST_N == 1
+
+# BASEOF/DEPTHOF/HASANCESTOR still hold
+BASEOF LoudTag
+ASSERT LAST == "TagGreeter"
+DEPTHOF LoudTag
+ASSERT LAST_N == 2
+HASANCESTOR LoudTag Greeter
+ASSERT LAST_N == 1
+
+PRINT "multifile_extend_fieldorigin_hasownfield_link3 ok"
+ASSERT OK == 1

@@ -175,3 +175,8 @@ Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
 
 | METHODORIGIN | defining EXTEND class for method · ORIGIN/DEFINEDIN |
 | OVERRIDES | soft 0|1 if method body owned on Class|obj (not pure inherit) |
+## MI 2407 field origin probe
+
+| FIELDORIGIN | defining EXTEND class for field default · ORIGIN/DEFINEDFIELD |
+| HASOWNFIELD | soft 0|1 if field default owned on Class|obj (not pure inherit) |
+

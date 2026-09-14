@@ -173,6 +173,14 @@ static int oop_field_idx(ClassDef *cd, const char *fname){
     if (strcmp(cd->fields[i].name, fname) == 0) return i;
   return -1;
 }
+
+static int oop_field_def_same(const FieldDef *a, const FieldDef *b){
+  if (!a || !b) return 0;
+  if (a->is_str != b->is_str || a->has_def != b->has_def) return 0;
+  if (!a->has_def) return 1;
+  if (a->is_str) return strcmp(a->def_str, b->def_str) == 0;
+  return a->def_num == b->def_num;
+}
 static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
   int i;
   for (i = 0; i < cd->n_methods; i++)
@@ -17765,6 +17773,191 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s %s.%s -> origin=%s own=%d\n",
               want_flag ? "OVERRIDES" : "METHODORIGIN", a, mname,
               origin[0] ? origin : "-", own);
+    bump(vm);
+    return 1;
+  }
+
+  /* FIELDORIGIN|FIELDFROM|DEFINEDFIELD|FIELDOWNER|SOURCEFIELD|FIELDCLASS Class|obj field
+   * multi-file EXTEND/link usability: nearest class that defines/overrides field default.
+   * LAST = class name. Soft empty if missing.
+   * HASOWNFIELD|OWNFIELD|DEFINESFIELD|OVERRIDESFIELD Class|obj field soft 0|1 own slot. */
+  if (kw(&L->cur, "FIELDORIGIN") || kw(&L->cur, "FIELDFROM") ||
+      kw(&L->cur, "DEFINEDFIELD") || kw(&L->cur, "FIELDOWNER") ||
+      kw(&L->cur, "SOURCEFIELD") || kw(&L->cur, "FIELDCLASS") ||
+      kw(&L->cur, "WHEREFIELD") || kw(&L->cur, "FIELD_ORIGIN") ||
+      kw(&L->cur, "ORIGINFIELD") || kw(&L->cur, "FIELDDEFINEDIN") ||
+      kw(&L->cur, "HASOWNFIELD") || kw(&L->cur, "OWNFIELD") ||
+      kw(&L->cur, "DEFINESFIELD") || kw(&L->cur, "OVERRIDESFIELD") ||
+      kw(&L->cur, "HAS_OWN_FIELD") || kw(&L->cur, "ISOWNFIELD") ||
+      kw(&L->cur, "OWN_FIELD") || kw(&L->cur, "FIELD_OWN")) {
+    int want_flag = kw(&L->cur, "HASOWNFIELD") || kw(&L->cur, "OWNFIELD") ||
+                    kw(&L->cur, "DEFINESFIELD") || kw(&L->cur, "OVERRIDESFIELD") ||
+                    kw(&L->cur, "HAS_OWN_FIELD") || kw(&L->cur, "ISOWNFIELD") ||
+                    kw(&L->cur, "OWN_FIELD") || kw(&L->cur, "FIELD_OWN");
+    char a[48], fname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    const char *origin = "";
+    int own = 0, inherited = 0, introduced = 0, overridden = 0;
+    int guard = 0, fi;
+    int found = 0;
+    FieldDef *fd_self = NULL;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "HASOWNFIELD Class|obj field"
+                         : "FIELDORIGIN Class|obj field");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "FIELD") || kw(&L->cur, "PROP") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "ATTR") || kw(&L->cur, "MEMBER"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "HASOWNFIELD Class|obj field"
+                         : "FIELDORIGIN Class|obj field");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(id, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      ClassDef *slot_cd = NULL;
+      FieldDef *slot_fd = NULL;
+      ClassDef *w = cd;
+      guard = 0;
+      while (w && guard++ < CUBALC_MAX_CLASSES) {
+        fi = oop_field_idx(w, fname);
+        if (fi >= 0) {
+          slot_cd = w;
+          slot_fd = &w->fields[fi];
+          break;
+        }
+        if (w->parent_idx < 0 || w->parent_idx >= vm->n_classes) break;
+        w = &vm->classes[w->parent_idx];
+      }
+      if (slot_cd && slot_fd) {
+        ClassDef *origin_cd = slot_cd;
+        FieldDef *origin_fd = slot_fd;
+        int g2 = 0;
+        found = 1;
+        fd_self = slot_fd;
+        w = slot_cd;
+        while (w->parent_idx >= 0 && w->parent_idx < vm->n_classes &&
+               g2++ < CUBALC_MAX_CLASSES) {
+          ClassDef *par = &vm->classes[w->parent_idx];
+          int pfi2 = oop_field_idx(par, fname);
+          if (pfi2 < 0) break;
+          if (!oop_field_def_same(origin_fd, &par->fields[pfi2])) break;
+          origin_cd = par;
+          origin_fd = &par->fields[pfi2];
+          w = par;
+        }
+        origin = origin_cd->name;
+        if (origin_cd == cd) {
+          own = 1;
+          if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+            ClassDef *walk = &vm->classes[cd->parent_idx];
+            int g3 = 0;
+            while (walk && g3++ < CUBALC_MAX_CLASSES) {
+              if (oop_field_idx(walk, fname) >= 0) {
+                inherited = 1;
+                overridden = 1;
+                break;
+              }
+              if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+              walk = &vm->classes[walk->parent_idx];
+            }
+          }
+          if (!inherited) introduced = 1;
+        } else {
+          inherited = 1;
+          own = 0;
+          if (origin_cd->parent_idx >= 0 && origin_cd->parent_idx < vm->n_classes) {
+            ClassDef *op = &vm->classes[origin_cd->parent_idx];
+            int pfi = oop_field_idx(op, fname);
+            if (pfi >= 0) {
+              if (!oop_field_def_same(origin_fd, &op->fields[pfi]))
+                overridden = 1;
+            } else {
+              introduced = 1;
+            }
+          } else {
+            introduced = 1;
+          }
+        }
+      }
+    }
+    if (want_flag) {
+      var_set_num(vm, "LAST_N", own ? 1 : 0);
+      vm->last_n = own ? 1 : 0;
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", own ? "1" : "0");
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "HASOWNFIELD_N", own ? 1 : 0);
+      var_set_num(vm, "OWNFIELD_N", own ? 1 : 0);
+      var_set_num(vm, "OVERRIDESFIELD_N", (own && overridden) ? 1 : 0);
+      var_set_num(vm, "DEFINESFIELD_N", own ? 1 : 0);
+    } else {
+      var_set_str(vm, "LAST", origin);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", origin);
+      var_set_str(vm, "ORIGIN", origin);
+      var_set_str(vm, "FIELDORIGIN", origin);
+      var_set_str(vm, "DEFINEDFIELD", origin);
+      var_set_str(vm, "FIELDOWNER", origin);
+      var_set_str(vm, "FIELDCLASS", origin);
+      var_set_str(vm, "SOURCEFIELD", origin);
+      var_set_str(vm, "WHEREFIELD", origin);
+      var_set_num(vm, "LAST_N", found && origin[0] ? 1 : 0);
+      vm->last_n = found && origin[0] ? 1 : 0;
+      var_set_num(vm, "FIELDORIGIN_N", found && origin[0] ? 1 : 0);
+      var_set_num(vm, "DEFINEDFIELD_N", found && origin[0] ? 1 : 0);
+    }
+    var_set_str(vm, "FIELD", fname);
+    if (cd) var_set_str(vm, "CLASS", cd->name);
+    var_set_num(vm, "HASFIELD_N", found ? 1 : 0);
+    var_set_num(vm, "INHERITED_N", inherited ? 1 : 0);
+    var_set_num(vm, "OVERRIDE_N", overridden ? 1 : 0);
+    var_set_num(vm, "INTRODUCED_N", introduced ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    (void)fd_self;
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s.%s -> origin=%s own=%d ovr=%d intro=%d\n",
+              want_flag ? "HASOWNFIELD" : "FIELDORIGIN", a, fname,
+              origin[0] ? origin : "-", own, overridden, introduced);
     bump(vm);
     return 1;
   }
