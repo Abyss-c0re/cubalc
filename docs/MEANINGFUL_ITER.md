@@ -74,3 +74,10 @@ Proof asserts_ok 68 fail 0. VERSION 1.16.6-methodorigin-overrides.
 Multifile CLASS/EXTEND peer probes (excl self). Complements SIBLINGS + NTHCHILD.
 Proof asserts_ok 65 fail 0. VERSION 1.16.18-nthsibling-firstlast.
 - proof programs/proof/2417_multifile_extend_nthsibling_firstlast_link3.cubalc
+
+## MI 2418 — NEXTSIBLING / PREVSIBLING / CHILDRANK
+
+Multifile CLASS/EXTEND sibling walk + child rank probes. Complements NTHSIBLING + SIBLINGS + NTHCHILD.
+Proof asserts_ok 79 fail 0. VERSION 1.16.19-nextsibling-prevsibling-childrank.
+- proof programs/proof/2418_multifile_extend_nextsibling_prevsibling_childrank_link3.cubalc
+

@@ -1,3 +1,8 @@
+## 1.16.19-nextsibling-prevsibling-childrank — MI 2418
+
+- NEXTSIBLING/PREVSIBLING/CHILDRANK multifile EXTEND
+- Proof: programs/proof/2418_multifile_extend_nextsibling_prevsibling_childrank_link3.cubalc
+
 ## 1.16.18-nthsibling-firstlast — MI 2417 MULTIFILE_EXTEND_NTHSIBLING_FIRSTLAST_LINK3
 
 - **NTHSIBLING** / SIBLINGAT — 0-based peer under same parent (excl self)

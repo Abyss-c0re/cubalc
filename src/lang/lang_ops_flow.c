@@ -19746,6 +19746,134 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* NEXTSIBLING + PREVSIBLING + CHILDRANK (multifile EXTEND)
+   * NEXTSIBLING Class|obj — next peer after self under same parent (decl order); soft empty.
+   * PREVSIBLING Class|obj — previous peer before self; soft empty.
+   * CHILDRANK Class|obj — 0-based index among parent's children (self rank); -1/soft 0 if root.
+   * Complements NTHSIBLING + FIRST/LASTSIBLING + SIBLINGS bag. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NEXTSIBLING") || kw(&L->cur, "NEXTPEER") ||
+      kw(&L->cur, "SIBLINGNEXT") || kw(&L->cur, "NEXT_SIBLING") ||
+      kw(&L->cur, "FOLLOWINGSIB") || kw(&L->cur, "RIGHTSIBLING") ||
+      kw(&L->cur, "PREVSIBLING") || kw(&L->cur, "PREVPEER") ||
+      kw(&L->cur, "SIBLINGPREV") || kw(&L->cur, "PREV_SIBLING") ||
+      kw(&L->cur, "PRECEDINGSIB") || kw(&L->cur, "LEFTSIBLING") ||
+      kw(&L->cur, "PRIORSIBLING") ||
+      kw(&L->cur, "CHILDRANK") || kw(&L->cur, "SIBLINGRANK") ||
+      kw(&L->cur, "INDEXOFCHILD") || kw(&L->cur, "CHILD_RANK") ||
+      kw(&L->cur, "RANKAMONGSIBS") || kw(&L->cur, "MYCHILDIX") ||
+      kw(&L->cur, "CHILDINDEX") || kw(&L->cur, "SIBINDEX")) {
+    int want_next = kw(&L->cur, "NEXTSIBLING") || kw(&L->cur, "NEXTPEER") ||
+                    kw(&L->cur, "SIBLINGNEXT") || kw(&L->cur, "NEXT_SIBLING") ||
+                    kw(&L->cur, "FOLLOWINGSIB") || kw(&L->cur, "RIGHTSIBLING");
+    int want_prev = kw(&L->cur, "PREVSIBLING") || kw(&L->cur, "PREVPEER") ||
+                    kw(&L->cur, "SIBLINGPREV") || kw(&L->cur, "PREV_SIBLING") ||
+                    kw(&L->cur, "PRECEDINGSIB") || kw(&L->cur, "LEFTSIBLING") ||
+                    kw(&L->cur, "PRIORSIBLING");
+    int want_rank = kw(&L->cur, "CHILDRANK") || kw(&L->cur, "SIBLINGRANK") ||
+                    kw(&L->cur, "INDEXOFCHILD") || kw(&L->cur, "CHILD_RANK") ||
+                    kw(&L->cur, "RANKAMONGSIBS") || kw(&L->cur, "MYCHILDIX") ||
+                    kw(&L->cur, "CHILDINDEX") || kw(&L->cur, "SIBINDEX");
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, hit = 0, rank = -1;
+    int kids[512];
+    int nk = 0;
+    const char *opname = want_next ? "NEXTSIBLING"
+                         : want_prev ? "PREVSIBLING"
+                                       : "CHILDRANK";
+    lex_next(L);
+    a[0] = pick[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_rank ? "CHILDRANK Class|obj"
+                         : (want_next ? "NEXTSIBLING Class|obj"
+                                      : "PREVSIBLING Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == parent && nk < 512)
+            kids[nk++] = i;
+        }
+        for (i = 0; i < nk; i++) {
+          if (kids[i] == ai) { rank = i; break; }
+        }
+      } else {
+        /* root / orphan: rank 0 alone; no siblings */
+        rank = 0;
+        nk = 0;
+      }
+    }
+    if (want_rank) {
+      n = (rank >= 0) ? rank : 0;
+      hit = (cda && rank >= 0) ? 1 : 0;
+      /* roots report rank 0 with OK=1 and LAST_N=0 meaning rank value in LAST_N */
+      var_set_num(vm, "LAST_N", (cda && rank >= 0) ? rank : 0);
+      vm->last_n = (cda && rank >= 0) ? rank : 0;
+      var_set_num(vm, "CHILDRANK", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "CHILDRANK_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "SIBLINGRANK_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "INDEXOFCHILD_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "CHILDINDEX_N", (cda && rank >= 0) ? rank : 0);
+      n = (cda && rank >= 0) ? rank : 0;
+    } else {
+      pick[0] = 0;
+      hit = 0;
+      if (rank >= 0 && nk > 0) {
+        int j = want_next ? (rank + 1) : (rank - 1);
+        if (j >= 0 && j < nk) {
+          snprintf(pick, sizeof pick, "%s", vm->classes[kids[j]].name);
+          hit = 1;
+        }
+      }
+      var_set_str(vm, "LAST", pick);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+      var_set_str(vm, "NEXTSIBLING", pick);
+      var_set_str(vm, "PREVSIBLING", pick);
+      var_set_str(vm, "NEXTPEER", pick);
+      var_set_str(vm, "PREVPEER", pick);
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "NEXTSIBLING_N", hit ? 1 : 0);
+      var_set_num(vm, "PREVSIBLING_N", hit ? 1 : 0);
+      n = hit ? 1 : 0;
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> rank=%d hit=%d n=%d\n", opname, a, rank, hit, n);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.
