@@ -1,0 +1,103 @@
+# Proof 2412 — MULTIFILE_EXTEND_CHAINDIST_PATHBETWEEN_LINK3
+# Three-unit multi-file CLASS EXTEND/link + CHAINDIST + PATHBETWEEN.
+# Complements COMMONANCESTOR/LCA + SAMECHAIN + DEPTHOF + PARENTS.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+
+HASCLASS Greeter
+ASSERT LAST_N == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# chain: LoudTag -> TagGreeter -> Greeter
+DEPTHOF LoudTag
+ASSERT LAST_N == 2
+ROOTOF LoudTag
+ASSERT LAST == "Greeter"
+
+# CHAINDIST: same class = 0
+CHAINDIST LoudTag LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT CHAINDIST_N == 0
+
+# child to parent = 1
+CHAINDIST LoudTag TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT CHAINDIST_N == 1
+
+# child to root = 2
+CHAINDIST LoudTag Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT DIST_N == 2
+
+# parent to child same hop count
+CHAINDIST Greeter LoudTag
+ASSERT LAST_N == 2
+
+# mid to root
+CHAINDIST TagGreeter Greeter
+ASSERT LAST_N == 1
+
+# PATHBETWEEN LoudTag -> Greeter: LoudTag, TagGreeter, Greeter
+PATHBETWEEN LoudTag Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT PATH_N == 3
+ASSERT PATHBETWEEN_N == 3
+ASSERT LCA == "Greeter"
+
+PATHBETWEEN LoudTag TagGreeter
+ASSERT LAST_N == 2
+ASSERT LCA == "TagGreeter"
+
+PATHBETWEEN LoudTag LoudTag
+ASSERT LAST_N == 1
+
+# CLASSPATH alias
+CLASSPATH Greeter LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+
+# DISTBETWEEN alias
+DISTBETWEEN TagGreeter LoudTag
+ASSERT LAST_N == 1
+
+# disjoint unrelated class
+CLASS Solo
+  FIELD x 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS Solo
+ASSERT LAST_N == 1
+
+CHAINDIST LoudTag Solo
+ASSERT OK == 1
+ASSERT LAST_N == -1
+ASSERT CHAINDIST_N == -1
+
+PATHBETWEEN LoudTag Solo
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT PATH_N == 0
+
+COMMONANCESTOR LoudTag TagGreeter
+ASSERT LAST == "TagGreeter"
+
+PRINT "PASS multifile CHAINDIST/PATHBETWEEN link3"

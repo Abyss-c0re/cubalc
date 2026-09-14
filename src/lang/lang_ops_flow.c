@@ -18480,6 +18480,226 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
 
+  /* CHAINDIST|CLASSDIST|EXTENDDIST|DISTBETWEEN|HOPBETWEEN Class|obj Class|obj
+   * multi-file EXTEND/link usability: hop distance on the single-inheritance
+   * graph via LCA. Same class -> 0. One ancestor of other -> depth delta.
+   * Related via LCA -> depth(A,LCA)+depth(B,LCA). Unrelated soft LAST_N=-1.
+   * PATHBETWEEN|CLASSPATH|CHAINPATH|EXTENDPATH|PATHTO Class|obj Class|obj
+   * newline bag of class names A ... B (via LCA). Soft empty if unrelated.
+   * Complements COMMONANCESTOR/SAMECHAIN + DEPTHOF + PARENTS. Cube is SoT. */
+  if (kw(&L->cur, "CHAINDIST") || kw(&L->cur, "CLASSDIST") ||
+      kw(&L->cur, "EXTENDDIST") || kw(&L->cur, "DISTBETWEEN") ||
+      kw(&L->cur, "HOPBETWEEN") || kw(&L->cur, "CHAIN_DIST") ||
+      kw(&L->cur, "CLASS_DIST") || kw(&L->cur, "EXTEND_DIST") ||
+      kw(&L->cur, "DIST_BETWEEN") || kw(&L->cur, "HOPSBETWEEN") ||
+      kw(&L->cur, "HOPSTO") || kw(&L->cur, "DISTANCEOF") ||
+      kw(&L->cur, "PATHBETWEEN") || kw(&L->cur, "CLASSPATH") ||
+      kw(&L->cur, "CHAINPATH") || kw(&L->cur, "EXTENDPATH") ||
+      kw(&L->cur, "PATHTO") || kw(&L->cur, "PATH_BETWEEN") ||
+      kw(&L->cur, "CLASS_PATH") || kw(&L->cur, "CHAIN_PATH") ||
+      kw(&L->cur, "ANCESTORPATH") || kw(&L->cur, "PATHFROM")) {
+    int want_path = kw(&L->cur, "PATHBETWEEN") || kw(&L->cur, "CLASSPATH") ||
+                    kw(&L->cur, "CHAINPATH") || kw(&L->cur, "EXTENDPATH") ||
+                    kw(&L->cur, "PATHTO") || kw(&L->cur, "PATH_BETWEEN") ||
+                    kw(&L->cur, "CLASS_PATH") || kw(&L->cur, "CHAIN_PATH") ||
+                    kw(&L->cur, "ANCESTORPATH") || kw(&L->cur, "PATHFROM");
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1;
+    int a_anc[CUBALC_MAX_CLASSES];
+    int b_anc[CUBALC_MAX_CLASSES];
+    int a_n = 0, b_n = 0, guard = 0, pi, i, j;
+    int lca_i = -1, hit = 0;
+    int dist = -1;
+    int da = 0, db = 0;
+    char bag[2048];
+    size_t o = 0;
+    int pn = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_path ? "PATHBETWEEN Class|obj Class|obj"
+                         : "CHAINDIST Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "AND") || kw(&L->cur, "WITH") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "OF") || kw(&L->cur, "VS") || kw(&L->cur, "X") ||
+        kw(&L->cur, "FROM"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_path ? "PATHBETWEEN Class|obj Class|obj"
+                         : "CHAINDIST Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    bag[0] = 0;
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    if (cda && cdb && ai >= 0 && bi >= 0) {
+      pi = ai;
+      guard = 0;
+      while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+        if (a_n < CUBALC_MAX_CLASSES) a_anc[a_n++] = pi;
+        pi = vm->classes[pi].parent_idx;
+      }
+      pi = bi;
+      guard = 0;
+      while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+        if (b_n < CUBALC_MAX_CLASSES) b_anc[b_n++] = pi;
+        pi = vm->classes[pi].parent_idx;
+      }
+      for (i = 0; i < a_n && !hit; i++) {
+        for (j = 0; j < b_n; j++) {
+          if (a_anc[i] == b_anc[j]) {
+            lca_i = a_anc[i];
+            da = i;
+            db = j;
+            hit = 1;
+            break;
+          }
+        }
+      }
+      if (hit) {
+        dist = da + db;
+        o = 0;
+        pn = 0;
+        for (i = 0; i <= da; i++) {
+          const char *nm = vm->classes[a_anc[i]].name;
+          size_t ln = strlen(nm);
+          if (pn > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + ln < sizeof bag) {
+            memcpy(bag + o, nm, ln);
+            o += ln;
+          }
+          pn++;
+        }
+        for (j = db - 1; j >= 0; j--) {
+          const char *nm = vm->classes[b_anc[j]].name;
+          size_t ln = strlen(nm);
+          if (pn > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + ln < sizeof bag) {
+            memcpy(bag + o, nm, ln);
+            o += ln;
+          }
+          pn++;
+        }
+        if (o < sizeof bag) bag[o] = 0;
+      }
+    }
+    if (want_path) {
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_num(vm, "LAST_N", hit ? pn : 0);
+      vm->last_n = hit ? pn : 0;
+      var_set_str(vm, "PATHBETWEEN", bag);
+      var_set_str(vm, "CLASSPATH", bag);
+      var_set_str(vm, "CHAINPATH", bag);
+      var_set_str(vm, "PATH", bag);
+      var_set_num(vm, "PATHBETWEEN_N", hit ? pn : 0);
+      var_set_num(vm, "CLASSPATH_N", hit ? pn : 0);
+      var_set_num(vm, "PATH_N", hit ? pn : 0);
+      if (dist >= 0) {
+        var_set_num(vm, "CHAINDIST_N", dist);
+        var_set_num(vm, "DIST_N", dist);
+      } else {
+        var_set_num(vm, "CHAINDIST_N", -1);
+        var_set_num(vm, "DIST_N", -1);
+      }
+    } else {
+      if (dist >= 0) {
+        var_set_num(vm, "LAST_N", dist);
+        vm->last_n = dist;
+        snprintf(vm->last_str, sizeof vm->last_str, "%d", dist);
+        var_set_str(vm, "LAST", vm->last_str);
+        var_set_num(vm, "CHAINDIST_N", dist);
+        var_set_num(vm, "CLASSDIST_N", dist);
+        var_set_num(vm, "DIST_N", dist);
+        var_set_num(vm, "HOPS_N", dist);
+      } else {
+        var_set_num(vm, "LAST_N", -1);
+        vm->last_n = -1;
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "-1");
+        var_set_str(vm, "LAST", vm->last_str);
+        var_set_num(vm, "CHAINDIST_N", -1);
+        var_set_num(vm, "CLASSDIST_N", -1);
+        var_set_num(vm, "DIST_N", -1);
+        var_set_num(vm, "HOPS_N", -1);
+      }
+      if (bag[0]) {
+        var_set_str(vm, "PATHBETWEEN", bag);
+        var_set_str(vm, "PATH", bag);
+        var_set_num(vm, "PATH_N", pn);
+      }
+    }
+    if (hit && lca_i >= 0 && lca_i < vm->n_classes) {
+      var_set_str(vm, "LCA", vm->classes[lca_i].name);
+      var_set_str(vm, "COMMONANCESTOR", vm->classes[lca_i].name);
+      var_set_str(vm, "COMMON", vm->classes[lca_i].name);
+      var_set_num(vm, "LCA_N", 1);
+    } else {
+      var_set_num(vm, "LCA_N", 0);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "OTHER", cdb->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> dist=%d path_n=%d lca=%s\n",
+              want_path ? "PATHBETWEEN" : "CHAINDIST", a, b, dist, pn,
+              (hit && lca_i >= 0) ? vm->classes[lca_i].name : "-");
+    bump(vm);
+    return 1;
+  }
+
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.
