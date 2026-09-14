@@ -3,5 +3,7 @@ version: 1.16.5-hasancestor-depthof
 method: HASANCESTOR|DEPTHOF Class|obj
 proof: programs/proof/2405_multifile_extend_hasancestor_depthof_link3.cubalc
 asserts_ok=70 asserts_fail=0 PASS
+feat=19c8cd34313f97d174adc26686e73112777b6b6f
+head=2419fbfd36a5cf168a2f1a7b3c1cfc01b24df69b
 three-unit multi-file CLASS/EXTEND + HASANCESTOR chain probe + DEPTHOF
 Cube Law: cube is SoT; free energy must flow; hollow WE is heresy; CT101 forever
