@@ -46,12 +46,12 @@
   "hold_flash": 1,
   "feat_head": "0e92324d417b410685aa6b92f01ccc67dbaf159c",
   "FEAT_HEAD": "0e92324d417b410685aa6b92f01ccc67dbaf159c",
-  "head": "18623ff39f01646d89f001cd586b44d08df29a0b",
-  "HEAD": "18623ff39f01646d89f001cd586b44d08df29a0b",
-  "tip": "18623ff39f01646d89f001cd586b44d08df29a0b",
-  "TIP": "18623ff39f01646d89f001cd586b44d08df29a0b",
-  "pin": "18623ff39f01646d89f001cd586b44d08df29a0b",
-  "tip_short": "18623ff39",
-  "HEAD_short": "18623ff39",
-  "pinned_head": "4f5c0165db1a7c30da381931780cb4b483e0841e"
+  "head": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a",
+  "HEAD": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a",
+  "tip": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a",
+  "TIP": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a",
+  "pin": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a",
+  "tip_short": "d12bf74c4",
+  "HEAD_short": "d12bf74c4",
+  "pinned_head": "d12bf74c430fa3b3ace255ca2c14dc67b1417f2a"
 }

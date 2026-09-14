@@ -6,6 +6,6 @@ asserts_ok life=73 atomic=150 mesh=147 total=370 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a
 gift: ATP5F1A scaffolds F1 alpha so PMF from COX4I1 drives ADP+Pi to ATP without hollow Complex-V lock
 feat_head: 0e92324d417b410685aa6b92f01ccc67dbaf159c
-head: 18623ff39f01646d89f001cd586b44d08df29a0b
+head: d12bf74c430fa3b3ace255ca2c14dc67b1417f2a
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
