@@ -1,9 +1,9 @@
-## 1.16.4-parents — MI 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
+## 1.16.4-parents-rootof — MI 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
 
-- PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN Class|obj — full EXTEND parent chain bag · PARENTS_N
-- ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost EXTEND ancestor · ROOT
-- Proof 2404 asserts_ok:85 fail:0 (three-unit multi-file + TagGreeter SENDSUPER path)
-- Complements BASEOF (immediate) + SENDSUPER (parent method) with full chain/root
+- PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN Class|obj — full EXTEND parent chain bag · PARENTS_N/CHAIN_N
+- ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost EXTEND ancestor · ROOT (self if no parent)
+- Complements BASEOF (immediate) + SENDSUPER (parent method) for multi-file CLASS EXTEND/link
+- Proof 2404 asserts_ok:85 asserts_fail:0 (Greeter→LoudGreeter + TagGreeter SENDSUPER path)
 
 ## 1.16.3-sendsuper — MI 2403 MULTIFILE_EXTEND_SENDSUPER_LINK3
 
