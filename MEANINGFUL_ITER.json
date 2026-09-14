@@ -1,15 +1,1 @@
-{
-  "mi": 2404,
-  "feature": "MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3",
-  "version": "1.16.4-parents-rootof",
-  "head": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "asserts_ok": 85,
-  "asserts_fail": 0,
-  "pass": true,
-  "HEAD": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "tip": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "TIP": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "pin": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "pinned_head": "bffb3b0eb8a64a937035b357e128b383eba8e883",
-  "head_short": "bffb3b0eb"
-}
+{"mi":2404,"feature":"MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3","version":"1.16.4-parents-rootof","asserts_ok":85,"asserts_fail":0,"head":"efe85aac95c467259d3e5cd803d44a33819f1707","pass":true}
