@@ -26,9 +26,10 @@
   "prior_feature": "MULTIFILE_EXTEND_NTHSIBLING_FIRSTLAST_LINK3",
   "prior_mi": 2417,
   "domain": "multi-file CLASS EXTEND usability",
-  "gift": "NEXTSIBLING/PREVSIBLING walk + CHILDRANK index among parent children across demo_greeter packs",
-  "forms": "NEXTSIBLING|NEXTPEER|RIGHTSIBLING + PREVSIBLING|PREVPEER|LEFTSIBLING + CHILDRANK|SIBLINGRANK|INDEXOFCHILD|CHILDINDEX",
+  "gift": "NEXTSIBLING/PREVSIBLING peer walk + CHILDRANK 0-based index across demo_greeter packs",
+  "forms": "NEXTSIBLING|NEXTPEER|RIGHTSIBLING + PREVSIBLING|PREVPEER|LEFTSIBLING + CHILDRANK|SIBLINGRANK|INDEXOFCHILD",
   "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
-  "summary": "NEXT/PREVSIBLING peer walk under same parent; CHILDRANK 0-based self rank among siblings; soft empty roots; multifile CLASS EXTEND",
-  "ts": 1789406000
+  "summary": "NEXT/PREV sibling walk in declaration order; CHILDRANK 0-based among parent kids; soft empty ends; multifile CLASS EXTEND",
+  "head": "febfe99e1",
+  "ts": 1789406370
 }
