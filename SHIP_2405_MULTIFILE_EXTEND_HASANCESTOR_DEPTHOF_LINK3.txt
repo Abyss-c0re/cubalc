@@ -1,7 +1,7 @@
 SHIP 2405 MULTIFILE_EXTEND_HASANCESTOR_DEPTHOF_LINK3
 VERSION=1.16.5-hasancestor-depthof
 MI=2405
-HEAD=b67193d5035dd2a0f2887e7d4bbab3901a8f719d
+HEAD=d925cac1bc23d970b61978bfeff9db5deb73ffad
 FEAT=19c8cd34313f97d174adc26686e73112777b6b6f
 PROOF=programs/proof/2405_multifile_extend_hasancestor_depthof_link3.cubalc
 ASSERTS_OK=70
