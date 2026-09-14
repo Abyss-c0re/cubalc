@@ -44,14 +44,14 @@
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
   "hold_flash": 1,
-  "head": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
-  "HEAD": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
-  "tip": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
-  "TIP": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
-  "pin": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
-  "pinned_head": "2788545c42ec43f3a012d4008813a8db2e93ccd7",
+  "head": "f617572351f82a7ebeac35774847db511760ee9b",
+  "HEAD": "f617572351f82a7ebeac35774847db511760ee9b",
+  "tip": "f617572351f82a7ebeac35774847db511760ee9b",
+  "TIP": "f617572351f82a7ebeac35774847db511760ee9b",
+  "pin": "f617572351f82a7ebeac35774847db511760ee9b",
+  "pinned_head": "f617572351f82a7ebeac35774847db511760ee9b",
   "feat_head": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
   "FEAT_HEAD": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
-  "tip_short": "2788545c4",
-  "HEAD_short": "2788545c4"
+  "tip_short": "f61757235",
+  "HEAD_short": "f61757235"
 }
