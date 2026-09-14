@@ -180,3 +180,8 @@ Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
 | FIELDORIGIN | defining EXTEND class for field default · ORIGIN/DEFINEDFIELD |
 | HASOWNFIELD | soft 0|1 if field default owned on Class|obj (not pure inherit) |
 
+## MI 2408 own contribution bags
+
+| LISTOWNFIELDS | newline bag of fields owned on Class|obj (HASOWNFIELD=1) |
+| LISTOWNMETHODS | newline bag of methods owned on Class|obj (OVERRIDES=1) |
+

@@ -1,0 +1,102 @@
+# Proof 2408 — MULTIFILE_EXTEND_LISTOWN_FIELDS_METHODS_LINK3
+# Three-unit multi-file CLASS EXTEND/link + LISTOWNFIELDS + LISTOWNMETHODS.
+# Complements FIELDORIGIN/HASOWNFIELD + METHODORIGIN/OVERRIDES.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# Greeter owns all its own fields (root)
+LISTOWNFIELDS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT OWNFIELDS_N == 3
+ASSERT LISTOWNFIELDS_N == 3
+
+LISTOWNMETHODS Greeter
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+ASSERT OWNMETHODS_N >= 3
+
+# TagGreeter owns tag field override only
+LISTOWNFIELDS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "tag"
+ASSERT OWNFIELDS == "tag"
+HASOWNFIELD TagGreeter tag
+ASSERT LAST_N == 1
+HASOWNFIELD TagGreeter name
+ASSERT LAST_N == 0
+
+# TagGreeter owns its own methods (not pure inherit bump)
+LISTOWNMETHODS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+ASSERT OWNMETHODS_N >= 3
+OVERRIDES TagGreeter hi
+ASSERT LAST_N == 1
+OVERRIDES TagGreeter bump
+ASSERT LAST_N == 0
+
+# LoudTag owns bang + mark/hi/mid_hi/root_hi
+LISTOWNFIELDS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "bang"
+ASSERT OWNFIELDS == "bang"
+HASOWNFIELD LoudTag bang
+ASSERT LAST_N == 1
+HASOWNFIELD LoudTag tag
+ASSERT LAST_N == 0
+
+LISTOWNMETHODS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 4
+ASSERT OWNMETHODS_N >= 4
+OVERRIDES LoudTag hi
+ASSERT LAST_N == 1
+OVERRIDES LoudTag bump
+ASSERT LAST_N == 0
+OVERRIDES LoudTag mark
+ASSERT LAST_N == 1
+
+# live object dual
+NEW LoudTag lt "atlas"
+LISTOWNFIELDS lt
+ASSERT LAST_N == 1
+ASSERT LAST == "bang"
+LISTOWNMETHODS lt
+ASSERT LAST_N >= 4
+ASSERT OWNMETHODS_N >= 4
+
+# cross-check origin still coherent
+FIELDORIGIN LoudTag bang
+ASSERT LAST == "LoudTag"
+METHODORIGIN LoudTag hi
+ASSERT LAST == "LoudTag"
+METHODORIGIN LoudTag bump
+ASSERT LAST == "Greeter"
+FIELDORIGIN LoudTag name
+ASSERT LAST == "Greeter"
+
+PRINT "listown_fields_methods_link3_ok" LAST_N
+PASS

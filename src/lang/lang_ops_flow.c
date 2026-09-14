@@ -17962,6 +17962,183 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+
+  /* LISTOWNFIELDS|OWNFIELDS|LOCALFIELDS Class|obj — newline bag of fields whose
+   * default is owned on this class (HASOWNFIELD=1), not pure inherit.
+   * Multi-file EXTEND pack contribution probe. LAST = bag; LAST_N = count.
+   * Complements FIELDORIGIN + HASOWNFIELD + LISTFIELDS. */
+  if (kw(&L->cur, "LISTOWNFIELDS") || kw(&L->cur, "OWNFIELDS") ||
+      kw(&L->cur, "LOCALFIELDS") || kw(&L->cur, "OWN_FIELDS") ||
+      kw(&L->cur, "LISTLOCALFIELDS") || kw(&L->cur, "FIELDS_OWN")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, fi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOWNFIELDS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (fi = 0; fi < cd->n_fields; fi++) {
+        FieldDef *fd = &cd->fields[fi];
+        const char *fname = fd->name;
+        int own = 0;
+        if (cd->parent_idx < 0 || cd->parent_idx >= vm->n_classes) {
+          own = 1;
+        } else {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int g = 0, seen = 0;
+          while (walk && g++ < CUBALC_MAX_CLASSES) {
+            int pfi = oop_field_idx(walk, fname);
+            if (pfi >= 0) {
+              seen = 1;
+              if (!oop_field_def_same(fd, &walk->fields[pfi]))
+                own = 1; /* override default */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+          if (!seen) own = 1; /* introduced on this class */
+        }
+        if (!own) continue;
+        {
+          size_t ln = strlen(fname);
+          if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + ln < sizeof bag) {
+            memcpy(bag + o, fname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOWNFIELDS", bag);
+    var_set_str(vm, "OWNFIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OWNFIELDS_N", n);
+    var_set_num(vm, "LISTOWNFIELDS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTOWNMETHODS|OWNMETHODS|LOCALMETHODS Class|obj — newline bag of methods
+   * whose body is owned on this class (OVERRIDES/HASOWNMETHOD=1).
+   * Multi-file EXTEND pack contribution probe. LAST = bag; LAST_N = count.
+   * Complements METHODORIGIN + OVERRIDES + LISTMETHODS. */
+  if (kw(&L->cur, "LISTOWNMETHODS") || kw(&L->cur, "OWNMETHODS") ||
+      kw(&L->cur, "LOCALMETHODS") || kw(&L->cur, "OWN_METHODS") ||
+      kw(&L->cur, "LISTLOCALMETHODS") || kw(&L->cur, "METHODS_OWN")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, mi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOWNMETHODS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (mi = 0; mi < cd->n_methods; mi++) {
+        MethodDef *md = &cd->methods[mi];
+        const char *mname = md->name;
+        int own = 1;
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int pguard = 0;
+          while (walk && pguard++ < CUBALC_MAX_CLASSES) {
+            MethodDef *pm = oop_find_method(walk, mname);
+            if (pm) {
+              if (pm->body == md->body && pm->len == md->len)
+                own = 0; /* pure inherit same body pointer */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+        }
+        if (!own) continue;
+        {
+          size_t ln = strlen(mname);
+          if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+          if (o + ln < sizeof bag) {
+            memcpy(bag + o, mname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOWNMETHODS", bag);
+    var_set_str(vm, "OWNMETHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OWNMETHODS_N", n);
+    var_set_num(vm, "LISTOWNMETHODS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).
