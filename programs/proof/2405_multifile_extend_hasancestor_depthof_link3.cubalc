@@ -1,0 +1,169 @@
+# Proof 2405 — MULTIFILE_EXTEND_HASANCESTOR_DEPTHOF_LINK3
+# Three-unit multi-file CLASS EXTEND/link + HASANCESTOR probe + DEPTHOF.
+# Complements PARENTS (bag) + ROOTOF (top) + BASEOF (immediate) + ISOF.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+# unit 1: base CLASS
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1 "base Greeter present"
+
+# unit 2: EXTEND reopen
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+# unit 3: TagGreeter child + LoudTag grandchild (depth 2)
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1 "unit3 LoudTag"
+
+# BASEOF still immediate
+BASEOF LoudTag
+ASSERT LAST == "TagGreeter" "immediate parent"
+BASEOF TagGreeter
+ASSERT LAST == "Greeter" "mid parent"
+
+# DEPTHOF — parent chain depth (PARENTS_N)
+DEPTHOF LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 2 "LoudTag depth 2"
+ASSERT DEPTH == 2
+ASSERT DEPTHOF_N == 2
+ASSERT CHAIN_N == 2
+ASSERT PARENTS_N == 2
+
+DEPTHOF TagGreeter
+ASSERT LAST_N == 1 "TagGreeter depth 1"
+ASSERT DEPTHOF_N == 1
+
+DEPTHOF Greeter
+ASSERT LAST_N == 0 "root depth 0"
+ASSERT DEPTH == 0
+ASSERT DEPTHOF_N == 0
+
+# CHAINDEPTH / PARENTDEPTH / EXTENDDEPTH aliases
+CHAINDEPTH LoudTag
+ASSERT LAST_N == 2 "CHAINDEPTH alias"
+PARENTDEPTH LoudTag
+ASSERT LAST_N == 2 "PARENTDEPTH alias"
+EXTENDDEPTH LoudTag
+ASSERT LAST_N == 2 "EXTENDDEPTH alias"
+
+# HASANCESTOR — soft 0|1 parent-chain membership (not self)
+HASANCESTOR LoudTag Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 1 "LoudTag has Greeter"
+ASSERT HASANCESTOR_N == 1
+ASSERT INCHAIN_N == 1
+ASSERT ANCESTOR == "Greeter"
+
+HASANCESTOR LoudTag TagGreeter
+ASSERT LAST_N == 1 "LoudTag has TagGreeter"
+ASSERT HASANCESTOR_N == 1
+ASSERT ANCESTOR == "TagGreeter"
+
+HASANCESTOR TagGreeter Greeter
+ASSERT LAST_N == 1 "TagGreeter has Greeter"
+
+# negative: self is not ancestor; reverse not in chain
+HASANCESTOR LoudTag LoudTag
+ASSERT LAST_N == 0 "self not ancestor"
+ASSERT HASANCESTOR_N == 0
+
+HASANCESTOR Greeter LoudTag
+ASSERT LAST_N == 0 "root has no LoudTag ancestor"
+ASSERT HASANCESTOR_N == 0
+
+HASANCESTOR Greeter Greeter
+ASSERT LAST_N == 0 "root self not ancestor"
+
+HASANCESTOR TagGreeter LoudTag
+ASSERT LAST_N == 0 "mid has no child ancestor"
+
+# aliases
+INCHAIN LoudTag Greeter
+ASSERT LAST_N == 1 "INCHAIN alias"
+EXTENDSFROM LoudTag Greeter
+ASSERT LAST_N == 1 "EXTENDSFROM alias"
+DERIVESFROM LoudTag TagGreeter
+ASSERT LAST_N == 1 "DERIVESFROM alias"
+ISAEXTEND LoudTag Greeter
+ASSERT LAST_N == 1 "ISAEXTEND alias"
+
+# PARENTS/ROOTOF still hold
+PARENTS LoudTag
+ASSERT PARENTS_N == 2
+SYS HAS LAST "TagGreeter"
+ASSERT LAST_N == 1
+SYS HAS LAST "Greeter"
+ASSERT LAST_N == 1
+ASSERT ROOT == "Greeter"
+
+ROOTOF LoudTag
+ASSERT LAST == "Greeter" "ROOTOF topmost"
+
+# live instance path
+NEW LoudTag lt "atlas"
+ASSERT OK == 1
+DEPTHOF lt
+ASSERT LAST_N == 2 "obj DEPTHOF"
+HASANCESTOR lt Greeter
+ASSERT LAST_N == 1 "obj HASANCESTOR Greeter"
+HASANCESTOR lt TagGreeter
+ASSERT LAST_N == 1 "obj HASANCESTOR TagGreeter"
+HASANCESTOR lt LoudTag
+ASSERT LAST_N == 0 "obj self not ancestor"
+
+# ISOF still full chain
+ISOF lt LoudTag
+ASSERT LAST_N == 1
+ISOF lt TagGreeter
+ASSERT LAST_N == 1
+ISOF lt Greeter
+ASSERT LAST_N == 1 "full ISOF"
+
+# SENDSUPER still flows after probes
+SEND lt set_tag "link3"
+SENDSUPER lt hi
+ASSERT LAST == "link3" "SENDSUPER after HASANCESTOR"
+DEPTHOF lt
+ASSERT LAST_N == 2 "depth stable after SENDSUPER"
+HASANCESTOR lt Greeter
+ASSERT LAST_N == 1 "ancestor stable after SENDSUPER"
+
+# second class branch: LoudGreeter depth 1
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+DEPTHOF LoudGreeter
+ASSERT LAST_N == 1 "LoudGreeter depth 1"
+HASANCESTOR LoudGreeter Greeter
+ASSERT LAST_N == 1
+HASANCESTOR LoudGreeter TagGreeter
+ASSERT LAST_N == 0 "other branch"
+HASANCESTOR LoudTag LoudGreeter
+ASSERT LAST_N == 0 "cross branch"
+
+NEW LoudGreeter lg "peer"
+DEPTHOF lg
+ASSERT LAST_N == 1
+HASANCESTOR lg Greeter
+ASSERT LAST_N == 1
+
+# CLASSINFO still carries parent
+CLASSINFO LoudTag
+ASSERT OK == 1
+SYS HAS LAST "parent:TagGreeter"
+ASSERT LAST_N == 1
+
+PRINT "multifile_extend_hasancestor_depthof_link3 ok"
+ASSERT OK == 1

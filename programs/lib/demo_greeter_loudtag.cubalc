@@ -1,0 +1,20 @@
+# multi-file unit 3/3 — LoudTag EXTEND TagGreeter (depth-2 chain for HASANCESTOR/DEPTHOF)
+CLASS LoudTag EXTEND TagGreeter
+  FIELD bang "!"
+  METHOD mark
+    GETF THIS bang
+    RET LAST
+  END
+  METHOD hi
+    GETF THIS bang
+    RET LAST
+  END
+  METHOD mid_hi
+    SENDSUPER THIS hi
+    RET LAST
+  END
+  METHOD root_hi
+    SENDSUPER THIS base_hi
+    RET LAST
+  END
+END

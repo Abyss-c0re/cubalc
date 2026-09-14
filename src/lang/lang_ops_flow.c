@@ -17459,6 +17459,117 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* HASANCESTOR|INCHAIN|EXTENDSFROM|DERIVESFROM|ISAEXTEND Class|obj Ancestor
+   * — multi-file EXTEND/link usability: soft 0|1 if Ancestor appears on the
+   * parent_idx walk (not self). Complements PARENTS bag + ROOTOF + ISOF.
+   * DEPTHOF|CHAINDEPTH|PARENTDEPTH Class|obj — numeric EXTEND depth (PARENTS_N).
+   * Cube Law: free energy must flow; meaningful growth only. */
+  if (kw(&L->cur, "HASANCESTOR") || kw(&L->cur, "INCHAIN") ||
+      kw(&L->cur, "EXTENDSFROM") || kw(&L->cur, "DERIVESFROM") ||
+      kw(&L->cur, "ISAEXTEND") || kw(&L->cur, "HAS_ANCESTOR") ||
+      kw(&L->cur, "DEPTHOF") || kw(&L->cur, "CHAINDEPTH") ||
+      kw(&L->cur, "PARENTDEPTH") || kw(&L->cur, "EXTENDDEPTH") ||
+      kw(&L->cur, "DEPTH_OF") || kw(&L->cur, "CHAIN_DEPTH")) {
+    int want_depth = kw(&L->cur, "DEPTHOF") || kw(&L->cur, "CHAINDEPTH") ||
+                     kw(&L->cur, "PARENTDEPTH") || kw(&L->cur, "EXTENDDEPTH") ||
+                     kw(&L->cur, "DEPTH_OF") || kw(&L->cur, "CHAIN_DEPTH");
+    char a[48], anc[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int n = 0, guard = 0, pi, hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_depth ? "DEPTHOF Class|obj" : "HASANCESTOR Class|obj Ancestor");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    anc[0] = 0;
+    if (!want_depth) {
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "HASANCESTOR Class|obj Ancestor");
+        return -1;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(anc, sizeof anc, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        char id[48];
+        Var *vv;
+        snprintf(id, sizeof id, "%s", L->cur.text);
+        lex_next(L);
+        if (oop_find_class(vm, id)) {
+          snprintf(anc, sizeof anc, "%s", id);
+        } else {
+          vv = var_get(vm, id, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(anc, sizeof anc, "%s", vv->sval);
+          else
+            snprintf(anc, sizeof anc, "%s", id);
+        }
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      pi = cd->parent_idx;
+      while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+        ClassDef *pw = &vm->classes[pi];
+        n++;
+        if (!want_depth && anc[0] && strcmp(pw->name, anc) == 0) hit = 1;
+        pi = pw->parent_idx;
+      }
+    }
+    if (want_depth) {
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_num(vm, "DEPTH", n);
+      var_set_num(vm, "DEPTHOF_N", n);
+      var_set_num(vm, "CHAIN_N", n);
+      var_set_num(vm, "PARENTS_N", n);
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", n);
+      var_set_str(vm, "LAST", vm->last_str);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+    } else {
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "HASANCESTOR_N", hit ? 1 : 0);
+      var_set_num(vm, "INCHAIN_N", hit ? 1 : 0);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hit ? "1" : "0");
+      var_set_str(vm, "LAST", vm->last_str);
+      if (anc[0]) var_set_str(vm, "ANCESTOR", anc);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+      var_set_num(vm, "PARENTS_N", n);
+      var_set_num(vm, "CHAIN_N", n);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> hit=%d depth=%d\n",
+              want_depth ? "DEPTHOF" : "HASANCESTOR", a,
+              want_depth ? "-" : anc, hit, n);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).

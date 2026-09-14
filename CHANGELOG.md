@@ -1,3 +1,8 @@
+## 1.16.5-hasancestor-depthof
+- HASANCESTOR|INCHAIN|EXTENDSFROM|DERIVESFROM|ISAEXTEND Class|obj Ancestor — soft 0|1 EXTEND parent-chain probe (not self)
+- DEPTHOF|CHAINDEPTH|PARENTDEPTH|EXTENDDEPTH Class|obj — numeric EXTEND depth (PARENTS_N)
+- Proof 2405 multifile LoudTag depth-2 chain + demo_greeter_loudtag; asserts gate BASEOF/PARENTS/ROOTOF/ISOF/SENDSUPER
+
 ## 1.16.4-parents-rootof — MI 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
 
 - PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN Class|obj — full EXTEND parent chain bag · PARENTS_N/CHAIN_N
