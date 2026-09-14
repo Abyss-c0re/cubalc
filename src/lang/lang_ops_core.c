@@ -2096,6 +2096,8 @@ static const CubalcHelpEnt cubalc_help_catalog[] = {
       {"CLASSINFO", "CLASSINFO [JSON] Class|obj — class schema plate · parent/fields/methods/live"},
       {"BASEOF", "BASEOF|GETBASE|PARENTCLASS Class|obj — immediate EXTEND parent name · LAST/BASE"},
       {"HASPARENT", "HASPARENT|HASBASE Class|obj — soft 0|1 if CLASS has EXTEND parent"},
+      {"PARENTS", "PARENTS|SUPERCHAIN|ANCESTORS Class|obj — full EXTEND parent chain bag · PARENTS_N"},
+      {"ROOTOF", "ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost EXTEND ancestor name · ROOT"},
       {"SENDSUPER", "SENDSUPER|SUPERSEND|CALLSUPER obj method [args] — parent EXTEND chain method (skip override)"},
       {"DUMPCLASS", "DUMPCLASS alias of CLASSINFO"},
       {"DESCRIBECLASS", "DESCRIBECLASS alias of CLASSINFO"},

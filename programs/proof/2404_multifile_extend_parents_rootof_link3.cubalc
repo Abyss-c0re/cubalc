@@ -1,0 +1,170 @@
+# Proof 2404 — MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
+# Three-unit multi-file CLASS EXTEND/link + PARENTS chain bag + ROOTOF.
+# Complements BASEOF (immediate) + SENDSUPER (parent method) with full chain.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+# unit 1: base CLASS
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1 "base Greeter present"
+
+# unit 2: EXTEND reopen (add methods, no redefine)
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1 "reopen flagged"
+HASMETHOD Greeter reset
+ASSERT LAST_N == 1 "reset after EXTEND"
+HASMETHOD Greeter hi
+ASSERT LAST_N == 1 "base hi retained"
+
+# unit 3: child CLASS EXTEND Greeter (inherit + parent_idx)
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+ASSERT EXTEND_N == 1 "child extend"
+HASCLASS LoudGreeter
+ASSERT LAST_N == 1
+
+# BASEOF still immediate parent
+BASEOF LoudGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter" "BASEOF class"
+ASSERT BASE == "Greeter"
+ASSERT PARENTCLASS == "Greeter"
+ASSERT HASPARENT_N == 1
+
+# PARENTS — full EXTEND parent chain bag (depth 1 here)
+PARENTS LoudGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter" "PARENTS bag"
+ASSERT PARENTS == "Greeter"
+ASSERT SUPERCHAIN == "Greeter"
+ASSERT ANCESTORS == "Greeter"
+ASSERT BASECHAIN == "Greeter"
+ASSERT LAST_N == 1 "PARENTS_N depth"
+ASSERT PARENTS_N == 1
+ASSERT CHAIN_N == 1
+ASSERT SUPERCHAIN_N == 1
+ASSERT ROOT == "Greeter"
+ASSERT ROOTCLASS == "Greeter"
+ASSERT HASPARENT_N == 1
+
+# SUPERCHAIN alias
+SUPERCHAIN LoudGreeter
+ASSERT LAST == "Greeter" "SUPERCHAIN alias"
+ASSERT PARENTS_N == 1
+
+# ANCESTORS alias
+ANCESTORS LoudGreeter
+ASSERT LAST == "Greeter" "ANCESTORS alias"
+
+# ROOTOF — topmost EXTEND ancestor
+ROOTOF LoudGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter" "ROOTOF child"
+ASSERT ROOT == "Greeter"
+ASSERT ROOTCLASS == "Greeter"
+ASSERT BASE == "Greeter"
+ASSERT LAST_N == 1
+ASSERT ROOTOF_N == 1
+
+# GETROOT / ROOTCLASS aliases
+GETROOT LoudGreeter
+ASSERT LAST == "Greeter" "GETROOT alias"
+ROOTCLASS LoudGreeter
+ASSERT LAST == "Greeter" "ROOTCLASS alias"
+
+# base is its own root; empty parent chain
+PARENTS Greeter
+ASSERT OK == 1
+ASSERT LAST == "" "Greeter parents empty"
+ASSERT LAST_N == 0
+ASSERT PARENTS_N == 0
+ASSERT CHAIN_N == 0
+ASSERT HASPARENT_N == 0
+ASSERT ROOT == "Greeter" "root self when no parent"
+
+ROOTOF Greeter
+ASSERT LAST == "Greeter" "ROOTOF base is self"
+ASSERT ROOT == "Greeter"
+ASSERT LAST_N == 1
+ASSERT ROOTOF_N == 1
+
+# live instance path
+NEW LoudGreeter lg "atlas"
+ASSERT OK == 1
+ISOF lg LoudGreeter
+ASSERT LAST_N == 1
+ISOF lg Greeter
+ASSERT LAST_N == 1 "ISOF chain through parent"
+
+PARENTS lg
+ASSERT LAST == "Greeter" "PARENTS obj"
+ASSERT PARENTS_N == 1
+ASSERT ROOT == "Greeter"
+
+ROOTOF lg
+ASSERT LAST == "Greeter" "ROOTOF obj"
+ASSERT ROOT == "Greeter"
+ASSERT LAST_N == 1
+
+BASEOF lg
+ASSERT LAST == "Greeter" "BASEOF obj still immediate"
+
+# inherited methods still flow
+SEND lg hi
+ASSERT LAST == "atlas" "inherited hi"
+SEND lg shout
+ASSERT LAST == "atlas" "child shout uses inherited hi"
+SEND lg mark
+ASSERT LAST == "!" "child field bang"
+SEND lg reset
+ASSERT LAST == "world" "inherited reset via EXTEND reopen"
+GETF lg name
+ASSERT LAST == "world"
+
+# second instance independence
+NEW LoudGreeter pe "peer"
+PARENTS pe
+ASSERT LAST == "Greeter"
+ROOTOF pe
+ASSERT LAST == "Greeter"
+SEND pe hi
+ASSERT LAST == "peer"
+
+# CLASSINFO plate still carries parent:
+CLASSINFO LoudGreeter
+ASSERT OK == 1
+SYS HAS LAST "parent:Greeter"
+ASSERT LAST_N == 1 "CLASSINFO parent bag"
+ASSERT BASE == "Greeter"
+ASSERT PARENTCLASS == "Greeter"
+ASSERT HASPARENT_N == 1
+
+# TagGreeter path (override unit) — PARENTS/ROOTOF after SENDSUPER stack
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+BASEOF TagGreeter
+ASSERT LAST == "Greeter"
+PARENTS TagGreeter
+ASSERT LAST == "Greeter" "TagGreeter parents"
+ASSERT PARENTS_N == 1
+ROOTOF TagGreeter
+ASSERT LAST == "Greeter" "TagGreeter root"
+NEW TagGreeter tg "atlas"
+SEND tg set_tag "link3"
+SEND tg hi
+ASSERT LAST == "link3" "child override hi"
+SENDSUPER tg hi
+ASSERT LAST == "atlas" "SENDSUPER parent hi"
+PARENTS tg
+ASSERT LAST == "Greeter" "PARENTS after SENDSUPER"
+ROOTOF tg
+ASSERT LAST == "Greeter"
+
+PRINT "multifile_extend_parents_rootof_link3 ok"
+ASSERT OK == 1

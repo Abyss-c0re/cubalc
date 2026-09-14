@@ -17353,6 +17353,112 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN Class|obj
+   * — multi-file EXTEND/link usability: full parent chain as newline bag.
+   * Walk parent_idx from Class|obj up to root (skip self). LAST = bag,
+   * PARENTS_N / CHAIN_N / LAST_N = depth. Soft empty bag if no parent.
+   * ROOTOF|GETROOT|ROOTCLASS Class|obj — topmost ancestor name (or self).
+   * Complements BASEOF (immediate) + ISOF + SENDSUPER without bag scrape. */
+  if (kw(&L->cur, "PARENTS") || kw(&L->cur, "SUPERCHAIN") ||
+      kw(&L->cur, "ANCESTORS") || kw(&L->cur, "BASECHAIN") ||
+      kw(&L->cur, "PARENTCHAIN") || kw(&L->cur, "EXTENDCHAIN") ||
+      kw(&L->cur, "CHAINOF") || kw(&L->cur, "SUPERPATH") ||
+      kw(&L->cur, "ROOTOF") || kw(&L->cur, "GETROOT") ||
+      kw(&L->cur, "ROOTCLASS") || kw(&L->cur, "CLASSROOT") ||
+      kw(&L->cur, "BASEROOT") || kw(&L->cur, "TOPBASE") ||
+      kw(&L->cur, "ROOT_OF") || kw(&L->cur, "GET_ROOT")) {
+    int want_root = kw(&L->cur, "ROOTOF") || kw(&L->cur, "GETROOT") ||
+                    kw(&L->cur, "ROOTCLASS") || kw(&L->cur, "CLASSROOT") ||
+                    kw(&L->cur, "BASEROOT") || kw(&L->cur, "TOPBASE") ||
+                    kw(&L->cur, "ROOT_OF") || kw(&L->cur, "GET_ROOT");
+    char a[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    char bag[1024];
+    size_t o = 0;
+    int n = 0, guard = 0, pi;
+    const char *root = "";
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_root ? "ROOTOF Class|obj" : "PARENTS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    if (cd) {
+      root = cd->name;
+      pi = cd->parent_idx;
+      while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+        ClassDef *pw = &vm->classes[pi];
+        size_t ln = strlen(pw->name);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, pw->name, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+        root = pw->name;
+        pi = pw->parent_idx;
+      }
+    }
+    if (want_root) {
+      var_set_str(vm, "LAST", root);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", root);
+      var_set_str(vm, "ROOT", root);
+      var_set_str(vm, "ROOTCLASS", root);
+      var_set_str(vm, "BASE", root);
+      var_set_num(vm, "LAST_N", root[0] ? 1 : 0);
+      vm->last_n = root[0] ? 1 : 0;
+      var_set_num(vm, "ROOTOF_N", root[0] ? 1 : 0);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+    } else {
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_str(vm, "PARENTS", bag);
+      var_set_str(vm, "SUPERCHAIN", bag);
+      var_set_str(vm, "ANCESTORS", bag);
+      var_set_str(vm, "BASECHAIN", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_num(vm, "PARENTS_N", n);
+      var_set_num(vm, "CHAIN_N", n);
+      var_set_num(vm, "SUPERCHAIN_N", n);
+      var_set_str(vm, "ROOT", root);
+      var_set_str(vm, "ROOTCLASS", root);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_num(vm, "HASPARENT_N", n > 0 ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> root=%s depth=%d\n",
+              want_root ? "ROOTOF" : "PARENTS", a, root[0] ? root : "-", n);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).
