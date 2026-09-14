@@ -33,5 +33,12 @@
   "gift": "ARECOUSINS two-arg first-cousin gate + COUSINCOUNT/HASCOUSIN proven across greeter EXTEND lattice",
   "forms": "ARECOUSINS|ARE_COUSINS|ISCOUSIN|IS_COUSIN|COUSINOF|ISCOUSINOF|SHAREGRANDPARENT_P|SAMEGRAND_P|COCOUSIN + COUSINCOUNT|HASCOUSIN",
   "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
-  "summary": "ARECOUSINS soft 0|1 same-grandparent via different parents; COUSINCOUNT cousin card; HASCOUSIN flag; multifile CLASS EXTEND"
+  "summary": "ARECOUSINS soft 0|1 same-grandparent via different parents; COUSINCOUNT cousin card; HASCOUSIN flag; multifile CLASS EXTEND",
+  "head": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "HEAD": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "git_head": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "feat_head": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "tip": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "commit": "511c4a9b6aa094cb440d3501ec9f728ac4500104",
+  "short": "511c4a9b6"
 }
