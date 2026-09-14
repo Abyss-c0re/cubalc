@@ -38,10 +38,10 @@
   "sealed": true,
   "pass": true,
   "proof_status": "PASS",
-  "head": "15925e034d967bce04123bf6f29aa6926f3502c9",
-  "HEAD": "15925e034d967bce04123bf6f29aa6926f3502c9",
-  "feat_head": "15925e034d967bce04123bf6f29aa6926f3502c9",
-  "head_short": "15925e034",
-  "FEAT_HEAD": "15925e034d967bce04123bf6f29aa6926f3502c9",
-  "ts": "2026-09-14T04:15:29Z"
+  "head": "69ea1a7b2fc77b7f9bb78e0a8b89aca1aadb1725",
+  "HEAD": "69ea1a7b2fc77b7f9bb78e0a8b89aca1aadb1725",
+  "feat_head": "69ea1a7b2fc77b7f9bb78e0a8b89aca1aadb1725",
+  "head_short": "69ea1a7b2",
+  "FEAT_HEAD": "69ea1a7b2fc77b7f9bb78e0a8b89aca1aadb1725",
+  "ts": "2026-09-14T04:15:30Z"
 }
