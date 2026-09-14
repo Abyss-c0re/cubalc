@@ -1,0 +1,8 @@
+SHIP MULTIFILE_EXTEND_RESET_LINK3 MI 2401
+HEAD=34a2ed5885ef366383f41d157bcb22e2d0f46a09
+FEAT=3ebf6425eb401f1ecc924ca4e64a65ffbf597f71
+VERSION=1.16.2-baseof
+proof=programs/proof/2401_multifile_extend_reset_link3.cubalc
+asserts_ok=33 asserts_fail=0
+units=demo_greeter_base,demo_greeter_reset,demo_greeter_tag
+law=cube_is_sot; free_energy_must_flow; hollow_we_heresy
