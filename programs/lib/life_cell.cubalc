@@ -24015,7 +24015,67 @@ CLASS Cell
     RET take
   END
 
-
+  # LIFE_CELL_ATP5PO: ATP5PO (OSCP) ATP synthase oligomycin-sensitivity-conferral protein after ATP5F1D on OXPHOS continuum
+  # ATP5PO / ATP5O (OSCP) is the nuclear-encoded F1 OSCP subunit that couples the F1 catalytic core to the Fo peripheral stalk after ATP5F1D seats F1 delta.
+  # Distinct from ATP5F1D, ATP5F1A, ATP5F1B, ATP5F1C, COX4I1, CYCS, UQCRC1, ACADVL, ETFDH, HADHA, or PCYT2. Not a rename of prior Complex-V delta or alpha enzymes.
+  # Domain: inner-membrane Complex V F1 ATP5PO ward (ATP synthase OSCP peripheral-stalk couple limb of oxidative phosphorylation after F1 delta)
+  # Continuum: ...->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po
+  # Gift: ATP5PO seats OSCP so Fo stator torque transmits through F1 delta/alpha into ADP+Pi->ATP and free energy flows without hollow Complex-V OSCP lock (CV F1 OSCP ward)
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5po.
+  # Usability: AGI models atp5po under ASSERT on ETC/oxphos continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5po n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
 
 
 END
