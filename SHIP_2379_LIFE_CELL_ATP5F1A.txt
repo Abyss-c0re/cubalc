@@ -4,8 +4,8 @@ method: atp5f1a n
 proof: programs/proof/2379_life_cell_atp5f1a.cubalc
 asserts_ok life=73 atomic=150 mesh=147 total=370 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a
-gift: ATP5F1A scaffolds F1 alpha so PMF from COX4I1 drives ADP+Pi→ATP and free energy couples without hollow Complex-V lock (CV F1 alpha ward)
+gift: ATP5F1A scaffolds F1 alpha so PMF from COX4I1 drives ADP+Pi to ATP without hollow Complex-V lock
 feat_head: 0e92324d417b410685aa6b92f01ccc67dbaf159c
-head: 4f5c0165db1a7c30da381931780cb4b483e0841e
+head: 18623ff39f01646d89f001cd586b44d08df29a0b
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
