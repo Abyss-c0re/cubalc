@@ -18928,6 +18928,201 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm);
     return 1;
   }
+  /* DESCENDANTS bag + ISLEAF + HASCHILDREN + NTH/FIRST/LAST child (multifile EXTEND) */
+  if (kw(&L->cur, "DESCENDANTS") || kw(&L->cur, "LISTDESCENDANTS") ||
+      kw(&L->cur, "PROGENY") || kw(&L->cur, "ALLSUBS") ||
+      kw(&L->cur, "SUBTREEBAG") || kw(&L->cur, "ALLDESCENDANTS") ||
+      kw(&L->cur, "LIST_DESCENDANTS") || kw(&L->cur, "DESCENDANTBAG") ||
+      kw(&L->cur, "ISLEAF") || kw(&L->cur, "NOCHILDREN") ||
+      kw(&L->cur, "LEAFCLASS") || kw(&L->cur, "HASNOCHILD") ||
+      kw(&L->cur, "IS_LEAF") || kw(&L->cur, "NO_CHILDREN") ||
+      kw(&L->cur, "HASCHILDREN") || kw(&L->cur, "HASKIDS") ||
+      kw(&L->cur, "HASDIRECTKIDS") || kw(&L->cur, "HAS_CHILDREN") ||
+      kw(&L->cur, "HAS_KIDS") || kw(&L->cur, "HASDIRECTCHILDREN") ||
+      kw(&L->cur, "NTHCHILD") || kw(&L->cur, "CHILDAT") ||
+      kw(&L->cur, "SUBAT") || kw(&L->cur, "NTH_CHILD") ||
+      kw(&L->cur, "CHILD_AT") || kw(&L->cur, "KIDAT") ||
+      kw(&L->cur, "FIRSTCHILD") || kw(&L->cur, "ELDERCHILD") ||
+      kw(&L->cur, "OLDESTCHILD") || kw(&L->cur, "FIRST_CHILD") ||
+      kw(&L->cur, "LASTCHILD") || kw(&L->cur, "YOUNGCHILD") ||
+      kw(&L->cur, "NEWESTCHILD") || kw(&L->cur, "LAST_CHILD") ||
+      kw(&L->cur, "YOUNGESTCHILD")) {
+    int want_descbag = kw(&L->cur, "DESCENDANTS") || kw(&L->cur, "LISTDESCENDANTS") ||
+                       kw(&L->cur, "PROGENY") || kw(&L->cur, "ALLSUBS") ||
+                       kw(&L->cur, "SUBTREEBAG") || kw(&L->cur, "ALLDESCENDANTS") ||
+                       kw(&L->cur, "LIST_DESCENDANTS") || kw(&L->cur, "DESCENDANTBAG");
+    int want_leaf = kw(&L->cur, "ISLEAF") || kw(&L->cur, "NOCHILDREN") ||
+                    kw(&L->cur, "LEAFCLASS") || kw(&L->cur, "HASNOCHILD") ||
+                    kw(&L->cur, "IS_LEAF") || kw(&L->cur, "NO_CHILDREN");
+    int want_haskids = kw(&L->cur, "HASCHILDREN") || kw(&L->cur, "HASKIDS") ||
+                       kw(&L->cur, "HASDIRECTKIDS") || kw(&L->cur, "HAS_CHILDREN") ||
+                       kw(&L->cur, "HAS_KIDS") || kw(&L->cur, "HASDIRECTCHILDREN");
+    int want_nth = kw(&L->cur, "NTHCHILD") || kw(&L->cur, "CHILDAT") ||
+                   kw(&L->cur, "SUBAT") || kw(&L->cur, "NTH_CHILD") ||
+                   kw(&L->cur, "CHILD_AT") || kw(&L->cur, "KIDAT");
+    int want_first = kw(&L->cur, "FIRSTCHILD") || kw(&L->cur, "ELDERCHILD") ||
+                     kw(&L->cur, "OLDESTCHILD") || kw(&L->cur, "FIRST_CHILD");
+    int want_last = kw(&L->cur, "LASTCHILD") || kw(&L->cur, "YOUNGCHILD") ||
+                    kw(&L->cur, "NEWESTCHILD") || kw(&L->cur, "LAST_CHILD") ||
+                    kw(&L->cur, "YOUNGESTCHILD");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1;
+    int n = 0, i, idx_want = 0;
+    int hit = 0;
+    char bag[2048];
+    size_t o = 0;
+    const char *opname = want_descbag ? "DESCENDANTS"
+                         : want_leaf ? "ISLEAF"
+                         : want_haskids ? "HASCHILDREN"
+                         : want_nth ? "NTHCHILD"
+                         : want_first ? "FIRSTCHILD"
+                         : "LASTCHILD";
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_nth ? "NTHCHILD Class|obj N"
+                        : (want_descbag ? "DESCENDANTS Class|obj"
+                                        : (want_leaf ? "ISLEAF Class|obj"
+                                                     : (want_haskids ? "HASCHILDREN Class|obj"
+                                                                     : (want_first ? "FIRSTCHILD Class|obj"
+                                                                                   : "LASTCHILD Class|obj")))));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (want_nth) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx_want = (int)L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx_want = (int)vv->val;
+        else { fail(vm, "NTHCHILD Class|obj N"); return -1; }
+        lex_next(L);
+      } else { fail(vm, "NTHCHILD Class|obj N"); return -1; }
+    }
+    bag[0] = 0;
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    {
+      int kids[512];
+      int nk = 0;
+      if (cda && ai >= 0) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == ai) {
+            if (nk < 512) kids[nk++] = i;
+          }
+        }
+      }
+      if (want_leaf || want_haskids) {
+        hit = want_leaf ? (nk == 0 && cda != NULL) : (nk > 0);
+        if (!cda) hit = 0;
+        var_set_num(vm, "LAST_N", hit ? 1 : 0);
+        vm->last_n = hit ? 1 : 0;
+        var_set_num(vm, "ISLEAF_N", (nk == 0 && cda) ? 1 : 0);
+        var_set_num(vm, "HASCHILDREN_N", nk > 0 ? 1 : 0);
+        var_set_num(vm, "HASKIDS_N", nk > 0 ? 1 : 0);
+        var_set_num(vm, "CHILDCOUNT_N", nk);
+        var_set_num(vm, "CHILDREN_N", nk);
+        snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+        var_set_str(vm, "LAST", vm->last_str);
+        n = hit ? 1 : 0;
+      } else if (want_first || want_last || want_nth) {
+        int pick = -1;
+        char namebuf[48];
+        namebuf[0] = 0;
+        if (want_first && nk > 0) pick = kids[0];
+        else if (want_last && nk > 0) pick = kids[nk - 1];
+        else if (want_nth && idx_want >= 0 && idx_want < nk) pick = kids[idx_want];
+        if (pick >= 0) {
+          snprintf(namebuf, sizeof namebuf, "%s", vm->classes[pick].name);
+          hit = 1;
+        }
+        var_set_str(vm, "LAST", namebuf);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", namebuf);
+        var_set_num(vm, "LAST_N", hit ? 1 : 0);
+        vm->last_n = hit ? 1 : 0;
+        var_set_str(vm, "CHILD", namebuf);
+        var_set_str(vm, "NTHCHILD", namebuf);
+        if (nk > 0) var_set_str(vm, "FIRSTCHILD", vm->classes[kids[0]].name);
+        else var_set_str(vm, "FIRSTCHILD", "");
+        if (nk > 0) var_set_str(vm, "LASTCHILD", vm->classes[kids[nk - 1]].name);
+        else var_set_str(vm, "LASTCHILD", "");
+        var_set_num(vm, "CHILDCOUNT_N", nk);
+        var_set_num(vm, "NTHCHILD_N", hit ? 1 : 0);
+        n = hit ? 1 : 0;
+      } else {
+        int queue[512];
+        int qh = 0, qt = 0;
+        int seen[512];
+        o = 0; n = 0; bag[0] = 0;
+        for (i = 0; i < 512; i++) seen[i] = 0;
+        if (cda && ai >= 0) {
+          for (i = 0; i < nk; i++) { queue[qt++] = kids[i]; seen[kids[i]] = 1; }
+          while (qh < qt) {
+            int cur = queue[qh++];
+            const char *nm; size_t ln;
+            if (cur < 0 || cur >= vm->n_classes) continue;
+            nm = vm->classes[cur].name; ln = strlen(nm);
+            if (n > 0 && o + 1 < sizeof bag) bag[o++] = "\n"[0];
+            if (o + ln < sizeof bag) { memcpy(bag + o, nm, ln); o += ln; }
+            n++;
+            for (i = 0; i < vm->n_classes; i++) {
+              if (vm->classes[i].parent_idx == cur && !seen[i]) {
+                seen[i] = 1;
+                if (qt < 512) queue[qt++] = i;
+              }
+            }
+          }
+          if (o < sizeof bag) bag[o] = 0;
+        }
+        var_set_str(vm, "LAST", bag);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+        var_set_num(vm, "LAST_N", n);
+        vm->last_n = n;
+        var_set_str(vm, "DESCENDANTS", bag);
+        var_set_str(vm, "PROGENY", bag);
+        var_set_str(vm, "SUBTREE", bag);
+        var_set_num(vm, "DESCENDANTS_N", n);
+        var_set_num(vm, "PROGENY_N", n);
+        var_set_num(vm, "SUBTREE_N", n);
+        var_set_num(vm, "CHILDCOUNT_N", nk);
+      }
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d hit=%d\n", opname, a, n, hit);
+    bump(vm);
+    return 1;
+  }
+
 
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
