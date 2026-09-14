@@ -165,3 +165,8 @@ Usability bit metrics on a 64-bit word → `LAST_N`.
 - `CTZN|NTZN|TZCNTN x` — trailing zeros (0→64)
 - `PARITYN|XORREDN|PARN x` — xor-reduce (popcount & 1)
 Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
+
+## MI 2405 chain probe
+
+| HASANCESTOR | soft 0|1 if Ancestor on EXTEND parent walk (not self) |
+| DEPTHOF | EXTEND parent-chain depth · DEPTH |
