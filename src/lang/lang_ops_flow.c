@@ -216,6 +216,35 @@ static int oop_inherit_flatten(VM *vm, ClassDef *cd, ClassDef *base){
   return 0;
 }
 
+/* After EXTEND reopen, push new FIELD/METHOD into CLASS EXTEND descendants.
+ * Multi-file: unit C EXTEND Base after Child defined → Child gains methods. */
+static int oop_propagate_extend(VM *vm, int src_idx){
+  int pass, i, gained_classes = 0;
+  int touched[CUBALC_MAX_CLASSES];
+  (void)src_idx;
+  if (!vm) return -1;
+  for (i = 0; i < CUBALC_MAX_CLASSES; i++) touched[i] = 0;
+  for (pass = 0; pass < CUBALC_MAX_CLASSES; pass++) {
+    int any = 0;
+    for (i = 0; i < vm->n_classes; i++) {
+      ClassDef *d = &vm->classes[i];
+      ClassDef *p;
+      int bf, bm;
+      if (d->parent_idx < 0 || d->parent_idx >= vm->n_classes) continue;
+      p = &vm->classes[d->parent_idx];
+      bf = d->n_fields;
+      bm = d->n_methods;
+      if (oop_inherit_flatten(vm, d, p) < 0) return -1;
+      if (d->n_fields != bf || d->n_methods != bm) {
+        any = 1;
+        if (!touched[i]) { touched[i] = 1; gained_classes++; }
+      }
+    }
+    if (!any) break;
+  }
+  return gained_classes;
+}
+
 /* ISOF chain: obj class or any parent matches cname */
 static int oop_isof_chain(VM *vm, int class_idx, const char *cname){
   int guard = 0;
@@ -1053,6 +1082,19 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       fprintf(vm->trace, "# %s %s fields=%d methods=%d parent=%d\n",
               reopen ? "EXTEND" : "CLASS", cname, cd->n_fields, cd->n_methods,
               cd->parent_idx);
+    {
+      int src_idx = oop_find_class_idx(vm, cname);
+      int prop = 0;
+      if (src_idx >= 0) {
+        prop = oop_propagate_extend(vm, src_idx);
+        if (prop < 0) return -1;
+      }
+      var_set_num(vm, "PROPAGATE_N", prop);
+      var_set_num(vm, "EXTEND_PROPAGATE_N", prop);
+      if (vm->trace && prop > 0)
+        fprintf(vm->trace, "# EXTEND propagate %s -> %d descendant class(es)\n",
+                cname, prop);
+    }
     bump(vm);
     return 1;
   }
@@ -1484,6 +1526,114 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "LAST_N", ntick);
     vm->last_n = ntick;
     var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SENDSUPER|SUPERSEND|CALLSUPER obj method [args…]
+   * Call METHOD on the EXTEND parent chain (skip instance-class overrides).
+   * Multi-file link usability: child unit overrides hi; base unit keeps hi;
+   * agent reaches parent via SENDSUPER without hollow dual-name glue.
+   * Sets SUPER=1 · BASE/PARENTCLASS · SENDSUPER_N=1 · OK. */
+  if (kw(&L->cur, "SENDSUPER") || kw(&L->cur, "SUPERSEND") ||
+      kw(&L->cur, "CALLSUPER") || kw(&L->cur, "SUPERCALL") ||
+      kw(&L->cur, "INVOKESUPER") || kw(&L->cur, "SUPERCALLMETHOD") ||
+      kw(&L->cur, "PARENTCALL") || kw(&L->cur, "CALLPARENT")) {
+    char oname[48], mname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    ClassDef *pcd = NULL;
+    MethodDef *md = NULL;
+    int pi, guard;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail_at(vm, L, "SENDSUPER needs object method [args] — SENDSUPER obj hi");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", id);
+    } else {
+      fail_at(vm, L, "SENDSUPER needs method — SENDSUPER obj hi");
+      return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob || ob->class_idx < 0 || ob->class_idx >= vm->n_classes) {
+      var_set_num(vm, "SENDSUPER_N", 0);
+      var_set_num(vm, "SUPER", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "SENDSUPER unknown object");
+      var_set_str(vm, "ERR", "SENDSUPER unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    /* Prefer CLASS plate when nested inside method of a class on ISOF chain. */
+    {
+      Var *cv = var_get(vm, "CLASS", 0);
+      if (cv && cv->is_str && cv->sval[0]) {
+        int ci = oop_find_class_idx(vm, cv->sval);
+        if (ci >= 0 && oop_isof_chain(vm, ob->class_idx, cv->sval))
+          cd = &vm->classes[ci];
+      }
+    }
+    pi = cd->parent_idx;
+    guard = 0;
+    while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+      ClassDef *pw = &vm->classes[pi];
+      MethodDef *found = oop_find_method(pw, mname);
+      if (found) {
+        /* Prefer method body that actually lives on parent plate:
+         * With flatten inherit, child already has copy — look for method
+         * defined on parent before child override by walking parents and
+         * taking first match in parent chain (parent has own or inherited).
+         * To skip override: use method from parent class def directly. */
+        md = found;
+        pcd = pw;
+        break;
+      }
+      pi = pw->parent_idx;
+    }
+    if (!md || !pcd) {
+      char ebuf[160];
+      snprintf(ebuf, sizeof ebuf, "SENDSUPER no parent METHOD %s.%s",
+               cd->name, mname);
+      var_set_num(vm, "SENDSUPER_N", 0);
+      var_set_num(vm, "SUPER", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
+      bump(vm);
+      return 1;
+    }
+    {
+      int got = oop_bind_args(vm, L, md->params, md->n_params);
+      if (got < 0) return -1;
+      if (oop_run_method(vm, ob, md) < 0) return -1;
+    }
+    var_set_num(vm, "SENDSUPER_N", 1);
+    var_set_num(vm, "SUPER", 1);
+    var_set_num(vm, "SUPER_N", 1);
+    var_set_num(vm, "HASPARENT_N", 1);
+    var_set_str(vm, "BASE", pcd->name);
+    var_set_str(vm, "PARENTCLASS", pcd->name);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "ERR", "");
+    if (vm->trace)
+      fprintf(vm->trace, "# SENDSUPER %s.%s via %s ok\n", oname, mname, pcd->name);
     bump(vm);
     return 1;
   }

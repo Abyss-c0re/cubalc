@@ -25,3 +25,9 @@ feature MULTIFILE_EXTEND_RESET_LINK3 version 1.16.1-multifile-reset PASS multi-f
 - proof programs/proof/2401_multifile_extend_reset_link3.cubalc asserts_ok:33 asserts_fail:0
 - units: demo_greeter_base + demo_greeter_reset + demo_greeter_tag
 - runtime: EXTEND reopen/add METHOD; INCLUDE chain; no hollow redefine
+
+## MI 2403 MULTIFILE_EXTEND_SENDSUPER_LINK3
+
+SENDSUPER parent method on multi-file CLASS EXTEND three-unit link.
+Proof asserts_ok 37 fail 0. VERSION 1.16.3-sendsuper.
+

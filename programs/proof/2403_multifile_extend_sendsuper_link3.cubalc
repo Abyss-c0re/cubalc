@@ -1,0 +1,87 @@
+# Proof 2403 — MULTIFILE_EXTEND_SENDSUPER_LINK3
+# Three-unit multi-file CLASS EXTEND + SENDSUPER parent method (skip override).
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1 "base Greeter"
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+HASMETHOD Greeter reset
+ASSERT LAST_N == 1
+HASMETHOD Greeter hi
+ASSERT LAST_N == 1 "base hi retained after reopen"
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+ASSERT EXTEND_N == 1 "child extend"
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+BASEOF TagGreeter
+ASSERT LAST == "Greeter" "BASEOF child"
+HASPARENT TagGreeter
+ASSERT LAST_N == 1
+
+NEW TagGreeter tg "atlas"
+ASSERT OK == 1
+SEND tg set_tag "link3"
+ASSERT OK == 1
+
+SEND tg hi
+ASSERT OK == 1
+ASSERT LAST == "link3" "child override hi"
+
+SENDSUPER tg hi
+ASSERT OK == 1
+ASSERT LAST == "atlas" "SENDSUPER parent hi"
+ASSERT SENDSUPER_N == 1
+ASSERT SUPER == 1
+ASSERT BASE == "Greeter"
+ASSERT PARENTCLASS == "Greeter"
+
+SEND tg base_hi
+ASSERT OK == 1
+ASSERT LAST == "atlas" "base_hi wrapper SENDSUPER"
+
+SEND tg shout
+ASSERT LAST == "link3" "shout uses override hi"
+
+SEND tg bump
+SEND tg bump
+GETF tg hits
+ASSERT LAST_N == 2 "hits via base"
+SEND tg reset
+GETF tg hits
+ASSERT LAST_N == 0 "reset clears hits"
+GETF tg name
+ASSERT LAST == "world" "reset name"
+SENDSUPER tg hi
+ASSERT LAST == "world" "SENDSUPER after reset name"
+
+ISOF tg TagGreeter
+ASSERT LAST_N == 1
+ISOF tg Greeter
+ASSERT LAST_N == 1 "ISOF parent"
+
+NEW TagGreeter pe "peer"
+SEND pe set_tag "u3"
+SEND pe hi
+ASSERT LAST == "u3"
+SENDSUPER pe hi
+ASSERT LAST == "peer"
+SEND pe base_hi
+ASSERT LAST == "peer"
+
+CLASSINFO TagGreeter
+ASSERT OK == 1
+SYS HAS LAST "parent:Greeter"
+ASSERT LAST_N == 1 "CLASSINFO parent bag"
+
+PRINT "multifile_extend_sendsuper_link3 ok"
+ASSERT OK == 1

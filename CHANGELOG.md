@@ -1,3 +1,9 @@
+## 1.16.3-sendsuper — MI 2403 MULTIFILE_EXTEND_SENDSUPER_LINK3
+
+- SENDSUPER|SUPERSEND|CALLSUPER obj method — invoke EXTEND parent-chain method, skip child override
+- Proof 2403 asserts_ok:37 fail:0 (TagGreeter three-unit link)
+- Complements BASEOF/HASPARENT (MI 2402) + EXTEND reopen
+
 ## 1.16.1-multifile-reset — MI 2401 MULTIFILE_EXTEND_RESET_LINK3
 - Multi-file CLASS EXTEND/link: Greeter base + reset + tag (3 INCLUDE units)
 - Proof 2401 asserts_ok:33 asserts_fail:0

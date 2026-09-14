@@ -1,0 +1,20 @@
+# unit 3/3 — TagGreeter EXTEND Greeter: override hi; parent hi via SENDSUPER
+CLASS TagGreeter EXTEND Greeter
+  FIELD tag "tag"
+  METHOD set_tag t
+    SETF THIS tag t
+    RET LAST
+  END
+  METHOD hi
+    GETF THIS tag
+    RET LAST
+  END
+  METHOD base_hi
+    SENDSUPER THIS hi
+    RET LAST
+  END
+  METHOD shout
+    SEND THIS hi
+    RET LAST
+  END
+END
