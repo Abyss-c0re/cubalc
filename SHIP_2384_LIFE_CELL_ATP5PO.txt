@@ -6,6 +6,6 @@ asserts_ok life=80 atomic=152 mesh=149 total=381 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po
 gift: ATP5PO seats OSCP so Fo stator torque transmits through F1 delta/alpha into ADP+Pi to ATP without hollow Complex-V OSCP lock
 feat_head: 54073aa57aa923bea2dc5dd3c98807342b75bd4d
-head: 999285175d77cb9b3ec44e2461d1e795872c6b78
+head: b287053cd2cbe8e09f89adc2a006c5ffddb6646c
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy

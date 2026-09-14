@@ -46,12 +46,12 @@
   "hold_flash": 1,
   "feat_head": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
   "FEAT_HEAD": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
-  "head": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2",
-  "HEAD": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2",
-  "tip": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2",
-  "TIP": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2",
-  "pin": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2",
-  "tip_short": "88f651598",
-  "HEAD_short": "88f651598",
-  "pinned_head": "88f6515989f02df5f87ca5f4fa846bc49e7d74a2"
+  "head": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "HEAD": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "tip": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "TIP": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "pin": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "pinned_head": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "tip_short": "b287053cd",
+  "HEAD_short": "b287053cd"
 }

@@ -1,7 +1,37 @@
 {
   "meaningful_iter": 2384,
   "version": "1.15.1884-usability",
-  "head": "999285175d77cb9b3ec44e2461d1e795872c6b78",
+  "head": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
   "feat": "LIFE_CELL_ATP5PO",
-  "status": "PASS"
+  "status": "PASS",
+  "HEAD": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "tip": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "TIP": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "pin": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "pinned_head": "b287053cd2cbe8e09f89adc2a006c5ffddb6646c",
+  "tip_short": "b287053cd",
+  "HEAD_short": "b287053cd",
+  "feat_head": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
+  "FEAT_HEAD": "54073aa57aa923bea2dc5dd3c98807342b75bd4d",
+  "asserts_ok": 384,
+  "proofs": {
+    "life": 83,
+    "atomic": 152,
+    "mesh": 149,
+    "total": 384,
+    "fail": 0
+  },
+  "proof_sum": {
+    "life": 83,
+    "atomic": 152,
+    "mesh": 149,
+    "sum": 384,
+    "asserts_fail": 0
+  },
+  "mi": 2384,
+  "MI": 2384,
+  "feature": "life_cell_atp5po",
+  "VERSION": "1.15.1884-usability",
+  "pass": true,
+  "sealed": true
 }
