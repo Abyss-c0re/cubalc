@@ -18139,6 +18139,180 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* LISTINHERITEDFIELDS|INHERITEDFIELDS|PARENTFIELDS Class|obj — newline bag of
+   * fields present on class/obj but NOT owned here (pure inherit from ancestors).
+   * Multi-file EXTEND pack: what this unit reuses vs contributes.
+   * Dual of LISTOWNFIELDS. LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTINHERITEDFIELDS") || kw(&L->cur, "INHERITEDFIELDS") ||
+      kw(&L->cur, "PARENTFIELDS") || kw(&L->cur, "INHERIT_FIELDS") ||
+      kw(&L->cur, "LISTPARENTFIELDS") || kw(&L->cur, "FIELDS_INHERITED")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, fi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTINHERITEDFIELDS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (fi = 0; fi < cd->n_fields; fi++) {
+        FieldDef *fd = &cd->fields[fi];
+        const char *fname = fd->name;
+        int own = 0;
+        if (cd->parent_idx < 0 || cd->parent_idx >= vm->n_classes) {
+          own = 1; /* root owns all */
+        } else {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int g = 0, seen = 0;
+          while (walk && g++ < CUBALC_MAX_CLASSES) {
+            int pfi = oop_field_idx(walk, fname);
+            if (pfi >= 0) {
+              seen = 1;
+              if (!oop_field_def_same(fd, &walk->fields[pfi]))
+                own = 1; /* override default = own */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+          if (!seen) own = 1; /* introduced here */
+        }
+        if (!own) {
+          size_t ln = strlen(fname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, fname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTINHERITEDFIELDS", bag);
+    var_set_str(vm, "INHERITEDFIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "INHERITEDFIELDS_N", n);
+    var_set_num(vm, "LISTINHERITEDFIELDS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTINHERITEDMETHODS|INHERITEDMETHODS|PARENTMETHODS Class|obj — newline bag
+   * of methods present but NOT owned here (pure inherit same body).
+   * Multi-file EXTEND pack reuse probe. Dual of LISTOWNMETHODS.
+   * LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTINHERITEDMETHODS") || kw(&L->cur, "INHERITEDMETHODS") ||
+      kw(&L->cur, "PARENTMETHODS") || kw(&L->cur, "INHERIT_METHODS") ||
+      kw(&L->cur, "LISTPARENTMETHODS") || kw(&L->cur, "METHODS_INHERITED")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, mi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTINHERITEDMETHODS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (mi = 0; mi < cd->n_methods; mi++) {
+        MethodDef *md = &cd->methods[mi];
+        const char *mname = md->name;
+        int own = 1;
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int pguard = 0;
+          while (walk && pguard++ < CUBALC_MAX_CLASSES) {
+            MethodDef *pm = oop_find_method(walk, mname);
+            if (pm) {
+              if (pm->body == md->body && pm->len == md->len)
+                own = 0; /* pure inherit same body pointer */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+        }
+        if (!own) {
+          size_t ln = strlen(mname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, mname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTINHERITEDMETHODS", bag);
+    var_set_str(vm, "INHERITEDMETHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "INHERITEDMETHODS_N", n);
+    var_set_num(vm, "LISTINHERITEDMETHODS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).

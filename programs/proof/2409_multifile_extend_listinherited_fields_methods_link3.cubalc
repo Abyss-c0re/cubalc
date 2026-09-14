@@ -1,0 +1,163 @@
+# Proof 2409 — MULTIFILE_EXTEND_LISTINHERITED_FIELDS_METHODS_LINK3
+# Three-unit multi-file CLASS EXTEND/link + LISTINHERITEDFIELDS + LISTINHERITEDMETHODS.
+# Dual of LISTOWNFIELDS/LISTOWNMETHODS: pure-inherit reuse bags for pack probes.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# Greeter root: no inherited fields/methods
+LISTINHERITEDFIELDS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT INHERITEDFIELDS_N == 0
+ASSERT LISTINHERITEDFIELDS_N == 0
+
+LISTINHERITEDMETHODS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT INHERITEDMETHODS_N == 0
+
+# own dual still works
+LISTOWNFIELDS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT OWNFIELDS_N == 3
+
+# TagGreeter: inherits name+hits (tag is own override default)
+LISTINHERITEDFIELDS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT INHERITEDFIELDS_N == 2
+# bag must contain name and hits (order as class field table)
+HASOWNFIELD TagGreeter tag
+ASSERT LAST_N == 1
+HASOWNFIELD TagGreeter name
+ASSERT LAST_N == 0
+HASOWNFIELD TagGreeter hits
+ASSERT LAST_N == 0
+
+LISTOWNFIELDS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "tag"
+
+# TagGreeter methods: hi/set_tag/base_hi/shout owned; bump/init/greet/reset inherited
+LISTINHERITEDMETHODS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+ASSERT INHERITEDMETHODS_N >= 2
+OVERRIDES TagGreeter hi
+ASSERT LAST_N == 1
+OVERRIDES TagGreeter bump
+ASSERT LAST_N == 0
+
+LISTOWNMETHODS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N >= 3
+ASSERT OWNMETHODS_N >= 3
+
+# LoudTag: inherits name/hits/tag; owns bang
+LISTINHERITEDFIELDS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT INHERITEDFIELDS_N == 3
+HASOWNFIELD LoudTag bang
+ASSERT LAST_N == 1
+HASOWNFIELD LoudTag tag
+ASSERT LAST_N == 0
+HASOWNFIELD LoudTag name
+ASSERT LAST_N == 0
+
+LISTOWNFIELDS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LAST == "bang"
+
+# LoudTag methods: hi/mark/mid_hi/root_hi owned; bump and others inherited
+LISTINHERITEDMETHODS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+ASSERT INHERITEDMETHODS_N >= 2
+OVERRIDES LoudTag hi
+ASSERT LAST_N == 1
+OVERRIDES LoudTag bump
+ASSERT LAST_N == 0
+OVERRIDES LoudTag mark
+ASSERT LAST_N == 1
+
+LISTOWNMETHODS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 4
+ASSERT OWNMETHODS_N >= 4
+
+# live object dual
+NEW LoudTag lt "atlas"
+LISTINHERITEDFIELDS lt
+ASSERT OK == 1
+ASSERT LAST_N == 3
+ASSERT INHERITEDFIELDS_N == 3
+LISTINHERITEDMETHODS lt
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+ASSERT INHERITEDMETHODS_N >= 2
+LISTOWNFIELDS lt
+ASSERT LAST_N == 1
+ASSERT LAST == "bang"
+LISTOWNMETHODS lt
+ASSERT LAST_N >= 4
+
+# partition invariant: own + inherited field counts cover LISTFIELDS
+LISTFIELDS LoudTag
+ASSERT OK == 1
+LET all_f = LAST_N
+LISTOWNFIELDS LoudTag
+LET own_f = LAST_N
+LISTINHERITEDFIELDS LoudTag
+LET inh_f = LAST_N
+LET sum_f = own_f + inh_f
+ASSERT sum_f == all_f
+
+# aliases
+INHERITEDFIELDS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 3
+PARENTFIELDS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 2
+INHERITEDMETHODS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+PARENTMETHODS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+
+# origin still coherent
+FIELDORIGIN LoudTag bang
+ASSERT LAST == "LoudTag"
+FIELDORIGIN LoudTag name
+ASSERT LAST == "Greeter"
+METHODORIGIN LoudTag hi
+ASSERT LAST == "LoudTag"
+METHODORIGIN LoudTag bump
+ASSERT LAST == "Greeter"
+
+PRINT "PASS multifile LISTINHERITEDFIELDS/METHODS link3"
