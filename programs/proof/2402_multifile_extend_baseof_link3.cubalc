@@ -1,0 +1,107 @@
+# Proof 2402 — MULTIFILE_EXTEND_BASEOF_LINK3
+# Three-unit multi-file CLASS EXTEND/link + BASEOF/HASPARENT + CLASSINFO parent.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+# unit 1: base CLASS
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1 "base Greeter present"
+
+# unit 2: EXTEND reopen (add methods, no redefine)
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1 "reopen flagged"
+HASMETHOD Greeter reset
+ASSERT LAST_N == 1 "reset after EXTEND"
+HASMETHOD Greeter greet
+ASSERT LAST_N == 1 "greet after EXTEND"
+HASMETHOD Greeter hi
+ASSERT LAST_N == 1 "base hi retained"
+
+# unit 3: child CLASS EXTEND Greeter (inherit + parent_idx)
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+ASSERT EXTEND_N == 1 "child extend"
+HASCLASS LoudGreeter
+ASSERT LAST_N == 1
+
+# BASEOF / GETBASE on child class
+BASEOF LoudGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter" "BASEOF class"
+ASSERT BASE == "Greeter"
+ASSERT PARENTCLASS == "Greeter"
+ASSERT LAST_N == 1
+ASSERT HASPARENT_N == 1
+
+HASPARENT LoudGreeter
+ASSERT LAST_N == 1 "HASPARENT child"
+ASSERT BASE == "Greeter"
+
+# base has no parent
+BASEOF Greeter
+ASSERT LAST == "" "Greeter root"
+ASSERT LAST_N == 0
+HASPARENT Greeter
+ASSERT LAST_N == 0 "no parent on base"
+ASSERT HASPARENT_N == 0
+
+# live instance path
+NEW LoudGreeter lg "atlas"
+ASSERT OK == 1
+ISOF lg LoudGreeter
+ASSERT LAST_N == 1
+ISOF lg Greeter
+ASSERT LAST_N == 1 "ISOF chain through parent"
+
+BASEOF lg
+ASSERT LAST == "Greeter" "BASEOF obj"
+ASSERT LAST_N == 1
+HASPARENT lg
+ASSERT LAST_N == 1
+
+# inherited + own methods
+SEND lg hi
+ASSERT LAST == "atlas" "inherited hi"
+SEND lg shout
+ASSERT LAST == "atlas" "child shout uses inherited hi"
+SEND lg mark
+ASSERT LAST == "!" "child field bang"
+SEND lg reset
+ASSERT LAST == "world" "inherited reset via EXTEND reopen"
+GETF lg name
+ASSERT LAST == "world"
+
+# CLASSINFO plate carries parent:
+CLASSINFO LoudGreeter
+ASSERT OK == 1
+SYS HAS LAST "parent:Greeter"
+ASSERT LAST_N == 1 "CLASSINFO parent bag"
+SYS HAS LAST "name:LoudGreeter"
+ASSERT LAST_N == 1
+ASSERT BASE == "Greeter"
+ASSERT PARENTCLASS == "Greeter"
+ASSERT HASPARENT_N == 1
+SYS HAS METHODS "shout"
+ASSERT LAST_N == 1
+SYS HAS METHODS "hi"
+ASSERT LAST_N == 1
+SYS HAS METHODS "reset"
+ASSERT LAST_N == 1
+
+CLASSINFO JSON LoudGreeter
+ASSERT OK == 1
+SYS HAS LAST "\"parent\":\"Greeter\""
+ASSERT LAST_N == 1 "CLASSINFO JSON parent"
+SYS HAS LAST "cubalc.class.v1"
+ASSERT LAST_N == 1
+
+# GETBASE alias
+GETBASE LoudGreeter
+ASSERT LAST == "Greeter" "GETBASE alias"
+
+PRINT "multifile_extend_baseof_link3 ok"
+ASSERT OK == 1

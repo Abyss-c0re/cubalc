@@ -82,6 +82,7 @@ typedef struct {
   MethodDef methods[CUBALC_MAX_METHODS];
   int n_methods;
   char role[24]; /* COP default cube role when CUBE/ENTITY OF class */
+  int parent_idx; /* -1 none; else base CLASS for EXTEND/ISOF chain */
 } ClassDef;
 
 typedef struct {

@@ -179,6 +179,175 @@ static MethodDef *oop_find_method(ClassDef *cd, const char *mname){
     if (strcmp(cd->methods[i].name, mname) == 0) return &cd->methods[i];
   return NULL;
 }
+
+/* Copy parent fields/methods into child (flatten). Child may override methods
+ * by same name later. parent_idx kept for ISOF chain. Returns 0 ok, -1 fail. */
+static int oop_inherit_flatten(VM *vm, ClassDef *cd, ClassDef *base){
+  int i, j;
+  if (!cd || !base) return -1;
+  for (i = 0; i < base->n_fields; i++) {
+    FieldDef *pf = &base->fields[i];
+    int hit = 0;
+    for (j = 0; j < cd->n_fields; j++) {
+      if (strcmp(cd->fields[j].name, pf->name) == 0) { hit = 1; break; }
+    }
+    if (hit) continue;
+    if (cd->n_fields >= CUBALC_MAX_FIELDS) {
+      fail(vm, "EXTEND too many FIELD from base");
+      return -1;
+    }
+    cd->fields[cd->n_fields++] = *pf;
+  }
+  for (i = 0; i < base->n_methods; i++) {
+    MethodDef *pm = &base->methods[i];
+    int hit = 0;
+    for (j = 0; j < cd->n_methods; j++) {
+      if (strcmp(cd->methods[j].name, pm->name) == 0) { hit = 1; break; }
+    }
+    if (hit) continue;
+    if (cd->n_methods >= CUBALC_MAX_METHODS) {
+      fail(vm, "EXTEND too many METHOD from base");
+      return -1;
+    }
+    cd->methods[cd->n_methods++] = *pm;
+  }
+  if (base->role[0] && (!cd->role[0] || strcmp(cd->role, "body") == 0))
+    snprintf(cd->role, sizeof cd->role, "%s", base->role);
+  return 0;
+}
+
+/* ISOF chain: obj class or any parent matches cname */
+static int oop_isof_chain(VM *vm, int class_idx, const char *cname){
+  int guard = 0;
+  while (class_idx >= 0 && class_idx < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+    ClassDef *cd = &vm->classes[class_idx];
+    if (strcmp(cd->name, cname) == 0) return 1;
+    class_idx = cd->parent_idx;
+  }
+  return 0;
+}
+
+/* Shared FIELD/METHOD/ROLE body parser for CLASS and EXTEND reopen.
+ * Returns 0 ok, -1 fail. Stops after consuming END. */
+static int oop_parse_class_body(VM *vm, Lex *L, ClassDef *cd, const char *cname){
+  for (;;) {
+    skip_nl(L);
+    if (L->cur.kind == TK_EOF) {
+      snprintf(vm->err, sizeof vm->err, "CLASS/EXTEND %s without END", cname);
+      fail_at(vm, L, vm->err);
+      return -1;
+    }
+    if (kw(&L->cur, "END")) { lex_next(L); break; }
+    if (kw(&L->cur, "FIELD") || kw(&L->cur, "VAR") || kw(&L->cur, "PROP") ||
+        kw(&L->cur, "MEMBER") || kw(&L->cur, "COMPONENT") ||
+        kw(&L->cur, "ATTR")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "FIELD name"); return -1; }
+      {
+        char fname[32];
+        int fi = -1, i;
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+        lex_next(L);
+        for (i = 0; i < cd->n_fields; i++) {
+          if (strcmp(cd->fields[i].name, fname) == 0) { fi = i; break; }
+        }
+        if (fi < 0) {
+          if (cd->n_fields >= CUBALC_MAX_FIELDS) {
+            fail(vm, "too many FIELD"); return -1;
+          }
+          fi = cd->n_fields++;
+          memset(&cd->fields[fi], 0, sizeof cd->fields[fi]);
+          snprintf(cd->fields[fi].name, sizeof cd->fields[fi].name, "%s", fname);
+        }
+        {
+          FieldDef *fd = &cd->fields[fi];
+          if (L->cur.kind == TK_EQ) lex_next(L);
+          if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+              L->cur.kind == TK_LPAREN) {
+            fd->def_num = parse_expr(vm, L);
+            fd->has_def = 1;
+            fd->is_str = 0;
+          } else if (L->cur.kind == TK_STR) {
+            snprintf(fd->def_str, sizeof fd->def_str, "%s", L->cur.text);
+            fd->is_str = 1;
+            fd->has_def = 1;
+            lex_next(L);
+          } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "FIELD") &&
+                     !kw(&L->cur, "METHOD") && !kw(&L->cur, "END") &&
+                     !kw(&L->cur, "ROLE") && !kw(&L->cur, "VAR") &&
+                     !kw(&L->cur, "PROP") && !kw(&L->cur, "FN") &&
+                     !kw(&L->cur, "ATTR") && !kw(&L->cur, "MEMBER")) {
+            snprintf(fd->def_str, sizeof fd->def_str, "%s", L->cur.text);
+            fd->is_str = 1;
+            fd->has_def = 1;
+            lex_next(L);
+          }
+        }
+      }
+      continue;
+    }
+    if (kw(&L->cur, "ROLE")) {
+      lex_next(L);
+      if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+        snprintf(cd->role, sizeof cd->role, "%s", L->cur.text);
+        lex_next(L);
+      }
+      continue;
+    }
+    if (kw(&L->cur, "METHOD") || kw(&L->cur, "FN") || kw(&L->cur, "FUNC") ||
+        kw(&L->cur, "DEF") || kw(&L->cur, "UPDATE") || kw(&L->cur, "HANDLER")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT) { fail(vm, "METHOD name"); return -1; }
+      {
+        char mname[32];
+        int mi = -1, i;
+        MethodDef *md;
+        size_t b0, b1;
+        int depth = 1;
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+        lex_next(L);
+        for (i = 0; i < cd->n_methods; i++) {
+          if (strcmp(cd->methods[i].name, mname) == 0) { mi = i; break; }
+        }
+        if (mi < 0) {
+          if (cd->n_methods >= CUBALC_MAX_METHODS) {
+            fail(vm, "too many METHOD"); return -1;
+          }
+          mi = cd->n_methods++;
+          memset(&cd->methods[mi], 0, sizeof cd->methods[mi]);
+        } else {
+          memset(&cd->methods[mi], 0, sizeof cd->methods[mi]);
+        }
+        md = &cd->methods[mi];
+        snprintf(md->name, sizeof md->name, "%s", mname);
+        while (md->n_params < 8 && L->cur.kind == TK_IDENT &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "THEN")) {
+          snprintf(md->params[md->n_params], sizeof md->params[0], "%s",
+                   L->cur.text);
+          md->n_params++;
+          lex_next(L);
+        }
+        skip_nl(L);
+        b0 = L->tok_off;
+        while (L->cur.kind != TK_EOF) {
+          if (block_scan_step(L, &depth, 0)) break;
+        }
+        if (depth != 0) { fail(vm, "METHOD without END"); return -1; }
+        b1 = L->tok_off;
+        if (b1 < b0) b1 = b0;
+        md->body = L->s + b0;
+        md->len = b1 - b0;
+        if (kw(&L->cur, "END")) lex_next(L);
+      }
+      continue;
+    }
+    snprintf(vm->err, sizeof vm->err, "CLASS/EXTEND %s unknown form '%s'", cname,
+             L->cur.text[0] ? L->cur.text : "?");
+    fail(vm, vm->err);
+    return -1;
+  }
+  return 0;
+}
 /* WHEN multi-alias numeric atom: prim + * / % + - without AND/OR
  * so `WHEN 4 OR 5 OR 6` is three arms, not (4||5||6). */
 static long case_when_num_atom(VM *vm, Lex *L){
@@ -792,122 +961,98 @@ static int oop_new_instance(VM *vm, const char *cname, const char *oname,
 }
 
 int cubalc_lang_ops_flow(VM *vm, Lex *L){
-  /* ---- OOP: CLASS / TYPE â¦ FIELD â¦ METHOD â¦ END ---- */
-  if (kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
-    lex_next(L);
-    if (L->cur.kind != TK_IDENT) { fail_at(vm, L, "CLASS needs name â CLASS Ticket â¦ END"); return -1; }
+  /* ---- OOP: CLASS / TYPE … FIELD … METHOD … END ----
+   * CLASS Name [EXTEND|EXTENDS|OF|FROM|: Base] … END
+   * EXTEND Name … END — multi-file reopen: add/override FIELD/METHOD on existing CLASS.
+   * Usability: base in lib A, methods in unit B after INCLUDE — no hollow redefine. */
+  if (kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+      kw(&L->cur, "EXTEND") || kw(&L->cur, "EXTENDS")) {
+    int is_extend_kw = kw(&L->cur, "EXTEND") || kw(&L->cur, "EXTENDS");
     char cname[48];
+    char base_name[48];
+    ClassDef *cd;
+    ClassDef *base = NULL;
+    int reopen = 0;
+    int base_idx = -1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail_at(vm, L, is_extend_kw
+              ? "EXTEND needs ClassName — EXTEND Greeter … END"
+              : "CLASS needs name — CLASS Ticket … END");
+      return -1;
+    }
     snprintf(cname, sizeof cname, "%s", L->cur.text);
     lex_next(L);
+    base_name[0] = 0;
+    /* CLASS Child EXTEND Parent | CLASS Child : Parent | CLASS Child OF Parent */
+    if (!is_extend_kw &&
+        (kw(&L->cur, "EXTEND") || kw(&L->cur, "EXTENDS") ||
+         kw(&L->cur, "OF") || kw(&L->cur, "FROM") ||
+         kw(&L->cur, "BASE") || kw(&L->cur, "ISA") ||
+         (L->cur.kind == TK_COLON))) {
+      if (L->cur.kind == TK_COLON) lex_next(L);
+      else lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail_at(vm, L, "CLASS EXTEND needs base name — CLASS Child EXTEND Parent");
+        return -1;
+      }
+      snprintf(base_name, sizeof base_name, "%s", L->cur.text);
+      lex_next(L);
+    }
     skip_nl(L);
-    if (vm->n_classes >= CUBALC_MAX_CLASSES) {
-      fail(vm, "too many CLASS"); return -1;
-    }
-    if (oop_find_class(vm, cname)) {
-      snprintf(vm->err, sizeof vm->err, "CLASS redefine %s", cname);
-      fail(vm, vm->err); return -1;
-    }
-    {
-      ClassDef *cd = &vm->classes[vm->n_classes++];
-      memset(cd, 0, sizeof *cd);
-      snprintf(cd->name, sizeof cd->name, "%s", cname);
-      snprintf(cd->role, sizeof cd->role, "body");
-      for (;;) {
-        skip_nl(L);
-        if (L->cur.kind == TK_EOF) { fail_at(vm, L, "CLASS without END â close with END"); return -1; }
-        if (kw(&L->cur, "END")) { lex_next(L); break; }
-        if (kw(&L->cur, "FIELD") || kw(&L->cur, "VAR") || kw(&L->cur, "PROP") ||
-            kw(&L->cur, "MEMBER") || kw(&L->cur, "COMPONENT") ||
-            kw(&L->cur, "ATTR")) {
-          lex_next(L);
-          if (L->cur.kind != TK_IDENT) { fail(vm, "FIELD name"); return -1; }
-          if (cd->n_fields >= CUBALC_MAX_FIELDS) {
-            fail(vm, "too many FIELD"); return -1;
-          }
-          {
-            FieldDef *fd = &cd->fields[cd->n_fields++];
-            memset(fd, 0, sizeof *fd);
-            snprintf(fd->name, sizeof fd->name, "%s", L->cur.text);
-            lex_next(L);
-            if (L->cur.kind == TK_EQ) lex_next(L);
-            if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
-                L->cur.kind == TK_LPAREN) {
-              fd->def_num = parse_expr(vm, L);
-              fd->has_def = 1;
-              fd->is_str = 0;
-            } else if (L->cur.kind == TK_STR) {
-              snprintf(fd->def_str, sizeof fd->def_str, "%s", L->cur.text);
-              fd->is_str = 1;
-              fd->has_def = 1;
-              lex_next(L);
-            } else if (L->cur.kind == TK_IDENT && !kw(&L->cur, "FIELD") &&
-                       !kw(&L->cur, "METHOD") && !kw(&L->cur, "END") &&
-                       !kw(&L->cur, "ROLE") && !kw(&L->cur, "COMPONENT") &&
-                       !kw(&L->cur, "ATTR")) {
-              long v = parse_expr(vm, L);
-              fd->def_num = v;
-              fd->has_def = 1;
-              fd->is_str = 0;
-            }
-          }
-          continue;
-        }
-        if (kw(&L->cur, "ROLE")) {
-          lex_next(L);
-          if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
-            snprintf(cd->role, sizeof cd->role, "%s", L->cur.text);
-            lex_next(L);
-          }
-          continue;
-        }
-        if (kw(&L->cur, "METHOD") || kw(&L->cur, "FN") || kw(&L->cur, "FUNC") ||
-            kw(&L->cur, "DEF") || kw(&L->cur, "UPDATE") || kw(&L->cur, "HANDLER")) {
-          lex_next(L);
-          if (L->cur.kind != TK_IDENT) { fail(vm, "METHOD name"); return -1; }
-          if (cd->n_methods >= CUBALC_MAX_METHODS) {
-            fail(vm, "too many METHOD"); return -1;
-          }
-          {
-            MethodDef *md = &cd->methods[cd->n_methods++];
-            size_t b0, b1;
-            int depth = 1;
-            memset(md, 0, sizeof *md);
-            snprintf(md->name, sizeof md->name, "%s", L->cur.text);
-            lex_next(L);
-            while (md->n_params < 8 && L->cur.kind == TK_IDENT &&
-                   !kw(&L->cur, "END") && !kw(&L->cur, "THEN")) {
-              snprintf(md->params[md->n_params], sizeof md->params[0], "%s",
-                       L->cur.text);
-              md->n_params++;
-              lex_next(L);
-            }
-            skip_nl(L);
-            b0 = L->tok_off;
-            while (L->cur.kind != TK_EOF) {
-              if (block_scan_step(L, &depth, 0)) break;
-            }
-            if (depth != 0) { fail(vm, "METHOD without END"); return -1; }
-            b1 = L->tok_off;
-            if (b1 < b0) b1 = b0;
-            md->body = L->s + b0;
-            md->len = b1 - b0;
-            if (kw(&L->cur, "END")) lex_next(L);
-          }
-          continue;
-        }
-        snprintf(vm->err, sizeof vm->err, "CLASS %s unknown form '%s'", cname,
-                 L->cur.text[0] ? L->cur.text : "?");
+    if (is_extend_kw) {
+      /* reopen existing class (multi-file link) */
+      cd = oop_find_class(vm, cname);
+      if (!cd) {
+        snprintf(vm->err, sizeof vm->err,
+                 "EXTEND unknown CLASS %s — CLASS/INCLUDE first", cname);
         fail(vm, vm->err);
         return -1;
       }
-      var_set_str(vm, "CLASS", cname);
-      var_set_num(vm, "NFIELDS", cd->n_fields);
-      var_set_num(vm, "NMETHODS", cd->n_methods);
-      var_set_num(vm, "OK", 1);
-      if (vm->trace)
-        fprintf(vm->trace, "# CLASS %s fields=%d methods=%d\n", cname,
-                cd->n_fields, cd->n_methods);
+      reopen = 1;
+    } else {
+      if (vm->n_classes >= CUBALC_MAX_CLASSES) {
+        fail(vm, "too many CLASS"); return -1;
+      }
+      if (oop_find_class(vm, cname)) {
+        snprintf(vm->err, sizeof vm->err, "CLASS redefine %s — use EXTEND %s", cname, cname);
+        fail(vm, vm->err); return -1;
+      }
+      if (base_name[0]) {
+        base = oop_find_class(vm, base_name);
+        if (!base) {
+          snprintf(vm->err, sizeof vm->err,
+                   "CLASS EXTEND base '%s' missing — INCLUDE/CLASS first", base_name);
+          fail(vm, vm->err);
+          return -1;
+        }
+        base_idx = oop_find_class_idx(vm, base_name);
+      }
+      cd = &vm->classes[vm->n_classes++];
+      memset(cd, 0, sizeof *cd);
+      snprintf(cd->name, sizeof cd->name, "%s", cname);
+      snprintf(cd->role, sizeof cd->role, "body");
+      cd->parent_idx = base_idx;
+      if (base) {
+        if (oop_inherit_flatten(vm, cd, base) < 0) return -1;
+      } else {
+        cd->parent_idx = -1;
+      }
     }
+    if (oop_parse_class_body(vm, L, cd, cname) < 0) return -1;
+    var_set_str(vm, "CLASS", cname);
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "NMETHODS", cd->n_methods);
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "EXTEND_N", reopen ? 1 : (base_name[0] ? 1 : 0));
+    if (base_name[0])
+      var_set_str(vm, "BASE", base_name);
+    else if (reopen && cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes)
+      var_set_str(vm, "BASE", vm->classes[cd->parent_idx].name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s fields=%d methods=%d parent=%d\n",
+              reopen ? "EXTEND" : "CLASS", cname, cd->n_fields, cd->n_methods,
+              cd->parent_idx);
     bump(vm);
     return 1;
   }
@@ -16944,7 +17089,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     lex_next(L);
     ob = oop_find_obj(vm, oname);
     if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
-      hit = (strcmp(vm->classes[ob->class_idx].name, cname) == 0) ? 1 : 0;
+      hit = oop_isof_chain(vm, ob->class_idx, cname);
     var_set_num(vm, "LAST_N", hit);
     vm->last_n = hit;
     var_set_num(vm, "OK", 1);
@@ -16973,6 +17118,87 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", cd->name);
     }
     var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* BASEOF|GETBASE|PARENTCLASS|BASECLASS Class|obj
+   * — multi-file EXTEND/link usability: resolve immediate parent CLASS name.
+   * Soft: unknown / no parent → LAST="" LAST_N=0 OK=1 (probe, not fail).
+   * HASPARENT|HASBASE → LAST_N 0|1 only. Complements ISOF chain + CLASSINFO.
+   * Usability: agent link checks without CLASSINFO bag scrape after INCLUDE units. */
+  if (kw(&L->cur, "BASEOF") || kw(&L->cur, "GETBASE") ||
+      kw(&L->cur, "PARENTCLASS") || kw(&L->cur, "BASECLASS") ||
+      kw(&L->cur, "CLASSBASE") || kw(&L->cur, "GETPARENT") ||
+      kw(&L->cur, "PARENT_OF") || kw(&L->cur, "BASE_OF") ||
+      kw(&L->cur, "HASPARENT") || kw(&L->cur, "HASBASE") ||
+      kw(&L->cur, "HAS_PARENT") || kw(&L->cur, "HAS_BASE")) {
+    int want_flag = kw(&L->cur, "HASPARENT") || kw(&L->cur, "HASBASE") ||
+                    kw(&L->cur, "HAS_PARENT") || kw(&L->cur, "HAS_BASE");
+    char a[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    const char *pname = "";
+    int has = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "HASPARENT Class|obj" : "BASEOF Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd && cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+      pname = vm->classes[cd->parent_idx].name;
+      has = 1;
+    }
+    if (want_flag) {
+      var_set_num(vm, "LAST_N", has);
+      vm->last_n = has;
+      var_set_str(vm, "LAST", has ? "1" : "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", has ? "1" : "0");
+      if (has) {
+        var_set_str(vm, "BASE", pname);
+        var_set_str(vm, "PARENTCLASS", pname);
+      } else {
+        var_set_str(vm, "BASE", "");
+        var_set_str(vm, "PARENTCLASS", "");
+      }
+    } else {
+      var_set_str(vm, "LAST", pname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", pname);
+      var_set_num(vm, "LAST_N", has);
+      vm->last_n = has;
+      var_set_str(vm, "BASE", pname);
+      var_set_str(vm, "PARENTCLASS", pname);
+      if (cd)
+        var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_num(vm, "HASPARENT_N", has);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> %s has=%d\n",
+              want_flag ? "HASPARENT" : "BASEOF", a, pname[0] ? pname : "-", has);
     bump(vm);
     return 1;
   }
@@ -17024,7 +17250,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       snprintf(vm->last_str, sizeof vm->last_str, "%s", cd->name);
       var_set_str(vm, "CLASS", cd->name);
       var_set_str(vm, "OBJECT", oname);
-      if (cname[0] && strcmp(cd->name, cname) == 0)
+      if (cname[0] && oop_isof_chain(vm, ob->class_idx, cname))
         hit = 1;
     } else {
       var_set_str(vm, "LAST", "");
@@ -21027,12 +21253,17 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       mbag[mo] = 0;
     }
     if (as_json) {
-      o = (size_t)snprintf(
-          bag, sizeof bag,
-          "{\"schema\":\"cubalc.class.v1\",\"name\":\"%s\",\"role\":\"%s\","
-          "\"n_fields\":%d,\"n_methods\":%d,\"live\":%d,\"fields\":[",
-          cd->name, cd->role[0] ? cd->role : "", cd->n_fields, cd->n_methods,
-          n_live);
+      {
+        const char *parent_name = "";
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes)
+          parent_name = vm->classes[cd->parent_idx].name;
+        o = (size_t)snprintf(
+            bag, sizeof bag,
+            "{\"schema\":\"cubalc.class.v1\",\"name\":\"%s\",\"role\":\"%s\","
+            "\"parent\":\"%s\",\"n_fields\":%d,\"n_methods\":%d,\"live\":%d,\"fields\":[",
+            cd->name, cd->role[0] ? cd->role : "", parent_name,
+            cd->n_fields, cd->n_methods, n_live);
+      }
       for (i = 0; i < cd->n_fields && o + 8 < sizeof bag; i++) {
         if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
         o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
@@ -21051,13 +21282,21 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
         bag[o] = 0;
       }
     } else {
-      o = (size_t)snprintf(
-          bag, sizeof bag,
-          "name:%s\nrole:%s\nn_fields:%d\nn_methods:%d\nlive:%d\nfields:%s\n"
-          "methods:%s",
-          cd->name, cd->role[0] ? cd->role : "", cd->n_fields, cd->n_methods,
-          n_live, fbag, mbag);
-      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+      {
+        const char *parent_name = "";
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes)
+          parent_name = vm->classes[cd->parent_idx].name;
+        o = (size_t)snprintf(
+            bag, sizeof bag,
+            "name:%s\nrole:%s\nparent:%s\nn_fields:%d\nn_methods:%d\nlive:%d\n"
+            "fields:%s\nmethods:%s",
+            cd->name, cd->role[0] ? cd->role : "", parent_name,
+            cd->n_fields, cd->n_methods, n_live, fbag, mbag);
+        if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+        var_set_str(vm, "BASE", parent_name);
+        var_set_str(vm, "PARENTCLASS", parent_name);
+        var_set_num(vm, "HASPARENT_N", parent_name[0] ? 1 : 0);
+      }
     }
     var_set_str(vm, "LAST", bag);
     var_set_str(vm, "CLASSINFO", bag);

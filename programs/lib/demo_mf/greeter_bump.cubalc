@@ -1,0 +1,9 @@
+# unit 3 — EXTEND Greeter with bump after reset unit
+EXTEND Greeter
+  METHOD bump
+    GETF THIS count
+    LET c = LAST_N + 1
+    SETF THIS count c
+    RET c
+  END
+END

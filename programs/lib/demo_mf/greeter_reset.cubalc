@@ -1,0 +1,8 @@
+# unit 2 — EXTEND Greeter with reset after base INCLUDE
+EXTEND Greeter
+  METHOD reset
+    SETF THIS name "world"
+    SETF THIS count 0
+    RET 1
+  END
+END

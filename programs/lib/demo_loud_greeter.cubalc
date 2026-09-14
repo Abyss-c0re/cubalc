@@ -1,0 +1,12 @@
+# multi-file unit 3/3 — child CLASS EXTEND Greeter (parent_idx + inherit)
+CLASS LoudGreeter EXTEND Greeter
+  FIELD bang "!"
+  METHOD shout
+    SEND THIS hi
+    RET LAST
+  END
+  METHOD mark
+    GETF THIS bang
+    RET LAST
+  END
+END
