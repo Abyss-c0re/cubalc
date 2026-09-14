@@ -4,6 +4,6 @@ PROOF: programs/proof/2402_multifile_extend_baseof_link3.cubalc asserts_ok:48 as
 LIBS: demo_greeter_base + demo_greeter_extend + demo_loud_greeter
 RUNTIME: parent_idx · EXTEND reopen · CLASS Child EXTEND Parent · ISOF · BASEOF/HASPARENT · CLASSINFO parent
 VERSION: 1.16.2-baseof
-HEAD: 58dae0306688cb908f7836e9e87e1cf7eac46452
-FEAT_HEAD: 58dae0306688cb908f7836e9e87e1cf7eac46452
+HEAD: ce0ce91050697584ca1fb47ed3f633e849f73d5f
+FEAT_HEAD: ea291a12c75abeae5d9e16b2719d27fac40cf392
 STATUS: PASS
