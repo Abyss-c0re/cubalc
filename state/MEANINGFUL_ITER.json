@@ -20,14 +20,14 @@
   "proof_status": "PASS",
   "pass": true,
   "sealed": true,
-  "head": "06fd1751cab1563a13fdc8d78472c37b9769ca22",
-  "HEAD": "06fd1751cab1563a13fdc8d78472c37b9769ca22",
-  "tip": "06fd1751cab1563a13fdc8d78472c37b9769ca22",
-  "TIP": "06fd1751cab1563a13fdc8d78472c37b9769ca22",
+  "head": "c90028bdd6679f58465778b68d3c1388421be506",
+  "HEAD": "c90028bdd6679f58465778b68d3c1388421be506",
+  "tip": "c90028bdd6679f58465778b68d3c1388421be506",
+  "TIP": "c90028bdd6679f58465778b68d3c1388421be506",
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy; ct101_forever",
   "feat": "19c8cd34313f97d174adc26686e73112777b6b6f",
   "FEAT": "19c8cd34313f97d174adc26686e73112777b6b6f",
   "feature_head": "19c8cd34313f97d174adc26686e73112777b6b6f",
-  "pin": "06fd1751cab1563a13fdc8d78472c37b9769ca22",
-  "PIN": "06fd1751cab1563a13fdc8d78472c37b9769ca22"
+  "pin": "c90028bdd6679f58465778b68d3c1388421be506",
+  "PIN": "c90028bdd6679f58465778b68d3c1388421be506"
 }
