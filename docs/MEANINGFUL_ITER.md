@@ -68,3 +68,9 @@ METHODORIGIN/OVERRIDES defining-class + own-body probes on multi-file CLASS EXTE
 Proof asserts_ok 68 fail 0. VERSION 1.16.6-methodorigin-overrides.
 - proof programs/proof/2406_multifile_extend_methodorigin_overrides_link3.cubalc
 - complements HASANCESTOR/DEPTHOF + HASMETHOD + SENDSUPER
+
+## MI 2417 — NTHSIBLING / FIRSTSIBLING / LASTSIBLING
+
+Multifile CLASS/EXTEND peer probes (excl self). Complements SIBLINGS + NTHCHILD.
+Proof asserts_ok 65 fail 0. VERSION 1.16.18-nthsibling-firstlast.
+- proof programs/proof/2417_multifile_extend_nthsibling_firstlast_link3.cubalc

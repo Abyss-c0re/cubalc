@@ -19,7 +19,7 @@
   "proof_status": "PASS",
   "asserts_ok": 65,
   "asserts_fail": 0,
-  "status": "PASS",
+  "status": "SEALED",
   "pass": true,
   "sealed": true,
   "anti_bloat": true,
@@ -30,5 +30,5 @@
   "forms": "NTHSIBLING|SIBLINGAT + FIRSTSIBLING|ELDERSIBLING + LASTSIBLING|YOUNGSIBLING",
   "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
   "summary": "NTHSIBLING 0-based peer pick; FIRST/LASTSIBLING ends; soft empty for roots/orphans; multifile CLASS EXTEND",
-  "ts": 1789405200
+  "ts": 1789405235
 }

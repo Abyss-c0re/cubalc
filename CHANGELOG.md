@@ -1,3 +1,9 @@
+## 1.16.18-nthsibling-firstlast — MI 2417 MULTIFILE_EXTEND_NTHSIBLING_FIRSTLAST_LINK3
+
+- **NTHSIBLING** / SIBLINGAT — 0-based peer under same parent (excl self)
+- **FIRSTSIBLING** / ELDERSIBLING + **LASTSIBLING** / YOUNGSIBLING — peer ends
+- Proof: `programs/proof/2417_multifile_extend_nthsibling_firstlast_link3.cubalc` asserts_ok=65 fail=0
+
 ## 1.16.17-listleaves-firstleaf-nthleaf — MI 2416 MULTIFILE_EXTEND_LISTLEAVES_FIRSTLEAF_NTHLEAF_LINK3
 
 - **LISTLEAVES** / LEAVESBAG / LEAFNAMES — newline bag of leaf class names in subtree (self if leaf)
