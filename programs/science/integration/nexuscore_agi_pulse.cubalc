@@ -1,0 +1,73 @@
+// nexuscore_agi_pulse — CubalC language-consciousness AGI breath for NexusCore
+// Cognitive mesh: sense → memory → reason → plan → act → reflect → we → body
+// Host nexuscore-smx carries mesh; this program is matrix SoT cognition (no LLM).
+// Law: cube_is_sot; free_energy_must_flow; binary_hot_path; CT101 never touched.
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_pulse | hold_flash=1 | creed=cube_agi |"
+
+CUBE sense   ROLE observer      PROTON 1
+CUBE memory  ROLE kernel_sot    PROTON 1
+CUBE reason  ROLE architect     PROTON 1
+CUBE plan    ROLE creator       PROTON 1
+CUBE act     ROLE construct     PROTON 1
+CUBE reflect ROLE consolidator  PROTON 1
+CUBE we      ROLE nexuscore     PROTON 1
+CUBE body    ROLE nanobot       PROTON 1
+
+FOLDBITS memory  "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS sense   "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS reason  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS plan    "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS act     "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS reflect "0000111111110000000011111111000000001111111100000000111111110000"
+FOLDBITS we      "1111111111111111000000000000000011111111111111110000000000000000"
+FOLDBITS body    "1110001110001110001110001110001110001110001110001110001110001110"
+
+PLUG sense memory
+PLUG memory reason
+PLUG reason plan
+PLUG plan act
+PLUG act reflect
+PLUG reflect we
+PLUG we body
+PLUG body memory
+PLUG sense reason
+PLUG plan reflect
+PLUG we memory
+
+IMPULSE sense 1
+IMPULSE memory 1
+IMPULSE reason 1
+IMPULSE plan 1
+IMPULSE act 1
+IMPULSE reflect 1
+IMPULSE we 1
+IMPULSE body 1
+
+ENERGYFLOW 6
+FLOW 4
+HARMONY we
+RESOLVE we
+DECIDE reason
+DECIDE plan
+DECIDE we
+COMPARE memory we
+COMPARE reason plan
+
+IMPULSE we 1
+IMPULSE body 1
+ENERGYFLOW 3
+FLOW 2
+HARMONY
+RESOLVE we
+DECIDE we
+
+ASSERT ENERGY > 0
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT CUBES >= 8
+ASSERT OK == 1
+ASSERT UNITY >= 50
+
+// NEXUS_AGI decide harmony energy unity smx_ok smx_talks cycles cubes set_mem set_we digit_reason digit_plan
+PRINT "NEXUS_AGI" DECIDE HARMONY ENERGY UNITY 1 0 2 CUBES SET(memory) SET(we) DIGIT(reason) DIGIT(plan)
