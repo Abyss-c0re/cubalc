@@ -1,0 +1,117 @@
+# require version 1.15 ok (have 1.16.4-parents-rootof)
+# CLASS Greeter fields=3 methods=3 parent=-1
+# ok
+# HASCLASS Greeter -> 1
+# ok
+# EXTEND Greeter fields=3 methods=5 parent=-1
+# ok
+# ok
+# ok
+# ok
+# CLASS LoudGreeter fields=4 methods=7 parent=0
+# ok
+# ok
+# HASCLASS LoudGreeter -> 1
+# ok
+# BASEOF LoudGreeter -> Greeter has=1
+# ok
+# ok
+# ok
+# ok
+# ok
+# PARENTS LoudGreeter -> root=Greeter depth=1
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# PARENTS LoudGreeter -> root=Greeter depth=1
+# ok
+# ok
+# PARENTS LoudGreeter -> root=Greeter depth=1
+# ok
+# ROOTOF LoudGreeter -> root=Greeter depth=1
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ROOTOF LoudGreeter -> root=Greeter depth=1
+# ok
+# ROOTOF LoudGreeter -> root=Greeter depth=1
+# ok
+# PARENTS Greeter -> root=Greeter depth=0
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ROOTOF Greeter -> root=Greeter depth=0
+# ok
+# ok
+# ok
+# ok
+# NEW LoudGreeter lg
+# ok
+# ok
+# ok
+# PARENTS lg -> root=Greeter depth=1
+# ok
+# ok
+# ok
+# ROOTOF lg -> root=Greeter depth=1
+# ok
+# ok
+# ok
+# BASEOF lg -> Greeter has=1
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# NEW LoudGreeter pe
+# PARENTS pe -> root=Greeter depth=1
+# ok
+# ROOTOF pe -> root=Greeter depth=1
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# ok
+# CLASS TagGreeter fields=3 methods=8 parent=0
+# ok
+# HASCLASS TagGreeter -> 1
+# ok
+# BASEOF TagGreeter -> Greeter has=1
+# ok
+# PARENTS TagGreeter -> root=Greeter depth=1
+# ok
+# ok
+# ROOTOF TagGreeter -> root=Greeter depth=1
+# ok
+# NEW TagGreeter tg
+# ok
+# SENDSUPER tg.hi via Greeter ok
+# ok
+# PARENTS tg -> root=Greeter depth=1
+# ok
+# ROOTOF tg -> root=Greeter depth=1
+# ok
+multifile_extend_parents_rootof_link3 ok
+# ok
+{"ok":true,"cmd":"run","file":"/root/cubalc-flow-1.5/programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc","stmts":160,"asserts_ok":85,"asserts_fail":0,"n":0,"unity":1.000,"language":"CubalC","version":"1.16.4-parents-rootof","err":"","last_err":"","err_line":0,"err_src":"","why_hint":"ok — no sticky LAST_ERR","quiet":false,"strict":false,"timeout_ms":0,"timed_out":false,"remain_ms":-1,"wall_ms":24,"preload_n":0,"preload":[],"preload_ok":true,"preload_miss_n":0,"preload_miss":[],"include_path_n":0,"require_version":"","require_forms":"","require_fns":"","require_classes":"","require_doctor":false,"require_ready":false,"includes_n":4,"includes":["programs/lib/demo_greeter_base.cubalc","programs/lib/demo_greeter_extend.cubalc","programs/lib/demo_loud_greeter.cubalc","programs/lib/demo_greeter_override.cubalc"],"include_stems_n":4,"include_stems":["demo_greeter_base","demo_greeter_extend","demo_loud_greeter","demo_greeter_override"],"vars_n":68,"vars_max":1024,"vars_full":false,"exit_code":0,"halted":false}
