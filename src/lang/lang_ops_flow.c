@@ -18313,6 +18313,355 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COMMONANCESTOR|LCA|LOWESTCOMMON|COMMONBASE Class|obj Class|obj
+   * — multi-file EXTEND/link usability: lowest common ancestor class name.
+   * Walk B ancestors into a set, then walk A up until hit. LAST = LCA name.
+   * Soft empty if disjoint / unknown. Complements HASANCESTOR + ROOTOF + PARENTS.
+   * SAMECHAIN|SHARECHAIN|RELATED|COCHAIN Class|obj Class|obj — soft 0|1 if
+   * same EXTEND family (LCA exists OR either is ancestor of other OR same class).
+   * Cube Law: free energy must flow; meaningful growth only. */
+  if (kw(&L->cur, "COMMONANCESTOR") || kw(&L->cur, "LCA") ||
+      kw(&L->cur, "LOWESTCOMMON") || kw(&L->cur, "COMMONBASE") ||
+      kw(&L->cur, "COMMON_ANCESTOR") || kw(&L->cur, "LOWEST_COMMON") ||
+      kw(&L->cur, "COMMONPARENT") || kw(&L->cur, "SHAREDBASE") ||
+      kw(&L->cur, "COMMONROOT") || kw(&L->cur, "LCACLASS") ||
+      kw(&L->cur, "SAMECHAIN") || kw(&L->cur, "SHARECHAIN") ||
+      kw(&L->cur, "RELATED") || kw(&L->cur, "COCHAIN") ||
+      kw(&L->cur, "SAME_CHAIN") || kw(&L->cur, "SHARE_CHAIN") ||
+      kw(&L->cur, "ONCHAIN") || kw(&L->cur, "FAMILYOF") ||
+      kw(&L->cur, "SAMEFAMILY") || kw(&L->cur, "ISRELATED")) {
+    int want_flag = kw(&L->cur, "SAMECHAIN") || kw(&L->cur, "SHARECHAIN") ||
+                    kw(&L->cur, "RELATED") || kw(&L->cur, "COCHAIN") ||
+                    kw(&L->cur, "SAME_CHAIN") || kw(&L->cur, "SHARE_CHAIN") ||
+                    kw(&L->cur, "ONCHAIN") || kw(&L->cur, "FAMILYOF") ||
+                    kw(&L->cur, "SAMEFAMILY") || kw(&L->cur, "ISRELATED");
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1;
+    int b_anc[CUBALC_MAX_CLASSES];
+    int b_n = 0, guard = 0, pi, i, hit = 0;
+    const char *lca = "";
+    int same = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "SAMECHAIN Class|obj Class|obj"
+                         : "COMMONANCESTOR Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "AND") || kw(&L->cur, "WITH") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "OF") || kw(&L->cur, "VS") || kw(&L->cur, "X"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_flag ? "SAMECHAIN Class|obj Class|obj"
+                         : "COMMONANCESTOR Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    if (cda && cdb && ai >= 0 && bi >= 0) {
+      if (ai == bi) {
+        lca = cda->name;
+        same = 1;
+        hit = 1;
+      } else {
+        /* collect B + ancestors of B */
+        pi = bi;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          if (b_n < CUBALC_MAX_CLASSES) b_anc[b_n++] = pi;
+          pi = vm->classes[pi].parent_idx;
+        }
+        /* walk A + ancestors; first membership in B-set is LCA (nearest to A) */
+        pi = ai;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          for (i = 0; i < b_n; i++) {
+            if (b_anc[i] == pi) {
+              lca = vm->classes[pi].name;
+              hit = 1;
+              same = 1;
+              guard = CUBALC_MAX_CLASSES; /* break outer */
+              break;
+            }
+          }
+          if (hit) break;
+          pi = vm->classes[pi].parent_idx;
+        }
+      }
+    }
+    if (want_flag) {
+      var_set_num(vm, "LAST_N", same ? 1 : 0);
+      vm->last_n = same ? 1 : 0;
+      var_set_num(vm, "SAMECHAIN_N", same ? 1 : 0);
+      var_set_num(vm, "RELATED_N", same ? 1 : 0);
+      var_set_num(vm, "COCHAIN_N", same ? 1 : 0);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", same ? "1" : "0");
+      var_set_str(vm, "LAST", vm->last_str);
+      if (lca[0]) {
+        var_set_str(vm, "LCA", lca);
+        var_set_str(vm, "COMMONANCESTOR", lca);
+        var_set_str(vm, "COMMON", lca);
+      }
+    } else {
+      var_set_str(vm, "LAST", lca);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", lca);
+      var_set_num(vm, "LAST_N", hit && lca[0] ? 1 : 0);
+      vm->last_n = hit && lca[0] ? 1 : 0;
+      var_set_num(vm, "COMMONANCESTOR_N", hit && lca[0] ? 1 : 0);
+      var_set_num(vm, "LCA_N", hit && lca[0] ? 1 : 0);
+      if (lca[0]) {
+        var_set_str(vm, "LCA", lca);
+        var_set_str(vm, "COMMONANCESTOR", lca);
+        var_set_str(vm, "COMMON", lca);
+        var_set_str(vm, "ORIGIN", lca);
+      }
+      var_set_num(vm, "SAMECHAIN_N", same ? 1 : 0);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "OTHER", cdb->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> lca=%s same=%d\n",
+              want_flag ? "SAMECHAIN" : "COMMONANCESTOR", a, b,
+              lca[0] ? lca : "-", same);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
+   * fields owned here that also exist on an ancestor (default override / redefine).
+   * Multi-file EXTEND pack: contribution that shadows parent slots.
+   * Partition: LISTOWN = introduced+override; LISTINHERITED = pure inherit;
+   * LISTOVERRIDE = own∩ancestor. LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTOVERRIDEFIELDS") || kw(&L->cur, "OVERRIDEFIELDS") ||
+      kw(&L->cur, "REDEFINEDFIELDS") || kw(&L->cur, "OVERRIDE_FIELDS") ||
+      kw(&L->cur, "LISTREDEFINEDFIELDS") || kw(&L->cur, "FIELDS_OVERRIDE")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, fi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOVERRIDEFIELDS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (fi = 0; fi < cd->n_fields; fi++) {
+        FieldDef *fd = &cd->fields[fi];
+        const char *fname = fd->name;
+        int own = 0, seen = 0;
+        if (cd->parent_idx < 0 || cd->parent_idx >= vm->n_classes) {
+          own = 1; /* root: no ancestor → not override */
+        } else {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int g = 0;
+          while (walk && g++ < CUBALC_MAX_CLASSES) {
+            int pfi = oop_field_idx(walk, fname);
+            if (pfi >= 0) {
+              seen = 1;
+              if (!oop_field_def_same(fd, &walk->fields[pfi]))
+                own = 1; /* override default */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+          if (!seen) own = 1; /* introduced here — not override */
+        }
+        /* override = owned AND seen on ancestor with different def */
+        if (own && seen) {
+          size_t ln = strlen(fname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, fname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOVERRIDEFIELDS", bag);
+    var_set_str(vm, "OVERRIDEFIELDS", bag);
+    var_set_str(vm, "REDEFINEDFIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OVERRIDEFIELDS_N", n);
+    var_set_num(vm, "LISTOVERRIDEFIELDS_N", n);
+    var_set_num(vm, "REDEFINEDFIELDS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTOVERRIDEMETHODS|OVERRIDEMETHODS|REDEFINEDMETHODS Class|obj — newline bag
+   * of methods owned here that also exist on an ancestor (body override).
+   * Multi-file EXTEND pack shadow probe. Dual of LISTOVERRIDEFIELDS.
+   * LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTOVERRIDEMETHODS") || kw(&L->cur, "OVERRIDEMETHODS") ||
+      kw(&L->cur, "REDEFINEDMETHODS") || kw(&L->cur, "OVERRIDE_METHODS") ||
+      kw(&L->cur, "LISTREDEFINEDMETHODS") || kw(&L->cur, "METHODS_OVERRIDE")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, mi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOVERRIDEMETHODS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (mi = 0; mi < cd->n_methods; mi++) {
+        MethodDef *md = &cd->methods[mi];
+        const char *mname = md->name;
+        int own = 1, seen = 0;
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int pguard = 0;
+          while (walk && pguard++ < CUBALC_MAX_CLASSES) {
+            MethodDef *pm = oop_find_method(walk, mname);
+            if (pm) {
+              seen = 1;
+              if (pm->body == md->body && pm->len == md->len)
+                own = 0; /* pure inherit same body pointer */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+        }
+        /* override = owned body AND ancestor had same name */
+        if (own && seen) {
+          size_t ln = strlen(mname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, mname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOVERRIDEMETHODS", bag);
+    var_set_str(vm, "OVERRIDEMETHODS", bag);
+    var_set_str(vm, "REDEFINEDMETHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OVERRIDEMETHODS_N", n);
+    var_set_num(vm, "LISTOVERRIDEMETHODS_N", n);
+    var_set_num(vm, "REDEFINEDMETHODS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
   /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
    * is an instance of Class. Complements CLASSNAME + EQS without string glue.
    * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).
