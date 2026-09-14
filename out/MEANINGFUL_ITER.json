@@ -16,19 +16,7 @@
   "method": "listleaves_firstleaf_nthleaf_link3",
   "ship": "2416_multifile_extend_listleaves_firstleaf_nthleaf_link3",
   "proof": "programs/proof/2416_multifile_extend_listleaves_firstleaf_nthleaf_link3.cubalc",
-  "proof_status": "PASS",
   "asserts_ok": 110,
   "asserts_fail": 0,
-  "status": "SEALED",
-  "pass": true,
-  "sealed": true,
-  "anti_bloat": true,
-  "prior_feature": "MULTIFILE_EXTEND_NTHPARENT_HEIGHTOF_LEAFCOUNT_LINK3",
-  "prior_mi": 2415,
-  "domain": "multi-file CLASS EXTEND usability",
-  "gift": "LISTLEAVES subtree leaf bag + FIRSTLEAF/LASTLEAF pick + NTHLEAF index across demo_greeter packs",
-  "forms": "LISTLEAVES|LEAVESBAG|LEAFNAMES + FIRSTLEAF|ELDERLEAF + LASTLEAF|YOUNGLEAF + NTHLEAF|LEAFAT",
-  "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
-  "summary": "LISTLEAVES newline bag of leaves in subtree (self if leaf); FIRSTLEAF/LASTLEAF ends; NTHLEAF 0-based soft OOB; multifile CLASS EXTEND",
-  "ts": 1789404468
+  "status": "PASS"
 }
