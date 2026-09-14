@@ -5,7 +5,7 @@ proof: programs/proof/2378_life_cell_cox4i1.cubalc
 asserts_ok life=60 atomic=150 mesh=147 total=357 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1
 gift: COX4I1 anchors CIV so electrons from CYCS reduce O2 and free energy flows without hollow COX deficiency lock
-feat_head: PENDING
-head: PENDING
+feat_head: 0c9deecc40b1311fd76211ca9f5decd31cccdd35
+head: 0c9deecc40b1311fd76211ca9f5decd31cccdd35
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
