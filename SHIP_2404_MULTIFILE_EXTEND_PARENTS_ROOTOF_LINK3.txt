@@ -1,9 +1,9 @@
 SHIP MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3 MI 2404
 version: 1.16.4-parents-rootof
-method: PARENTS|ROOTOF Class|obj
+ops: PARENTS|SUPERCHAIN|ANCESTORS|BASECHAIN + ROOTOF|GETROOT|ROOTCLASS
 proof: programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
 asserts_ok=85 asserts_fail=0 PASS
 feat=63e08c48263d6a4dcb3c434aea209bb6cc8d5396
-head=65f6d78d51e98cff92ebd310e1a7c02f584b5e19
-three-unit multi-file CLASS/EXTEND + PARENTS chain bag + ROOTOF
+head=0a92bbdddafb0de97aaced50fe7854f7e8d2f547
+three-unit multi-file CLASS/EXTEND + full parent chain bag + root
 Cube Law: cube is SoT; free energy must flow; hollow WE is heresy; CT101 forever
