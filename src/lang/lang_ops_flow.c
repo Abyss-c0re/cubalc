@@ -20201,6 +20201,219 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
 
+  /* COUSINCOUNT + HASCOUSIN (multifile EXTEND)
+   * COUSINCOUNT Class|obj — count of classes that share the same grandparent
+   *   via a different parent (first-cousin peers on EXTEND lattice). Excludes self.
+   * HASCOUSIN Class|obj — 1 if COUSINCOUNT > 0, else 0.
+   * Soft 0 for roots / only-child-of-root / unknown. Complements ARESIBLINGS +
+   * SIBLINGCOUNT + COMMONANCESTOR. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "COUSINCOUNT") || kw(&L->cur, "COUNTCOUSINS") ||
+      kw(&L->cur, "NUMCOUSINS") || kw(&L->cur, "NCOUSINS") ||
+      kw(&L->cur, "COUSIN_COUNT") || kw(&L->cur, "PEERCOUSINCOUNT") ||
+      kw(&L->cur, "HASCOUSIN") || kw(&L->cur, "HASCOUSINS") ||
+      kw(&L->cur, "HAS_COUSIN") || kw(&L->cur, "HAS_COUSINS") ||
+      kw(&L->cur, "HASCOUSIN_P") || kw(&L->cur, "COUSINED_P")) {
+    int want_cnt = kw(&L->cur, "COUSINCOUNT") || kw(&L->cur, "COUNTCOUSINS") ||
+                   kw(&L->cur, "NUMCOUSINS") || kw(&L->cur, "NCOUSINS") ||
+                   kw(&L->cur, "COUSIN_COUNT") || kw(&L->cur, "PEERCOUSINCOUNT");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, ncos = 0, flag = 0;
+    int pa = -1, gpa = -1;
+    const char *opname = want_cnt ? "COUSINCOUNT" : "HASCOUSIN";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_cnt ? "COUSINCOUNT Class|obj" : "HASCOUSIN Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ncos = 0;
+    if (cda && ai >= 0) {
+      pa = cda->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes) {
+        gpa = vm->classes[pa].parent_idx;
+        if (gpa >= 0 && gpa < vm->n_classes) {
+          for (i = 0; i < vm->n_classes; i++) {
+            int p2;
+            if (i == ai) continue;
+            p2 = vm->classes[i].parent_idx;
+            if (p2 < 0 || p2 >= vm->n_classes) continue;
+            if (p2 == pa) continue;
+            if (vm->classes[p2].parent_idx != gpa) continue;
+            ncos++;
+          }
+        }
+      }
+    }
+    flag = ncos > 0 ? 1 : 0;
+    if (want_cnt) {
+      var_set_num(vm, "LAST_N", ncos);
+      vm->last_n = ncos;
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", ncos);
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "COUSINCOUNT", ncos);
+      var_set_num(vm, "COUSINCOUNT_N", ncos);
+      var_set_num(vm, "COUNTCOUSINS_N", ncos);
+      var_set_num(vm, "NUMCOUSINS_N", ncos);
+    } else {
+      var_set_num(vm, "LAST_N", flag);
+      vm->last_n = flag;
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", flag);
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "HASCOUSIN", flag);
+      var_set_num(vm, "HASCOUSIN_N", flag);
+      var_set_num(vm, "HASCOUSINS_N", flag);
+    }
+    var_set_num(vm, "COUSINCOUNT_N", ncos);
+    var_set_num(vm, "HASCOUSIN_N", flag);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> ncos=%d flag=%d\n", opname, a, ncos, flag);
+    bump(vm);
+    return 1;
+  }
+
+  /* ARECOUSINS + ISCOUSIN/COUSINOF (multifile EXTEND)
+   * ARECOUSINS|ISCOUSIN|COUSINOF Class|obj Class|obj
+   * — soft 0|1 if both resolve, distinct, different parents, and those parents
+   * share the same parent_idx (first cousins on EXTEND lattice).
+   * Self / siblings / roots / unknown → 0. Complements COUSINCOUNT + HASCOUSIN +
+   * ARESIBLINGS + COMMONANCESTOR. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ARECOUSINS") || kw(&L->cur, "ARE_COUSINS") ||
+      kw(&L->cur, "ISCOUSIN") || kw(&L->cur, "IS_COUSIN") ||
+      kw(&L->cur, "COUSINOF") || kw(&L->cur, "COUSIN_OF") ||
+      kw(&L->cur, "ISCOUSINOF") || kw(&L->cur, "IS_COUSIN_OF") ||
+      kw(&L->cur, "SHAREGRANDPARENT_P") || kw(&L->cur, "SAMEGRAND_P") ||
+      kw(&L->cur, "COCOUSIN") || kw(&L->cur, "CO_COUSIN")) {
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1, hit = 0;
+    int pa = -1, pb = -1, ga = -1, gb = -1;
+    const char *opname = "ARECOUSINS";
+    lex_next(L);
+    a[0] = b[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARECOUSINS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AND") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "IS") || kw(&L->cur, "TO") || kw(&L->cur, "VS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARECOUSINS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    hit = 0;
+    if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+      pa = cda->parent_idx;
+      pb = cdb->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes && pb >= 0 && pb < vm->n_classes &&
+          pa != pb) {
+        ga = vm->classes[pa].parent_idx;
+        gb = vm->classes[pb].parent_idx;
+        if (ga >= 0 && ga < vm->n_classes && ga == gb)
+          hit = 1;
+      }
+    }
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+    var_set_str(vm, "LAST", vm->last_str);
+    var_set_num(vm, "ARECOUSINS_N", hit ? 1 : 0);
+    var_set_num(vm, "ARECOUSINS", hit ? 1 : 0);
+    var_set_num(vm, "ISCOUSIN_N", hit ? 1 : 0);
+    var_set_num(vm, "ISCOUSIN", hit ? 1 : 0);
+    var_set_num(vm, "COUSINOF_N", hit ? 1 : 0);
+    var_set_num(vm, "OK", (cda && cdb) ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "PEER", cdb->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> %d\n", opname, a, b, hit);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.

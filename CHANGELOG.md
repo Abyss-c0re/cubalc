@@ -1,3 +1,7 @@
+## 1.16.22-arecousins-cousincount-hascousin — MI 2421
+- feat(lang): ARECOUSINS/ISCOUSIN/COUSINOF two-arg first-cousin gate + COUSINCOUNT/HASCOUSIN multifile EXTEND
+- Proof programs/proof/2421_multifile_extend_arecousins_cousincount_hascousin_link3.cubalc
+
 ## 1.16.21-aresiblings-siblingcount-hassibling — MI 2420
 - feat(lang): ARESIBLINGS/ISSIBLING/SIBLINGOF two-arg peer gate + prove SIBLINGCOUNT/HASSIBLING multifile EXTEND
 - Proof programs/proof/2420_multifile_extend_aresiblings_siblingcount_hassibling_link3.cubalc

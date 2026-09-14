@@ -1,0 +1,243 @@
+# Proof 2421 — MULTIFILE_EXTEND_ARECOUSINS_COUSINCOUNT_HASCOUSIN_LINK3
+# Multi-file CLASS EXTEND + ARECOUSINS/ISCOUSIN + COUSINCOUNT + HASCOUSIN.
+# First cousins: share grandparent via different parents on EXTEND lattice.
+# Complements ARESIBLINGS + SIBLINGCOUNT + COMMONANCESTOR + CHILDRANK.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+
+HASCLASS Greeter
+ASSERT LAST_N == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# Lattice:
+# Greeter kids = TagGreeter, TwinGreet
+# TagGreeter kids = LoudTag, SoftTag
+# TwinGreet kids = TwinLeafA, TwinLeafB
+# SoftTag kid = DeepLeaf ; Solo root
+# Cousins: LoudTag/SoftTag <-> TwinLeafA/TwinLeafB (gpa=Greeter)
+CLASS TwinGreet EXTEND Greeter
+  FIELD twin 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS TwinGreet
+ASSERT LAST_N == 1
+
+CLASS SoftTag EXTEND TagGreeter
+  FIELD soft 1
+  METHOD hush
+    RET 0
+  END
+END
+HASCLASS SoftTag
+ASSERT LAST_N == 1
+
+CLASS TwinLeafA EXTEND TwinGreet
+  FIELD a 1
+  METHOD za
+    RET 1
+  END
+END
+HASCLASS TwinLeafA
+ASSERT LAST_N == 1
+
+CLASS TwinLeafB EXTEND TwinGreet
+  FIELD b 1
+  METHOD zb
+    RET 1
+  END
+END
+HASCLASS TwinLeafB
+ASSERT LAST_N == 1
+
+CLASS Solo
+  FIELD x 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS Solo
+ASSERT LAST_N == 1
+
+CLASS DeepLeaf EXTEND SoftTag
+  FIELD deep 1
+  METHOD z
+    RET 1
+  END
+END
+HASCLASS DeepLeaf
+ASSERT LAST_N == 1
+
+# ---- COUSINCOUNT (first cousins under same grandparent, excl self) ----
+# LoudTag parent=TagGreeter; cousins via TwinGreet: TwinLeafA, TwinLeafB → 2
+COUSINCOUNT LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUSINCOUNT_N == 2
+ASSERT COUSINCOUNT == 2
+
+COUSINCOUNT SoftTag
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUSINCOUNT_N == 2
+
+COUSINCOUNT TwinLeafA
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUSINCOUNT_N == 2
+
+COUSINCOUNT TwinLeafB
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT COUSINCOUNT_N == 2
+
+# DeepLeaf parent=SoftTag; SoftTag siblings under TagGreeter = LoudTag only
+# LoudTag kids none → DeepLeaf has 0 first-cousins at this depth
+COUSINCOUNT DeepLeaf
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT COUSINCOUNT_N == 0
+
+# roots / top-level kids (no grandparent) → 0
+COUSINCOUNT Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT COUSINCOUNT_N == 0
+
+COUSINCOUNT TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT COUSINCOUNT_N == 0
+
+COUSINCOUNT TwinGreet
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+COUSINCOUNT Solo
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+COUNTCOUSINS LoudTag
+ASSERT LAST_N == 2
+NUMCOUSINS SoftTag
+ASSERT LAST_N == 2
+NCOUSINS TwinLeafA
+ASSERT LAST_N == 2
+
+# ---- HASCOUSIN ----
+HASCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCOUSIN_N == 1
+ASSERT HASCOUSIN == 1
+
+HASCOUSIN TwinLeafB
+ASSERT LAST_N == 1
+ASSERT HASCOUSIN_N == 1
+
+HASCOUSIN DeepLeaf
+ASSERT LAST_N == 0
+ASSERT HASCOUSIN_N == 0
+
+HASCOUSIN Greeter
+ASSERT LAST_N == 0
+
+HASCOUSIN Solo
+ASSERT LAST_N == 0
+
+HASCOUSINS SoftTag
+ASSERT LAST_N == 1
+HAS_COUSIN TwinLeafA
+ASSERT LAST_N == 1
+
+# ---- ARECOUSINS (two-arg first-cousin gate) ----
+ARECOUSINS LoudTag TwinLeafA
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ARECOUSINS_N == 1
+ASSERT ARECOUSINS == 1
+
+ARECOUSINS LoudTag TwinLeafB
+ASSERT LAST_N == 1
+ASSERT ARECOUSINS_N == 1
+
+ARECOUSINS SoftTag TwinLeafA
+ASSERT LAST_N == 1
+
+ARECOUSINS SoftTag TwinLeafB
+ASSERT LAST_N == 1
+
+ARECOUSINS TwinLeafA LoudTag
+ASSERT LAST_N == 1
+
+# siblings are NOT cousins
+ARECOUSINS LoudTag SoftTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ARECOUSINS_N == 0
+
+ARECOUSINS TwinLeafA TwinLeafB
+ASSERT LAST_N == 0
+
+# self-pair soft 0
+ARECOUSINS LoudTag LoudTag
+ASSERT LAST_N == 0
+
+# parent/child not cousins
+ARECOUSINS TagGreeter LoudTag
+ASSERT LAST_N == 0
+
+ARECOUSINS Greeter TwinLeafA
+ASSERT LAST_N == 0
+
+# DeepLeaf has no first cousins in lattice
+ARECOUSINS DeepLeaf LoudTag
+ASSERT LAST_N == 0
+
+ARECOUSINS DeepLeaf TwinLeafA
+ASSERT LAST_N == 0
+
+# Solo disjoint
+ARECOUSINS Solo LoudTag
+ASSERT LAST_N == 0
+
+# aliases
+ISCOUSIN LoudTag TwinLeafA
+ASSERT LAST_N == 1
+ASSERT ISCOUSIN_N == 1
+
+COUSINOF SoftTag TwinLeafB
+ASSERT LAST_N == 1
+ASSERT COUSINOF_N == 1
+
+SHAREGRANDPARENT_P TwinLeafA LoudTag
+ASSERT LAST_N == 1
+
+SAMEGRAND_P TwinLeafB SoftTag
+ASSERT LAST_N == 1
+
+COCOUSIN LoudTag TwinLeafA
+ASSERT LAST_N == 1
+
+# optional OF glue
+ARECOUSINS LoudTag OF TwinLeafA
+ASSERT LAST_N == 1
+
+ISCOUSIN SoftTag AND TwinLeafB
+ASSERT LAST_N == 1
+
+PRINT "MI2421_ARECOUSINS_COUSINCOUNT_HASCOUSIN_PASS"
