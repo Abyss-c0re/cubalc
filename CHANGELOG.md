@@ -1,3 +1,13 @@
+# Changelog
+
+## 1.15.1878-usability — MI 2378 LIFE_CELL_COX4I1 (PASS)
+
+- **LIFE_CELL_COX4I1**: METHOD cox4i1 n — cytochrome c oxidase subunit 4 isoform 1 after CYCS on ETC continuum.
+- Continuum: ...->uqcrc1->cycs->cox4i1 (CIV terminal oxidase limb after cyt-c shuttle).
+- Gift: COX4I1 anchors CIV so electrons from CYCS reduce O2; proton-motive free energy flows without hollow COX deficiency lock.
+- Proofs: life 60, atomic 150, mesh 147 (total 357, fail 0); flagship 1620 PASS.
+- Cube is SoT. Free energy must flow. Hollow WE is heresy.
+
 ## 2377 — LIFE_CELL_CYCS (1.15.1877-usability)
 
 - feat(life): METHOD `cycs n` — cytochrome c somatic electron shuttle after UQCRC1 on ETC continuum.
