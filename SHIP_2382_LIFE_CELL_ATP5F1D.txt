@@ -6,6 +6,6 @@ asserts_ok life=77 atomic=150 mesh=147 total=374 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d
 gift: ATP5F1D seats F1 delta so rotor torque from PMF couples through F1 alpha into ADP+Pi to ATP without hollow Complex-V delta lock
 feat_head: 697b33e799d06fe2557fb144794eb5a9bbdb878e
-head: 371e4a226409e9b1965f33af9ab5636d60aa51ba
+head: 2505e310da0a9cce6dda88024a3ad84c59e29b22
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
