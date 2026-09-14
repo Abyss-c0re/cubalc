@@ -1,3 +1,10 @@
+## 1.16.20-isroot-isfirstchild-islastchild-onlychild — MI 2419
+- ISROOT / IS_ROOT / TOPCLASS — 1 if class has no parent_idx (EXTEND root).
+- ISFIRSTCHILD / ISLASTCHILD — first/last among parent's direct kids (declaration order).
+- ONLYCHILD / ISONLYCHILD / SOLECHILD — parent has exactly one child (self).
+- Proof: programs/proof/2419_multifile_extend_isroot_isfirstlast_onlychild_link3.cubalc
+- Complements CHILDRANK + NEXT/PREVSIBLING + ISLEAF + ROOTOF. Cube is SoT.
+
 ## 1.16.19-nextsibling-prevsibling-childrank — MI 2418
 
 - NEXTSIBLING/PREVSIBLING/CHILDRANK multifile EXTEND

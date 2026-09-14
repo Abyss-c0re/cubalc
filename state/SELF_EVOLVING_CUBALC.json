@@ -1,1 +1,23 @@
-{"schema":"self_evolving_cubalc.v1","engine":"C","language":"CubalC","version":"1.12.81-universal","gen":2,"races":29,"wins":29,"losses":0,"energy":307.0,"difficulty":1.400,"fitness":0.9625,"best_fitness":0.9625,"unity":0.6211,"algo_solves":232,"algo_fails":0,"program":"programs/evolve/LATEST.cubalc","run_ok":true,"asserts_ok":4,"asserts_fail":0,"status":"WIN path=11 plug=22 face=5","creed":"evolve solves · algo optimizes · C only"}
+{
+  "schema": "self_evolving_cubalc.v1",
+  "engine": "C",
+  "language": "CubalC",
+  "version": "1.16.20-isroot-isfirstchild-islastchild-onlychild",
+  "gen": 148974,
+  "races": 1481950,
+  "wins": 1481950,
+  "losses": 0,
+  "energy": 24793296.0,
+  "difficulty": 4.0,
+  "fitness": 0.9625,
+  "best_fitness": 1.0,
+  "unity": 0.6607,
+  "algo_solves": 11861733,
+  "algo_fails": 99,
+  "program": "programs/evolve/LATEST.cubalc",
+  "run_ok": true,
+  "asserts_ok": 4,
+  "asserts_fail": 0,
+  "status": "WIN path=9 plug=24 face=2",
+  "creed": "evolve solves \u00b7 algo optimizes \u00b7 C only"
+}

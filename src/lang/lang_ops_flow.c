@@ -19874,6 +19874,225 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+
+  /* ISROOT + ISFIRSTCHILD/ISLASTCHILD + ONLYCHILD (multifile EXTEND)
+   * ISROOT Class|obj — 1 if no parent_idx (top of EXTEND chain).
+   * ISFIRSTCHILD / ISLASTCHILD — 1 if self is first/last among parent's kids.
+   * ONLYCHILD — 1 if parent has exactly one direct child (self alone).
+   * Complements CHILDRANK + NEXT/PREVSIBLING + ISLEAF + ROOTOF.
+   * LAST_N / form_N = 0|1 soft. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ISROOT") || kw(&L->cur, "IS_ROOT") ||
+      kw(&L->cur, "NOROOTPARENT") || kw(&L->cur, "TOPCLASS") ||
+      kw(&L->cur, "ISFIRSTCHILD") || kw(&L->cur, "IS_FIRST_CHILD") ||
+      kw(&L->cur, "ISELDERCHILD") || kw(&L->cur, "ISOLDESTCHILD") ||
+      kw(&L->cur, "ISFIRSTKID") || kw(&L->cur, "ELDESTCHILD_P") ||
+      kw(&L->cur, "ISLASTCHILD") || kw(&L->cur, "IS_LAST_CHILD") ||
+      kw(&L->cur, "ISYOUNGCHILD") || kw(&L->cur, "ISNEWESTCHILD") ||
+      kw(&L->cur, "ISLASTKID") || kw(&L->cur, "YOUNGESTCHILD_P") ||
+      kw(&L->cur, "ONLYCHILD") || kw(&L->cur, "ISONLYCHILD") ||
+      kw(&L->cur, "ONLY_CHILD") || kw(&L->cur, "IS_ONLY_CHILD") ||
+      kw(&L->cur, "SOLECHILD") || kw(&L->cur, "HASNOSIB")) {
+    int want_root = kw(&L->cur, "ISROOT") || kw(&L->cur, "IS_ROOT") ||
+                    kw(&L->cur, "NOROOTPARENT") || kw(&L->cur, "TOPCLASS");
+    int want_first = kw(&L->cur, "ISFIRSTCHILD") || kw(&L->cur, "IS_FIRST_CHILD") ||
+                     kw(&L->cur, "ISELDERCHILD") || kw(&L->cur, "ISOLDESTCHILD") ||
+                     kw(&L->cur, "ISFIRSTKID") || kw(&L->cur, "ELDESTCHILD_P");
+    int want_last = kw(&L->cur, "ISLASTCHILD") || kw(&L->cur, "IS_LAST_CHILD") ||
+                    kw(&L->cur, "ISYOUNGCHILD") || kw(&L->cur, "ISNEWESTCHILD") ||
+                    kw(&L->cur, "ISLASTKID") || kw(&L->cur, "YOUNGESTCHILD_P");
+    int want_only = kw(&L->cur, "ONLYCHILD") || kw(&L->cur, "ISONLYCHILD") ||
+                    kw(&L->cur, "ONLY_CHILD") || kw(&L->cur, "IS_ONLY_CHILD") ||
+                    kw(&L->cur, "SOLECHILD") || kw(&L->cur, "HASNOSIB");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, nk = 0, rank = -1;
+    const char *opname = want_root ? "ISROOT"
+                         : want_first ? "ISFIRSTCHILD"
+                         : want_last ? "ISLASTCHILD"
+                                       : "ONLYCHILD";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_root ? "ISROOT Class|obj"
+                         : (want_first ? "ISFIRSTCHILD Class|obj"
+                         : (want_last ? "ISLASTCHILD Class|obj"
+                                      : "ONLYCHILD Class|obj")));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    n = 0;
+    nk = 0;
+    rank = -1;
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (want_root) {
+        n = (parent < 0 || parent >= vm->n_classes) ? 1 : 0;
+      } else if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == parent) {
+            if (i == ai) rank = nk;
+            nk++;
+          }
+        }
+        if (want_first) n = (rank == 0) ? 1 : 0;
+        else if (want_last) n = (rank >= 0 && rank == nk - 1) ? 1 : 0;
+        else if (want_only) n = (nk == 1) ? 1 : 0;
+      } else {
+        /* root: not a child; first/last/only soft 0 */
+        n = 0;
+      }
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", n);
+    var_set_str(vm, "LAST", vm->last_str);
+    if (want_root) {
+      var_set_num(vm, "ISROOT_N", n);
+      var_set_num(vm, "ISROOT", n);
+    } else if (want_first) {
+      var_set_num(vm, "ISFIRSTCHILD_N", n);
+      var_set_num(vm, "ISFIRSTCHILD", n);
+    } else if (want_last) {
+      var_set_num(vm, "ISLASTCHILD_N", n);
+      var_set_num(vm, "ISLASTCHILD", n);
+    } else {
+      var_set_num(vm, "ONLYCHILD_N", n);
+      var_set_num(vm, "ONLYCHILD", n);
+      var_set_num(vm, "ISONLYCHILD_N", n);
+    }
+    if (rank >= 0) {
+      var_set_num(vm, "CHILDRANK_N", rank);
+      var_set_num(vm, "CHILDCOUNT_N", nk);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d rank=%d kids=%d\n", opname, a, n, rank, nk);
+    bump(vm);
+    return 1;
+  }
+
+  /* SIBLINGCOUNT + HASSIBLING (multifile EXTEND)
+   * SIBLINGCOUNT Class|obj — peer count under same parent (excludes self).
+   * HASSIBLING Class|obj — 1 if at least one peer, else 0.
+   * ONLYCHILD lives with ISROOT/ISFIRSTCHILD block (parent-child cardinality).
+   * Complements SIBLINGS bag + NTHSIBLING + CHILDRANK. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "SIBLINGCOUNT") || kw(&L->cur, "COUNTSIBLINGS") ||
+      kw(&L->cur, "NUMSIBLINGS") || kw(&L->cur, "NSIBLINGS") ||
+      kw(&L->cur, "PEERCOUNT") || kw(&L->cur, "SIBLING_COUNT") ||
+      kw(&L->cur, "COUNT_SIBLINGS") || kw(&L->cur, "NPEERS") ||
+      kw(&L->cur, "HASSIBLING") || kw(&L->cur, "HASSIBLINGS") ||
+      kw(&L->cur, "HASPEER") || kw(&L->cur, "HASPEERS") ||
+      kw(&L->cur, "HAS_SIBLING") || kw(&L->cur, "HAS_SIBLINGS")) {
+    int want_cnt = kw(&L->cur, "SIBLINGCOUNT") || kw(&L->cur, "COUNTSIBLINGS") ||
+                   kw(&L->cur, "NUMSIBLINGS") || kw(&L->cur, "NSIBLINGS") ||
+                   kw(&L->cur, "PEERCOUNT") || kw(&L->cur, "SIBLING_COUNT") ||
+                   kw(&L->cur, "COUNT_SIBLINGS") || kw(&L->cur, "NPEERS");
+    int want_has = kw(&L->cur, "HASSIBLING") || kw(&L->cur, "HASSIBLINGS") ||
+                   kw(&L->cur, "HASPEER") || kw(&L->cur, "HASPEERS") ||
+                   kw(&L->cur, "HAS_SIBLING") || kw(&L->cur, "HAS_SIBLINGS");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, nsib = 0, flag = 0;
+    const char *opname = want_cnt ? "SIBLINGCOUNT" : "HASSIBLING";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_cnt ? "SIBLINGCOUNT Class|obj" : "HASSIBLING Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    nsib = 0;
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (i != ai && vm->classes[i].parent_idx == parent)
+            nsib++;
+        }
+      }
+      /* roots: no peers under a parent → 0 siblings */
+    }
+    flag = nsib > 0 ? 1 : 0;
+    var_set_num(vm, "LAST_N", want_cnt ? nsib : flag);
+    vm->last_n = want_cnt ? nsib : flag;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", want_cnt ? nsib : flag);
+    var_set_str(vm, "LAST", vm->last_str);
+    if (want_cnt) {
+      var_set_num(vm, "SIBLINGCOUNT", nsib);
+      var_set_num(vm, "SIBLINGCOUNT_N", nsib);
+      var_set_num(vm, "PEERCOUNT_N", nsib);
+      var_set_num(vm, "NSIBLINGS", nsib);
+    } else {
+      var_set_num(vm, "HASSIBLING", flag);
+      var_set_num(vm, "HASSIBLING_N", flag);
+      var_set_num(vm, "HASSIBLINGS_N", flag);
+      var_set_num(vm, "HASPEER_N", flag);
+    }
+    /* also mirror peer card for both */
+    var_set_num(vm, "SIBLINGCOUNT_N", nsib);
+    var_set_num(vm, "HASSIBLING_N", flag);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> nsib=%d flag=%d\n", opname, a, nsib, flag);
+    bump(vm);
+    return 1;
+  }
+
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.
