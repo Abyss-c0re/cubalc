@@ -1,0 +1,319 @@
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+
+# LIFE_CELL_ATP5PB — ATP5PB ATP synthase peripheral stalk-membrane subunit b after ATP5PO on OXPHOS continuum
+# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po->atp5pb
+# Gift: ATP5PB anchors the OSCP-capped peripheral stalk into the inner membrane so Fo stator torque stays membrane-tethered into F1 ADP+Pi to ATP and free energy flows without hollow stalk-b-gap (CV peripheral stalk-b ward).
+# Domain: inner-membrane Complex V ATP5PB ward (peripheral stalk-b membrane span linking Fo to OSCP after OSCP seat).
+# Science: ATP5PB (ATP synthase peripheral stalk subunit b / ATP5F) is the nuclear-encoded membrane-span anchoring OSCP-capped stalk after ATP5PO; not a rename of ATP5PO, ATP5F1D, ATP5F1A, ATP5F1B, ATP5F1C, COX4I1, CYCS, UQCRC1, ACADVL, ETFDH, HADHA, CPT2, or PCYT2.
+# Cube is SoT. Free energy must flow. Not a dual ladder.
+
+ENTITY hepatocyte OF Cell 1 72 0
+ENTITY kupffer OF Cell 1 54 0
+ENTITY mito_omm OF Cell 1 50 0
+ENTITY hollow OF Cell 0 14 0
+ENTITY dry OF Cell 1 0 0
+
+SEND hepatocyte set_threshold 11
+SEND kupffer set_threshold 9
+SEND mito_omm set_threshold 10
+SEND dry set_threshold 13
+
+SEND hepatocyte photosynth 30
+SEND hepatocyte charge 24
+SEND hepatocyte feed 22
+SEND hepatocyte pump 12
+SEND hepatocyte glycolyse 14
+SEND hepatocyte photophos 11
+GETF hepatocyte energy
+ASSERT LAST_N >= 22 "hepatocyte ATP5PB prelude energy"
+GETF hepatocyte atp
+ASSERT LAST_N >= 22 "hepatocyte ATP5PB prelude atp"
+GETF hepatocyte pmf
+ASSERT LAST_N >= 5 "hepatocyte ATP5PB prelude pmf"
+
+SEND kupffer photosynth 18
+SEND kupffer charge 16
+SEND kupffer feed 14
+GETF kupffer alive
+ASSERT LAST_N == 1 "kupffer primed"
+SEND mito_omm photosynth 16
+SEND mito_omm charge 14
+SEND mito_omm feed 12
+GETF mito_omm alive
+ASSERT LAST_N == 1 "mito_omm primed"
+
+# Dry/hollow heresy barred
+SEND dry acsl1 8
+ASSERT LAST_N == 0 "dry acsl1 no ATP"
+SEND dry cpt1a 8
+ASSERT LAST_N == 0 "dry cpt1a no ATP"
+SEND dry slc25a20 8
+ASSERT LAST_N == 0 "dry slc25a20 no ATP"
+SEND dry cpt2 8
+ASSERT LAST_N == 0 "dry cpt2 no ATP"
+SEND dry cycs 8
+ASSERT LAST_N == 0 "dry cycs no ATP"
+SEND dry cox4i1 8
+ASSERT LAST_N == 0 "dry cox4i1 no ATP"
+SEND dry atp5f1a 8
+ASSERT LAST_N == 0 "dry atp5f1a no ATP"
+SEND dry atp5f1d 8
+ASSERT LAST_N == 0 "dry atp5f1d no ATP"
+SEND dry atp5po 8
+SEND dry atp5pb 8
+ASSERT LAST_N == 0 "dry atp5po no ATP"
+SEND hollow acsl1 4
+ASSERT LAST_N == 0 "hollow acsl1 heresy barred"
+SEND hollow cpt1a 4
+ASSERT LAST_N == 0 "hollow cpt1a heresy barred"
+SEND hollow slc25a20 4
+ASSERT LAST_N == 0 "hollow slc25a20 heresy barred"
+SEND hollow cpt2 4
+ASSERT LAST_N == 0 "hollow cpt2 heresy barred"
+SEND hollow cycs 4
+ASSERT LAST_N == 0 "hollow cycs heresy barred"
+SEND hollow cox4i1 4
+ASSERT LAST_N == 0 "hollow cox4i1 heresy barred"
+SEND hollow atp5f1a 4
+ASSERT LAST_N == 0 "hollow atp5f1a heresy barred"
+SEND hollow atp5f1d 4
+ASSERT LAST_N == 0 "hollow atp5f1d heresy barred"
+SEND hollow atp5po 4
+SEND hollow atp5pb 4
+ASSERT LAST_N == 0 "hollow atp5po heresy barred"
+
+# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po->atp5pb
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 10
+SEND hepatocyte feed 8
+SEND hepatocyte acsl1 1
+ASSERT LAST_N == 1 "er acsl1 gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cpt1a 1
+ASSERT LAST_N == 1 "er cpt1a gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte slc25a20 1
+ASSERT LAST_N == 1 "er slc25a20 gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cpt2 1
+ASSERT LAST_N == 1 "er cpt2 gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte acadvl 1
+ASSERT LAST_N == 1 "er acadvl gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cycs 1
+ASSERT LAST_N == 1 "er cycs gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte cox4i1 1
+ASSERT LAST_N == 1 "er cox4i1 gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte atp5f1a 1
+ASSERT LAST_N == 1 "er atp5f1a gate before atp5po"
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte atp5f1d 1
+SEND hepatocyte atp5po 1
+ASSERT LAST_N == 1 "hepatocyte atp5po parent"
+ASSERT LAST_N == 1 "er atp5f1d gate before atp5po"
+
+# hepatocyte ATP5PB delta-3 signature
+SEND hepatocyte photosynth 14
+SEND hepatocyte charge 12
+SEND hepatocyte feed 10
+GETF hepatocyte heat
+LET s_h = LAST_N
+GETF hepatocyte energy
+LET s_e = LAST_N
+GETF hepatocyte atp
+LET s_a = LAST_N
+GETF hepatocyte age
+LET s_age = LAST_N
+GETF hepatocyte pcr
+LET s_pcr = LAST_N
+GETF hepatocyte reserve
+LET s_rsv = LAST_N
+GETF hepatocyte pmf
+LET s_pmf = LAST_N
+GETF hepatocyte threshold
+LET s_thr = LAST_N
+SEND hepatocyte atp5pb 3
+ASSERT LAST_N == 3 "er atp5po delta-3"
+GETF hepatocyte heat
+ASSERT LAST_N == s_h + 3 "er atp5po heat+3"
+GETF hepatocyte energy
+ASSERT LAST_N == s_e - 3 "er atp5po energy-3"
+GETF hepatocyte atp
+ASSERT LAST_N == s_a - 3 "er atp5po atp-3"
+GETF hepatocyte age
+ASSERT LAST_N == s_age "er atp5po age held"
+GETF hepatocyte pcr
+ASSERT LAST_N == s_pcr "er atp5po pcr held"
+GETF hepatocyte reserve
+ASSERT LAST_N == s_rsv "er atp5po reserve held"
+GETF hepatocyte pmf
+ASSERT LAST_N == s_pmf "er atp5po pmf held"
+GETF hepatocyte threshold
+ASSERT LAST_N == s_thr "er atp5po thr held"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "er alive post-atp5po-delta"
+
+# mito_omm ATP5PB delta-2
+SEND mito_omm photosynth 12
+SEND mito_omm charge 10
+SEND mito_omm feed 8
+GETF mito_omm heat
+LET m_h = LAST_N
+GETF mito_omm energy
+LET m_e = LAST_N
+GETF mito_omm atp
+LET m_a = LAST_N
+SEND mito_omm atp5pb 2
+ASSERT LAST_N == 2 "mito atp5po delta-2"
+GETF mito_omm heat
+ASSERT LAST_N == m_h + 2 "mito atp5po heat+2"
+GETF mito_omm energy
+ASSERT LAST_N == m_e - 2 "mito atp5po energy-2"
+GETF mito_omm atp
+ASSERT LAST_N == m_a - 2 "mito atp5po atp-2"
+GETF mito_omm alive
+ASSERT LAST_N == 1 "mito alive post-atp5po"
+
+# kupffer ATP5PB delta-2
+SEND kupffer photosynth 12
+SEND kupffer charge 10
+SEND kupffer feed 8
+GETF kupffer heat
+LET k_h = LAST_N
+GETF kupffer energy
+LET k_e = LAST_N
+GETF kupffer atp
+LET k_a = LAST_N
+SEND kupffer atp5pb 2
+ASSERT LAST_N == 2 "kupffer atp5po delta-2"
+GETF kupffer heat
+ASSERT LAST_N == k_h + 2 "kupffer atp5po heat+2"
+GETF kupffer energy
+ASSERT LAST_N == k_e - 2 "kupffer atp5po energy-2"
+GETF kupffer atp
+ASSERT LAST_N == k_a - 2 "kupffer atp5po atp-2"
+GETF kupffer alive
+ASSERT LAST_N == 1 "kupffer alive post-atp5po"
+
+# zero / clamp
+SEND hepatocyte atp5pb 0
+ASSERT LAST_N == 0 "er atp5po zero"
+SEND hepatocyte atp5pb -3
+ASSERT LAST_N == 0 "er atp5po negative"
+
+# dry still barred
+SEND dry photosynth 2
+SEND dry charge 1
+SEND dry atp5po 5
+SEND dry atp5pb 5
+ASSERT LAST_N == 0 "dry still barred atp5po"
+
+# multi-step continuum gift on hepatocyte
+SEND hepatocyte photosynth 16
+SEND hepatocyte charge 14
+SEND hepatocyte feed 12
+SEND hepatocyte atp5f1d 1
+ASSERT LAST_N == 1 "pre-atp5po atp5f1d"
+SEND hepatocyte atp5pb 1
+ASSERT LAST_N == 1 "post-atp5f1d atp5po gift"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "hepatocyte continuum alive"
+
+# readiness held
+GETF hepatocyte ready
+ASSERT LAST_N >= 0 "ready field readable"
+GETF hepatocyte energy
+ASSERT LAST_N >= 0 "energy non-neg"
+GETF hepatocyte atp
+ASSERT LAST_N >= 0 "atp non-neg"
+
+# second delta pulse
+SEND hepatocyte photosynth 10
+SEND hepatocyte charge 8
+SEND hepatocyte feed 6
+GETF hepatocyte heat
+LET h2 = LAST_N
+GETF hepatocyte atp
+LET a2 = LAST_N
+SEND hepatocyte atp5pb 1
+ASSERT LAST_N == 1 "er atp5po second pulse"
+GETF hepatocyte heat
+ASSERT LAST_N == h2 + 1 "er atp5po heat+1 second"
+GETF hepatocyte atp
+ASSERT LAST_N == a2 - 1 "er atp5po atp-1 second"
+
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "final hepatocyte alive"
+GETF kupffer alive
+ASSERT LAST_N == 1 "final kupffer alive"
+GETF mito_omm alive
+ASSERT LAST_N == 1 "final mito_omm alive"
+GETF hollow alive
+ASSERT LAST_N == 0 "hollow stays dead"
+
+# extra continuum gates / clamps toward CYCS-parity assert count
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte acsl1 1
+ASSERT LAST_N == 1 "parity acsl1 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cpt1a 1
+ASSERT LAST_N == 1 "parity cpt1a gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte slc25a20 1
+ASSERT LAST_N == 1 "parity slc25a20 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cpt2 1
+ASSERT LAST_N == 1 "parity cpt2 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cycs 1
+ASSERT LAST_N == 1 "parity cycs gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cox4i1 1
+ASSERT LAST_N == 1 "parity cox4i1 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte atp5f1a 1
+ASSERT LAST_N == 1 "parity atp5f1a gate"
+SEND hepatocyte atp5pb 1
+ASSERT LAST_N == 1 "parity atp5po after full gate"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "parity alive"
+SEND kupffer atp5pb 0
+ASSERT LAST_N == 0 "kupffer atp5po zero"
+SEND mito_omm atp5pb 0
+ASSERT LAST_N == 0 "mito atp5po zero"
+
+PASS "LIFE_CELL_ATP5PB CV peripheral stalk-b ward after ATP5PO free energy flows"

@@ -24078,4 +24078,68 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_ATP5PB: ATP5PB ATP synthase peripheral stalk-membrane subunit b after ATP5PO on OXPHOS continuum
+  # ATP5PB (ATP synthase peripheral stalk subunit b / ATP5F) is the nuclear-encoded membrane-span that anchors the OSCP-capped peripheral stalk into Fo after ATP5PO seats OSCP.
+  # Distinct from ATP5PO, ATP5F1D, ATP5F1A, ATP5F1B, ATP5F1C, ATP5F1E, ATP5PD, ATP5PF, COX4I1, CYCS, UQCRC1, ACADVL, ETFDH, HADHA, or PCYT2. Not a rename of prior Complex-V OSCP or F1 enzymes.
+  # Domain: inner-membrane Complex V ATP5PB ward (peripheral stalk-b membrane span linking Fo to OSCP so oligomycin-sensitive coupling yields net ATP not detached stalk after OSCP)
+  # Continuum: ...->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po->atp5pb
+  # Gift: ATP5PB anchors the OSCP-capped peripheral stalk into the inner membrane so Fo stator torque stays membrane-tethered into F1 ADP+Pi→ATP and free energy flows without hollow stalk-b-gap (CV peripheral stalk-b ward)
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5pb.
+  # Usability: AGI models atp5pb under ASSERT on ETC/oxphos continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5pb n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
