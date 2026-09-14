@@ -6,6 +6,6 @@ asserts_ok life=69 atomic=150 mesh=147 total=366 fail=0 PASS
 continuum: ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1
 gift: COX4I1 anchors CIV so electrons from CYCS reduce O2 and free energy flows without hollow COX deficiency lock
 feat_head: 0c9deecc40b1311fd76211ca9f5decd31cccdd35
-head: 00d9b4a873638092d791208303648e440bcdb2d2
+head: 8d11d4ac3b48f3f0f456cbd411c3b13fad588e4e
 status: PASS
 law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
