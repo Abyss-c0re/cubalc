@@ -23888,4 +23888,68 @@ CLASS Cell
   END
 
 
+
+  # LIFE_CELL_ATP5F1A: ATP5F1A ATP synthase F1 subunit alpha after COX4I1 on OXPHOS continuum
+  # ATP5F1A (ATP synthase F1 subunit alpha) is the nuclear-encoded catalytic alpha subunit of Complex V F1 after COX4I1 completes CIV O2 reduction and PMF.
+  # Distinct from COX4I1, CYCS, UQCRC1, ATP5F1B, ACADVL, ETFDH, HADHA, or PCYT2. Not a rename of prior ETC terminal oxidase enzymes.
+  # Domain: inner-membrane Complex V F1 ATP5F1A ward (ATP synthase catalytic alpha limb of oxidative phosphorylation after CIV)
+  # Continuum: ...->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a
+  # Gift: ATP5F1A scaffolds F1 alpha so PMF from COX4I1 drives ADP+Pi→ATP and free energy couples without hollow Complex-V lock (CV F1 alpha ward)
+  # Signature: heat+n atp-n energy-n; age+pcr+reserve+pmf+sp+thr held - atp5f1a.
+  # Usability: AGI models atp5f1a under ASSERT on ETC/oxphos continuum.
+  # Cube is SoT. Free energy must flow. Returns take; else 0.
+  METHOD atp5f1a n
+    GETF THIS alive
+    IF LAST_N == 0 THEN
+      RET 0
+    END
+    IF n < 1 THEN
+      RET 0
+    END
+    GETF THIS atp
+    LET a = LAST_N
+    IF a < 0 THEN
+      LET a = 0
+    END
+    GETF THIS energy
+    LET e = LAST_N
+    IF e < 0 THEN
+      LET e = 0
+    END
+    LET take = n
+    IF take > a THEN
+      LET take = a
+    END
+    IF take > e THEN
+      LET take = e
+    END
+    IF take < 1 THEN
+      RET 0
+    END
+    LET a = a - take
+    SETF THIS atp a
+    LET e = e - take
+    SETF THIS energy e
+    GETF THIS heat
+    LET h = LAST_N + take
+    SETF THIS heat h
+    GETF THIS quiescent
+    IF LAST_N == 1 THEN
+      SETF THIS ready 0
+      RET take
+    END
+    GETF THIS threshold
+    LET thr = LAST_N
+    IF thr < 0 THEN
+      LET thr = 0
+    END
+    LET rd = 0
+    IF e >= thr THEN
+      LET rd = 1
+    END
+    SETF THIS ready rd
+    RET take
+  END
+
+
 END
