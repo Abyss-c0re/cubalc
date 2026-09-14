@@ -31,3 +31,10 @@ feature MULTIFILE_EXTEND_RESET_LINK3 version 1.16.1-multifile-reset PASS multi-f
 SENDSUPER parent method on multi-file CLASS EXTEND three-unit link.
 Proof asserts_ok 37 fail 0. VERSION 1.16.3-sendsuper.
 
+## MI 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
+
+PARENTS/SUPERCHAIN full parent bag + ROOTOF top ancestor on multi-file CLASS EXTEND link.
+Proof asserts_ok 85 fail 0. VERSION 1.16.4-parents-rootof.
+- proof programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
+- complements BASEOF (immediate) + SENDSUPER (parent method)
+
