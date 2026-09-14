@@ -19488,6 +19488,134 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* CHILDCOUNT + DESCENDANTCOUNT + SUBTREESIZE (multifile EXTEND)
+   * CHILDCOUNT Class|obj — direct children count (EXTEND kids only).
+   * DESCENDANTCOUNT Class|obj — proper descendants count (excludes self).
+   * SUBTREESIZE Class|obj — 1 + descendants (self included).
+   * Complements HASCHILDREN + DESCENDANTS bag + LEAFCOUNT. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "CHILDCOUNT") || kw(&L->cur, "COUNTCHILDREN") ||
+      kw(&L->cur, "NUMCHILDREN") || kw(&L->cur, "NCHILDREN") ||
+      kw(&L->cur, "KIDCOUNT") || kw(&L->cur, "DIRECTKIDS") ||
+      kw(&L->cur, "CHILD_COUNT") || kw(&L->cur, "COUNT_CHILDREN") ||
+      kw(&L->cur, "DESCENDANTCOUNT") || kw(&L->cur, "COUNTDESCENDANTS") ||
+      kw(&L->cur, "NUMDESCENDANTS") || kw(&L->cur, "NDESCENDANTS") ||
+      kw(&L->cur, "PROGENYCOUNT") || kw(&L->cur, "DESCENDANT_COUNT") ||
+      kw(&L->cur, "COUNT_DESCENDANTS") || kw(&L->cur, "ALLSUBSCOUNT") ||
+      kw(&L->cur, "SUBTREESIZE") || kw(&L->cur, "TREESIZE") ||
+      kw(&L->cur, "NODESIN") || kw(&L->cur, "SUBTREE_SIZE") ||
+      kw(&L->cur, "TREE_SIZE") || kw(&L->cur, "COUNTNODES") ||
+      kw(&L->cur, "SUBTREECARD") || kw(&L->cur, "CLASSTREE_N")) {
+    int want_childc = kw(&L->cur, "CHILDCOUNT") || kw(&L->cur, "COUNTCHILDREN") ||
+                      kw(&L->cur, "NUMCHILDREN") || kw(&L->cur, "NCHILDREN") ||
+                      kw(&L->cur, "KIDCOUNT") || kw(&L->cur, "DIRECTKIDS") ||
+                      kw(&L->cur, "CHILD_COUNT") || kw(&L->cur, "COUNT_CHILDREN");
+    int want_descc = kw(&L->cur, "DESCENDANTCOUNT") || kw(&L->cur, "COUNTDESCENDANTS") ||
+                     kw(&L->cur, "NUMDESCENDANTS") || kw(&L->cur, "NDESCENDANTS") ||
+                     kw(&L->cur, "PROGENYCOUNT") || kw(&L->cur, "DESCENDANT_COUNT") ||
+                     kw(&L->cur, "COUNT_DESCENDANTS") || kw(&L->cur, "ALLSUBSCOUNT");
+    int want_sub = kw(&L->cur, "SUBTREESIZE") || kw(&L->cur, "TREESIZE") ||
+                   kw(&L->cur, "NODESIN") || kw(&L->cur, "SUBTREE_SIZE") ||
+                   kw(&L->cur, "TREE_SIZE") || kw(&L->cur, "COUNTNODES") ||
+                   kw(&L->cur, "SUBTREECARD") || kw(&L->cur, "CLASSTREE_N");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, guard = 0;
+    const char *opname = want_childc ? "CHILDCOUNT"
+                         : want_descc ? "DESCENDANTCOUNT"
+                                        : "SUBTREESIZE";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_childc ? "CHILDCOUNT Class|obj"
+                         : (want_descc ? "DESCENDANTCOUNT Class|obj"
+                                       : "SUBTREESIZE Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (cda && ai >= 0) {
+      if (want_childc) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == ai) n++;
+        }
+      } else {
+        /* BFS descendants; subtree = 1 + descendants */
+        int queue[512];
+        int qh = 0, qt = 0;
+        int seen[512];
+        int ndesc = 0;
+        for (i = 0; i < 512; i++) seen[i] = 0;
+        queue[qt++] = ai;
+        seen[ai] = 1;
+        guard = 0;
+        while (qh < qt && guard++ < CUBALC_MAX_CLASSES * 4) {
+          int cur = queue[qh++];
+          if (cur < 0 || cur >= vm->n_classes) continue;
+          for (i = 0; i < vm->n_classes; i++) {
+            if (vm->classes[i].parent_idx == cur && !seen[i] && qt < 512) {
+              seen[i] = 1;
+              queue[qt++] = i;
+              ndesc++;
+            }
+          }
+        }
+        n = want_descc ? ndesc : (ndesc + 1);
+      }
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    if (want_childc) {
+      var_set_num(vm, "CHILDCOUNT_N", n);
+      var_set_num(vm, "COUNTCHILDREN_N", n);
+      var_set_num(vm, "NUMCHILDREN_N", n);
+      var_set_num(vm, "KIDCOUNT_N", n);
+    } else if (want_descc) {
+      var_set_num(vm, "DESCENDANTCOUNT_N", n);
+      var_set_num(vm, "COUNTDESCENDANTS_N", n);
+      var_set_num(vm, "NUMDESCENDANTS_N", n);
+      var_set_num(vm, "PROGENYCOUNT_N", n);
+      var_set_num(vm, "DESCENDANTCOUNT", n);
+    } else {
+      var_set_num(vm, "SUBTREESIZE_N", n);
+      var_set_num(vm, "TREESIZE_N", n);
+      var_set_num(vm, "NODESIN_N", n);
+      var_set_num(vm, "SUBTREESIZE", n);
+      var_set_num(vm, "TREESIZE", n);
+    }
+    /* also mirror common count aliases for bag duals */
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d\n", opname, a, n);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.
