@@ -1,7 +1,11 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX MESH VESICLE LIFE MI2384: ATP5PO (OSCP) ATP synthase oligomycin-sensitivity-conferral protein after ATP5F1D on OXPHOS continuum
+# SMX MESH VESICLE LIFE MI2384: ATP5PO / OSCP ATP synthase peripheral stalk after ATP5F1D on OXPHOS continuum
+# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po (ATP5PO/OSCP after ATP5F1D CV OSCP limb)
+# Gift: ATP5PO seats OSCP under ASSERT so peripheral-stalk couple transmits Fo torque into F1 ADP+Pi to ATP and free energy flows without hollow Complex-V OSCP lock (CV OSCP ward).
+# Domain: inner-membrane Complex V peripheral-stalk ATP5PO/OSCP ward (ATP synthase OSCP couple limb of oxidative phosphorylation after F1 delta).
+# Cube is SoT. Free energy must flow. Not a dual ladder.
 # Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1->atp5f1a->atp5f1d->atp5po (ATP5PO after ATP5PO CV F1 OSCP limb)
 # Gift: ATP5PO seats OSCP under ASSERT so Fo stator torque transmits through F1 delta/alpha into ADP+Pi to ATP and free energy couples without hollow Complex-V OSCP lock (CV F1 OSCP ward).
 # Domain: inner-membrane Complex V F1 ATP5PO ward (Complex V F1 OSCP peripheral-stalk couple limb of oxidative phosphorylation after F1 delta).
