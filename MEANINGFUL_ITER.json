@@ -2,14 +2,14 @@
   "mi": 2404,
   "feature": "MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3",
   "version": "1.16.4-parents-rootof",
-  "head": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
+  "head": "bffb3b0eb8a64a937035b357e128b383eba8e883",
   "asserts_ok": 85,
   "asserts_fail": 0,
   "pass": true,
-  "HEAD": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
-  "tip": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
-  "TIP": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
-  "pin": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
-  "pinned_head": "51460bd7b7705916d95eeb164d1d8ea25c866f13",
-  "head_short": "51460bd7b"
+  "HEAD": "bffb3b0eb8a64a937035b357e128b383eba8e883",
+  "tip": "bffb3b0eb8a64a937035b357e128b383eba8e883",
+  "TIP": "bffb3b0eb8a64a937035b357e128b383eba8e883",
+  "pin": "bffb3b0eb8a64a937035b357e128b383eba8e883",
+  "pinned_head": "bffb3b0eb8a64a937035b357e128b383eba8e883",
+  "head_short": "bffb3b0eb"
 }
