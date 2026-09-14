@@ -30,6 +30,6 @@
   "forms": "ISROOT|IS_ROOT|TOPCLASS + ISFIRSTCHILD|IS_FIRST_CHILD + ISLASTCHILD|IS_LAST_CHILD + ONLYCHILD|ISONLYCHILD|SOLECHILD",
   "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
   "summary": "ISROOT parentless class; ISFIRST/ISLAST among parent kids; ONLYCHILD nk==1; multifile CLASS EXTEND",
-  "head": "f81730d79",
+  "head": "873abe207",
   "ts": 1789407648
 }
