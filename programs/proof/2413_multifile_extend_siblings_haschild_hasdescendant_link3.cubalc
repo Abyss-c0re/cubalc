@@ -1,0 +1,189 @@
+# Proof 2413 — MULTIFILE_EXTEND_SIBLINGS_HASCHILD_HASDESCENDANT_LINK3
+# Three-unit multi-file CLASS EXTEND/link + SIBLINGS + HASCHILD + HASDESCENDANT.
+# Complements CHAINDIST/PATHBETWEEN + COMMONANCESTOR + HASANCESTOR/DEPTHOF.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+
+HASCLASS Greeter
+ASSERT LAST_N == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# peer under Greeter so TagGreeter has a sibling; LoudTag has none yet
+CLASS TwinGreet EXTEND Greeter
+  FIELD twin 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS TwinGreet
+ASSERT LAST_N == 1
+
+# second child under TagGreeter so LoudTag has a sibling
+CLASS SoftTag EXTEND TagGreeter
+  FIELD soft 1
+  METHOD hush
+    RET 0
+  END
+END
+HASCLASS SoftTag
+ASSERT LAST_N == 1
+
+# orphan root for negative cases
+CLASS Solo
+  FIELD x 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS Solo
+ASSERT LAST_N == 1
+
+# --- HASCHILD (direct parent_idx) ---
+HASCHILD Greeter TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASCHILD_N == 1
+
+HASCHILD Greeter TwinGreet
+ASSERT LAST_N == 1
+
+HASCHILD TagGreeter LoudTag
+ASSERT LAST_N == 1
+
+HASCHILD TagGreeter SoftTag
+ASSERT LAST_N == 1
+
+# not direct (grandparent)
+HASCHILD Greeter LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT HASCHILD_N == 0
+
+# reverse / self / unrelated
+HASCHILD TagGreeter Greeter
+ASSERT LAST_N == 0
+HASCHILD Greeter Greeter
+ASSERT LAST_N == 0
+HASCHILD Greeter Solo
+ASSERT LAST_N == 0
+
+# alias
+HASSUBCLASS Greeter TagGreeter
+ASSERT LAST_N == 1
+ISPARENTOF TagGreeter LoudTag
+ASSERT LAST_N == 1
+
+# --- HASDESCENDANT (any depth) ---
+HASDESCENDANT Greeter TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT HASDESCENDANT_N == 1
+
+HASDESCENDANT Greeter LoudTag
+ASSERT LAST_N == 1
+
+HASDESCENDANT Greeter SoftTag
+ASSERT LAST_N == 1
+
+HASDESCENDANT TagGreeter LoudTag
+ASSERT LAST_N == 1
+
+HASDESCENDANT TagGreeter SoftTag
+ASSERT LAST_N == 1
+
+# self is not a descendant
+HASDESCENDANT Greeter Greeter
+ASSERT LAST_N == 0
+
+# reverse / unrelated
+HASDESCENDANT LoudTag Greeter
+ASSERT LAST_N == 0
+HASDESCENDANT Greeter Solo
+ASSERT LAST_N == 0
+HASDESCENDANT Solo Greeter
+ASSERT LAST_N == 0
+
+# aliases
+HASSUBTREE Greeter LoudTag
+ASSERT LAST_N == 1
+INPROGENY TagGreeter SoftTag
+ASSERT LAST_N == 1
+
+# --- CHILDREN bag ---
+CHILDREN Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 2
+ASSERT CHILDREN_N == 2
+
+CHILDREN TagGreeter
+ASSERT LAST_N == 2
+ASSERT KIDS_N == 2
+
+CHILDREN LoudTag
+ASSERT LAST_N == 0
+
+CHILDREN Solo
+ASSERT LAST_N == 0
+
+LISTCHILDREN Greeter
+ASSERT LAST_N == 2
+SUBCLASSES TagGreeter
+ASSERT LAST_N == 2
+
+# --- SIBLINGS bag ---
+SIBLINGS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT SIBLINGS_N == 1
+
+SIBLINGS TwinGreet
+ASSERT LAST_N == 1
+
+SIBLINGS LoudTag
+ASSERT LAST_N == 1
+ASSERT SIBLINGS_N == 1
+
+SIBLINGS SoftTag
+ASSERT LAST_N == 1
+
+# roots / unknown have no siblings
+SIBLINGS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+SIBLINGS Solo
+ASSERT LAST_N == 0
+
+# aliases
+COSUBS TagGreeter
+ASSERT LAST_N == 1
+PEERCLASSES LoudTag
+ASSERT LAST_N == 1
+SAMEPARENT SoftTag
+ASSERT LAST_N == 1
+
+# cross-check with prior probes
+HASANCESTOR LoudTag Greeter
+ASSERT LAST_N == 1
+DEPTHOF LoudTag
+ASSERT LAST_N == 2
+COMMONANCESTOR LoudTag SoftTag
+ASSERT LAST == "TagGreeter"
+CHAINDIST LoudTag SoftTag
+ASSERT LAST_N == 2
+PATHBETWEEN LoudTag SoftTag
+ASSERT LAST_N == 3
+
+PRINT "PASS multifile SIBLINGS/HASCHILD/HASDESCENDANT link3"

@@ -18700,6 +18700,232 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
   }
 
 
+  /* SIBLINGS|COSUBS|PEERCLASSES|SAMEPARENT|LISTSIBLINGS Class|obj
+   * multi-file EXTEND/link usability: newline bag of classes that share the
+   * same parent_idx (excluding self). Soft empty OK=1 when root/orphan/unknown.
+   * HASCHILD|HASDIRECTSUB|HASSUBCLASS|DIRECTCHILD Class|obj Child
+   * soft 0|1 if Child parent_idx is Class (direct EXTEND child).
+   * HASDESCENDANT|HASSUBTREE|INPROGENY|HASPROGENY Class|obj Desc
+   * soft 0|1 if Desc walks parent_idx into Class (strict descendant, not self).
+   * CHILDREN|LISTCHILDREN|SUBCLASSES|DIRECTSUBS Class|obj - bag of direct kids.
+   * Complements HASANCESTOR/DEPTHOF + COMMONANCESTOR + CHAINDIST. Cube is SoT. */
+  if (kw(&L->cur, "SIBLINGS") || kw(&L->cur, "COSUBS") ||
+      kw(&L->cur, "PEERCLASSES") || kw(&L->cur, "SAMEPARENT") ||
+      kw(&L->cur, "LISTSIBLINGS") || kw(&L->cur, "SIBLINGCLASSES") ||
+      kw(&L->cur, "PEER_CLASSES") || kw(&L->cur, "SAME_PARENT") ||
+      kw(&L->cur, "COCLASSES") || kw(&L->cur, "SHAREPARENT") ||
+      kw(&L->cur, "HASCHILD") || kw(&L->cur, "HASDIRECTSUB") ||
+      kw(&L->cur, "HASSUBCLASS") || kw(&L->cur, "DIRECTCHILD") ||
+      kw(&L->cur, "HAS_CHILD") || kw(&L->cur, "HAS_SUBCLASS") ||
+      kw(&L->cur, "HASDIRECTCHILD") || kw(&L->cur, "ISPARENTOF") ||
+      kw(&L->cur, "HASDESCENDANT") || kw(&L->cur, "HASSUBTREE") ||
+      kw(&L->cur, "INPROGENY") || kw(&L->cur, "HASPROGENY") ||
+      kw(&L->cur, "HAS_DESCENDANT") || kw(&L->cur, "HAS_SUBTREE") ||
+      kw(&L->cur, "IN_PROGENY") || kw(&L->cur, "DESCENDSOF") ||
+      kw(&L->cur, "CHILDREN") || kw(&L->cur, "LISTCHILDREN") ||
+      kw(&L->cur, "SUBCLASSES") || kw(&L->cur, "DIRECTSUBS") ||
+      kw(&L->cur, "LISTSUBS") || kw(&L->cur, "CHILDOF") ||
+      kw(&L->cur, "LIST_CHILDREN") || kw(&L->cur, "DIRECT_CHILDREN")) {
+    int want_sib = kw(&L->cur, "SIBLINGS") || kw(&L->cur, "COSUBS") ||
+                   kw(&L->cur, "PEERCLASSES") || kw(&L->cur, "SAMEPARENT") ||
+                   kw(&L->cur, "LISTSIBLINGS") || kw(&L->cur, "SIBLINGCLASSES") ||
+                   kw(&L->cur, "PEER_CLASSES") || kw(&L->cur, "SAME_PARENT") ||
+                   kw(&L->cur, "COCLASSES") || kw(&L->cur, "SHAREPARENT");
+    int want_child = kw(&L->cur, "HASCHILD") || kw(&L->cur, "HASDIRECTSUB") ||
+                     kw(&L->cur, "HASSUBCLASS") || kw(&L->cur, "DIRECTCHILD") ||
+                     kw(&L->cur, "HAS_CHILD") || kw(&L->cur, "HAS_SUBCLASS") ||
+                     kw(&L->cur, "HASDIRECTCHILD") || kw(&L->cur, "ISPARENTOF");
+    int want_desc = kw(&L->cur, "HASDESCENDANT") || kw(&L->cur, "HASSUBTREE") ||
+                    kw(&L->cur, "INPROGENY") || kw(&L->cur, "HASPROGENY") ||
+                    kw(&L->cur, "HAS_DESCENDANT") || kw(&L->cur, "HAS_SUBTREE") ||
+                    kw(&L->cur, "IN_PROGENY") || kw(&L->cur, "DESCENDSOF");
+    int want_kids = kw(&L->cur, "CHILDREN") || kw(&L->cur, "LISTCHILDREN") ||
+                    kw(&L->cur, "SUBCLASSES") || kw(&L->cur, "DIRECTSUBS") ||
+                    kw(&L->cur, "LISTSUBS") || kw(&L->cur, "CHILDOF") ||
+                    kw(&L->cur, "LIST_CHILDREN") || kw(&L->cur, "DIRECT_CHILDREN");
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1;
+    int hit = 0, n = 0, i, guard, pi;
+    char bag[2048];
+    size_t o = 0;
+    const char *opname = want_sib ? "SIBLINGS"
+                         : want_child ? "HASCHILD"
+                         : want_desc ? "HASDESCENDANT"
+                         : "CHILDREN";
+    (void)want_kids;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_child || want_desc
+                   ? (want_child ? "HASCHILD Class|obj Child"
+                                 : "HASDESCENDANT Class|obj Desc")
+                   : (want_sib ? "SIBLINGS Class|obj" : "CHILDREN Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    b[0] = 0;
+    if (want_child || want_desc) {
+      if (kw(&L->cur, "AND") || kw(&L->cur, "WITH") || kw(&L->cur, "OF") ||
+          kw(&L->cur, "IS") || kw(&L->cur, "TO") || kw(&L->cur, "HAS"))
+        lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, want_child ? "HASCHILD Class|obj Child"
+                            : "HASDESCENDANT Class|obj Desc");
+        return -1;
+      }
+      if (L->cur.kind == TK_STR) {
+        snprintf(b, sizeof b, "%s", L->cur.text);
+        lex_next(L);
+      } else {
+        char id[48];
+        Var *vv;
+        snprintf(id, sizeof id, "%s", L->cur.text);
+        lex_next(L);
+        if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+          snprintf(b, sizeof b, "%s", id);
+        } else {
+          vv = var_get(vm, id, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(b, sizeof b, "%s", vv->sval);
+          else
+            snprintf(b, sizeof b, "%s", id);
+        }
+      }
+    }
+    bag[0] = 0;
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (want_child || want_desc) {
+      ob = oop_find_obj(vm, b);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+        cdb = &vm->classes[ob->class_idx];
+        bi = ob->class_idx;
+      } else {
+        cdb = oop_find_class(vm, b);
+        if (cdb) bi = (int)(cdb - vm->classes);
+      }
+    }
+    if (want_child) {
+      hit = 0;
+      if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+        if (cdb->parent_idx == ai) hit = 1;
+      }
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "HASCHILD_N", hit ? 1 : 0);
+      var_set_num(vm, "CHILD_N", hit ? 1 : 0);
+      var_set_num(vm, "DIRECT_N", hit ? 1 : 0);
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+      var_set_str(vm, "LAST", vm->last_str);
+    } else if (want_desc) {
+      hit = 0;
+      if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+        pi = cdb->parent_idx;
+        guard = 0;
+        while (pi >= 0 && pi < vm->n_classes && guard++ < CUBALC_MAX_CLASSES) {
+          if (pi == ai) { hit = 1; break; }
+          pi = vm->classes[pi].parent_idx;
+        }
+      }
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "HASDESCENDANT_N", hit ? 1 : 0);
+      var_set_num(vm, "DESCENDANT_N", hit ? 1 : 0);
+      var_set_num(vm, "SUBTREE_N", hit ? 1 : 0);
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+      var_set_str(vm, "LAST", vm->last_str);
+    } else if (want_sib) {
+      o = 0; n = 0; bag[0] = 0;
+      if (cda && ai >= 0) {
+        int par = cda->parent_idx;
+        if (par >= 0 && par < vm->n_classes) {
+          for (i = 0; i < vm->n_classes; i++) {
+            if (i == ai) continue;
+            if (vm->classes[i].parent_idx == par) {
+              const char *nm = vm->classes[i].name;
+              size_t ln = strlen(nm);
+              if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+              if (o + ln < sizeof bag) {
+                memcpy(bag + o, nm, ln);
+                o += ln;
+              }
+              n++;
+            }
+          }
+          if (o < sizeof bag) bag[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_str(vm, "SIBLINGS", bag);
+      var_set_str(vm, "PEERS", bag);
+      var_set_str(vm, "COSUBS", bag);
+      var_set_num(vm, "SIBLINGS_N", n);
+      var_set_num(vm, "PEERS_N", n);
+    } else {
+      o = 0; n = 0; bag[0] = 0;
+      if (cda && ai >= 0) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == ai) {
+            const char *nm = vm->classes[i].name;
+            size_t ln = strlen(nm);
+            if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+            if (o + ln < sizeof bag) {
+              memcpy(bag + o, nm, ln);
+              o += ln;
+            }
+            n++;
+          }
+        }
+        if (o < sizeof bag) bag[o] = 0;
+      }
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_str(vm, "CHILDREN", bag);
+      var_set_str(vm, "SUBCLASSES", bag);
+      var_set_str(vm, "KIDS", bag);
+      var_set_num(vm, "CHILDREN_N", n);
+      var_set_num(vm, "CHILDCOUNT_N", n);
+      var_set_num(vm, "KIDS_N", n);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "OTHER", cdb->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> n=%d hit=%d\n", opname, a,
+              b[0] ? b : "-", n, hit);
+    bump(vm);
+    return 1;
+  }
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.
