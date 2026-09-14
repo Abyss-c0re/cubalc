@@ -1,0 +1,15 @@
+# unit 3/3 alt — reopen Greeter again: tag methods (three-unit link)
+EXTEND Greeter
+  METHOD set_tag t
+    SETF THIS tag t
+    RET LAST
+  END
+  METHOD bye
+    GETF THIS tag
+    RET LAST
+  END
+  METHOD hello_tag
+    GETF THIS tag
+    RET LAST
+  END
+END

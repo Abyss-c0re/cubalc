@@ -1,0 +1,12 @@
+# unit 2/3 — reopen Greeter: reset + greet_count after INCLUDE base
+EXTEND Greeter
+  METHOD reset
+    RESETF THIS name
+    SETF THIS hits 0
+    RET LAST
+  END
+  METHOD greet_count
+    GETF THIS hits
+    RET LAST_N
+  END
+END

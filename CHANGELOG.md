@@ -1,3 +1,7 @@
+## 1.16.1-multifile-reset — MI 2401 MULTIFILE_EXTEND_RESET_LINK3
+- Multi-file CLASS EXTEND/link: Greeter base + reset + tag (3 INCLUDE units)
+- Proof 2401 asserts_ok:33 asserts_fail:0
+
 ## 1.15.1887-usability — MI 2387 LIFE_CELL_ATP5PD PASS (383/0)
 
 - **FEATURE** `LIFE_CELL_ATP5PD` — METHOD `atp5pd n` on CLASS Cell after ATP5PB

@@ -1,0 +1,91 @@
+# Proof 2401 — multi-file CLASS EXTEND/link usability (3 units)
+# Unit1: demo_greeter_base  CLASS Greeter
+# Unit2: demo_greeter_reset EXTEND reset/greet_count
+# Unit3: demo_greeter_tag   EXTEND tag/bye/hello_tag
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+
+NEW Greeter g "cube"
+ASSERT OK == 1
+ISOF g Greeter
+ASSERT LAST_N == 1
+SEND g hi
+ASSERT OK == 1
+GETF g name
+ASSERT OK == 1
+
+SEND g bump
+ASSERT LAST_N == 1
+SEND g bump
+ASSERT LAST_N == 2
+GETF g hits
+ASSERT LAST_N == 2
+
+INCLUDE demo_greeter_reset
+ASSERT OK == 1
+
+HASMETHOD Greeter reset
+ASSERT LAST_N == 1
+HASMETHOD g reset
+ASSERT LAST_N == 1
+HASMETHOD Greeter greet_count
+ASSERT LAST_N == 1
+
+SEND g greet_count
+ASSERT LAST_N == 2
+SEND g reset
+ASSERT OK == 1
+GETF g hits
+ASSERT LAST_N == 0
+SEND g greet_count
+ASSERT LAST_N == 0
+
+SEND g init "atlas"
+SEND g bump
+SEND g bump
+SEND g bump
+SEND g greet_count
+ASSERT LAST_N == 3
+
+INCLUDE demo_greeter_tag
+ASSERT OK == 1
+
+HASMETHOD Greeter set_tag
+ASSERT LAST_N == 1
+HASMETHOD Greeter hello_tag
+ASSERT LAST_N == 1
+HASMETHOD Greeter bye
+ASSERT LAST_N == 1
+
+SEND g set_tag "link3"
+ASSERT OK == 1
+SEND g hello_tag
+ASSERT OK == 1
+GETF g tag
+ASSERT OK == 1
+
+SEND g greet_count
+ASSERT LAST_N == 3
+SEND g hi
+ASSERT OK == 1
+SEND g reset
+GETF g hits
+ASSERT LAST_N == 0
+SEND g greet_count
+ASSERT LAST_N == 0
+
+NEW Greeter h "peer"
+SEND h bump
+SEND h set_tag "unit3"
+SEND h hello_tag
+ASSERT OK == 1
+SEND h greet_count
+ASSERT LAST_N == 1
+ISOF h Greeter
+ASSERT LAST_N == 1
+
+PRINT "multifile_extend_reset_link3 ok"
+ASSERT OK == 1

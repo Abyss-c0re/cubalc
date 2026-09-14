@@ -18,3 +18,10 @@ B4GALT commits GlcCer into Golgi LacCer under ASSERT after UGCG GlcCer ward so f
 - method: `st3gal5 n`
 - continuum: `...->ugcg->b4galt->st3gal5`
 - proof: `programs/proof/2352_life_cell_st3gal5.cubalc`
+
+# MEANINGFUL_ITER 2401
+
+feature MULTIFILE_EXTEND_RESET_LINK3 version 1.16.1-multifile-reset PASS multi-file CLASS EXTEND/link3 Greeter.reset
+- proof programs/proof/2401_multifile_extend_reset_link3.cubalc asserts_ok:33 asserts_fail:0
+- units: demo_greeter_base + demo_greeter_reset + demo_greeter_tag
+- runtime: EXTEND reopen/add METHOD; INCLUDE chain; no hollow redefine
