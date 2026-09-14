@@ -19593,11 +19593,13 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       var_set_num(vm, "CHILDCOUNT_N", n);
       var_set_num(vm, "COUNTCHILDREN_N", n);
       var_set_num(vm, "NUMCHILDREN_N", n);
+      var_set_num(vm, "NCHILDREN_N", n);
       var_set_num(vm, "KIDCOUNT_N", n);
     } else if (want_descc) {
       var_set_num(vm, "DESCENDANTCOUNT_N", n);
       var_set_num(vm, "COUNTDESCENDANTS_N", n);
       var_set_num(vm, "NUMDESCENDANTS_N", n);
+      var_set_num(vm, "NDESCENDANTS_N", n);
       var_set_num(vm, "PROGENYCOUNT_N", n);
       var_set_num(vm, "DESCENDANTCOUNT", n);
     } else {
@@ -19612,6 +19614,134 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     var_set_num(vm, "OK", cda ? 1 : 0);
     if (vm->trace)
       fprintf(vm->trace, "# %s %s -> n=%d\n", opname, a, n);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* NTHSIBLING|FIRSTSIBLING|LASTSIBLING (multifile EXTEND)
+   * FIRSTSIBLING / LASTSIBLING Class|obj — first/last peer sharing parent_idx (excl self).
+   * NTHSIBLING Class|obj N — sibling at index N (0-based, declaration order); soft empty OOB.
+   * Complements SIBLINGS bag + NTHCHILD + NTHPARENT. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NTHSIBLING") || kw(&L->cur, "SIBLINGAT") ||
+      kw(&L->cur, "NTH_SIBLING") || kw(&L->cur, "SIBLING_AT") ||
+      kw(&L->cur, "PEERAT") || kw(&L->cur, "NTHPEER") ||
+      kw(&L->cur, "FIRSTSIBLING") || kw(&L->cur, "ELDERSIBLING") ||
+      kw(&L->cur, "OLDESTSIBLING") || kw(&L->cur, "FIRST_SIBLING") ||
+      kw(&L->cur, "FIRSTPEER") || kw(&L->cur, "ELDERPEER") ||
+      kw(&L->cur, "LASTSIBLING") || kw(&L->cur, "YOUNGSIBLING") ||
+      kw(&L->cur, "NEWESTSIBLING") || kw(&L->cur, "LAST_SIBLING") ||
+      kw(&L->cur, "YOUNGESTSIBLING") || kw(&L->cur, "LASTPEER") ||
+      kw(&L->cur, "YOUNGPEER")) {
+    int want_nth = kw(&L->cur, "NTHSIBLING") || kw(&L->cur, "SIBLINGAT") ||
+                   kw(&L->cur, "NTH_SIBLING") || kw(&L->cur, "SIBLING_AT") ||
+                   kw(&L->cur, "PEERAT") || kw(&L->cur, "NTHPEER");
+    int want_first = kw(&L->cur, "FIRSTSIBLING") || kw(&L->cur, "ELDERSIBLING") ||
+                     kw(&L->cur, "OLDESTSIBLING") || kw(&L->cur, "FIRST_SIBLING") ||
+                     kw(&L->cur, "FIRSTPEER") || kw(&L->cur, "ELDERPEER");
+    int want_last = kw(&L->cur, "LASTSIBLING") || kw(&L->cur, "YOUNGSIBLING") ||
+                    kw(&L->cur, "NEWESTSIBLING") || kw(&L->cur, "LAST_SIBLING") ||
+                    kw(&L->cur, "YOUNGESTSIBLING") || kw(&L->cur, "LASTPEER") ||
+                    kw(&L->cur, "YOUNGPEER");
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, idx_want = -1, hit = 0;
+    int sibs[512];
+    int ns = 0;
+    const char *opname = want_nth ? "NTHSIBLING"
+                         : want_first ? "FIRSTSIBLING"
+                                      : "LASTSIBLING";
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_nth ? "NTHSIBLING Class|obj N"
+                        : (want_first ? "FIRSTSIBLING Class|obj"
+                                      : "LASTSIBLING Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (want_nth) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx_want = (int)L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx_want = (int)vv->val;
+        else { fail(vm, "NTHSIBLING Class|obj N"); return -1; }
+        lex_next(L);
+      } else { fail(vm, "NTHSIBLING Class|obj N"); return -1; }
+    }
+    pick[0] = 0;
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ns = 0;
+    if (cda && ai >= 0) {
+      int par = cda->parent_idx;
+      if (par >= 0 && par < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (i == ai) continue;
+          if (vm->classes[i].parent_idx == par) {
+            if (ns < 512) sibs[ns++] = i;
+          }
+        }
+      }
+    }
+    hit = 0;
+    if (want_first && ns > 0) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[0]].name);
+      hit = 1;
+    } else if (want_last && ns > 0) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[ns - 1]].name);
+      hit = 1;
+    } else if (want_nth && idx_want >= 0 && idx_want < ns) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[idx_want]].name);
+      hit = 1;
+    }
+    var_set_str(vm, "LAST", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    var_set_str(vm, "SIBLING", pick);
+    var_set_str(vm, "NTHSIBLING", pick);
+    var_set_str(vm, "FIRSTSIBLING", pick);
+    var_set_str(vm, "LASTSIBLING", pick);
+    var_set_str(vm, "SIBLINGAT", pick);
+    var_set_num(vm, "NTHSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "FIRSTSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "LASTSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "SIBLINGS_N", ns);
+    var_set_num(vm, "SIBLINGCOUNT_N", ns);
+    n = hit ? 1 : 0;
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d hit=%d sibs=%d\n", opname, a, n, hit, ns);
     bump(vm);
     return 1;
   }
