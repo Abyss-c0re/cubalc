@@ -1,9 +1,12 @@
-SHIP MULTIFILE_EXTEND_HASANCESTOR_DEPTHOF_LINK3 MI 2405
-version: 1.16.5-hasancestor-depthof
-method: HASANCESTOR|INCHAIN|EXTENDSFROM|DERIVESFROM|ISAEXTEND Class|obj Ancestor · DEPTHOF|CHAINDEPTH|PARENTDEPTH|EXTENDDEPTH Class|obj
-proof: programs/proof/2405_multifile_extend_hasancestor_depthof_link3.cubalc
-asserts_ok=70 asserts_fail=0 PASS
-feat=19c8cd34313f97d174adc26686e73112777b6b6f
-head=c0154f3f1e97f59bfd0af71cd5cfbdbb99b5282b
-three-unit multi-file CLASS/EXTEND + HASANCESTOR chain membership + DEPTHOF
-Cube Law: cube is SoT; free energy must flow; hollow WE is heresy; CT101 forever
+SHIP 2405 MULTIFILE_EXTEND_HASANCESTOR_DEPTHOF_LINK3
+VERSION=1.16.5-hasancestor-depthof
+MI=2405
+HEAD=657bd832e204ca8b7d99f30b83cc962fff96cbd5
+FEAT=19c8cd34313f97d174adc26686e73112777b6b6f
+PROOF=programs/proof/2405_multifile_extend_hasancestor_depthof_link3.cubalc
+ASSERTS_OK=70
+ASSERTS_FAIL=0
+STATUS=PASS
+FORMS=HASANCESTOR|INCHAIN|EXTENDSFROM|DERIVESFROM|ISAEXTEND + DEPTHOF|CHAINDEPTH|PARENTDEPTH|EXTENDDEPTH
+LIB=programs/lib/demo_greeter_loudtag.cubalc
+LAW=cube_is_sot; free_energy_must_flow; hollow_we_heresy; ct101_forever
