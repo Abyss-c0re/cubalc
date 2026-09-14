@@ -40,13 +40,13 @@
   "proof_status": "PASS",
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
-  "head": "74dbf73a6935a604a71bada6964132678f4aae94",
-  "HEAD": "74dbf73a6935a604a71bada6964132678f4aae94",
+  "head": "478e56be597de195829100ebb829171d1078313f",
+  "HEAD": "478e56be597de195829100ebb829171d1078313f",
   "tip": "80d3688cc0c92684373774d279ac8f8d42d8386b",
   "TIP": "80d3688cc0c92684373774d279ac8f8d42d8386b",
   "pin": "80d3688cc0c92684373774d279ac8f8d42d8386b",
   "pinned_head": "80d3688cc0c92684373774d279ac8f8d42d8386b",
   "tip_short": "80d3688cc",
-  "feat_head": "74dbf73a6935a604a71bada6964132678f4aae94",
+  "feat_head": "478e56be597de195829100ebb829171d1078313f",
   "FEAT_HEAD": "ea291a12c75abeae5d9e16b2719d27fac40cf392"
 }
