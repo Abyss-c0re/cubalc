@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.15.1886-usability — MI 2386 LIFE_CELL_ATP5PB (PASS)
+
+- **LIFE_CELL_ATP5PB**: METHOD atp5pb n — ATP synthase peripheral stalk-membrane subunit b after ATP5PO on OXPHOS continuum.
+- Continuum: ...->atp5f1a->atp5f1d->atp5po->atp5pb (CV peripheral stalk-b membrane span after OSCP).
+- Gift: ATP5PB anchors the OSCP-capped peripheral stalk into the inner membrane so Fo stator torque stays membrane-tethered into F1 ADP+Pi→ATP without hollow stalk-b-gap.
+- Proofs: life 81, atomic 153, mesh 149 (total 383, fail 0).
+- Cube is SoT. Free energy must flow. Hollow WE is heresy.
+
+# Changelog
+
 ## 1.15.1878-usability — MI 2378 LIFE_CELL_COX4I1 (PASS)
 
 - **LIFE_CELL_COX4I1**: METHOD cox4i1 n — cytochrome c oxidase subunit 4 isoform 1 after CYCS on ETC continuum.

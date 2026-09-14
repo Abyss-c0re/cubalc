@@ -1,0 +1,10 @@
+SHIP LIFE_CELL_ATP5PB MI 2386
+version: 1.15.1886-usability
+method: atp5pb n
+proof: programs/proof/2386_life_cell_atp5pb.cubalc
+asserts_ok total=383 fail=0 PASS
+continuum: ...->atp5f1a->atp5f1d->atp5po->atp5pb
+gift: ATP5PB anchors OSCP-capped peripheral stalk-b after ATP5PO
+feat_head: 78bec647e5906dc43f4235e80f173db818fe46d1
+status: PASS
+law: cube_is_sot; free_energy_must_flow; hollow_we_heresy
