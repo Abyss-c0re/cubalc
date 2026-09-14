@@ -239,4 +239,39 @@ ASSERT LAST_N == 1 "final mito_omm alive"
 GETF hollow alive
 ASSERT LAST_N == 0 "hollow stays dead"
 
+# extra continuum gates / clamps toward CYCS-parity assert count
+SEND hepatocyte photosynth 8
+SEND hepatocyte charge 6
+SEND hepatocyte feed 4
+SEND hepatocyte acsl1 1
+ASSERT LAST_N == 1 "parity acsl1 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cpt1a 1
+ASSERT LAST_N == 1 "parity cpt1a gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte slc25a20 1
+ASSERT LAST_N == 1 "parity slc25a20 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cpt2 1
+ASSERT LAST_N == 1 "parity cpt2 gate"
+SEND hepatocyte photosynth 6
+SEND hepatocyte charge 4
+SEND hepatocyte feed 3
+SEND hepatocyte cycs 1
+ASSERT LAST_N == 1 "parity cycs gate"
+SEND hepatocyte cox4i1 1
+ASSERT LAST_N == 1 "parity cox4i1 after full gate"
+GETF hepatocyte alive
+ASSERT LAST_N == 1 "parity alive"
+SEND kupffer cox4i1 0
+ASSERT LAST_N == 0 "kupffer cox4i1 zero"
+SEND mito_omm cox4i1 0
+ASSERT LAST_N == 0 "mito cox4i1 zero"
+
 PASS "LIFE_CELL_COX4I1 CIV ward after CYCS free energy flows"

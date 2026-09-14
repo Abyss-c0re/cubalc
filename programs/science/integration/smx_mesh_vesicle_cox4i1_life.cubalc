@@ -1,9 +1,9 @@
 REQUIRE VERSION "1.15"
 INCLUDE life_cell
 
-# SMX MESH VESICLE LIFE MI2378: COX4I1 cytochrome c oxidase subunit 4 isoform 1 after COX4I1 on ETC continuum
-# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1 (COX4I1 after COX4I1 CIV limb)
-# Gift: COX4I1 anchors CIV under ASSERT so electrons from COX4I1 reduce O2 and proton-motive free energy flows without hollow COX deficiency lock (CIV ward).
+# SMX MESH VESICLE LIFE MI2378: COX4I1 cytochrome c oxidase subunit 4 isoform 1 after CYCS on ETC continuum
+# Continuum ...->acsl1->cpt1a->slc25a20->cpt2->acadvl->hadha->etfdh->uqcrc1->cycs->cox4i1 (COX4I1 after CYCS CIV limb)
+# Gift: COX4I1 anchors CIV under ASSERT so electrons from CYCS reduce O2 and proton-motive free energy flows without hollow COX deficiency lock (CIV ward).
 # Domain: inner-membrane complex IV COX4I1 ward (CIV terminal oxidase limb of oxidative phosphorylation after cyt-c).
 # Cube is SoT. Free energy must flow. Not a dual ladder.
 
