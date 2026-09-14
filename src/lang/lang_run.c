@@ -1,3 +1,4 @@
+#include <stdlib.h>
 /* CubalC lang — lang_run.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
 #include <ctype.h>
@@ -71,18 +72,27 @@ int cubalc_lang_exec_stmts_until(VM *vm, Lex *L, const char *stop1, const char *
 
 static int run_source_inner(const char *src, size_t n, const char *name,
                             cubalc_run_result *out, FILE *trace){
-  VM vm; memset(&vm,0,sizeof vm);
-  vm.res=out; vm.trace=trace; vm.hold_flash=1;
-  snprintf(vm.creed,sizeof vm.creed,"%s",CUBALC_CREED);
+  /* Heap VM: ClassDef plane ~7.5MB; 8MB stack default segfaults. */
+  VM *vmp = (VM*)calloc(1, sizeof(VM));
+  if (!vmp) {
+    if (out) {
+      out->ok = 0;
+      snprintf(out->err, sizeof out->err, "VM alloc fail");
+    }
+    return 2;
+  }
+  VM *vm = vmp;
+  vm->res=out; vm->trace=trace; vm->hold_flash=1;
+  snprintf(vm->creed,sizeof vm->creed,"%s",CUBALC_CREED);
   cubalc_async_init(0);
-  cubalc_chain_init(&vm.ch);
-  vm.last_str[0]=0; vm.last_code=0; vm.last_n=0;
-  vm.sp=0;
+  cubalc_chain_init(&vm->ch);
+  vm->last_str[0]=0; vm->last_code=0; vm->last_n=0;
+  vm->sp=0;
   {
     const char *se = getenv("CUBALC_SEED");
-    if (se && se[0]) vm.rng = (uint32_t)strtoul(se, NULL, 0);
-    else vm.rng = (uint32_t)time(NULL) ^ 0xC3C3C3C3u;
-    if (!vm.rng) vm.rng = 1;
+    if (se && se[0]) vm->rng = (uint32_t)strtoul(se, NULL, 0);
+    else vm->rng = (uint32_t)time(NULL) ^ 0xC3C3C3C3u;
+    if (!vm->rng) vm->rng = 1;
   }
   /* Usability: CUBALC_RUN_TIMEOUT ms wall budget (cubalc run -T dual). */
   {
@@ -95,53 +105,53 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     }
     if (tms < 0) tms = 0;
     if (tms > 86400000L) tms = 86400000L; /* cap 24h */
-    vm.run_timeout_ms = tms;
-    vm.run_start_ms = cubalc_lang_mono_ms();
+    vm->run_timeout_ms = tms;
+    vm->run_start_ms = cubalc_lang_mono_ms();
     if (tms > 0)
-      vm.run_deadline_ms = vm.run_start_ms + tms;
+      vm->run_deadline_ms = vm->run_start_ms + tms;
     else
-      vm.run_deadline_ms = 0;
+      vm->run_deadline_ms = 0;
   }
-  vm.ch.hold_flash=1;
-  snprintf(vm.ch.creed,sizeof vm.ch.creed,"%s",CUBALC_CREED);
-  if (out){ memset(out,0,sizeof*out); out->ok=1; out->timeout_ms=(int)vm.run_timeout_ms; }
+  vm->ch.hold_flash=1;
+  snprintf(vm->ch.creed,sizeof vm->ch.creed,"%s",CUBALC_CREED);
+  if (out){ memset(out,0,sizeof*out); out->ok=1; out->timeout_ms=(int)vm->run_timeout_ms; }
   if (name && name[0]){
     const char *sl = cubalc_path_slash(name);
     if (sl){
       size_t nbase = (size_t)(sl - name);
-      if (nbase >= sizeof vm.include_base) nbase = sizeof vm.include_base - 1;
-      memcpy(vm.include_base, name, nbase);
-      vm.include_base[nbase] = 0;
-    } else vm.include_base[0]=0;
+      if (nbase >= sizeof vm->include_base) nbase = sizeof vm->include_base - 1;
+      memcpy(vm->include_base, name, nbase);
+      vm->include_base[nbase] = 0;
+    } else vm->include_base[0]=0;
   }
   /* Publish budget so agents can read TIMEOUT_MS without env glue. */
-  if (vm.run_timeout_ms > 0) {
-    var_set_num(&vm, "TIMEOUT_MS", vm.run_timeout_ms);
-    var_set_num(&vm, "RUN_TIMEOUT", vm.run_timeout_ms);
-    var_set_num(&vm, "TIMED_OUT", 0);
+  if (vm->run_timeout_ms > 0) {
+    var_set_num(vm, "TIMEOUT_MS", vm->run_timeout_ms);
+    var_set_num(vm, "RUN_TIMEOUT", vm->run_timeout_ms);
+    var_set_num(vm, "TIMED_OUT", 0);
   }
 
   Lex L; lex_init(&L, src, n);
-  while (!vm.fatal && !vm.halt && L.cur.kind != TK_EOF){
-    if (cubalc_lang_check_timeout(&vm, L.cur.line))
+  while (!vm->fatal && !vm->halt && L.cur.kind != TK_EOF){
+    if (cubalc_lang_check_timeout(vm, L.cur.line))
       break;
     skip_nl(&L);
     if (L.cur.kind==TK_EOF) break;
-    if (parse_form(&vm, &L) < 0) break;
+    if (parse_form(vm, &L) < 0) break;
   }
-  if (vm.ch.n_cubes>0) cubalc_chain_tick(&vm.ch);
+  if (vm->ch.n_cubes>0) cubalc_chain_tick(&vm->ch);
 
   if (out){
-    out->halted = vm.halt ? 1 : 0;
-    out->exit_code = vm.exit_code;
+    out->halted = vm->halt ? 1 : 0;
+    out->exit_code = vm->exit_code;
     /* EXIT n: non-zero fails plate; clean EXIT 0 stays ok if no asserts_fail/fatal */
-    out->ok = !vm.fatal && out->asserts_fail==0 && !(vm.halt && vm.exit_code != 0);
-    out->n_cubes = vm.ch.n_cubes;
-    out->unity = vm.ch.unity;
-    out->timeout_ms = (int)vm.run_timeout_ms;
+    out->ok = !vm->fatal && out->asserts_fail==0 && !(vm->halt && vm->exit_code != 0);
+    out->n_cubes = vm->ch.n_cubes;
+    out->unity = vm->ch.unity;
+    out->timeout_ms = (int)vm->run_timeout_ms;
     /* Usability: end-of-run wall budget left (dual of REMAIN_MS form). */
     {
-      long rem = cubalc_lang_timeout_remain_ms(&vm);
+      long rem = cubalc_lang_timeout_remain_ms(vm);
       long now = cubalc_lang_mono_ms();
       long wall = 0;
       if (out->timed_out)
@@ -152,20 +162,20 @@ static int run_source_inner(const char *src, size_t n, const char *name,
         out->remain_ms = 2147483647;
       else
         out->remain_ms = (int)rem;
-      if (vm.run_start_ms > 0 && now >= vm.run_start_ms)
-        wall = now - vm.run_start_ms;
+      if (vm->run_start_ms > 0 && now >= vm->run_start_ms)
+        wall = now - vm->run_start_ms;
       if (wall > 2147483647L) wall = 2147483647L;
       out->wall_ms = (int)wall;
-      var_set_num(&vm, "WALL_MS", wall);
-      var_set_num(&vm, "ELAPSED_MS", wall);
+      var_set_num(vm, "WALL_MS", wall);
+      var_set_num(vm, "ELAPSED_MS", wall);
     }
-    if (vm.fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm.err);
+    if (vm->fatal && !out->err[0]) snprintf(out->err,sizeof out->err,"%s",vm->err);
     /* Usability: surface sticky LAST_ERR/ERR on plate even when run ok
      * (soft FAIL/EXPECT probes leave agent-readable reason). */
     {
-      Var *le = var_get(&vm, "LAST_ERR", 0);
+      Var *le = var_get(vm, "LAST_ERR", 0);
       if (!le || !le->is_str || !le->sval[0])
-        le = var_get(&vm, "ERR", 0);
+        le = var_get(vm, "ERR", 0);
       if (le && le->is_str && le->sval[0])
         snprintf(out->last_err, sizeof out->last_err, "%s", le->sval);
       else if (out->err[0] && !out->last_err[0])
@@ -178,43 +188,43 @@ static int run_source_inner(const char *src, size_t n, const char *name,
     {
       int i;
       size_t o = 0;
-      out->includes_n = vm.n_included;
+      out->includes_n = vm->n_included;
       out->includes[0] = 0;
-      for (i = 0; i < vm.n_included; i++) {
-        size_t ln = strlen(vm.included[i]);
+      for (i = 0; i < vm->n_included; i++) {
+        size_t ln = strlen(vm->included[i]);
         if (o && o + 1 < sizeof out->includes) out->includes[o++] = '\n';
         if (o + ln < sizeof out->includes) {
-          memcpy(out->includes + o, vm.included[i], ln);
+          memcpy(out->includes + o, vm->included[i], ln);
           o += ln;
         }
         out->includes[o] = 0;
       }
     }
     /* Usability: run-plate dual of STATUS vars_n|max|full — fat board pressure. */
-    out->vars_n = vm.n_vars;
+    out->vars_n = vm->n_vars;
     out->vars_max = CUBALC_MAX_VARS;
-    out->vars_full = vm.vars_full ? 1 : 0;
+    out->vars_full = vm->vars_full ? 1 : 0;
   }
-  if (vm.ch.n_cubes>0){
+  if (vm->ch.n_cubes>0){
     /* Cube Law: share state_matrix only · devices free · united visual faces */
-    cubalc_chain_publish_united(&vm.ch);
+    cubalc_chain_publish_united(&vm->ch);
   }
   {
     int ib;
-    for (ib = 0; ib < vm.n_include_bufs; ib++) {
-      free(vm.include_bufs[ib]);
-      vm.include_bufs[ib] = NULL;
+    for (ib = 0; ib < vm->n_include_bufs; ib++) {
+      free(vm->include_bufs[ib]);
+      vm->include_bufs[ib] = NULL;
     }
-    vm.n_include_bufs = 0;
+    vm->n_include_bufs = 0;
   }
   /* Prefer EXIT code for process rc when halted with non-zero. */
-  if (vm.halt && vm.exit_code != 0) {
-    int ec = vm.exit_code;
+  if (vm->halt && vm->exit_code != 0) {
+    int ec = vm->exit_code;
     if (ec < 0) ec = 1;
     if (ec > 125) ec = 1;
-    return ec;
+    free(vmp); return ec;
   }
-  return out && out->ok ? 0 : 1;
+  free(vmp); return out && out->ok ? 0 : 1;
 }
 
 int cubalc_run_source(const char *src, size_t n, const char *name,
