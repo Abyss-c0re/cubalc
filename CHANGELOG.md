@@ -1,3 +1,11 @@
+## 1.16.17-listleaves-firstleaf-nthleaf — MI 2416 MULTIFILE_EXTEND_LISTLEAVES_FIRSTLEAF_NTHLEAF_LINK3
+
+- **LISTLEAVES** / LEAVESBAG / LEAFNAMES — newline bag of leaf class names in subtree (self if leaf)
+- **FIRSTLEAF** / ELDERLEAF + **LASTLEAF** / YOUNGLEAF — ends of leaf bag in declaration order
+- **NTHLEAF** / LEAFAT — 0-based leaf pick; soft empty OOB
+- Complements LEAFCOUNT + ISLEAF + DESCENDANTS + NTHCHILD
+- Proof: `programs/proof/2416_multifile_extend_listleaves_firstleaf_nthleaf_link3.cubalc` asserts_ok=110 fail=0
+
 ## 1.16.16-nthparent-heightof-leafcount — MI 2415 MULTIFILE_EXTEND_NTHPARENT_HEIGHTOF_LEAFCOUNT_LINK3
 
 - **NTHPARENT** / PARENTAT / ANCESTORAT — ancestor N steps up (0 = immediate parent); soft empty OOB

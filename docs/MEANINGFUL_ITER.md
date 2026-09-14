@@ -1,3 +1,9 @@
+## MI 2416 — MULTIFILE_EXTEND_LISTLEAVES_FIRSTLEAF_NTHLEAF_LINK3
+- VERSION `1.16.17-listleaves-firstleaf-nthleaf`
+- LISTLEAVES bag + FIRSTLEAF/LASTLEAF + NTHLEAF multi-file CLASS EXTEND probes
+- Proof: programs/proof/2416_multifile_extend_listleaves_firstleaf_nthleaf_link3.cubalc
+- asserts_ok=110 asserts_fail=0
+
 ## MI 2415 — MULTIFILE_EXTEND_NTHPARENT_HEIGHTOF_LEAFCOUNT_LINK3
 - VERSION `1.16.16-nthparent-heightof-leafcount`
 - NTHPARENT/PARENTAT + HEIGHTOF + LEAFCOUNT multi-file CLASS EXTEND probes
