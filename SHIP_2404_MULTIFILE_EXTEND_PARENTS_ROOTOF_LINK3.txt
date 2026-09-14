@@ -4,6 +4,6 @@ method: PARENTS|SUPERCHAIN|ANCESTORS Class|obj ; ROOTOF|GETROOT|ROOTCLASS Class|
 proof: programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
 asserts_ok=85 asserts_fail=0 PASS
 feat_head: 63e08c48263d6a4dcb3c434aea209bb6cc8d5396
-git_tip: 94562b720032b3e5b860686063a8a437ac289db3
+git_tip: a8a6a98c422ea1bb78817ccab7c52a80fdbc3ce2
 three/four-unit multi-file CLASS/EXTEND + PARENTS chain + ROOTOF
 Cube Law: cube is SoT; free energy must flow; hollow WE is heresy; CT101 forever
