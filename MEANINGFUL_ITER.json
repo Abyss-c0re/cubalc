@@ -40,13 +40,13 @@
   "proof_status": "PASS",
   "anti_bloat": true,
   "law": "cube_is_sot; free_energy_must_flow; hollow_we_heresy",
-  "head": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "HEAD": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "tip": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "TIP": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "pin": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "pinned_head": "bf18dcd31bcfb72169fbc8d50dcfca8942cb758d",
-  "tip_short": "bf18dcd31",
-  "feat_head": "3ebf6425eb401f1ecc924ca4e64a65ffbf597f71",
-  "FEAT_HEAD": "3ebf6425eb401f1ecc924ca4e64a65ffbf597f71"
+  "head": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "HEAD": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "tip": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "TIP": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "pin": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "pinned_head": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "tip_short": "80d3688cc",
+  "feat_head": "80d3688cc0c92684373774d279ac8f8d42d8386b",
+  "FEAT_HEAD": "ea291a12c75abeae5d9e16b2719d27fac40cf392"
 }
