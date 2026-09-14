@@ -1,6 +1,6 @@
 # life_cell_x08.cubalc — EXTEND Cell pack 8
 
-EXTEND CLASS Cell
+EXTEND Cell
   METHOD sgpl1 n
     GETF THIS alive
     IF LAST_N == 0 THEN

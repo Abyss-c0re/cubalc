@@ -202,3 +202,15 @@ Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
 
 Note: RELATED stays form-discovery (SEEALSO); chain probe uses ISRELATED/SAMEFAMILY.
 
+
+## MI 2412 chain distance / path
+
+| CHAINDIST / TREEDIST / CLASSDIST | EXTEND-tree hop distance via LCA · DIST |
+| PATHBETWEEN / CLASSPATH / TREEPATH | newline bag of class names on path A..B · PATH_N |
+
+## MI 2413 siblings / child / descendant
+
+| SIBLINGS / COSUBS / PEERCLASSES / SAMEPARENT | newline bag of classes sharing parent_idx (excl. self) · SIBLINGS_N |
+| HASCHILD / HASSUBCLASS / ISPARENTOF | soft 0|1 if Child is direct EXTEND child · HASCHILD_N |
+| HASDESCENDANT / HASSUBTREE / INPROGENY | soft 0|1 if Desc is any-depth progeny (not self) · HASDESCENDANT_N |
+| CHILDREN / LISTCHILDREN / SUBCLASSES | newline bag of direct EXTEND kids · CHILDREN_N |

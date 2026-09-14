@@ -1,3 +1,21 @@
+## 1.16.14-siblings-haschild-hasdescendant — MI 2413 MULTIFILE_EXTEND_SIBLINGS_HASCHILD_HASDESCENDANT_LINK3
+
+- **SIBLINGS** / COSUBS / PEERCLASSES / SAMEPARENT Class|obj — newline bag of peer classes sharing parent_idx (excl. self) · SIBLINGS_N
+- **HASCHILD** / HASSUBCLASS / ISPARENTOF / HASDIRECTSUB Class|obj Child — soft 0|1 direct EXTEND child · HASCHILD_N
+- **HASDESCENDANT** / HASSUBTREE / INPROGENY Class|obj Desc — soft 0|1 any-depth progeny (not self) · HASDESCENDANT_N
+- **CHILDREN** / LISTCHILDREN / SUBCLASSES Class|obj — newline bag of direct kids · CHILDREN_N
+- Multifile Greeter→TagGreeter→LoudTag + TwinGreet/SoftTag peers; Solo orphan negatives
+- Complements HASANCESTOR/DEPTHOF + COMMONANCESTOR + CHAINDIST/PATHBETWEEN
+- Proof `programs/proof/2413_multifile_extend_siblings_haschild_hasdescendant_link3.cubalc` — 65 asserts PASS
+- Law: cube is SoT; free energy must flow; no life_cell continuum; no IF*P duals
+
+## 1.16.12-chaindist-pathbetween — MI 2412 MULTIFILE_EXTEND_CHAINDIST_PATHBETWEEN_LINK3
+
+- **CHAINDIST** / TREEDIST / CLASSDIST A B — EXTEND-tree hop distance via LCA · DIST
+- **PATHBETWEEN** / CLASSPATH / TREEPATH A B — newline bag path A..B · PATH_N
+- Complements COMMONANCESTOR/SAMECHAIN + HASANCESTOR/DEPTHOF
+- Proof `programs/proof/2412_multifile_extend_chaindist_pathbetween_link3.cubalc`
+
 ## 1.16.7-fieldorigin-hasownfield — MI 2407 MULTIFILE_EXTEND_FIELDORIGIN_HASOWNFIELD_LINK3
 
 - **FIELDORIGIN** / FIELDFROM / DEFINEDFIELD / FIELDOWNER / SOURCEFIELD / WHEREFIELD Class|obj field — nearest EXTEND class that owns field default · ORIGIN

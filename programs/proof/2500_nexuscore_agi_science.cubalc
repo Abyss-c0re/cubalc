@@ -1,0 +1,9 @@
+// Proof 2500 — NexusCore science-backed AGI (wrapper)
+// Canonical SoT program:
+//   programs/science/integration/nexuscore_agi_science.cubalc
+// Host continuous prove:
+//   /opt/nexuscore/bin/nexuscore-cubalc-agi-science --json
+// This proof file is a direct INCLUDE of the science battery when path resolves.
+
+REQUIRE VERSION "1.15"
+INCLUDE science/integration/nexuscore_agi_science

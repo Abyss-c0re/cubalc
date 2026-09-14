@@ -1,6 +1,6 @@
 # life_cell_x02.cubalc — EXTEND Cell pack 2
 
-EXTEND CLASS Cell
+EXTEND Cell
   METHOD momp n
     GETF THIS alive
     IF LAST_N == 0 THEN

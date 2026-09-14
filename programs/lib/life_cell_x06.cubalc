@@ -1,6 +1,6 @@
 # life_cell_x06.cubalc — EXTEND Cell pack 6
 
-EXTEND CLASS Cell
+EXTEND Cell
   METHOD cyp7a1 n
     GETF THIS alive
     IF LAST_N == 0 THEN

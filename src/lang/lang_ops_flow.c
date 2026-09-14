@@ -1012,6 +1012,9 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     int reopen = 0;
     int base_idx = -1;
     lex_next(L);
+    /* Usability: EXTEND CLASS Greeter … END  ≡  EXTEND Greeter … END */
+    if (is_extend_kw && kw(&L->cur, "CLASS"))
+      lex_next(L);
     if (L->cur.kind != TK_IDENT) {
       fail_at(vm, L, is_extend_kw
               ? "EXTEND needs ClassName — EXTEND Greeter … END"

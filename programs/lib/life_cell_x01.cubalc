@@ -1,6 +1,6 @@
 # life_cell_x01.cubalc — EXTEND Cell pack 1
 
-EXTEND CLASS Cell
+EXTEND Cell
   METHOD futile n
     GETF THIS alive
     IF LAST_N == 0 THEN

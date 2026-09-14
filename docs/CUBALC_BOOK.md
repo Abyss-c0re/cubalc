@@ -564,3 +564,10 @@ C API: `cubalc_smx_seal` · `cubalc_smx_open` · `cubalc_cube_talk_secure`.
 
 Legacy `proto=1` unsigned pack remains for offline sim only; **hive / nanobot exchange must use SMX2**.
 
+
+## Multifile EXTEND chain probes (MI 2411–2413)
+
+- COMMONANCESTOR / SAMECHAIN
+- CHAINDIST / PATHBETWEEN
+- SIBLINGS / HASCHILD / HASDESCENDANT / CHILDREN
+

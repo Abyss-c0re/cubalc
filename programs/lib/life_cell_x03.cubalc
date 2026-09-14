@@ -1,6 +1,6 @@
 # life_cell_x03.cubalc — EXTEND Cell pack 3
 
-EXTEND CLASS Cell
+EXTEND Cell
   METHOD glycosyl n
     GETF THIS alive
     IF LAST_N == 0 THEN
