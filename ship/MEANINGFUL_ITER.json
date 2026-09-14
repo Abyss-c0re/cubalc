@@ -1,7 +1,9 @@
 {
   "meaningful_iter": 2384,
   "version": "1.15.1884-usability",
-  "head": "853ea9a094e7615f002a65014f96016225bd7773",
+  "head": "2cd0d94c14e67c658e60dc69f5cd052173d0405e",
   "feat": "LIFE_CELL_ATP5PO",
-  "status": "PASS"
+  "status": "PASS",
+  "HEAD": "2cd0d94c14e67c658e60dc69f5cd052173d0405e",
+  "feat_head": "54073aa57aa923bea2dc5dd3c98807342b75bd4d"
 }
