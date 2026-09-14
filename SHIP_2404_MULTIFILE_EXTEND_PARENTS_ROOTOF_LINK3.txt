@@ -1,8 +1,9 @@
-SHIP 2404 MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3
-VERSION=1.16.4-parents-rootof
-MI=2404
-HEAD=e65732e7fa7341dab31955c221a60b298348398e
-PROOF=programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
-ASSERTS_OK=85
-ASSERTS_FAIL=0
-STATUS=PASS
+SHIP MULTIFILE_EXTEND_PARENTS_ROOTOF_LINK3 MI 2404
+version: 1.16.4-parents-rootof
+method: PARENTS|ROOTOF Class|obj
+proof: programs/proof/2404_multifile_extend_parents_rootof_link3.cubalc
+asserts_ok=85 asserts_fail=0 PASS
+feat=63e08c48263d6a4dcb3c434aea209bb6cc8d5396
+head=d66de59c624e424b2999f8292385a57a5551b0f2
+three-unit multi-file CLASS/EXTEND + PARENTS chain bag + ROOTOF
+Cube Law: cube is SoT; free energy must flow; hollow WE is heresy; CT101 forever
