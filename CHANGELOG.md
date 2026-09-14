@@ -1,3 +1,7 @@
+## 1.16.21-aresiblings-siblingcount-hassibling — MI 2420
+- feat(lang): ARESIBLINGS/ISSIBLING/SIBLINGOF two-arg peer gate + prove SIBLINGCOUNT/HASSIBLING multifile EXTEND
+- Proof programs/proof/2420_multifile_extend_aresiblings_siblingcount_hassibling_link3.cubalc
+
 ## 1.16.20-isroot-isfirstchild-islastchild-onlychild — MI 2419
 - ISROOT / IS_ROOT / TOPCLASS — 1 if class has no parent_idx (EXTEND root).
 - ISFIRSTCHILD / ISLASTCHILD — first/last among parent's direct kids (declaration order).

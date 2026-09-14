@@ -20092,6 +20092,114 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* ARESIBLINGS + ISSIBLING/SIBLINGOF/PEEROF (multifile EXTEND)
+   * ARESIBLINGS|ISSIBLING|SIBLINGOF|PEEROF|ISPEEROF|SHAREPARENT_P Class|obj Class|obj
+   * — soft 0|1 if both resolve and share the same parent_idx (distinct classes).
+   * Roots / unknown / self-pair → 0. Complements SIBLINGCOUNT + HASSIBLING +
+   * SIBLINGS bag + CHILDRANK. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ARESIBLINGS") || kw(&L->cur, "ARE_SIBLINGS") ||
+      kw(&L->cur, "ISSIBLING") || kw(&L->cur, "IS_SIBLING") ||
+      kw(&L->cur, "SIBLINGOF") || kw(&L->cur, "SIBLING_OF") ||
+      kw(&L->cur, "PEEROF") || kw(&L->cur, "PEER_OF") ||
+      kw(&L->cur, "ISPEEROF") || kw(&L->cur, "IS_PEER_OF") ||
+      kw(&L->cur, "SHAREPARENT_P") || kw(&L->cur, "SAMEPARENT_P") ||
+      kw(&L->cur, "COSIBLING") || kw(&L->cur, "CO_SIBLING")) {
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1, hit = 0;
+    const char *opname = "ARESIBLINGS";
+    lex_next(L);
+    a[0] = b[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARESIBLINGS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AND") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "IS") || kw(&L->cur, "TO") || kw(&L->cur, "VS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARESIBLINGS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    hit = 0;
+    if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+      int pa = cda->parent_idx;
+      int pb = cdb->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes && pa == pb)
+        hit = 1;
+    }
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+    var_set_str(vm, "LAST", vm->last_str);
+    var_set_num(vm, "ARESIBLINGS_N", hit ? 1 : 0);
+    var_set_num(vm, "ARESIBLINGS", hit ? 1 : 0);
+    var_set_num(vm, "ISSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "ISSIBLING", hit ? 1 : 0);
+    var_set_num(vm, "SIBLINGOF_N", hit ? 1 : 0);
+    var_set_num(vm, "PEEROF_N", hit ? 1 : 0);
+    var_set_num(vm, "OK", (cda && cdb) ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "PEER", cdb->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> %d\n", opname, a, b, hit);
+    bump(vm);
+    return 1;
+  }
+
 
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
