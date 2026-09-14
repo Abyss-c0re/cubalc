@@ -46,12 +46,12 @@
   "hold_flash": 1,
   "feat_head": "0c9deecc40b1311fd76211ca9f5decd31cccdd35",
   "FEAT_HEAD": "0c9deecc40b1311fd76211ca9f5decd31cccdd35",
-  "head": "c79fe3eb917a436cf00500911bf47878bdd62a32",
-  "HEAD": "c79fe3eb917a436cf00500911bf47878bdd62a32",
-  "tip": "c79fe3eb917a436cf00500911bf47878bdd62a32",
+  "head": "821d2aa4a250451a920afb5be144c9db0a641260",
+  "HEAD": "821d2aa4a250451a920afb5be144c9db0a641260",
+  "tip": "821d2aa4a250451a920afb5be144c9db0a641260",
   "TIP": "cbc2ec69ed23331cba6855d1258b8f77cd566d07",
   "pin": "cbc2ec69ed23331cba6855d1258b8f77cd566d07",
   "tip_short": "cbc2ec69e",
   "HEAD_short": "cbc2ec69e",
-  "pinned_head": "c79fe3eb917a436cf00500911bf47878bdd62a32"
+  "pinned_head": "821d2aa4a250451a920afb5be144c9db0a641260"
 }
