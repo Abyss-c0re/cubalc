@@ -1,0 +1,106 @@
+# Proof 2411 — MULTIFILE_EXTEND_COMMONANCESTOR_SAMECHAIN_LINK3
+# Three-unit multi-file CLASS EXTEND/link + COMMONANCESTOR/LCA + SAMECHAIN.
+# Complements HASANCESTOR + PARENTS + ROOTOF + DEPTHOF + LISTOWN/INHERITED/OVERRIDE.
+# Cube is SoT. Free energy must flow. Meaningful growth only.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+
+HASCLASS Greeter
+ASSERT LAST_N == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+# chain: LoudTag -> TagGreeter -> Greeter
+HASANCESTOR LoudTag Greeter
+ASSERT LAST_N == 1
+HASANCESTOR LoudTag TagGreeter
+ASSERT LAST_N == 1
+HASANCESTOR TagGreeter Greeter
+ASSERT LAST_N == 1
+DEPTHOF LoudTag
+ASSERT LAST_N == 2
+ROOTOF LoudTag
+ASSERT LAST == "Greeter"
+
+# COMMONANCESTOR / LCA
+COMMONANCESTOR LoudTag TagGreeter
+ASSERT OK == 1
+ASSERT LAST == "TagGreeter"
+ASSERT LCA == "TagGreeter"
+ASSERT LAST_N == 1
+
+COMMONANCESTOR LoudTag Greeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter"
+ASSERT LCA_N == 1
+
+COMMONANCESTOR TagGreeter Greeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter"
+
+# same class → self
+COMMONANCESTOR LoudTag LoudTag
+ASSERT OK == 1
+ASSERT LAST == "LoudTag"
+ASSERT LAST_N == 1
+
+# LCA alias
+LCA LoudTag TagGreeter
+ASSERT LAST == "TagGreeter"
+
+# SAMECHAIN soft flag
+SAMECHAIN LoudTag TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT SAMECHAIN_N == 1
+
+SAMECHAIN LoudTag Greeter
+ASSERT LAST_N == 1
+
+SAMECHAIN TagGreeter Greeter
+ASSERT LAST_N == 1
+
+SAMECHAIN LoudTag LoudTag
+ASSERT LAST_N == 1
+
+# RELATED alias
+ISRELATED LoudTag TagGreeter
+ASSERT LAST_N == 1
+SAMEFAMILY LoudTag TagGreeter
+ASSERT LAST_N == 1
+
+# disjoint unrelated class
+CLASS Solo
+  FIELD x 1
+  METHOD ping
+    RET 1
+  END
+END
+HASCLASS Solo
+ASSERT LAST_N == 1
+
+COMMONANCESTOR LoudTag Solo
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+SAMECHAIN LoudTag Solo
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT SAMECHAIN_N == 0
+
+PARENTS LoudTag
+ASSERT OK == 1
+ASSERT PARENTS_N == 2
+
+PRINT "PASS multifile COMMONANCESTOR/SAMECHAIN link3"

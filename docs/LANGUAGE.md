@@ -185,3 +185,20 @@ Sticky: `POPCOUNTN_OK`, `CLZN_OK`, `CTZN_OK`, `PARITYN_OK` and `*_X`.
 | LISTOWNFIELDS | newline bag of fields owned on Class|obj (HASOWNFIELD=1) |
 | LISTOWNMETHODS | newline bag of methods owned on Class|obj (OVERRIDES=1) |
 
+## MI 2409 inherited contribution bags
+
+| LISTINHERITEDFIELDS | newline bag of fields pure-inherited (not owned here) |
+| LISTINHERITEDMETHODS | newline bag of methods pure-inherited (not owned here) |
+
+## MI 2410 override contribution bags
+
+| LISTOVERRIDEFIELDS | newline bag of own fields that shadow an ancestor |
+| LISTOVERRIDEMETHODS | newline bag of own methods that override an ancestor |
+
+## MI 2411 common ancestor / same chain
+
+| COMMONANCESTOR / LCA | lowest common EXTEND ancestor name · LAST/LCA |
+| SAMECHAIN / ISRELATED / SAMEFAMILY | soft 0|1 if same EXTEND family |
+
+Note: RELATED stays form-discovery (SEEALSO); chain probe uses ISRELATED/SAMEFAMILY.
+

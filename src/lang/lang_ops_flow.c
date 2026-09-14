@@ -18317,7 +18317,7 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
    * — multi-file EXTEND/link usability: lowest common ancestor class name.
    * Walk B ancestors into a set, then walk A up until hit. LAST = LCA name.
    * Soft empty if disjoint / unknown. Complements HASANCESTOR + ROOTOF + PARENTS.
-   * SAMECHAIN|SHARECHAIN|RELATED|COCHAIN Class|obj Class|obj — soft 0|1 if
+   * SAMECHAIN|SHARECHAIN|COCHAIN|SAMEFAMILY|ISRELATED Class|obj Class|obj — soft 0|1 if
    * same EXTEND family (LCA exists OR either is ancestor of other OR same class).
    * Cube Law: free energy must flow; meaningful growth only. */
   if (kw(&L->cur, "COMMONANCESTOR") || kw(&L->cur, "LCA") ||
@@ -18326,12 +18326,12 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
       kw(&L->cur, "COMMONPARENT") || kw(&L->cur, "SHAREDBASE") ||
       kw(&L->cur, "COMMONROOT") || kw(&L->cur, "LCACLASS") ||
       kw(&L->cur, "SAMECHAIN") || kw(&L->cur, "SHARECHAIN") ||
-      kw(&L->cur, "RELATED") || kw(&L->cur, "COCHAIN") ||
+      kw(&L->cur, "COCHAIN") || kw(&L->cur, "CHAINMATES") ||
       kw(&L->cur, "SAME_CHAIN") || kw(&L->cur, "SHARE_CHAIN") ||
       kw(&L->cur, "ONCHAIN") || kw(&L->cur, "FAMILYOF") ||
       kw(&L->cur, "SAMEFAMILY") || kw(&L->cur, "ISRELATED")) {
     int want_flag = kw(&L->cur, "SAMECHAIN") || kw(&L->cur, "SHARECHAIN") ||
-                    kw(&L->cur, "RELATED") || kw(&L->cur, "COCHAIN") ||
+                    kw(&L->cur, "COCHAIN") || kw(&L->cur, "CHAINMATES") ||
                     kw(&L->cur, "SAME_CHAIN") || kw(&L->cur, "SHARE_CHAIN") ||
                     kw(&L->cur, "ONCHAIN") || kw(&L->cur, "FAMILYOF") ||
                     kw(&L->cur, "SAMEFAMILY") || kw(&L->cur, "ISRELATED");
