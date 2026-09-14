@@ -8,10 +8,10 @@
   "MI": 2403,
   "version": "1.16.3-sendsuper",
   "VERSION": "1.16.3-sendsuper",
-  "feature": "multifile_extend_sendsuper_link3",
+  "feature": "MULTIFILE_EXTEND_SENDSUPER_LINK3",
   "FEATURE": "MULTIFILE_EXTEND_SENDSUPER_LINK3",
   "name": "MULTIFILE_EXTEND_SENDSUPER_LINK3",
-  "title": "SENDSUPER parent method on multi-file CLASS EXTEND three-unit link",
+  "title": "MULTIFILE_EXTEND_SENDSUPER_LINK3",
   "label": "MULTIFILE_EXTEND_SENDSUPER_LINK3",
   "method": "SENDSUPER|SUPERSEND|CALLSUPER obj method \u2014 parent_idx chain skip override",
   "ship": "2403_multifile_extend_sendsuper_link3",
@@ -38,7 +38,10 @@
   "sealed": true,
   "pass": true,
   "proof_status": "PASS",
-  "head": "40ee55bb16277f2c29a12cd868563939ca0ff6a6",
-  "HEAD": "40ee55bb16277f2c29a12cd868563939ca0ff6a6",
-  "feat_head": "40ee55bb16277f2c29a12cd868563939ca0ff6a6"
+  "head": "2c54b2d949c205d316194e52c055cb9e05fdfcd2",
+  "HEAD": "2c54b2d949c205d316194e52c055cb9e05fdfcd2",
+  "feat_head": "2c54b2d949c205d316194e52c055cb9e05fdfcd2",
+  "head_short": "2c54b2d94",
+  "FEAT_HEAD": "2c54b2d949c205d316194e52c055cb9e05fdfcd2",
+  "ts": "2026-09-14T04:15:29Z"
 }
