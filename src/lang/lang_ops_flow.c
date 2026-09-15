@@ -20581,6 +20581,111 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     bump(vm);
     return 1;
   }
+  /* NTHCOUSIN|COUSINAT|COUSIN_AT (multifile EXTEND)
+   * NTHCOUSIN Class|obj N — first-cousin name at 0-based index (declaration order).
+   * Soft empty LAST="" LAST_N=0 on OOB / root / no cousins. OK=1 always when parse ok.
+   * Complements COUSINS bag + FIRSTCOUSIN + LASTCOUSIN + COUSINCOUNT + ARECOUSINS.
+   * Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NTHCOUSIN") || kw(&L->cur, "COUSINAT") ||
+      kw(&L->cur, "NTH_COUSIN") || kw(&L->cur, "COUSIN_AT") ||
+      kw(&L->cur, "COUSIN_NTH") || kw(&L->cur, "PEERCOUSINAT") ||
+      kw(&L->cur, "NTHPEERCOUSIN") || kw(&L->cur, "COUSININDEX")) {
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, idx_want = -1, hit = 0;
+    int pa = -1, gpa = -1;
+    int cous[512];
+    int nc = 0;
+    const char *opname = "NTHCOUSIN";
+    lex_next(L);
+    a[0] = 0;
+    pick[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "NTHCOUSIN Class|obj N");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+        kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      idx_want = (int)L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && !vv->is_str) idx_want = (int)vv->val;
+      else { fail(vm, "NTHCOUSIN Class|obj N"); return -1; }
+      lex_next(L);
+    } else { fail(vm, "NTHCOUSIN Class|obj N"); return -1; }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    nc = 0;
+    if (cda && ai >= 0) {
+      pa = cda->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes) {
+        gpa = vm->classes[pa].parent_idx;
+        if (gpa >= 0 && gpa < vm->n_classes) {
+          for (i = 0; i < vm->n_classes; i++) {
+            int p2;
+            if (i == ai) continue;
+            p2 = vm->classes[i].parent_idx;
+            if (p2 < 0 || p2 >= vm->n_classes) continue;
+            if (p2 == pa) continue;
+            if (vm->classes[p2].parent_idx != gpa) continue;
+            if (nc < 512) cous[nc++] = i;
+          }
+        }
+      }
+    }
+    hit = 0;
+    pick[0] = 0;
+    if (idx_want >= 0 && idx_want < nc) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[cous[idx_want]].name);
+      hit = 1;
+    }
+    var_set_str(vm, "LAST", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    var_set_str(vm, "COUSIN", pick);
+    var_set_str(vm, "NTHCOUSIN", pick);
+    var_set_str(vm, "COUSINAT", pick);
+    var_set_num(vm, "NTHCOUSIN_N", hit ? 1 : 0);
+    var_set_num(vm, "COUSINAT_N", hit ? 1 : 0);
+    var_set_num(vm, "COUSINS_N", nc);
+    var_set_num(vm, "COUSINCOUNT_N", nc);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %d -> hit=%d cous=%d\n", opname, a, idx_want, hit, nc);
+    bump(vm);
+    return 1;
+  }
+
 
 
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
