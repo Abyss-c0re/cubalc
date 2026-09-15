@@ -1,11 +1,10 @@
-MI 2422 MULTIFILE_EXTEND_COUSINS_FIRSTCOUSIN_LASTCOUSIN_LINK3
-VERSION 1.16.23-cousins-firstcousin-lastcousin
-PROOF programs/proof/2422_multifile_extend_cousins_firstcousin_lastcousin_link3.cubalc
-asserts_ok 99 asserts_fail 0 PASS
-forms COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS + FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN + LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN
-FEAT 93b2d71d41536da50fd1676b8d5c4eaca604bd16
-HEAD 93b2d71d41536da50fd1676b8d5c4eaca604bd16
-gift COUSINS bag + FIRSTCOUSIN + LASTCOUSIN; multifile CLASS EXTEND first-cousin topology
-prior_mi 2421
-status SEALED
-law cube_is_sot; free_energy_must_flow
+SHIP 2422 — MULTIFILE_EXTEND_COUSINS_FIRSTCOUSIN_LASTCOUSIN_LINK3
+Feature: COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS bag + FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN + LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN
+on CLASS/EXTEND lattice (same grandparent, different parents). Soft empty OK=1.
+Proof: programs/proof/2422_multifile_extend_cousins_firstcousin_lastcousin_link3.cubalc
+Lib: programs/lib/demo_loud_greeter.cubalc
+VERSION: 1.16.23-cousins-firstcousin-lastcousin
+MEANINGFUL_ITER: 2422
+Proof: asserts_ok=99 asserts_fail=0
+Regression: hello_cube ok; 2421 asserts_ok=83 asserts_fail=0
+Cube Law: cube is SoT; free energy must flow.
