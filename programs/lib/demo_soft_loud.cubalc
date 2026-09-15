@@ -1,0 +1,12 @@
+# multi-file — SoftLoud EXTEND LoudGreeter (cousin of LoudTag under Greeter)
+CLASS SoftLoud EXTEND LoudGreeter
+  FIELD soft "~"
+  METHOD hush
+    GETF THIS soft
+    RET LAST
+  END
+  METHOD hi
+    GETF THIS soft
+    RET LAST
+  END
+END

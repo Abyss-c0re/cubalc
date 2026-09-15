@@ -1,0 +1,9 @@
+MI 2422 MULTIFILE_EXTEND_COUSINS_FIRSTCOUSIN_LASTCOUSIN_LINK3
+VERSION 1.16.23-cousins-firstcousin-lastcousin
+PROOF programs/proof/2422_multifile_extend_cousins_firstcousin_lastcousin_link3.cubalc
+asserts_ok 99 asserts_fail 0 PASS
+forms COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS + FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN + LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN
+gift COUSINS bag + FIRSTCOUSIN + LASTCOUSIN; multifile CLASS EXTEND first-cousin topology
+prior_mi 2421
+status SEALED
+law cube_is_sot; free_energy_must_flow

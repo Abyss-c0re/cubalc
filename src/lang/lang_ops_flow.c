@@ -20414,6 +20414,175 @@ int cubalc_lang_ops_flow(VM *vm, Lex *L){
     return 1;
   }
 
+  /* COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS Class|obj
+   * — newline bag of first cousins (same grandparent, different parents).
+   * FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN Class|obj — first cousin name (may empty).
+   * LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN Class|obj — last cousin name (may empty).
+   * Soft empty OK=1 when root/shallow/unknown/no cousins. LAST=bag|name; LAST_N=count|0|1.
+   * Complements ARECOUSINS/COUSINCOUNT/HASCOUSIN + SIBLINGS bag without scrape.
+   * Multi-file CLASS/EXTEND usability. Cube Law: free energy must flow. */
+  if (kw(&L->cur, "COUSINS") || kw(&L->cur, "COUSINBAG") ||
+      kw(&L->cur, "LISTCOUSINS") || kw(&L->cur, "PEERCOUSINS") ||
+      kw(&L->cur, "COUSINS_OF") || kw(&L->cur, "LIST_COUSINS") ||
+      kw(&L->cur, "COUSINLIST") || kw(&L->cur, "ALLCOUSINS") ||
+      kw(&L->cur, "FIRSTCOUSIN") || kw(&L->cur, "HEADCOUSIN") ||
+      kw(&L->cur, "ELDESTCOUSIN") || kw(&L->cur, "FIRST_COUSIN") ||
+      kw(&L->cur, "HEAD_COUSIN") || kw(&L->cur, "STARTCOUSIN") ||
+      kw(&L->cur, "LASTCOUSIN") || kw(&L->cur, "TAILCOUSIN") ||
+      kw(&L->cur, "YOUNGESTCOUSIN") || kw(&L->cur, "LAST_COUSIN") ||
+      kw(&L->cur, "TAIL_COUSIN") || kw(&L->cur, "ENDCOUSIN")) {
+    int want_first =
+        kw(&L->cur, "FIRSTCOUSIN") || kw(&L->cur, "HEADCOUSIN") ||
+        kw(&L->cur, "ELDESTCOUSIN") || kw(&L->cur, "FIRST_COUSIN") ||
+        kw(&L->cur, "HEAD_COUSIN") || kw(&L->cur, "STARTCOUSIN");
+    int want_last =
+        kw(&L->cur, "LASTCOUSIN") || kw(&L->cur, "TAILCOUSIN") ||
+        kw(&L->cur, "YOUNGESTCOUSIN") || kw(&L->cur, "LAST_COUSIN") ||
+        kw(&L->cur, "TAIL_COUSIN") || kw(&L->cur, "ENDCOUSIN");
+    int want_bag = !want_first && !want_last;
+    char a[48], bag[2048];
+    char first_nm[48], last_nm[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, ci, self_i = -1, parent_i = -1, gparent_i = -1;
+    const char *wh = "COUSINS";
+    lex_next(L);
+    a[0] = 0;
+    bag[0] = 0;
+    first_nm[0] = 0;
+    last_nm[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_first ? "FIRSTCOUSIN Class|obj"
+                           : want_last ? "LASTCOUSIN Class|obj"
+                                       : "COUSINS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) self_i = (int)(cd - vm->classes);
+    if (cd && self_i >= 0) parent_i = cd->parent_idx;
+    if (parent_i >= 0 && parent_i < vm->n_classes)
+      gparent_i = vm->classes[parent_i].parent_idx;
+    if (cd && self_i >= 0 && parent_i >= 0 && gparent_i >= 0 &&
+        gparent_i < vm->n_classes) {
+      for (ci = 0; ci < vm->n_classes; ci++) {
+        int p, gp;
+        ClassDef *c;
+        const char *nm;
+        size_t ln;
+        if (ci == self_i) continue;
+        c = &vm->classes[ci];
+        p = c->parent_idx;
+        if (p < 0 || p >= vm->n_classes) continue;
+        if (p == parent_i) continue; /* sibling, not cousin */
+        gp = vm->classes[p].parent_idx;
+        if (gp != gparent_i) continue;
+        nm = c->name;
+        ln = strlen(nm);
+        if (!ln) continue;
+        if (!first_nm[0]) snprintf(first_nm, sizeof first_nm, "%s", nm);
+        snprintf(last_nm, sizeof last_nm, "%s", nm);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, nm, ln);
+          o += ln;
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    if (want_first) wh = "FIRSTCOUSIN";
+    else if (want_last) wh = "LASTCOUSIN";
+    else wh = "COUSINS";
+    if (want_bag) {
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_str(vm, "COUSINS", bag);
+      var_set_str(vm, "COUSINBAG", bag);
+      var_set_str(vm, "LISTCOUSINS", bag);
+      var_set_str(vm, "PEERCOUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINBAG_N", n);
+      var_set_num(vm, "LISTCOUSINS_N", n);
+      var_set_num(vm, "PEERCOUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_num(vm, "NCOUSINS", n);
+      var_set_num(vm, "NUMCOUSINS", n);
+      var_set_num(vm, "HASCOUSIN", n > 0 ? 1 : 0);
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+      var_set_num(vm, "FIRSTCOUSIN_N", first_nm[0] ? 1 : 0);
+      var_set_num(vm, "LASTCOUSIN_N", last_nm[0] ? 1 : 0);
+    } else if (want_first) {
+      var_set_str(vm, "LAST", first_nm);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", first_nm);
+      var_set_num(vm, "LAST_N", first_nm[0] ? 1 : 0);
+      vm->last_n = first_nm[0] ? 1 : 0;
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+      var_set_str(vm, "HEADCOUSIN", first_nm);
+      var_set_str(vm, "ELDESTCOUSIN", first_nm);
+      var_set_num(vm, "FIRSTCOUSIN_N", first_nm[0] ? 1 : 0);
+      var_set_str(vm, "COUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+    } else {
+      var_set_str(vm, "LAST", last_nm);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", last_nm);
+      var_set_num(vm, "LAST_N", last_nm[0] ? 1 : 0);
+      vm->last_n = last_nm[0] ? 1 : 0;
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+      var_set_str(vm, "TAILCOUSIN", last_nm);
+      var_set_str(vm, "YOUNGESTCOUSIN", last_nm);
+      var_set_num(vm, "LASTCOUSIN_N", last_nm[0] ? 1 : 0);
+      var_set_str(vm, "COUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+    }
+    if (cd) var_set_str(vm, "CLASS", cd->name);
+    if (parent_i >= 0 && parent_i < vm->n_classes)
+      var_set_str(vm, "PARENT", vm->classes[parent_i].name);
+    else
+      var_set_str(vm, "PARENT", "");
+    if (gparent_i >= 0 && gparent_i < vm->n_classes)
+      var_set_str(vm, "GRANDPARENT", vm->classes[gparent_i].name);
+    else
+      var_set_str(vm, "GRANDPARENT", "");
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d first=%s last=%s gp=%d\n", wh, a, n,
+              first_nm[0] ? first_nm : "-", last_nm[0] ? last_nm : "-",
+              gparent_i);
+    bump(vm);
+    return 1;
+  }
+
+
   /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
    * fields owned here that also exist on an ancestor (default override / redefine).
    * Multi-file EXTEND pack: contribution that shadows parent slots.

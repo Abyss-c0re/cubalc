@@ -1,0 +1,220 @@
+# Proof 2422 — MULTIFILE_EXTEND_COUSINS_FIRSTCOUSIN_LASTCOUSIN_LINK3
+# Multi-file CLASS EXTEND + COUSINS bag / FIRSTCOUSIN / LASTCOUSIN.
+# Topology: Greeter root; kids TagGreeter + LoudGreeter; LoudTag under TagGreeter.
+# BoomKid under LoudGreeter → first cousins with LoudTag (shared gp Greeter).
+# Cube is SoT. Free energy must flow.
+REQUIRE VERSION "1.15"
+HOLD_FLASH 1
+
+INCLUDE demo_greeter_base
+ASSERT OK == 1
+HASCLASS Greeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_extend
+ASSERT OK == 1
+ASSERT EXTEND_N == 1
+
+INCLUDE demo_greeter_override
+ASSERT OK == 1
+HASCLASS TagGreeter
+ASSERT LAST_N == 1
+
+INCLUDE demo_greeter_loudtag
+ASSERT OK == 1
+HASCLASS LoudTag
+ASSERT LAST_N == 1
+
+INCLUDE demo_loud_greeter
+ASSERT OK == 1
+HASCLASS LoudGreeter
+ASSERT LAST_N == 1
+
+BASEOF LoudTag
+ASSERT OK == 1
+ASSERT LAST == "TagGreeter"
+
+BASEOF TagGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter"
+
+BASEOF LoudGreeter
+ASSERT OK == 1
+ASSERT LAST == "Greeter"
+
+# Soft empty before BoomKid — no cousins yet
+COUSINS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT COUSINS_N == 0
+ASSERT COUSINCOUNT == 0
+ASSERT HASCOUSIN == 0
+
+FIRSTCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT FIRSTCOUSIN_N == 0
+
+LASTCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT LASTCOUSIN_N == 0
+
+COUSINS TagGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+COUSINS LoudGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# Root / unknown soft-zero
+COUSINS Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+FIRSTCOUSIN Greeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+COUSINS NoSuchClass_zz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+FIRSTCOUSIN NoSuchClass_zz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+LASTCOUSIN NoSuchClass_zz
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+# True cousin pair: child under LoudGreeter
+CLASS BoomKid EXTEND LoudGreeter
+  FIELD z 1
+  METHOD ping
+    RET 1
+  END
+END
+ASSERT OK == 1
+HASCLASS BoomKid
+ASSERT LAST_N == 1
+
+BASEOF BoomKid
+ASSERT OK == 1
+ASSERT LAST == "LoudGreeter"
+
+# Pair gate still holds
+ARECOUSINS LoudTag BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT ARECOUSINS == 1
+
+# Bag lists the cousin
+COUSINS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT COUSINS_N >= 1
+ASSERT COUSINCOUNT >= 1
+ASSERT HASCOUSIN == 1
+
+COUSINBAG LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+LISTCOUSINS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+PEERCOUSINS BoomKid
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT COUSINS_N >= 1
+
+# First / last name forms
+FIRSTCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT FIRSTCOUSIN_N == 1
+
+HEADCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+ELDESTCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+LASTCOUSIN LoudTag
+ASSERT OK == 1
+ASSERT LAST_N == 1
+ASSERT LASTCOUSIN_N == 1
+
+TAILCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+YOUNGESTCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# Second cousin on TagGreeter side expands bag
+CLASS BoomTag EXTEND TagGreeter
+  FIELD q 2
+  METHOD ping
+    RET 2
+  END
+END
+ASSERT OK == 1
+HASCLASS BoomTag
+ASSERT LAST_N == 1
+
+# BoomKid cousins: LoudTag + BoomTag (both under TagGreeter branch? No —
+# LoudTag parent TagGreeter, BoomTag parent TagGreeter → those two are siblings.
+# BoomKid parent LoudGreeter gp Greeter; LoudTag gp Greeter; BoomTag gp Greeter.
+# LoudTag and BoomTag share parent TagGreeter so NOT cousins of each other.
+# BoomKid cousins with both LoudTag and BoomTag.
+COUSINS BoomKid
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+ASSERT COUSINS_N >= 2
+ASSERT COUSINCOUNT >= 2
+
+COUSINCOUNT BoomKid
+ASSERT OK == 1
+ASSERT LAST_N >= 2
+
+HASCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+FIRSTCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+LASTCOUSIN BoomKid
+ASSERT OK == 1
+ASSERT LAST_N == 1
+
+# LoudTag now has BoomKid as cousin (BoomTag is sibling of LoudTag)
+COUSINS LoudTag
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+ASSERT COUSINCOUNT >= 1
+
+COUSINS BoomTag
+ASSERT OK == 1
+ASSERT LAST_N >= 1
+
+# siblings still not listed as cousins
+ARECOUSINS LoudTag BoomTag
+ASSERT OK == 1
+ASSERT LAST_N == 0
+ASSERT ARECOUSINS == 0
+
+# parent line still not cousins
+ARECOUSINS BoomKid LoudGreeter
+ASSERT OK == 1
+ASSERT LAST_N == 0
+
+NOTE "2422 COUSINS+FIRSTCOUSIN+LASTCOUSIN PASS"

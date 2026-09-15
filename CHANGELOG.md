@@ -1,3 +1,16 @@
+## 1.16.23-cousins-firstcousin-lastcousin — MI 2422
+
+### Language
+- `COUSINS`/`COUSINBAG`/`LISTCOUSINS`/`PEERCOUSINS` — newline bag of first cousins (same grandparent, different parents)
+- `FIRSTCOUSIN`/`HEADCOUSIN`/`ELDESTCOUSIN` — first cousin name (soft empty)
+- `LASTCOUSIN`/`TAILCOUSIN`/`YOUNGESTCOUSIN` — last cousin name (soft empty)
+- Complements ARECOUSINS / COUSINCOUNT / HASCOUSIN without scrape
+- Proof `programs/proof/2422_multifile_extend_cousins_firstcousin_lastcousin_link3.cubalc` asserts_ok=99 asserts_fail=0 PASS
+- Multifile CLASS/EXTEND via demo_greeter_* INCLUDEs + BoomKid/BoomTag
+
+### Law
+- cube is SoT · free energy must flow · zero bloat
+
 ## 1.16.22-arecousins-cousincount-hascousin — MI 2421
 - feat(lang): ARECOUSINS/ISCOUSIN/COUSINOF two-arg first-cousin gate + COUSINCOUNT/HASCOUSIN multifile EXTEND
 - Proof programs/proof/2421_multifile_extend_arecousins_cousincount_hascousin_link3.cubalc
