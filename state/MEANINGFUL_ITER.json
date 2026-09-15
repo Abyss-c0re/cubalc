@@ -30,5 +30,9 @@
   "forms": "COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS + FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN + LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN",
   "law": "cube_is_sot; free_energy_must_flow; zero_bloat; no_root_ship_pins; no_life_cell_continuum",
   "summary": "First-cousin bag and edge names on EXTEND topology; soft empty on roots/shallow/unknown",
-  "ts": 1789509000
+  "ts": 1789509000,
+  "head": "93b2d71d41536da50fd1676b8d5c4eaca604bd16",
+  "HEAD": "93b2d71d41536da50fd1676b8d5c4eaca604bd16",
+  "feat": "93b2d71d4",
+  "FEAT": "93b2d71d4"
 }

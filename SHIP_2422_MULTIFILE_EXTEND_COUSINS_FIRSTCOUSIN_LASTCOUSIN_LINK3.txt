@@ -3,6 +3,8 @@ VERSION 1.16.23-cousins-firstcousin-lastcousin
 PROOF programs/proof/2422_multifile_extend_cousins_firstcousin_lastcousin_link3.cubalc
 asserts_ok 99 asserts_fail 0 PASS
 forms COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS + FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN + LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN
+FEAT 93b2d71d41536da50fd1676b8d5c4eaca604bd16
+HEAD 93b2d71d41536da50fd1676b8d5c4eaca604bd16
 gift COUSINS bag + FIRSTCOUSIN + LASTCOUSIN; multifile CLASS EXTEND first-cousin topology
 prior_mi 2421
 status SEALED
