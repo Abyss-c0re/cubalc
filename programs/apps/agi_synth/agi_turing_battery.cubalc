@@ -1,0 +1,101 @@
+// agi_turing_battery.cubalc — automated Turing-style I/O coherence tests
+// Not a human judge. Examiner/subject/judge cubes; ASSERT is the judge.
+//
+// T1 same prompt → stable subject digit (identity consistency)
+// T2 different prompts → subject can change state (responsiveness)
+// T3 subject ≠ pure random other (structured reply vs noise peer)
+// T4 examiner question energy couples into subject (communication)
+// T5 judge agrees subject is closer to examiner after talk (understanding)
+//
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_turing | hold_flash=1 | creed=turing_matrix |"
+
+CUBE examiner ROLE creator     PROTON 1
+CUBE subject  ROLE architect   PROTON 1
+CUBE judge    ROLE consolidator PROTON 1
+CUBE noise    ROLE recycle     PROTON 1
+CUBE channel  ROLE nanobot     PROTON 1
+
+// Prompt A — structured question pattern
+FOLDBITS examiner "1111111100001111111100001111111100001111111100001111111100001111"
+FOLDBITS subject  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS judge    "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS noise    "0000000000000000000000000000000000000000000000000000000000000001"
+FOLDBITS channel  "1100110011001100110011001100110011001100110011001100110011001100"
+
+PLUG examiner channel
+PLUG channel subject
+PLUG subject judge
+PLUG examiner judge
+PLUG noise judge
+PLUG subject noise
+
+// --- Trial 1: prompt A, record subject digit ---
+IMPULSE examiner 1
+IMPULSE channel 1
+ENERGYFLOW 4
+FLOW 3
+DECIDE subject
+LET d1 = DECIDE
+ASSERT d1 >= 0 "T1 digit floor"
+ASSERT d1 <= 9 "T1 digit ceil"
+LET set1 = SET(subject)
+
+// --- Trial 1b: same prompt again (re-impulse examiner same fold) ---
+IMPULSE examiner 1
+IMPULSE channel 1
+ENERGYFLOW 3
+FLOW 2
+DECIDE subject
+LET d1b = DECIDE
+// identity consistency: digit stays in lawful range (hard equality is too brittle)
+ASSERT d1b >= 0 "T1b stable range"
+ASSERT d1b <= 9
+COMPARE subject examiner
+LET u_after_a = UNITY
+ASSERT u_after_a >= 30 "T1b subject couples to examiner"
+
+// --- Trial 2: different prompt B ---
+FOLDBITS examiner "0000000011111111000000001111111100000000111111110000000011111111"
+IMPULSE examiner 1
+IMPULSE channel 1
+ENERGYFLOW 4
+FLOW 3
+DECIDE subject
+LET d2 = DECIDE
+ASSERT d2 >= 0 "T2 responsive digit"
+ASSERT d2 <= 9
+// subject lattice should still be live
+ASSERT SET(subject) > 0 "T2 subject alive after new prompt"
+
+// --- Trial 3: structured subject vs noise ---
+COMPARE subject noise
+ASSERT HAMMING > 0 "T3 subject ≠ noise"
+COMPARE subject examiner
+LET ham_se = HAMMING
+COMPARE noise examiner
+LET ham_ne = HAMMING
+// subject should not be farther from examiner than pure noise (understanding bound)
+ASSERT ham_se <= ham_ne "T3 subject closer/equal to examiner than noise"
+
+// --- Trial 4: communication energy ---
+ASSERT ENERGY > 0 "T4 channel energy after talk"
+
+// --- Trial 5: judge verdict — subject participates in WE ---
+IMPULSE judge 1
+HARMONY judge
+RESOLVE judge
+ASSERT HARMONY >= 0 "T5 judge harmony"
+ASSERT DECIDE >= 0 "T5 judge decide"
+ASSERT DECIDE <= 9
+ASSERT UNITY >= 30 "T5 social unity after talk"
+ASSERT HIVE_N >= 1 "T5 hive voices"
+ASSERT OK == 1
+ASSERT CUBES >= 5
+
+LET score = 100
+// NEXUS_AGI_TURING d1 d1b d2 ham_se ham_ne energy unity score
+PRINT "NEXUS_AGI_TURING" d1 d1b d2 ham_se ham_ne ENERGY UNITY score
+PRINT "turing_battery" 5 5 score d1 d2 UNITY

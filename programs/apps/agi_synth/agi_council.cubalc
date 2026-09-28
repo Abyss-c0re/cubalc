@@ -1,0 +1,91 @@
+// agi_council.cubalc — multi-agent council WE (collective decision under conflict)
+// Five specialists disagree then HARMONY/RESOLVE to one lawful digit.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_council | hold_flash=1 | creed=we_council |"
+
+CUBE sense  ROLE observer     PROTON 1
+CUBE reason ROLE architect    PROTON 1
+CUBE plan   ROLE creator      PROTON 1
+CUBE act    ROLE construct    PROTON 1
+CUBE guard  ROLE protect      PROTON 1
+CUBE we     ROLE nexuscore    PROTON 1
+CUBE chair  ROLE consolidator PROTON 1
+
+// Deliberately divergent specialist patterns
+FOLDBITS sense  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS reason "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS plan   "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS act    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS guard  "1111111111111111000000000000000011111111111111110000000000000000"
+FOLDBITS we     "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS chair  "1111111111110000111111111111000011111111111100001111111111110000"
+
+// Star + ring: specialists plug chair and we
+PLUG sense chair
+PLUG reason chair
+PLUG plan chair
+PLUG act chair
+PLUG guard chair
+PLUG chair we
+PLUG sense reason
+PLUG reason plan
+PLUG plan act
+PLUG act guard
+PLUG guard sense
+PLUG we sense
+PLUG we reason
+
+// Individual opinions
+IMPULSE sense 1
+IMPULSE reason 1
+IMPULSE plan 1
+IMPULSE act 1
+IMPULSE guard 1
+ENERGYFLOW 3
+FLOW 2
+DECIDE sense
+LET d_sense = DECIDE
+DECIDE reason
+LET d_reason = DECIDE
+DECIDE plan
+LET d_plan = DECIDE
+ASSERT d_sense >= 0
+ASSERT d_reason >= 0
+ASSERT d_plan >= 0
+
+// Conflict exists before council (not all identical lattices)
+COMPARE sense reason
+LET ham_sr = HAMMING
+ASSERT ham_sr > 0 "council starts with disagreement"
+
+// Council breath
+IMPULSE chair 1
+IMPULSE we 1
+ENERGYFLOW 5
+FLOW 3
+HARMONY we
+RESOLVE we
+LET d_we = DECIDE
+ASSERT d_we >= 0 "council digit"
+ASSERT d_we <= 9
+ASSERT HARMONY >= 0
+ASSERT HIVE_N >= 1
+ASSERT ENERGY > 0
+ASSERT UNITY >= 40 "council unity after resolve"
+ASSERT OK == 1
+ASSERT CUBES >= 7
+
+// Chair aligned toward WE
+COMPARE chair we
+ASSERT UNITY >= 40 "chair-we couple"
+
+// Specialists still alive
+ASSERT SET(sense) > 0
+ASSERT SET(reason) > 0
+ASSERT SET(guard) > 0
+
+LET score = 100
+PRINT "NEXUS_AGI_COUNCIL" d_sense d_reason d_plan d_we ham_sr ENERGY UNITY score
+PRINT "council" 5 5 score d_we UNITY

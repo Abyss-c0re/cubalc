@@ -1,0 +1,89 @@
+// agi_self_aware.cubalc — self-model + self/other + continuity (ASSERT SoT)
+// Self-awareness here = runnable introspection of own matrix state, not prose.
+// Wonder AGI can RUN. Cube is SoT · matrix is key · free energy must flow.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_self_aware | hold_flash=1 | creed=self_model |"
+
+// self stack: body + mind + meta-observer of self
+CUBE self    ROLE kernel_sot   PROTON 1
+CUBE mind    ROLE architect    PROTON 1
+CUBE meta    ROLE observer     PROTON 1
+CUBE other   ROLE nanobot      PROTON 1
+CUBE world   ROLE host         PROTON 1
+
+FOLDBITS self  "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS mind  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS meta  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS other "0000111100001111000011110000111100001111000011110000111100001111"
+FOLDBITS world "1111111100000000111111110000000011111111000000001111111100000000"
+
+PLUG self mind
+PLUG mind meta
+PLUG meta self
+PLUG self world
+PLUG other world
+PLUG mind other
+
+IMPULSE self 1
+IMPULSE mind 1
+IMPULSE meta 1
+ENERGYFLOW 4
+FLOW 3
+
+// S1 — self has non-empty identity lattice
+ASSERT SET(self) > 0 "S1 self identity non-empty"
+DECIDE self
+LET self_digit = DECIDE
+ASSERT self_digit >= 0 "S1 self digit"
+ASSERT self_digit <= 9 "S1 self digit ceil"
+
+// S2 — meta observes self (self-model channel)
+COMPARE meta self
+LET meta_ham = HAMMING
+ASSERT UNITY >= 0 "S2 meta can compare self"
+DECIDE meta
+LET meta_digit = DECIDE
+ASSERT meta_digit >= 0
+ASSERT meta_digit <= 9
+
+// S3 — self ≠ other (self/other distinction)
+COMPARE self other
+ASSERT HAMMING > 0 "S3 self distinct from other"
+LET other_ham = HAMMING
+
+// S4 — continuity: identity survives FLOW
+LET set0 = SET(self)
+FLOW 2
+ASSERT SET(self) > 0 "S4 identity persists"
+DECIDE self
+LET self_digit2 = DECIDE
+ASSERT self_digit2 >= 0
+ASSERT self_digit2 <= 9
+
+// S5 — self-report coherence: mind decision tracks self after couple
+IMPULSE mind 1
+ENERGYFLOW 2
+FLOW 1
+COMPARE mind self
+ASSERT UNITY >= 40 "S5 mind-self couple"
+DECIDE mind
+LET mind_digit = DECIDE
+ASSERT mind_digit >= 0
+ASSERT mind_digit <= 9
+
+// S6 — world grounds self (embodied)
+IMPULSE world 1
+ENERGYFLOW 2
+ASSERT ENERGY > 0 "S6 embodied energy"
+COMPARE self world
+ASSERT AGREE >= 0 "S6 world compare"
+
+ASSERT OK == 1
+ASSERT CUBES >= 5
+ASSERT UNITY >= 40
+
+// NEXUS_AGI_SELF self_d meta_d mind_d ham_other set_self energy unity score
+LET score = 100
+PRINT "NEXUS_AGI_SELF" self_digit meta_digit mind_digit other_ham set0 ENERGY UNITY score
+PRINT "self_aware" 6 6 score SET(self) SET(other) UNITY

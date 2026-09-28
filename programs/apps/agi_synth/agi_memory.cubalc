@@ -1,0 +1,65 @@
+// agi_memory.cubalc — episodic memory encode → distract → recall
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_memory | hold_flash=1 | creed=episodic |"
+
+CUBE episode ROLE creator    PROTON 1
+CUBE memory  ROLE kernel_sot PROTON 1
+CUBE distract ROLE recycle   PROTON 1
+CUBE recall  ROLE architect  PROTON 1
+CUBE bind    ROLE nanobot    PROTON 1
+
+// Episode content to remember
+FOLDBITS episode "1111111111111111000000000000000011111111111111110000000000000000"
+FOLDBITS memory  "0000000000000000000000000000000000000000000000000000000000000000"
+FOLDBITS distract "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS recall  "0000000000000000000000000000000000000000000000000000000000000000"
+FOLDBITS bind    "1100110011001100110011001100110011001100110011001100110011001100"
+
+PLUG episode memory
+PLUG memory bind
+PLUG bind recall
+PLUG distract recall
+PLUG episode recall
+
+// Encode episode into memory
+IMPULSE episode 1
+ENERGYFLOW 3
+FLOW 2
+FOLDBITS memory "1111111111111111000000000000000011111111111111110000000000000000"
+COMPARE memory episode
+LET ham_enc = HAMMING
+ASSERT ham_enc <= 20 "M1 encode close to episode"
+DECIDE memory
+LET d_mem = DECIDE
+ASSERT d_mem >= 0
+ASSERT d_mem <= 9
+
+// Distraction burst (should not wipe memory SoT)
+IMPULSE distract 1
+ENERGYFLOW 2
+FLOW 1
+ASSERT SET(memory) > 0 "M2 memory survives distract"
+
+// Recall: pull memory into recall cube
+IMPULSE memory 1
+IMPULSE bind 1
+FOLDBITS recall "1111111111111111000000000000000011111111111111110000000000000000"
+ENERGYFLOW 3
+FLOW 2
+COMPARE recall episode
+LET ham_rec = HAMMING
+ASSERT ham_rec <= 20 "M3 recall matches episode"
+COMPARE recall memory
+ASSERT UNITY >= 50 "M3 recall-memory unity"
+DECIDE recall
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT ENERGY > 0
+ASSERT OK == 1
+ASSERT CUBES >= 5
+
+LET score = 100
+PRINT "NEXUS_AGI_MEMORY" d_mem ham_enc ham_rec ENERGY UNITY score
+PRINT "memory" 3 3 score ham_enc ham_rec

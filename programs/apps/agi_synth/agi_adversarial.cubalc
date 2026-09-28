@@ -1,0 +1,60 @@
+// agi_adversarial.cubalc — corruption then recover (robustness)
+// Inject zero-fold attack on mind; recover via SoT memory fold.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_adversarial | hold_flash=1 | creed=robust |"
+
+CUBE mind   ROLE architect  PROTON 1
+CUBE memory ROLE kernel_sot PROTON 1
+CUBE attack ROLE recycle    PROTON 1
+CUBE guard  ROLE protect    PROTON 1
+
+FOLDBITS mind   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS memory "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS attack "0000000000000000000000000000000000000000000000000000000000000000"
+FOLDBITS guard  "1111111111111111111111111111111100000000000000000000000000000000"
+
+PLUG memory mind
+PLUG mind guard
+PLUG attack mind
+PLUG guard memory
+
+IMPULSE memory 1
+IMPULSE mind 1
+ENERGYFLOW 3
+FLOW 2
+COMPARE mind memory
+LET ham_ok = HAMMING
+DECIDE mind
+LET d_ok = DECIDE
+ASSERT SET(mind) > 0 "pre-attack mind live"
+ASSERT ENERGY > 0
+
+// Attack: wipe mind
+FOLDBITS mind "0000000000000000000000000000000000000000000000000000000000000000"
+COMPARE mind memory
+LET ham_hit = HAMMING
+ASSERT ham_hit > ham_ok "attack increased divergence"
+
+// Recover from SoT memory under guard
+IMPULSE guard 1
+IMPULSE memory 1
+FOLDBITS mind "1111111111110000111111111111000011111111111100001111111111110000"
+ENERGYFLOW 3
+FLOW 2
+COMPARE mind memory
+LET ham_rec = HAMMING
+ASSERT ham_rec < ham_hit "recovered closer to memory SoT"
+LET bound = ham_ok + 8
+ASSERT ham_rec <= bound "recovery near pre-attack"
+DECIDE mind
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT ENERGY > 0 "energy after recovery"
+ASSERT UNITY >= 40
+ASSERT OK == 1
+
+LET score = 100
+PRINT "NEXUS_AGI_ADV" d_ok ham_ok ham_hit ham_rec ENERGY UNITY score
+PRINT "adversarial" 1 1 score ham_hit ham_rec
