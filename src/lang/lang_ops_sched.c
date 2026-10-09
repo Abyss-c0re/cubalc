@@ -12,14 +12,16 @@
 #define SCHED_NAME_MAX 15
 #define SCHED_BANDS_MAX 8
 #define SCHED_NOTES_MAX 16
+#define SCHED_AMPS_MAX 16
 #define SCHED_KIND_BAND 1
 #define SCHED_KIND_NOTE 2
+#define SCHED_KIND_AMP 3
 
 typedef struct {
   int kind;
   char name[SCHED_NAME_MAX + 1];
   long sus0, sus1, duty0, duty1, gap0, gap1, twin, sheet;
-  long hz, ms;
+  long power, hz, ms;
 } SchedItem;
 
 typedef struct {
@@ -27,8 +29,9 @@ typedef struct {
   char name[SCHED_NAME_MAX + 1];
   int n_bands;
   int n_notes;
+  int n_amps;
   int n;
-  SchedItem items[SCHED_BANDS_MAX + SCHED_NOTES_MAX];
+  SchedItem items[SCHED_BANDS_MAX + SCHED_NOTES_MAX + SCHED_AMPS_MAX];
 } Sched;
 
 static Sched g_sched;
@@ -41,7 +44,7 @@ static void publish_n(VM *vm, long n) {
 }
 
 static long sched_count(void) {
-  return (long)g_sched.n_bands + (long)g_sched.n_notes;
+  return (long)g_sched.n_bands + (long)g_sched.n_notes + (long)g_sched.n_amps;
 }
 
 static void publish_count(VM *vm) {
@@ -162,6 +165,8 @@ static int write_plate(const char *path) {
       n = fprintf(f, "BAND %s %ld %ld %ld %ld %ld %ld %ld %ld\n",
                   it->name, it->sus0, it->sus1, it->duty0, it->duty1,
                   it->gap0, it->gap1, it->twin, it->sheet);
+    else if (it->kind == SCHED_KIND_AMP)
+      n = fprintf(f, "AMP %ld %ld %ld\n", it->power, it->hz, it->ms);
     else
       n = fprintf(f, "NOTE %ld %ld\n", it->hz, it->ms);
     if (n < 0) goto bad;
@@ -249,6 +254,10 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
       fail_at(vm, L, "BAND needs SCHED");
       return -1;
     }
+    if (g_sched.n_amps) {
+      fail_at(vm, L, "BAND does not mix with AMP");
+      return -1;
+    }
     if (g_sched.n_bands >= SCHED_BANDS_MAX) {
       fail_at(vm, L, "BAND full");
       return -1;
@@ -280,6 +289,10 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
       fail_at(vm, L, "NOTE needs SCHED");
       return -1;
     }
+    if (g_sched.n_amps) {
+      fail_at(vm, L, "NOTE does not mix with AMP");
+      return -1;
+    }
     if (g_sched.n_notes >= SCHED_NOTES_MAX) {
       fail_at(vm, L, "NOTE full");
       return -1;
@@ -290,6 +303,45 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
     it.ms = ms;
     g_sched.items[g_sched.n++] = it;
     g_sched.n_notes++;
+    publish_count(vm);
+    return 1;
+  }
+
+  if (kw(&L->cur, "AMP")) {
+    long power, hz, ms;
+    SchedItem it;
+    lex_next(L);
+    power = arg_expr(vm, L, "AMP intensity hz ms");
+    if (vm->fatal) return -1;
+    hz = arg_expr(vm, L, "AMP intensity hz ms");
+    if (vm->fatal) return -1;
+    ms = arg_expr(vm, L, "AMP intensity hz ms");
+    if (vm->fatal) return -1;
+    if (need_between(vm, L, power, 0, 255, "AMP intensity 0..255") < 0)
+      return -1;
+    if (need_between(vm, L, hz, 0, 255, "AMP hz 0..255") < 0)
+      return -1;
+    if (need_between(vm, L, ms, 1, 60000, "AMP ms 1..60000") < 0)
+      return -1;
+    if (!g_sched.open) {
+      fail_at(vm, L, "AMP needs SCHED");
+      return -1;
+    }
+    if (g_sched.n_bands || g_sched.n_notes) {
+      fail_at(vm, L, "AMP does not mix with BAND or NOTE");
+      return -1;
+    }
+    if (g_sched.n_amps >= SCHED_AMPS_MAX) {
+      fail_at(vm, L, "AMP full");
+      return -1;
+    }
+    memset(&it, 0, sizeof it);
+    it.kind = SCHED_KIND_AMP;
+    it.power = power;
+    it.hz = hz;
+    it.ms = ms;
+    g_sched.items[g_sched.n++] = it;
+    g_sched.n_amps++;
     publish_count(vm);
     return 1;
   }

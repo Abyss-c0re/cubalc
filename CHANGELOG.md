@@ -1,3 +1,11 @@
+## 1.16.27-schedule
+
+### Language
+- `AMP intensity hz ms` — one schedule step. Intensity is `0..255`. Hertz is `0..255` (`0` holds that intensity). Hold time is `1..60000` ms. Max 16. `SCHED_N` counts AMP steps with bands and notes.
+- An AMP plate does not mix with `BAND` or `NOTE`. The core still does not name pins, plasma, or MindStorm.
+- Proof `programs/proof/schedule_amp.cubalc`. Fail-closed `programs/proof/schedule_bad_amp.cubalc` (hertz 300).
+- Product patterns `programs/realworld/plasma_steady.cubalc`, `plasma_slow.cubalc`, `plasma_fast.cubalc`, `plasma_flicker.cubalc`.
+
 ## 1.16.26-schedule
 
 ### Language

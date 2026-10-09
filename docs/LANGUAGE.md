@@ -32,7 +32,7 @@ Plugs wire cubes; **REVERSE** flips I/O direction when needed.
 `ASYNC HTTP` `AWAIT` `PARALLEL`  
 `SYS …`
 
-A schedule is data a host scans later, not time the program sleeps. `SCHED` opens a named plate, `BAND` and `NOTE` append device-agnostic ranges and tones, and `SCHEDOUT` writes `MSCHED 1` (`docs/SCHEDULE.md`, law `1.16.26-schedule`). `SYS SLEEP` still executes a wait. The core does not name pins, plasma, or MindStorm.
+A schedule is data a host scans later, not time the program sleeps. `SCHED` opens a named plate, `BAND` and `NOTE` append ranges and tones, and `AMP` appends intensity, hertz, and a hold time. `SCHEDOUT` writes `MSCHED 1` (`docs/SCHEDULE.md`, law `1.16.27-schedule`). `SYS SLEEP` still executes a wait. The core does not name pins, plasma, or MindStorm.
 
 ## Fold dialect (EXG cube)
 
