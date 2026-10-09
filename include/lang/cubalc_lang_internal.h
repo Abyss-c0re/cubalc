@@ -220,6 +220,8 @@ int cubalc_lang_ops_bit(VM *vm, Lex *L);
 int cubalc_lang_ops_cell(VM *vm, Lex *L);
 int cubalc_lang_ops_flow(VM *vm, Lex *L);
 int cubalc_lang_ops_smx(VM *vm, Lex *L);
+int cubalc_lang_ops_sched(VM *vm, Lex *L);
+int cubalc_lang_sched_note_ahead(Lex *L);
 
 #define fail(vm,msg)          cubalc_lang_fail((vm),(msg))
 #define fail_at(vm,L,msg)     cubalc_lang_fail_at((vm),(L)->cur.line,(msg))

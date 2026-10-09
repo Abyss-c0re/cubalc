@@ -1,3 +1,16 @@
+## 1.16.26-schedule
+
+### Language
+- `SCHED` / `BAND` / `NOTE` / `SCHEDOUT` — a bounded pulse schedule written as an `MSCHED 1` plate. A host scans that plate later. `SYS SLEEP` still executes time and is not a schedule.
+- Plate lines, append order, LF only: `MSCHED 1`, `NAME`, `BAND` (sustain, duty, gap, twin, sheet), `NOTE` (hz, ms; hz 0 is a rest), `END`. Bare `SCHEDOUT` writes `$CUBALC_STATE/cubalc_schedule.txt` or `state/cubalc_schedule.txt`.
+- Bands and notes stay device-agnostic. Storm numbers live in the program, not the core. No pins, plasma, or MindStorm in the language.
+- Proof `programs/proof/schedule_storm.cubalc` — plate contains `MSCHED 1`, the storm band, `NOTE 0 700`, `END`; `SCHED_N` is 10.
+- Fail-closed `programs/proof/schedule_bad_band.cubalc` — inverted sustain (`sus0 > sus1`) exits non-zero.
+- Product pattern `programs/realworld/plasma_storm.cubalc` — same legal schedule, default plate path.
+
+### Law
+- cube is SoT · free energy must flow · zero bloat
+
 ## 1.16.23-cousins-firstcousin-lastcousin — MI 2422
 
 ### Language
