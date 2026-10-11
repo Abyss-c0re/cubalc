@@ -1,0 +1,27 @@
+# One cell, two pulses. Same integers as vital_life_cell() in VitalCore.
+# 200 healed by 900/1000 is 180. A full match at severity 400 adds 400.
+# Wound 580. Energy decays 800→680 and the open wound returns 420, capped at 1000.
+# Second pulse, streak 3, gain 1500, wound caps at 1000, energy 850, unity 0.
+# Free energy stays above 0.
+
+LET VITAL_WOUND = 200
+LET VITAL_ENERGY = 800
+LET VITAL_MATCH = 1000
+LET VITAL_SEV = 400
+LET VITAL_STREAK = 1
+LET VITAL_FLOW = 1000
+INCLUDE vital_life
+ASSERT VITAL_WOUND == 580 "first wound"
+ASSERT VITAL_ENERGY == 1000 "first energy"
+ASSERT VITAL_UNITY == 420 "first unity"
+
+LET VITAL_MATCH = 1000
+LET VITAL_SEV = 400
+LET VITAL_STREAK = 3
+LET VITAL_FLOW = 1000
+INCLUDE vital_life
+ASSERT VITAL_WOUND == 1000 "regression wound caps"
+ASSERT VITAL_ENERGY == 850 "energy still flows"
+ASSERT VITAL_UNITY == 0 "unity spent"
+ASSERT VITAL_ENERGY > 0 "free energy must flow"
+PRINT "vital_life" VITAL_WOUND VITAL_ENERGY VITAL_UNITY
