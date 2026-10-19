@@ -1,9 +1,11 @@
 ## 1.16.27-schedule
 
 ### Language
-- `AMP intensity hz ms` — one schedule step. Intensity is `0..255`. Hertz is `0..255` (`0` holds that intensity). Hold time is `1..60000` ms. Max 16. `SCHED_N` counts AMP steps with bands and notes.
-- An AMP plate does not mix with `BAND` or `NOTE`. The core still does not name pins, plasma, or MindStorm.
-- Proof `programs/proof/schedule_amp.cubalc`. Fail-closed `programs/proof/schedule_bad_amp.cubalc` (hertz 300).
+- `PULSE intensity hz ms` — one schedule step. Intensity is a number `0..255`. Frequency is `0.000..2000.000` (`0` holds that intensity). A literal keeps at most three decimal places. An expression is whole hertz. Hold time is `1..60000` ms. Max 16. The plate writes `PULSE`. Whole hertz is an integer. A fraction keeps three places. A bare name stays the energy form `PULSE cube n`.
+- `AMP intensity hz ms` stays the legacy whole-hertz line, `0..255`, and is written as `PULSE` (`hz` times 1000). A decimal on `AMP` is refused.
+- A pulse plate does not mix with `BAND` or `NOTE`. `SCHED_N` counts pulse steps with bands and notes. The core still does not name pins, plasma, or MindStorm.
+- Proof `programs/proof/schedule_amp.cubalc` (legacy `AMP` in, `PULSE` on the plate). Fail-closed `programs/proof/schedule_bad_amp.cubalc` (hertz 300).
+- Proof `programs/proof/schedule_pulse.cubalc`. Fail-closed `programs/proof/schedule_bad_pulse.cubalc` (2000.001 Hz).
 - Product patterns `programs/realworld/plasma_steady.cubalc`, `plasma_slow.cubalc`, `plasma_fast.cubalc`, `plasma_flicker.cubalc`.
 
 ## 1.16.26-schedule

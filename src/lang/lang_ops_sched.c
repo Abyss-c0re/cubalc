@@ -3,6 +3,7 @@
  */
 #include "lang/cubalc_lang_internal.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,13 +16,13 @@
 #define SCHED_AMPS_MAX 16
 #define SCHED_KIND_BAND 1
 #define SCHED_KIND_NOTE 2
-#define SCHED_KIND_AMP 3
+#define SCHED_KIND_PULSE 3
 
 typedef struct {
   int kind;
   char name[SCHED_NAME_MAX + 1];
   long sus0, sus1, duty0, duty1, gap0, gap1, twin, sheet;
-  long power, hz, ms;
+  long power, hz, ms; /* pulse hz is milli-hertz: 1000 is 1.000 Hz */
 } SchedItem;
 
 typedef struct {
@@ -165,8 +166,18 @@ static int write_plate(const char *path) {
       n = fprintf(f, "BAND %s %ld %ld %ld %ld %ld %ld %ld %ld\n",
                   it->name, it->sus0, it->sus1, it->duty0, it->duty1,
                   it->gap0, it->gap1, it->twin, it->sheet);
-    else if (it->kind == SCHED_KIND_AMP)
-      n = fprintf(f, "AMP %ld %ld %ld\n", it->power, it->hz, it->ms);
+    else if (it->kind == SCHED_KIND_PULSE) {
+      char hzbuf[32];
+      long whole = it->hz / 1000;
+      long frac = it->hz % 1000;
+      if (whole < 0) whole = 0;
+      if (frac < 0) frac = 0;
+      if (frac == 0)
+        snprintf(hzbuf, sizeof hzbuf, "%ld", whole);
+      else
+        snprintf(hzbuf, sizeof hzbuf, "%ld.%03ld", whole, frac);
+      n = fprintf(f, "PULSE %ld %s %ld\n", it->power, hzbuf, it->ms);
+    }
     else
       n = fprintf(f, "NOTE %ld %ld\n", it->hz, it->ms);
     if (n < 0) goto bad;
@@ -181,6 +192,94 @@ bad:
   fclose(f);
   remove(path);
   return -1;
+}
+
+/* A literal 0.500 is milli-hertz. An expression is whole hertz, times 1000.
+ * The dot is not a lexer token, so a PULSE frequency consumes it here. */
+static int take_milli(VM *vm, Lex *L, long *out, const char *what) {
+  long whole;
+  long frac = 0;
+  int places = 0;
+  if (L->cur.kind == TK_NUM && L->i < L->n && L->s[L->i] == '.') {
+    whole = L->cur.num;
+    L->i++;
+    if (L->i >= L->n || !isdigit((unsigned char)L->s[L->i])) {
+      fail_at(vm, L, "PULSE frequency 0.000..2000.000");
+      return -1;
+    }
+    while (L->i < L->n && isdigit((unsigned char)L->s[L->i])) {
+      places++;
+      if (places > 3) {
+        fail_at(vm, L, "PULSE frequency 0.000..2000.000");
+        return -1;
+      }
+      frac = frac * 10 + (L->s[L->i] - '0');
+      L->i++;
+    }
+    if (L->i < L->n && L->s[L->i] == '.') {
+      fail_at(vm, L, "PULSE frequency 0.000..2000.000");
+      return -1;
+    }
+    while (places < 3) {
+      frac *= 10;
+      places++;
+    }
+    lex_next(L);
+    if (whole < 0 || whole > 2000) {
+      fail_at(vm, L, "PULSE frequency 0.000..2000.000");
+      return -1;
+    }
+    *out = whole * 1000 + frac;
+    if (*out < 0 || *out > 2000000L) {
+      fail_at(vm, L, "PULSE frequency 0.000..2000.000");
+      return -1;
+    }
+    return 0;
+  }
+  whole = arg_expr(vm, L, what);
+  if (vm->fatal) return -1;
+  if (need_between(vm, L, whole, 0, 2000, "PULSE frequency 0.000..2000.000") < 0)
+    return -1;
+  *out = whole * 1000;
+  return 0;
+}
+
+static int push_pulse(VM *vm, Lex *L, long power, long milli, long ms, int legacy) {
+  SchedItem it;
+  const char *power_msg = legacy ? "AMP intensity 0..255" : "PULSE intensity 0..255";
+  const char *ms_msg = legacy ? "AMP ms 1..60000" : "PULSE ms 1..60000";
+  const char *need_msg = legacy ? "AMP needs SCHED" : "PULSE needs SCHED";
+  const char *mix_msg = legacy ? "AMP does not mix with BAND or NOTE"
+                               : "PULSE does not mix with BAND or NOTE";
+  const char *full_msg = legacy ? "AMP full" : "PULSE full";
+  if (need_between(vm, L, power, 0, 255, power_msg) < 0)
+    return -1;
+  if (!legacy &&
+      need_between(vm, L, milli, 0, 2000000L, "PULSE frequency 0.000..2000.000") < 0)
+    return -1;
+  if (need_between(vm, L, ms, 1, 60000, ms_msg) < 0)
+    return -1;
+  if (!g_sched.open) {
+    fail_at(vm, L, need_msg);
+    return -1;
+  }
+  if (g_sched.n_bands || g_sched.n_notes) {
+    fail_at(vm, L, mix_msg);
+    return -1;
+  }
+  if (g_sched.n_amps >= SCHED_AMPS_MAX) {
+    fail_at(vm, L, full_msg);
+    return -1;
+  }
+  memset(&it, 0, sizeof it);
+  it.kind = SCHED_KIND_PULSE;
+  it.power = power;
+  it.hz = milli;
+  it.ms = ms;
+  g_sched.items[g_sched.n++] = it;
+  g_sched.n_amps++;
+  publish_count(vm);
+  return 1;
 }
 
 int cubalc_lang_ops_sched(VM *vm, Lex *L) {
@@ -255,7 +354,7 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
       return -1;
     }
     if (g_sched.n_amps) {
-      fail_at(vm, L, "BAND does not mix with AMP");
+      fail_at(vm, L, "BAND does not mix with PULSE");
       return -1;
     }
     if (g_sched.n_bands >= SCHED_BANDS_MAX) {
@@ -290,7 +389,7 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
       return -1;
     }
     if (g_sched.n_amps) {
-      fail_at(vm, L, "NOTE does not mix with AMP");
+      fail_at(vm, L, "NOTE does not mix with PULSE");
       return -1;
     }
     if (g_sched.n_notes >= SCHED_NOTES_MAX) {
@@ -307,43 +406,25 @@ int cubalc_lang_ops_sched(VM *vm, Lex *L) {
     return 1;
   }
 
-  if (kw(&L->cur, "AMP")) {
-    long power, hz, ms;
-    SchedItem it;
+  if (kw(&L->cur, "PULSE") || kw(&L->cur, "AMP")) {
+    int legacy = kw(&L->cur, "AMP");
+    long power, milli, ms;
+    const char *what = legacy ? "AMP intensity hz ms" : "PULSE intensity hz ms";
     lex_next(L);
-    power = arg_expr(vm, L, "AMP intensity hz ms");
+    power = arg_expr(vm, L, what);
     if (vm->fatal) return -1;
-    hz = arg_expr(vm, L, "AMP intensity hz ms");
-    if (vm->fatal) return -1;
-    ms = arg_expr(vm, L, "AMP intensity hz ms");
-    if (vm->fatal) return -1;
-    if (need_between(vm, L, power, 0, 255, "AMP intensity 0..255") < 0)
-      return -1;
-    if (need_between(vm, L, hz, 0, 255, "AMP hz 0..255") < 0)
-      return -1;
-    if (need_between(vm, L, ms, 1, 60000, "AMP ms 1..60000") < 0)
-      return -1;
-    if (!g_sched.open) {
-      fail_at(vm, L, "AMP needs SCHED");
+    if (legacy) {
+      long hz = arg_expr(vm, L, what);
+      if (vm->fatal) return -1;
+      if (need_between(vm, L, hz, 0, 255, "AMP hz 0..255") < 0)
+        return -1;
+      milli = hz * 1000;
+    } else if (take_milli(vm, L, &milli, what) < 0) {
       return -1;
     }
-    if (g_sched.n_bands || g_sched.n_notes) {
-      fail_at(vm, L, "AMP does not mix with BAND or NOTE");
-      return -1;
-    }
-    if (g_sched.n_amps >= SCHED_AMPS_MAX) {
-      fail_at(vm, L, "AMP full");
-      return -1;
-    }
-    memset(&it, 0, sizeof it);
-    it.kind = SCHED_KIND_AMP;
-    it.power = power;
-    it.hz = hz;
-    it.ms = ms;
-    g_sched.items[g_sched.n++] = it;
-    g_sched.n_amps++;
-    publish_count(vm);
-    return 1;
+    ms = arg_expr(vm, L, what);
+    if (vm->fatal) return -1;
+    return push_pulse(vm, L, power, milli, ms, legacy);
   }
 
   if (kw(&L->cur, "SCHEDOUT")) {

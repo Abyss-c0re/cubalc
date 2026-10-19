@@ -3633,9 +3633,19 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     var_set_num(vm,"OK",1);
     bump(vm); return 1;
   }
-  /* ENERGYSET cube n · ENERGYADD cube n — energy plane 0..100 (digit-6) */
+  /* ENERGYSET cube n · ENERGYADD cube n — energy plane 0..100 (digit-6).
+   * PULSE cube n stays that energy add. PULSE intensity hz ms is a schedule
+   * step and starts with a number, so this form lets it through. */
   if (kw(&L->cur,"ENERGYSET")||kw(&L->cur,"SETENERGY")||
       kw(&L->cur,"ENERGYADD")||kw(&L->cur,"ADDENERGY")||kw(&L->cur,"PULSE")){
+    if (kw(&L->cur,"PULSE")) {
+      Lex saved = *L;
+      int cube;
+      lex_next(L);
+      cube = (L->cur.kind == TK_IDENT);
+      *L = saved;
+      if (!cube) return 0;
+    }
     char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
     for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
     lex_next(L);
