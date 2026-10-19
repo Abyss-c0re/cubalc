@@ -1,0 +1,8 @@
+# Proof 14 — SMX mesh life-force stable_exchanges
+# Law: stable_exchanges restore life_force · fail-closed · HOLD_FLASH
+# Run: ./out/cubalc smx-mesh-exchange
+# Expect JSON ok=true stable_exchanges>=2 life_force>=0.35 mesh=stable
+CUBE kernel PROTON 1
+CUBE hive PROTON 1
+PLUG kernel hive
+ASSERT UNITY

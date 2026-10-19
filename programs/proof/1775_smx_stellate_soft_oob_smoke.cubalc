@@ -1,0 +1,55 @@
+// 1775_smx_stellate_soft_oob_smoke.cubalc — thin STELLATE/ITO soft-OOB + latch
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+HOLD_FLASH 1
+BUDGET 32
+SHARE state_matrix_only
+GENESIS "NEXUS_COORD v1 | from=gift | type=smx_stellate_smoke | hold_flash=1 | creed=life_force |"
+CUBE bed ROLE host PROTON 1
+CUBE nozzle ROLE construct PROTON 1
+CUBE hive ROLE nanobot PROTON 1
+CUBE scrap ROLE recycle PROTON 1
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+FOLDBITS nozzle "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS hive   "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS scrap  "0000111100001111000011110000111100001111000011110000111100001111"
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG hive scrap
+PLUG scrap bed
+ENTITY seed OF Cell 1 8 0
+PLUG bed seed
+IMPULSE bed 1
+IMPULSE nozzle 1
+ENERGYFLOW 4
+FLOW 3
+LET base_cubes = CUBES
+SMX KEY
+SMX EXCHANGE hive offworld_a
+ASSERT SMX_OK == 0 "storm soft-OOB"
+ASSERT SMX_OOB >= 1 "oob counted"
+ASSERT CUBES == base_cubes "no ghost"
+SMX STELLATE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stellate live"
+ASSERT SMX_STELLATED == 1 "stellated"
+ASSERT SMX_STELLATE == 1 "stellate latch"
+ASSERT SMX_STELLATE_ALIAS == 1 "alias"
+ASSERT SMX_MESH_STELLATE == 1 "mesh"
+ASSERT SMX_HARDEN_STELLATE == 1 "harden"
+ASSERT SMX_STABLE_MESH == 1 "stable"
+ASSERT SMX_MESH_EXCHANGE == 1 "exchange"
+ASSERT SMX_OOB == 0 "oob cleared"
+ASSERT SMX_BONDS == 6 "C(4,2)=6"
+ASSERT SMX_WRAPS == 4 "wrap ring"
+ASSERT SMX_SHEATHS == 4 "sheath hub"
+ASSERT SMX_STELLATE_SUM == 14 "bonds+wraps+sheaths"
+ASSERT SMX_LIVE == 4 "four live"
+ASSERT SMX_MESH == 4 "four mesh"
+ASSERT CUBES == base_cubes "no invent"
+SMX STABILIZE bed nozzle hive scrap
+ASSERT SMX_OK == 1 "stabilize"
+ASSERT SMX_STABLE_MESH == 1 "stable sticky"
+ASSERT SMX_STELLATE == 1 "stellate sticky"
+PRINT "smx_stellate_smoke" SMX_OK SMX_STELLATE SMX_STELLATE_SUM SMX_OOB CUBES
+PASS

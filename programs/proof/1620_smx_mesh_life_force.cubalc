@@ -1,0 +1,11 @@
+# Proof 1620 — flagship SMX mesh life-force regression (soft-OOB fail-closed)
+# Law: key required · soft-OOB heals · mesh_exchange stable · hold_flash · unity
+CUBE bed PROTON 1
+CUBE nozzle PROTON 1
+CUBE hive PROTON 1
+CUBE scrap PROTON 1
+PLUG bed nozzle
+PLUG nozzle hive
+PLUG scrap hive
+PLUG bed scrap
+ASSERT UNITY

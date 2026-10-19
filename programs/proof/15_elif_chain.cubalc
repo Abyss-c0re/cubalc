@@ -1,0 +1,67 @@
+# Proof 15 — IF / ELIF / ELSE chain usability
+# First true arm runs; later arms skipped; ELSE is fallback.
+
+LET x = 2
+LET path = 0
+IF x == 1 THEN
+  LET path = 1
+ELIF x == 2 THEN
+  LET path = 2
+ELIF x == 3 THEN
+  LET path = 3
+ELSE
+  LET path = 9
+END
+ASSERT path == 2
+
+LET y = 7
+LET hit = 0
+IF y < 0 THEN
+  LET hit = -1
+ELIF y == 0 THEN
+  LET hit = 0
+ELSE
+  LET hit = 1
+END
+ASSERT hit == 1
+
+LET z = 0
+LET arm = 0
+IF z == 1 THEN
+  LET arm = 1
+ELIF z == 2 THEN
+  LET arm = 2
+ELSE
+  LET arm = 3
+END
+ASSERT arm == 3
+
+# nested IF inside ELIF
+LET n = 5
+LET out = 0
+IF n < 3 THEN
+  LET out = 1
+ELIF n < 10 THEN
+  IF n == 5 THEN
+    LET out = 55
+  ELSE
+    LET out = 50
+  END
+ELSE
+  LET out = 99
+END
+ASSERT out == 55
+
+# ELSEIF alias
+LET k = 4
+LET a = 0
+IF k == 1 THEN
+  LET a = 1
+ELSEIF k == 4 THEN
+  LET a = 4
+ELSE
+  LET a = 0
+END
+ASSERT a == 4
+
+PRINT "elif_chain_ok" path hit arm out a

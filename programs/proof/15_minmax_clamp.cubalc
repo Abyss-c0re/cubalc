@@ -1,0 +1,28 @@
+# Proof 15 — MIN MAX ABS CLAMP SIGN usability
+# Expect: all asserts pass; last print marks ok.
+
+ASSERT ABS(-7) == 7
+ASSERT ABS(0) == 0
+ASSERT ABS(4) == 4
+
+ASSERT SIGN(-9) == -1
+ASSERT SIGN(0) == 0
+ASSERT SIGN(3) == 1
+
+ASSERT MIN(3, 8) == 3
+ASSERT MIN(8, 3) == 3
+ASSERT MAX(3, 8) == 8
+ASSERT MAX(8, 3) == 8
+
+ASSERT CLAMP(5, 0, 10) == 5
+ASSERT CLAMP(-3, 0, 10) == 0
+ASSERT CLAMP(99, 0, 10) == 10
+ASSERT CLAMP(4, 10, 0) == 4
+
+LET a = -12
+LET b = MAX(ABS(a), 5)
+ASSERT b == 12
+LET c = CLAMP(MIN(b, 100), 0, 9)
+ASSERT c == 9
+
+PRINT "minmax_clamp_ok" b c

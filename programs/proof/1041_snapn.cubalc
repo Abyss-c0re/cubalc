@@ -1,0 +1,83 @@
+# SNAPN / QUANTIZEN / ROUNDTON — snap x to nearest multiple of step
+
+HOLD_FLASH 1
+
+# exact multiple unchanged
+SNAPN 64 64
+ASSERT LAST_N == 64
+ASSERT SNAPN_OK == 1
+ASSERT SNAPN_X == 64
+ASSERT SNAPN_STEP == 64
+
+# exact mid-range multiple
+SNAPN 20 10
+ASSERT LAST_N == 20
+
+# tie away from 0: +25/10 -> 30
+SNAPN 25 10
+ASSERT LAST_N == 30
+
+# below half
+SNAPN 24 10
+ASSERT LAST_N == 20
+
+# above half
+SNAPN 26 10
+ASSERT LAST_N == 30
+
+# zero
+SNAPN 0 8
+ASSERT LAST_N == 0
+
+# negative below half toward 0 magnitude
+SNAPN -24 10
+ASSERT LAST_N == -20
+
+# negative tie away from 0
+SNAPN -25 10
+ASSERT LAST_N == -30
+
+# negative above half
+SNAPN -26 10
+ASSERT LAST_N == -30
+
+# step zero soft-fail
+SNAPN 7 0
+ASSERT LAST_N == 7
+ASSERT SNAPN_OK == 0
+LET e = LAST_ERR
+SYS LEN e
+ASSERT LAST_N > 0
+
+# aliases
+QUANTIZEN 15 8
+ASSERT LAST_N == 16
+ROUNDTON 11 4
+ASSERT LAST_N == 12
+GRIDN 3 4
+ASSERT LAST_N == 4
+
+# optional BY glue
+SNAPN 50 BY 16
+ASSERT LAST_N == 48
+
+# pipeline after GETFLAGN
+SYS ENV SET CUBALC_ARG0 "--offset=100"
+SYS ENV SET CUBALC_ARGC "1"
+GETFLAGN offset OR 0
+ASSERT LAST_N == 100
+SNAPN LAST_N 64
+ASSERT LAST_N == 128
+
+# var subjects
+LET x 70
+LET s 32
+SNAPN x s
+ASSERT LAST_N == 64
+
+# LAST decimal
+SNAPN 9 4
+SYS EQS LAST "8"
+ASSERT LAST_N == 1
+
+PRINT "snapn ok"

@@ -1,0 +1,54 @@
+# Proof 16 — ELIF / ELSEIF chain usability
+# First true arm runs; ELSE last; nested IF ok.
+
+LET x = 2
+LET path = 0
+IF x == 0 THEN
+  LET path = 10
+ELIF x == 1 THEN
+  LET path = 11
+ELIF x == 2 THEN
+  LET path = 12
+ELSE
+  LET path = 99
+END
+ASSERT path == 12
+
+LET y = 7
+LET z = 0
+IF y < 0 THEN
+  LET z = -1
+ELSEIF y == 0 THEN
+  LET z = 0
+ELSE
+  LET z = 1
+END
+ASSERT z == 1
+
+LET n = 0
+IF 0 THEN
+  LET n = 1
+ELIF 0 THEN
+  LET n = 2
+ELIF 1 THEN
+  LET n = 3
+ELIF 1 THEN
+  LET n = 4
+END
+ASSERT n == 3
+
+LET t = 0
+IF 1 THEN
+  IF 0 THEN
+    LET t = 1
+  ELIF 1 THEN
+    LET t = 2
+  ELSE
+    LET t = 3
+  END
+ELSE
+  LET t = 9
+END
+ASSERT t == 2
+
+PRINT "elif_chain_ok" path z n t
