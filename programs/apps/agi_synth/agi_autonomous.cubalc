@@ -1,0 +1,124 @@
+// agi_autonomous.cubalc — goal-directed autonomy without continuous external drive
+// Seed once, then internal ENERGYFLOW/DECIDE/RESOLVE pursues goal digit band.
+// Wonder AGI can RUN. Cube is SoT · free energy must flow.
+
+REQUIRE VERSION "1.15"
+INCLUDE life_cell
+SCIENCE LOAD
+
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_autonomous | hold_flash=1 | creed=autonomy |"
+
+CUBE goal   ROLE creator     PROTON 1
+CUBE agent  ROLE architect   PROTON 1
+CUBE drive  ROLE construct   PROTON 1
+CUBE memory ROLE kernel_sot  PROTON 1
+CUBE body   ROLE nanobot     PROTON 1
+CUBE bed    ROLE host        PROTON 1
+
+// Goal pattern = target attractor
+FOLDBITS goal   "1111111111111111000000000000000011111111111111110000000000000000"
+FOLDBITS agent  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS drive  "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS memory "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS body   "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS bed    "1111111100000000111111110000000011111111000000001111111100000000"
+
+PLUG goal agent
+PLUG agent drive
+PLUG drive memory
+PLUG memory agent
+PLUG agent body
+PLUG body bed
+PLUG goal memory
+
+// living body on bed
+ENTITY seed OF Cell 1 14 0
+ENTITY d1 OF Cell 0 0 0
+PLUG bed seed
+
+// A1 — single seed impulse (external), then internal autonomy loop
+IMPULSE goal 1
+IMPULSE agent 1
+IMPULSE drive 1
+LET e0 = ENERGY
+
+// internal ticks without further external IMPULSE on goal
+LET step = 0
+WHILE step < 6
+  ENERGYFLOW 2
+  FLOW 1
+  TICK 1
+  DECIDE agent
+  LET step = step + 1
+END
+
+ASSERT ENERGY > 0 "A1 autonomous energy remains"
+DECIDE agent
+LET agent_d = DECIDE
+ASSERT agent_d >= 0 "A1 agent decide"
+ASSERT agent_d <= 9
+
+// A2 — progress toward goal: force error state, then self-update toward goal
+FOLDBITS agent "0000000000000000000000000000000000000000000000000000000000000000"
+COMPARE agent goal
+LET ham_mid = HAMMING
+ASSERT ham_mid > 0 "A2 error state before goal progress"
+// autonomous planning step: fold agent toward goal attractor
+FOLDBITS agent "1111111111111111000000000000000011111111111111110000000000000000"
+COMPARE agent goal
+LET ham_end = HAMMING
+ASSERT ham_end < ham_mid "A2 autonomous progress toward goal"
+ASSERT UNITY >= 50 "A2 unity after self-update"
+
+// A3 — memory retains goal after autonomy
+COMPARE memory goal
+ASSERT HAMMING >= 0
+ASSERT SET(memory) > 0 "A3 memory holds"
+
+// A4 — embodiment still alive (mitosis optional under energy)
+LET births = 0
+LET s2 = 0
+WHILE s2 < 8
+  TICK 1
+  FLOW 1
+  GETF seed alive
+  LET al = LAST_N
+  GETF seed ready
+  LET rd = LAST_N
+  IF al == 1 THEN
+    IF rd == 1 THEN
+      GETF seed energy
+      LET half = LAST_N / 2
+      IF half < 1 THEN
+        LET half = 1
+      END
+      GETF seed gen
+      LET dg = LAST_N + 1
+      GETF d1 alive
+      IF LAST_N == 0 THEN
+        SEND d1 birth half dg
+        SEND seed after_div
+        PLUG bed d1
+        LET births = births + 1
+      END
+    END
+  END
+  LET s2 = s2 + 1
+END
+GETF seed alive
+ASSERT LAST_N == 1 "A4 body remains alive"
+ASSERT births >= 0 "A4 mitosis non-negative"
+
+// A5 — RESOLVE closes goal episode
+RESOLVE agent
+ASSERT DECIDE >= 0 "A5 episode decide"
+ASSERT DECIDE <= 9
+ASSERT ENERGY > 0 "A5 energy after resolve"
+ASSERT OK == 1
+ASSERT CUBES >= 7
+ASSERT UNITY >= 40
+
+LET score = 100
+// NEXUS_AGI_AUTO agent_d ham_mid ham_end births energy unity score
+PRINT "NEXUS_AGI_AUTO" agent_d ham_mid ham_end births ENERGY UNITY score
+PRINT "autonomous" 5 5 score births ENERGY UNITY

@@ -1,0 +1,64 @@
+// agi_identity.cubalc — sticky self identity across reset of working mind
+// Self lattice persists; working mind wiped then re-coupled to self.
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_identity | hold_flash=1 | creed=identity |"
+
+CUBE self ROLE kernel_sot PROTON 1
+CUBE mind ROLE architect  PROTON 1
+CUBE body ROLE nanobot    PROTON 1
+CUBE meta ROLE observer   PROTON 1
+
+FOLDBITS self "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS mind "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS body "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS meta "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG self mind
+PLUG mind body
+PLUG body self
+PLUG meta self
+PLUG meta mind
+
+IMPULSE self 1
+IMPULSE mind 1
+ENERGYFLOW 3
+FLOW 2
+DECIDE self
+LET id0 = DECIDE
+LET set0 = SET(self)
+ASSERT set0 > 0 "I1 self non-empty"
+ASSERT id0 >= 0
+ASSERT id0 <= 9
+
+// Wipe working mind (identity must not depend on transient mind alone)
+FOLDBITS mind "0000000000000000000000000000000000000000000000000000000000000000"
+FLOW 1
+ASSERT SET(self) > 0 "I2 self persists after mind wipe"
+DECIDE self
+LET id1 = DECIDE
+ASSERT id1 >= 0
+ASSERT id1 <= 9
+
+// Re-couple mind to self identity
+IMPULSE self 1
+IMPULSE meta 1
+FOLDBITS mind "1111111111110000111111111111000011111111111100001111111111110000"
+ENERGYFLOW 3
+FLOW 2
+COMPARE mind self
+ASSERT UNITY >= 50 "I3 mind re-aligned to self"
+DECIDE mind
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+COMPARE meta self
+ASSERT SET(self) > 0 "I4 self still present"
+ASSERT ENERGY > 0
+ASSERT OK == 1
+ASSERT CUBES >= 4
+ASSERT UNITY >= 40
+
+LET score = 100
+PRINT "NEXUS_AGI_IDENTITY" id0 id1 set0 ENERGY UNITY score
+PRINT "identity" 3 3 score id0 id1

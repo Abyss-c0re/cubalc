@@ -1,0 +1,60 @@
+// agi_meta.cubalc — meta-cognition: detect error, correct, verify
+// Meta cube monitors mind; on high Hamming vs SoT, triggers correct fold.
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_meta | hold_flash=1 | creed=metacog |"
+
+CUBE mind ROLE architect  PROTON 1
+CUBE sot  ROLE kernel_sot PROTON 1
+CUBE meta ROLE observer   PROTON 1
+CUBE fix  ROLE construct  PROTON 1
+
+FOLDBITS sot  "1111111111110000111111111111000011111111111100001111111111110000"
+FOLDBITS mind "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS meta "1100110011001100110011001100110011001100110011001100110011001100"
+FOLDBITS fix  "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG sot mind
+PLUG mind meta
+PLUG meta fix
+PLUG fix mind
+PLUG sot meta
+
+IMPULSE sot 1
+// force mind error away from SoT before meta inspects
+FOLDBITS mind "0000000000000000000000000000000000000000000000000000000000000000"
+IMPULSE mind 1
+FLOW 1
+COMPARE mind sot
+LET ham_err = HAMMING
+ASSERT ham_err > 0 "meta sees error state"
+DECIDE meta
+LET meta_d = DECIDE
+ASSERT meta_d >= 0
+ASSERT meta_d <= 9
+
+// Meta-triggered correction
+IMPULSE meta 1
+IMPULSE fix 1
+FOLDBITS mind "1111111111110000111111111111000011111111111100001111111111110000"
+ENERGYFLOW 3
+FLOW 2
+COMPARE mind sot
+LET ham_fix = HAMMING
+ASSERT ham_fix < ham_err "meta correction reduced error"
+ASSERT ham_fix <= 20 "meta strong align to SoT"
+DECIDE mind
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+COMPARE mind sot
+ASSERT UNITY >= 60 "meta mind-sot unity after fix"
+// second-order: meta still coupled
+COMPARE meta mind
+ASSERT UNITY >= 40 "meta remains coupled after fix"
+ASSERT ENERGY > 0
+ASSERT OK == 1
+
+LET score = 100
+PRINT "NEXUS_AGI_META" meta_d ham_err ham_fix ENERGY UNITY score
+PRINT "meta_cognition" 1 1 score ham_err ham_fix

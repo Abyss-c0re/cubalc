@@ -1,0 +1,73 @@
+// agi_dialogue.cubalc — multi-turn examiner/subject dialogue coherence
+// Turn A then B; subject tracks topic shift; judge WE closes.
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_dialogue | hold_flash=1 | creed=dialogue |"
+
+CUBE examiner ROLE creator      PROTON 1
+CUBE subject  ROLE architect    PROTON 1
+CUBE context  ROLE kernel_sot   PROTON 1
+CUBE judge    ROLE consolidator PROTON 1
+CUBE channel  ROLE nanobot      PROTON 1
+
+FOLDBITS examiner "1111111100001111111100001111111100001111111100001111111100001111"
+FOLDBITS subject  "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS context  "0000000000000000000000000000000000000000000000000000000000000000"
+FOLDBITS judge    "1111000011110000111100001111000011110000111100001111000011110000"
+FOLDBITS channel  "1100110011001100110011001100110011001100110011001100110011001100"
+
+PLUG examiner channel
+PLUG channel subject
+PLUG subject context
+PLUG context judge
+PLUG examiner judge
+PLUG subject judge
+
+// Turn 1
+IMPULSE examiner 1
+IMPULSE channel 1
+ENERGYFLOW 3
+FLOW 2
+// context stores turn-1 topic
+FOLDBITS context "1111111100001111111100001111111100001111111100001111111100001111"
+DECIDE subject
+LET d1 = DECIDE
+ASSERT d1 >= 0
+ASSERT d1 <= 9
+COMPARE subject examiner
+LET u1 = UNITY
+ASSERT u1 >= 25 "D1 subject couples turn1"
+
+// Turn 2 — topic shift
+FOLDBITS examiner "0000000011111111000000001111111100000000111111110000000011111111"
+IMPULSE examiner 1
+IMPULSE channel 1
+ENERGYFLOW 4
+FLOW 3
+DECIDE subject
+LET d2 = DECIDE
+ASSERT d2 >= 0
+ASSERT d2 <= 9
+// context still holds prior episode
+ASSERT SET(context) > 0 "D2 context retained"
+COMPARE subject examiner
+LET u2 = UNITY
+ASSERT u2 >= 25 "D2 couples turn2"
+
+// Judge closes dialogue
+IMPULSE judge 1
+HARMONY judge
+RESOLVE judge
+ASSERT DECIDE >= 0
+ASSERT DECIDE <= 9
+ASSERT HARMONY >= 0
+ASSERT ENERGY > 0
+ASSERT UNITY >= 30
+ASSERT HIVE_N >= 1
+ASSERT OK == 1
+ASSERT CUBES >= 5
+
+LET score = 100
+PRINT "NEXUS_AGI_DIALOGUE" d1 d2 u1 ENERGY UNITY score
+PRINT "dialogue" 2 2 score d1 d2

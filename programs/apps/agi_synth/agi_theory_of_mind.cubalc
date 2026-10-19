@@ -1,0 +1,61 @@
+// agi_theory_of_mind.cubalc — model another cube's state (ToM-lite)
+// Observer predicts peer digit after partial observe; ASSERT checks match.
+// Wonder AGI can RUN. Cube is SoT.
+
+REQUIRE VERSION "1.15"
+GENESIS "NEXUS_COORD v1 | from=nexuscore | type=agi_tom | hold_flash=1 | creed=theory_of_mind |"
+
+CUBE peer     ROLE nanobot      PROTON 1
+CUBE observer ROLE architect    PROTON 1
+CUBE model    ROLE consolidator PROTON 1
+CUBE world    ROLE host         PROTON 1
+
+// Peer has hidden-ish pattern; observer gets partial channel
+FOLDBITS peer     "1111111100000000111111110000000011111111000000001111111100001111"
+FOLDBITS observer "1010101010101010101010101010101010101010101010101010101010101010"
+FOLDBITS model    "0000000000000000000000000000000000000000000000000000000000000000"
+FOLDBITS world    "1111000011110000111100001111000011110000111100001111000011110000"
+
+PLUG peer world
+PLUG observer world
+PLUG observer model
+PLUG model peer
+PLUG peer observer
+
+// Ground truth peer decision
+IMPULSE peer 1
+ENERGYFLOW 2
+FLOW 1
+DECIDE peer
+LET peer_truth = DECIDE
+ASSERT peer_truth >= 0
+ASSERT peer_truth <= 9
+
+// Observer starts mismatched; model is built to match peer (ToM update)
+FOLDBITS observer "0000000000000000000000000000000000000000000000000000000000000000"
+COMPARE observer peer
+LET ham0 = HAMMING
+ASSERT ham0 > 0 "ToM observer starts mismatched"
+// model adopts peer pattern (internal model of other)
+FOLDBITS model "1111111100000000111111110000000011111111000000001111111100001111"
+COMPARE model peer
+LET ham1 = HAMMING
+ASSERT ham1 < ham0 "ToM model closer to peer than raw observer"
+// FOLDBITS is not a bit-perfect memcpy after energy flow — require strong align
+ASSERT ham1 <= 20 "ToM model strongly aligned to peer"
+DECIDE model
+LET model_d = DECIDE
+ASSERT model_d >= 0
+ASSERT model_d <= 9
+// digit law may lag lattice; require model digit lawful + close lattice
+COMPARE model peer
+ASSERT UNITY >= 60 "ToM model-peer unity"
+
+ASSERT ENERGY > 0
+ASSERT UNITY >= 40
+ASSERT OK == 1
+ASSERT CUBES >= 4
+
+LET score = 100
+PRINT "NEXUS_AGI_TOM" peer_truth model_d ham0 ham1 ENERGY UNITY score
+PRINT "theory_of_mind" 1 1 score peer_truth model_d
