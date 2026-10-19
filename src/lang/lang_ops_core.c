@@ -45171,8 +45171,10 @@ int cubalc_lang_ops_core(VM *vm, Lex *L){
 
   /* NOTE ["text"] — agent breadcrumb / step log. Sets LAST + NOTE, does not
    * change OK, EXPECT_OK, or sticky LAST_ERR (unlike PASS/FAIL). Trace: # note: */
-  if (kw(&L->cur,"NOTE")||kw(&L->cur,"REMARK")||kw(&L->cur,"LOG_NOTE")||
-      kw(&L->cur,"BREADCRUMB")||kw(&L->cur,"STEP_NOTE")){
+  /* NOTE hz ms is a schedule note. A text or single-ident NOTE stays a breadcrumb. */
+  if ((kw(&L->cur,"NOTE")||kw(&L->cur,"REMARK")||kw(&L->cur,"LOG_NOTE")||
+       kw(&L->cur,"BREADCRUMB")||kw(&L->cur,"STEP_NOTE")) &&
+      !cubalc_lang_sched_note_ahead(L)){
     int aln = L->cur.line;
     char msg[160];
     lex_next(L);

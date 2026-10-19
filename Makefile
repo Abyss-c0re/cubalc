@@ -50,6 +50,7 @@ LANG_SRC = \
 	src/lang/lang_ops_bit.c \
 	src/lang/lang_ops_cell.c \
 	src/lang/lang_ops_flow.c \
+	src/lang/lang_ops_sched.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
 

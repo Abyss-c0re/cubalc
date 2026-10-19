@@ -1,3 +1,26 @@
+## 1.16.27-schedule
+
+### Language
+- `PULSE intensity hz ms` — one schedule step. Intensity is a number `0..255`. Frequency is `0.000..2000.000` (`0` holds that intensity). A literal keeps at most three decimal places. An expression is whole hertz. Hold time is `1..60000` ms. Max 16. The plate writes `PULSE`. Whole hertz is an integer. A fraction keeps three places. A bare name stays the energy form `PULSE cube n`.
+- `AMP intensity hz ms` stays the legacy whole-hertz line, `0..255`, and is written as `PULSE` (`hz` times 1000). A decimal on `AMP` is refused.
+- A pulse plate does not mix with `BAND` or `NOTE`. `SCHED_N` counts pulse steps with bands and notes. The core still does not name pins, plasma, or MindStorm.
+- Proof `programs/proof/schedule_amp.cubalc` (legacy `AMP` in, `PULSE` on the plate). Fail-closed `programs/proof/schedule_bad_amp.cubalc` (hertz 300).
+- Proof `programs/proof/schedule_pulse.cubalc`. Fail-closed `programs/proof/schedule_bad_pulse.cubalc` (2000.001 Hz).
+- Product patterns `programs/realworld/plasma_steady.cubalc`, `plasma_slow.cubalc`, `plasma_fast.cubalc`, `plasma_flicker.cubalc`.
+
+## 1.16.26-schedule
+
+### Language
+- `SCHED` / `BAND` / `NOTE` / `SCHEDOUT` — a bounded pulse schedule written as an `MSCHED 1` plate. A host scans that plate later. `SYS SLEEP` still executes time and is not a schedule.
+- Plate lines, append order, LF only: `MSCHED 1`, `NAME`, `BAND` (sustain, duty, gap, twin, sheet), `NOTE` (hz, ms; hz 0 is a rest), `END`. Bare `SCHEDOUT` writes `$CUBALC_STATE/cubalc_schedule.txt` or `state/cubalc_schedule.txt`.
+- Bands and notes stay device-agnostic. Storm numbers live in the program, not the core. No pins, plasma, or MindStorm in the language.
+- Proof `programs/proof/schedule_storm.cubalc` — plate contains `MSCHED 1`, the storm band, `NOTE 0 700`, `END`; `SCHED_N` is 10.
+- Fail-closed `programs/proof/schedule_bad_band.cubalc` — inverted sustain (`sus0 > sus1`) exits non-zero.
+- Product pattern `programs/realworld/plasma_storm.cubalc` — same legal schedule, default plate path.
+
+### Law
+- cube is SoT · free energy must flow · zero bloat
+
 ## 1.16.23-cousins-firstcousin-lastcousin — MI 2422
 
 ### Language

@@ -1,0 +1,13 @@
+# Device-agnostic storm schedule. The host scans the plate. SLEEP is not this.
+SCHED storm
+BAND still 28 55 120 155 700 1500 5 0
+BAND gathering 45 110 150 190 180 520 18 3
+BAND storm 70 170 175 220 55 200 32 8
+NOTE 40 420
+NOTE 48 420
+NOTE 55 380
+NOTE 62 320
+NOTE 48 300
+NOTE 40 480
+NOTE 0 700
+SCHEDOUT
