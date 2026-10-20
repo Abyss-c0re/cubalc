@@ -109,6 +109,22 @@ int cubalc_lang_parse_form(VM *vm, Lex *L){
   skip_nl(L);
   if (L->cur.kind==TK_EOF) return 0;
 
+  /* Play dialect: [hold] [name:role] [a~b] [name!] [~n] [?] */
+  if (L->cur.kind == TK_LBRACK)
+    return parse_cube(vm, L);
+  /* Bare ? board show (hello_cube / play form) */
+  if (L->cur.kind == TK_QMARK) {
+    lex_next(L);
+    char id[48] = {0};
+    if (L->cur.kind == TK_IDENT) {
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+    }
+    do_show(vm, id[0] ? id : NULL);
+    bump(vm);
+    return 1;
+  }
+
   int r;
   if ((r = cubalc_lang_ops_core(vm, L)) != 0) return r;
   if ((r = cubalc_lang_ops_smx(vm, L)) != 0) return r;

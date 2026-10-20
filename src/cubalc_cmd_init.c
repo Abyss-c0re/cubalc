@@ -1,0 +1,1441 @@
+/* CubalC CLI init plane — brace-accurate peel from main */
+#define _POSIX_C_SOURCE 200809L
+#include "cubalc_cmd_init.h"
+#include "cubalc.h"
+#include "cubalc_lang.h"
+#include "cubalc_hostops.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <time.h>
+
+/* local helpers used by peeled CLI (from main) */
+static void ensure_dir(const char *d) { mkdir(d, 0755); }
+
+int cubalc_cmd_init(int argc, char **argv) {
+  const char *cmd = (argc > 1) ? argv[1] : "init";
+  if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
+      strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
+    /* Usability: scaffold a runnable .cubalc starter.
+     * cubalc init [path] [--force|-f] [--plate|--session] [--peer|--mesh] [--fat]
+     *            [--fat-session|--durable]
+     *            [--from|--recipe|-F <lib>]  ← any lib DEFAULT knobs + INCLUDE
+     * cubalc init --list|--templates  → catalog of scaffolds (agent discovery)
+     * Default: agent_boot + place/plug. --plate: plate_session + uniform + pretty.
+     * --peer: plate_peer_session multi-plate PLATE+PEER starter.
+     * --fat: fat_boot (agent_boot+var_guard) + nest plate specials room.
+     * --fat-session|--durable: INCLUDE fat_session (fat_boot+plate_boot one-shot).
+ * --cap|--forms|--capability: INCLUDE cap_boot (agent_boot+form_guard).
+     * --onboard|--welcome: INCLUDE onboard_boot (agent_boot + START plate).
+     * --discover|--explore: INCLUDE discover_boot (agent_boot + DISCOVER open plate).
+     * --open|--openplay|--playbook: INCLUDE open_boot (agent_boot + OPEN playbook).
+     * --doctor|--need-doctor: INCLUDE doctor_boot (agent_boot + NEEDDOCTOR hard gate).
+     * --ready|--need-ready: INCLUDE ready_boot (agent_boot + NEEDREADY prove checklist).
+     * --cli|--tool: INCLUDE cli_boot (agent_boot + HELPFLAG + VERSIONFLAG + CLIINFO).
+     * --cli-session|--cli-guard: INCLUDE cli_session (cli_boot + cli_guard one-shot).
+     * --env|--env-boot|--env-guard|--hostenv: INCLUDE env_boot (agent_boot + env_guard).
+     * --arg|--arg-boot|--arg-guard|--args|--need-arg: INCLUDE arg_boot (agent_boot + arg_guard).
+     * --time|--time-boot|--timeout-boot|--need-time: INCLUDE time_boot (agent_boot + time_guard).
+     * --full-cli|--cli-full|--tool-full|--flags-args: INCLUDE tool_session (cli_boot+cli_guard+arg_guard).
+     * --product|--app|--product-session|--full-product|--service: INCLUDE product_session (tool+env+time).
+     * --path|--path-boot|--path-guard|--hostpath: INCLUDE path_boot (agent_boot + path_guard).
+     * --rw|--rw-boot|--rw-guard|--access: INCLUDE rw_boot (agent_boot + rw_guard).
+     * --bin|--bin-boot|--bin-guard|--tools: INCLUDE bin_boot (agent_boot + bin_guard).
+     * --lib-boot|--lib-guard|--need-libs: INCLUDE lib_boot (agent_boot + lib_guard).
+     * --host|--host-boot|--host-session: INCLUDE host_boot (agent_boot + host_session).
+     * --fleet|--full-session|--full-boot|--service-full: INCLUDE full_boot (product+host).
+     * --key|--key-boot|--plate-guard|--need-keys: INCLUDE key_boot (plate_boot+plate_guard).
+     * --fn|--fn-boot|--fn-guard|--need-fns: INCLUDE fn_boot (agent_boot+fn_guard).
+     * --class|--class-boot|--class-guard|--need-classes: INCLUDE class_boot (agent_boot+class_guard).
+     * --method|--method-boot|--method-guard|--need-methods: INCLUDE method_boot (agent_boot+method_guard).
+     * --field|--field-boot|--field-guard|--need-fields: INCLUDE field_boot (agent_boot+field_guard).
+     * --oop|--oop-boot|--oop-session|--oop-guard|--need-oop: INCLUDE oop_boot (agent_boot+oop_session).
+     * --obj|--obj-boot|--obj-guard|--need-objs: INCLUDE obj_boot (agent_boot+obj_guard).
+     * --live|--live-boot|--live-session|--need-live: INCLUDE live_boot (agent_boot+live_session).
+     * --service-boot|--service-session|--need-service|--svc-boot: INCLUDE service_boot (full+live).
+     * --from lib: recipe-driven scaffold (LIBDEFAULTS as DEFAULT lines + INCLUDE).
+     * Agents: write file then cubalc run — no cookbook prose required. */
+    const char *path = "program.cubalc";
+    const char *tmpl = "agent_boot";
+    const char *from_lib = NULL;
+    int force = 0, i, wrote = 0, existed = 0, want_plate = 0, want_peer = 0;
+    int want_fat = 0, want_fat_session = 0, want_cap = 0, want_onboard = 0, want_discover = 0, want_open = 0, want_doctor = 0;
+    int want_ready = 0, want_cli = 0, want_cli_session = 0, want_env = 0, want_arg = 0, want_time = 0, want_tool = 0, want_product = 0, want_path = 0, want_rw = 0, want_bin = 0, want_lib = 0, want_host = 0, want_full = 0, want_key = 0, want_fn = 0, want_class = 0, want_method = 0, want_field = 0, want_oop = 0, want_obj = 0, want_live = 0, want_service = 0;
+    int want_list = 0;
+    char abspath[512];
+    char parent[512];
+    char from_body[8192];
+    size_t body_bytes = 0;
+    FILE *f;
+    static const char *body_boot =
+      "# CubalC starter — generated by cubalc init\n"
+      "# INCLUDE agent_boot = REQUIRE 1.15 + VERSION (HOLD_FLASH default 1)\n"
+      "INCLUDE agent_boot\n"
+      "\n"
+      "CUBE kernel ROLE host\n"
+      "CUBE hive ROLE body\n"
+      "PLUG kernel hive\n"
+      "IMPULSE kernel\n"
+      "FLOW 4\n"
+      "DECIDE kernel\n"
+      "STATUS\n"
+      "PRINT \"init ok\" OK LAST_N\n";
+    static const char *body_plate =
+      "# CubalC agent plate starter — generated by cubalc init --plate\n"
+      "# INCLUDE plate_session = agent_boot + plate_boot (durable PLATE)\n"
+      "# plate_uniform = nest value consistency · PRETTYP = inspect without jq\n"
+      "DEFAULT PLATE_PATH = \"state/agent_plate.json\"\n"
+      "DEFAULT PLATE_SEED = \"{\\\"n\\\":0,\\\"ok\\\":true,\\\"role\\\":\\\"worker\\\"}\"\n"
+      "INCLUDE plate_session\n"
+      "\n"
+      "SETP \"status\" \"ready\"\n"
+      "SETP \"role\" \"worker\"\n"
+      "INCP \"n\"\n"
+      "NEEDP \"n\" \"ok\" \"status\" \"role\"\n"
+      "DEFAULT UNIFORM_NEEDLE = \"role\"\n"
+      "INCLUDE plate_uniform\n"
+      "ASSERT UNIFORM_EQ == 1 \"roles must match after seed\"\n"
+      "PRETTYP\n"
+      "DUMPP\n"
+      "INCLUDE plate_save\n"
+      "PRINT \"plate init ok\" OK LAST_N\n";
+    static const char *body_peer =
+      "# CubalC multi-plate starter — generated by cubalc init --peer\n"
+      "# INCLUDE plate_peer_session = plate_session + plate_peer (PLATE + PEER)\n"
+      "DEFAULT PLATE_PATH = \"state/agent_plate.json\"\n"
+      "DEFAULT PLATE_SEED = \"{\\\"n\\\":0,\\\"ok\\\":true}\"\n"
+      "DEFAULT PEER_PATH = \"state/peer_plate.json\"\n"
+      "DEFAULT PEER_SEED = \"{\\\"agent\\\":\\\"local\\\",\\\"n\\\":0}\"\n"
+      "INCLUDE plate_peer_session\n"
+      "\n"
+      "SETP \"status\" \"ready\"\n"
+      "INCP \"n\"\n"
+      "SETP FROM PEER \"host\" \"cubeA\"\n"
+      "INCP FROM PEER \"n\"\n"
+      "NEEDP \"n\" \"ok\" \"status\"\n"
+      "NEEDP FROM PEER \"agent\" \"host\" \"n\"\n"
+      "DUMPP\n"
+      "DUMPP FROM PEER\n"
+      "INCLUDE plate_both_save\n"
+      "PRINT \"peer init ok\" OK LAST_N\n";
+    static const char *body_fat =
+      "# CubalC fat nest starter — generated by cubalc init --fat\n"
+      "# INCLUDE fat_boot = agent_boot + var_guard (free slots for nest specials)\n"
+      "# Raise NEED_VARROOM before INCLUDE if the board is denser.\n"
+      "DEFAULT NEED_VARROOM = 48\n"
+      "INCLUDE fat_boot\n"
+      "\n"
+      "DEFAULT PLATE_PATH = \"state/fat_agent.json\"\n"
+      "DEFAULT PLATE_SEED = \"{\\\"n\\\":0,\\\"ok\\\":true,\\\"role\\\":\\\"worker\\\","
+      "\\\"freq\\\":{\\\"error\\\":0,\\\"ok\\\":0}}\"\n"
+      "INCLUDE plate_boot\n"
+      "SETP \"status\" \"ready\"\n"
+      "SETP \"role\" \"worker\"\n"
+      "SETP \"freq.error\" 0\n"
+      "INCP \"n\"\n"
+      "NEEDP \"n\" \"ok\" \"status\" \"role\" \"freq.error\"\n"
+      "VARROOM\n"
+      "STATUS\n"
+      "INCLUDE plate_save\n"
+      "PRINT \"fat init ok\" OK VARROOM LAST_N\n";
+    static const char *body_fat_session =
+      "# CubalC durable fat nest — generated by cubalc init --fat-session\n"
+      "# INCLUDE fat_session = fat_boot + plate_boot one-shot (no double agent_boot)\n"
+      "# LIBDEFAULTS fat_session · LIBTREE fat_session for knobs/deps discovery\n"
+      "DEFAULT NEED_VARROOM = 48\n"
+      "DEFAULT PLATE_PATH = \"state/fat_session.json\"\n"
+      "DEFAULT PLATE_SEED = \"{\\\"n\\\":0,\\\"ok\\\":true,\\\"role\\\":\\\"worker\\\","
+      "\\\"freq\\\":{\\\"error\\\":0,\\\"ok\\\":0}}\"\n"
+      "INCLUDE fat_session\n"
+      "\n"
+      "SETP \"status\" \"ready\"\n"
+      "SETP \"role\" \"worker\"\n"
+      "SETP \"freq.error\" 0\n"
+      "INCP \"n\"\n"
+      "NEEDP \"n\" \"ok\" \"status\" \"role\" \"freq.error\"\n"
+      "VARROOM\n"
+      "STATUS\n"
+      "INCLUDE plate_save\n"
+      "PRINT \"fat_session init ok\" OK VARROOM LAST_N\n";
+    static const char *body_cap =
+      "# CubalC capability starter — generated by cubalc init --cap\n"
+      "# INCLUDE cap_boot = agent_boot + form_guard (NEED_FORMS / NEED_FORM_ANY)\n"
+      "# Override NEED_FORMS before INCLUDE to require optional forms (SORTLIBS…).\n"
+      "DEFAULT NEED_FORMS = \"HASFORM\\nNEEDFORM\\nHASFORMS\"\n"
+      "DEFAULT NEED_FORM_ANY = \"\"\n"
+      "DEFAULT FORM_GUARD_SOFT = 0\n"
+      "INCLUDE cap_boot\n"
+      "\n"
+      "CUBE kernel ROLE host\n"
+      "CUBE hive ROLE body\n"
+      "PLUG kernel hive\n"
+      "IMPULSE kernel\n"
+      "FLOW 4\n"
+      "HASFORMS HASFORM SORTLIBS\n"
+      "STATUS\n"
+      "PRINT \"cap init ok\" OK LAST_N\n";
+    static const char *body_onboard =
+      "# CubalC agent onboarding starter — generated by cubalc init --onboard\n"
+      "# INCLUDE onboard_boot = agent_boot + START (topics+next discovery plate)\n"
+      "# CLI dual: cubalc onboard · in-lang START|ONBOARD\n"
+      "INCLUDE onboard_boot\n"
+      "\n"
+      "PRINT \"topics\" START_TOPICS_N\n"
+      "PRINT \"next_n\" START_NEXT_N\n"
+      "PRINT \"hint\" START_HINT\n"
+      "STATUS\n"
+      "PRINT \"onboard init ok\" OK START_TOPICS_N\n";
+        static const char *body_discover =
+      "# CubalC discovery starter — generated by cubalc init --discover\n"
+      "# INCLUDE discover_boot = agent_boot + DISCOVER (match bag + first open)\n"
+      "# Optional: DEFAULT DISCOVER_NEEDLE = \"p\" before INCLUDE for filter open\n"
+      "# CLI dual: cubalc discover · in-lang DISCOVER|EXPLORE\n"
+      "INCLUDE discover_boot\n"
+      "\n"
+      "PRINT \"first\" DISCOVER_FIRST\n"
+      "PRINT \"topics_n\" DISCOVER_N\n"
+      "PRINT \"next_n\" DISCOVER_NEXT_N\n"
+      "PRINT \"hint\" DISCOVER_HINT\n"
+      "STATUS\n"
+      "PRINT \"discover init ok\" OK DISCOVER_N\n";
+    static const char *body_open =
+      "# CubalC open playbook starter — generated by cubalc init --open\n"
+      "# INCLUDE open_boot = agent_boot + OPEN (DISCOVER bag + GUIDE first)\n"
+      "# CLI dual: cubalc open · in-lang OPEN|OPENPLAY\n"
+      "INCLUDE open_boot\n"
+      "\n"
+      "PRINT \"first\" OPEN_FIRST\n"
+      "PRINT \"topics_n\" OPEN_N\n"
+      "PRINT \"tips_n\" GUIDE_TIPS_N\n"
+      "PRINT \"forms_n\" GUIDE_FORMS_N\n"
+      "STATUS\n"
+      "PRINT \"open init ok\" OK OPEN_N\n";
+    static const char *body_doctor =
+      "# CubalC doctor-gate starter — generated by cubalc init --doctor\n"
+      "# INCLUDE doctor_boot = agent_boot + NEEDDOCTOR hard install gate\n"
+      "# CLI dual: cubalc needdoctor · run -D · in-lang NEEDDOCTOR\n"
+      "INCLUDE doctor_boot\n"
+      "\n"
+      "PRINT \"doctor_ok\" DOCTOR_OK\n"
+      "PRINT \"libs_n\" DOCTOR_LIBS_N\n"
+      "STATUS\n"
+      "PRINT \"doctor init ok\" OK DOCTOR_OK\n";
+    static const char *body_ready =
+      "# CubalC ready-gate starter — generated by cubalc init --ready\n"
+      "# INCLUDE ready_boot = agent_boot + NEEDREADY install prove checklist\n"
+      "# CLI dual: cubalc ready · run -Y · CUBALC_REQUIRE_READY · in-lang NEEDREADY\n"
+      "INCLUDE ready_boot\n"
+      "\n"
+      "PRINT \"ready_ok\" READY_OK\n"
+      "PRINT \"pass_n\" READY_PASS_N\n"
+      "PRINT \"fail_n\" READY_FAIL_N\n"
+      "STATUS\n"
+      "PRINT \"ready init ok\" OK READY_OK\n";
+    static const char *body_cli =
+      "# CubalC CLI-tool starter — generated by cubalc init --cli\n"
+      "# INCLUDE cli_boot = agent_boot + HELPFLAG + VERSIONFLAG + CLIINFO\n"
+      "# Override USAGE / PROG_VERSION before INCLUDE for product tools\n"
+      "# CLI dual: cubalc cliinfo · HELPFLAG --help · VERSIONFLAG --version\n"
+      "DEFAULT USAGE = \"tool [--verbose] file…\"\n"
+      "DEFAULT PROG_VERSION = \"0.1.0\"\n"
+      "INCLUDE cli_boot\n"
+      "\n"
+      "PRINT \"argc\" ARGC\n"
+      "PRINT \"flags_n\" LISTFLAGS_N\n"
+      "PRINT \"rest_n\" RESTARGS_N\n"
+      "STATUS\n"
+      "PRINT \"cli init ok\" OK ARGC\n";
+    static const char *body_cli_session =
+      "# CubalC CLI-session starter — generated by cubalc init --cli-session\n"
+      "# INCLUDE cli_session = cli_boot + cli_guard (HELPFLAG + CLIINFO + contract)\n"
+      "# Override USAGE / NEED_FLAGS / NEED_REST_N before INCLUDE\n"
+      "DEFAULT USAGE = \"tool [--out PATH] files…\"\n"
+      "DEFAULT PROG_VERSION = \"0.1.0\"\n"
+      "DEFAULT NEED_FLAGS = \"\"\n"
+      "DEFAULT NEED_REST_N = 0\n"
+      "DEFAULT CLI_GUARD_SOFT = 0\n"
+      "INCLUDE cli_session\n"
+      "\n"
+      "PRINT \"argc\" ARGC\n"
+      "PRINT \"guard_ok\" CLI_GUARD_OK\n"
+      "PRINT \"flags_n\" LISTFLAGS_N\n"
+      "STATUS\n"
+      "PRINT \"cli session init ok\" OK CLI_GUARD_OK\n";
+    static const char *body_env =
+      "# CubalC host-env starter — generated by cubalc init --env\n"
+      "# INCLUDE env_boot = agent_boot + env_guard (NEED_ENVS / NEED_ENV_ANY)\n"
+      "# Override NEED_ENVS / NEED_ENV_ANY before INCLUDE for host config\n"
+      "DEFAULT NEED_ENVS = \"\"\n"
+      "DEFAULT NEED_ENV_ANY = \"\"\n"
+      "DEFAULT ENV_GUARD_SOFT = 0\n"
+      "INCLUDE env_boot\n"
+      "\n"
+      "PRINT \"env_guard_ok\" ENV_GUARD_OK\n"
+      "PRINT \"env_all_ok\" ENV_GUARD_ALL_OK\n"
+      "PRINT \"env_any_ok\" ENV_GUARD_ANY_OK\n"
+      "STATUS\n"
+      "PRINT \"env init ok\" OK ENV_GUARD_OK\n";
+    static const char *body_arg =
+      "# CubalC program-arg starter — generated by cubalc init --arg\n"
+      "# INCLUDE arg_boot = agent_boot + arg_guard (NEED_ARGS / NEED_ARG_ANY)\n"
+      "# Override NEED_ARGS / NEED_ARG_ANY before INCLUDE for CLI positionals\n"
+      "DEFAULT NEED_ARGS = \"\"\n"
+      "DEFAULT NEED_ARG_ANY = \"\"\n"
+      "DEFAULT ARG_GUARD_SOFT = 0\n"
+      "INCLUDE arg_boot\n"
+      "\n"
+      "PRINT \"arg_guard_ok\" ARG_GUARD_OK\n"
+      "PRINT \"arg_all_ok\" ARG_GUARD_ALL_OK\n"
+      "PRINT \"arg_any_ok\" ARG_GUARD_ANY_OK\n"
+      "STATUS\n"
+      "PRINT \"arg init ok\" OK ARG_GUARD_OK\n";
+    static const char *body_time =
+      "# CubalC wall-budget starter — generated by cubalc init --time\n"
+      "# INCLUDE time_boot = agent_boot + time_guard (NEED_TIME / REMAIN_MS)\n"
+      "# Override NEED_TIME before INCLUDE; soft via TIME_GUARD_SOFT=1\n"
+      "DEFAULT NEED_TIME = 100\n"
+      "DEFAULT TIME_GUARD_SOFT = 0\n"
+      "INCLUDE time_boot\n"
+      "\n"
+      "PRINT \"timeout_unlimited\" TIMEOUT_UNLIMITED\n"
+      "PRINT \"remain_ms\" REMAIN_MS\n"
+      "STATUS\n"
+      "PRINT \"time init ok\" OK\n";
+    static const char *body_tool =
+      "# CubalC full CLI tool starter — generated by cubalc init --full-cli\n"
+      "# INCLUDE tool_session = cli_boot + cli_guard + arg_guard\n"
+      "# Override USAGE / NEED_FLAGS / NEED_REST_N / NEED_ARGS before INCLUDE\n"
+      "DEFAULT USAGE = \"tool [--out PATH] files…\"\n"
+      "DEFAULT PROG_VERSION = \"0.1.0\"\n"
+      "DEFAULT NEED_FLAGS = \"\"\n"
+      "DEFAULT NEED_FLAG_ANY = \"\"\n"
+      "DEFAULT NEED_REST_N = 0\n"
+      "DEFAULT NEED_ARGS = \"\"\n"
+      "DEFAULT NEED_ARG_ANY = \"\"\n"
+      "DEFAULT CLI_GUARD_SOFT = 0\n"
+      "DEFAULT ARG_GUARD_SOFT = 0\n"
+      "INCLUDE tool_session\n"
+      "\n"
+      "PRINT \"argc\" ARGC\n"
+      "PRINT \"cli_ok\" CLI_GUARD_OK\n"
+      "PRINT \"arg_ok\" ARG_GUARD_OK\n"
+      "PRINT \"tool_ok\" TOOL_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"tool session init ok\" OK TOOL_SESSION_OK\n";
+    static const char *body_product =
+      "# CubalC product tool starter — generated by cubalc init --product\n"
+      "# INCLUDE product_session = tool_session + env_guard + time_guard\n"
+      "# Override USAGE / NEED_FLAGS / NEED_ENVS / NEED_TIME before INCLUDE\n"
+      "DEFAULT USAGE = \"product [--out PATH] files…\"\n"
+      "DEFAULT PROG_VERSION = \"0.1.0\"\n"
+      "DEFAULT NEED_FLAGS = \"\"\n"
+      "DEFAULT NEED_FLAG_ANY = \"\"\n"
+      "DEFAULT NEED_REST_N = 0\n"
+      "DEFAULT NEED_ARGS = \"\"\n"
+      "DEFAULT NEED_ARG_ANY = \"\"\n"
+      "DEFAULT NEED_ENVS = \"\"\n"
+      "DEFAULT NEED_ENV_ANY = \"\"\n"
+      "DEFAULT NEED_TIME = 1\n"
+      "DEFAULT CLI_GUARD_SOFT = 0\n"
+      "DEFAULT ARG_GUARD_SOFT = 0\n"
+      "DEFAULT ENV_GUARD_SOFT = 0\n"
+      "DEFAULT TIME_GUARD_SOFT = 0\n"
+      "INCLUDE product_session\n"
+      "\n"
+      "PRINT \"argc\" ARGC\n"
+      "PRINT \"cli_ok\" CLI_GUARD_OK\n"
+      "PRINT \"arg_ok\" ARG_GUARD_OK\n"
+      "PRINT \"env_ok\" ENV_GUARD_OK\n"
+      "PRINT \"time_ok\" TIME_GUARD_OK\n"
+      "PRINT \"tool_ok\" TOOL_SESSION_OK\n"
+      "PRINT \"product_ok\" PRODUCT_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"product session init ok\" OK PRODUCT_SESSION_OK\n";
+        static const char *body_path =
+      "# CubalC host-path starter — generated by cubalc init --path\n"
+      "# INCLUDE path_boot = agent_boot + path_guard (NEED_PATHS / NEED_PATH_ANY)\n"
+      "# Override NEED_PATHS before INCLUDE; soft via PATH_GUARD_SOFT=1\n"
+      "DEFAULT NEED_PATHS = \"\"\n"
+      "DEFAULT NEED_PATH_ANY = \"\"\n"
+      "DEFAULT PATH_GUARD_SOFT = 0\n"
+      "INCLUDE path_boot\n"
+      "\n"
+      "PRINT \"path_ok\" PATH_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"path init ok\" OK PATH_GUARD_OK\n";
+    static const char *body_rw =
+      "# CubalC host access starter — generated by cubalc init --rw\n"
+      "# INCLUDE rw_boot = agent_boot + rw_guard (NEED_READ_PATHS / NEED_WRITE_PATHS)\n"
+      "# Override NEED_READ_PATHS / NEED_WRITE_PATHS before INCLUDE; soft via RW_GUARD_SOFT=1\n"
+      "DEFAULT NEED_READ_PATHS = \"\"\n"
+      "DEFAULT NEED_WRITE_PATHS = \"\"\n"
+      "DEFAULT RW_GUARD_SOFT = 0\n"
+      "INCLUDE rw_boot\n"
+      "\n"
+      "PRINT \"rw_ok\" RW_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"rw init ok\" OK RW_GUARD_OK\n";
+    static const char *body_bin =
+      "# CubalC PATH tool starter — generated by cubalc init --bin\n"
+      "# INCLUDE bin_boot = agent_boot + bin_guard (NEED_BINS / NEED_BIN_ANY)\n"
+      "# Override NEED_BINS before INCLUDE; soft via BIN_GUARD_SOFT=1\n"
+      "DEFAULT NEED_BINS = \"\"\n"
+      "DEFAULT NEED_BIN_ANY = \"\"\n"
+      "DEFAULT BIN_GUARD_SOFT = 0\n"
+      "INCLUDE bin_boot\n"
+      "\n"
+      "PRINT \"bin_ok\" BIN_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"bin init ok\" OK BIN_GUARD_OK\n";
+    static const char *body_lib =
+      "# CubalC INCLUDE-path lib starter — generated by cubalc init --lib-boot\n"
+      "# INCLUDE lib_boot = agent_boot + lib_guard (NEED_LIBS / NEED_LIB_ANY)\n"
+      "# Override NEED_LIBS before INCLUDE; soft via LIB_GUARD_SOFT=1\n"
+      "DEFAULT NEED_LIBS = \"\"\n"
+      "DEFAULT NEED_LIB_ANY = \"\"\n"
+      "DEFAULT LIB_GUARD_SOFT = 0\n"
+      "INCLUDE lib_boot\n"
+      "\n"
+      "PRINT \"lib_ok\" LIB_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"lib init ok\" OK LIB_GUARD_OK\n";
+    static const char *body_host =
+      "# CubalC host readiness starter — generated by cubalc init --host\n"
+      "# INCLUDE host_boot = agent_boot + host_session (path+rw+bin+lib)\n"
+      "# Override NEED_PATHS / NEED_BINS / NEED_LIBS before INCLUDE\n"
+      "DEFAULT NEED_PATHS = \"\"\n"
+      "DEFAULT NEED_PATH_ANY = \"\"\n"
+      "DEFAULT PATH_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_READ_PATHS = \"\"\n"
+      "DEFAULT NEED_WRITE_PATHS = \"\"\n"
+      "DEFAULT RW_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_BINS = \"\"\n"
+      "DEFAULT NEED_BIN_ANY = \"\"\n"
+      "DEFAULT BIN_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_LIBS = \"\"\n"
+      "DEFAULT NEED_LIB_ANY = \"\"\n"
+      "DEFAULT LIB_GUARD_SOFT = 0\n"
+      "INCLUDE host_boot\n"
+      "\n"
+      "PRINT \"host_ok\" HOST_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"host init ok\" OK HOST_SESSION_OK\n";
+    static const char *body_full =
+      "# CubalC full product+host starter — generated by cubalc init --fleet\n"
+      "# INCLUDE full_boot = product_session + host_session (FULL_SESSION_OK)\n"
+      "# Override NEED_FLAGS / NEED_ENVS / NEED_PATHS / NEED_BINS / NEED_LIBS before INCLUDE\n"
+      "DEFAULT USAGE = \"fleet [--out PATH] …\"\n"
+      "DEFAULT PROG_VERSION = \"0.1.0\"\n"
+      "DEFAULT NEED_FLAGS = \"\"\n"
+      "DEFAULT NEED_FLAG_ANY = \"\"\n"
+      "DEFAULT NEED_REST_N = 0\n"
+      "DEFAULT NEED_ARGS = \"\"\n"
+      "DEFAULT NEED_ARG_ANY = \"\"\n"
+      "DEFAULT NEED_ENVS = \"\"\n"
+      "DEFAULT NEED_ENV_ANY = \"\"\n"
+      "DEFAULT NEED_TIME = 1\n"
+      "DEFAULT CLI_GUARD_SOFT = 0\n"
+      "DEFAULT ARG_GUARD_SOFT = 0\n"
+      "DEFAULT ENV_GUARD_SOFT = 0\n"
+      "DEFAULT TIME_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_PATHS = \"\"\n"
+      "DEFAULT NEED_PATH_ANY = \"\"\n"
+      "DEFAULT PATH_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_READ_PATHS = \"\"\n"
+      "DEFAULT NEED_WRITE_PATHS = \"\"\n"
+      "DEFAULT RW_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_BINS = \"\"\n"
+      "DEFAULT NEED_BIN_ANY = \"\"\n"
+      "DEFAULT BIN_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_LIBS = \"\"\n"
+      "DEFAULT NEED_LIB_ANY = \"\"\n"
+      "DEFAULT LIB_GUARD_SOFT = 0\n"
+      "INCLUDE full_boot\n"
+      "\n"
+      "PRINT \"product_ok\" PRODUCT_SESSION_OK\n"
+      "PRINT \"host_ok\" HOST_SESSION_OK\n"
+      "PRINT \"full_ok\" FULL_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"full init ok\" OK FULL_SESSION_OK\n";
+    static const char *body_key =
+      "# CubalC plate schema starter — generated by cubalc init --key\n"
+      "# INCLUDE key_boot = agent_boot + plate_boot + plate_guard (NEED_KEYS)\n"
+      "# Override PLATE_PATH / PLATE_SEED / NEED_KEYS before INCLUDE\n"
+      "DEFAULT PLATE_PATH = \"state/agent_plate.json\"\n"
+      "DEFAULT PLATE_SEED = \"{}\"\n"
+      "DEFAULT NEED_KEYS = \"\"\n"
+      "DEFAULT NEED_KEY_ANY = \"\"\n"
+      "DEFAULT PLATE_GUARD_SOFT = 0\n"
+      "INCLUDE key_boot\n"
+      "\n"
+      "PRINT \"plate_ok\" PLATE_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"key init ok\" OK PLATE_GUARD_OK\n";
+    static const char *body_fn =
+      "# CubalC FN catalog starter — generated by cubalc init --fn\n"
+      "# INCLUDE fn_boot = agent_boot + fn_guard (NEED_FNALL / NEED_FNANY)\n"
+      "# Define FNs then set NEED_FNALL before INCLUDE, or soft-check with FN_GUARD_SOFT=1\n"
+      "DEFAULT NEED_FNALL = \"\"\n"
+      "DEFAULT NEED_FNANY = \"\"\n"
+      "DEFAULT FN_GUARD_SOFT = 0\n"
+      "INCLUDE fn_boot\n"
+      "\n"
+      "PRINT \"fn_ok\" FN_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"fn init ok\" OK FN_GUARD_OK\n";
+    static const char *body_class =
+      "# CubalC CLASS catalog starter — generated by cubalc init --class\n"
+      "# INCLUDE class_boot = agent_boot + class_guard (NEED_CLASSES / NEED_CLASS_ANY)\n"
+      "# Define CLASS then set NEED_CLASSES before INCLUDE, or soft CLASS_GUARD_SOFT=1\n"
+      "DEFAULT NEED_CLASSES = \"\"\n"
+      "DEFAULT NEED_CLASS_ANY = \"\"\n"
+      "DEFAULT CLASS_GUARD_SOFT = 0\n"
+      "INCLUDE class_boot\n"
+      "\n"
+      "PRINT \"class_ok\" CLASS_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"class init ok\" OK CLASS_GUARD_OK\n";
+    static const char *body_method =
+      "# CubalC METHOD catalog starter — generated by cubalc init --method\n"
+      "# INCLUDE method_boot = agent_boot + method_guard (NEED_METHODS / NEED_METHOD_ANY)\n"
+      "# Entries are Class.method; DEFINE CLASS+METHOD then set NEED_METHODS, or soft METHOD_GUARD_SOFT=1\n"
+      "DEFAULT NEED_METHODS = \"\"\n"
+      "DEFAULT NEED_METHOD_ANY = \"\"\n"
+      "DEFAULT METHOD_GUARD_SOFT = 0\n"
+      "INCLUDE method_boot\n"
+      "\n"
+      "PRINT \"method_ok\" METHOD_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"method init ok\" OK METHOD_GUARD_OK\n";
+    static const char *body_field =
+      "# CubalC FIELD catalog starter — generated by cubalc init --field\n"
+      "# INCLUDE field_boot = agent_boot + field_guard (NEED_FIELDS / NEED_FIELD_ANY)\n"
+      "# Entries are Class.field; DEFINE CLASS+FIELD then set NEED_FIELDS, or soft FIELD_GUARD_SOFT=1\n"
+      "DEFAULT NEED_FIELDS = \"\"\n"
+      "DEFAULT NEED_FIELD_ANY = \"\"\n"
+      "DEFAULT FIELD_GUARD_SOFT = 0\n"
+      "INCLUDE field_boot\n"
+      "\n"
+      "PRINT \"field_ok\" FIELD_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"field init ok\" OK FIELD_GUARD_OK\n";
+    static const char *body_oop =
+      "# CubalC OOP catalog starter — generated by cubalc init --oop\n"
+      "# INCLUDE oop_boot = agent_boot + oop_session (class+method+field guards)\n"
+      "# Define CLASS/METHOD/FIELD then set NEED_CLASSES/METHODS/FIELDS, or soft *_GUARD_SOFT=1\n"
+      "DEFAULT NEED_CLASSES = \"\"\n"
+      "DEFAULT NEED_CLASS_ANY = \"\"\n"
+      "DEFAULT CLASS_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_METHODS = \"\"\n"
+      "DEFAULT NEED_METHOD_ANY = \"\"\n"
+      "DEFAULT METHOD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_FIELDS = \"\"\n"
+      "DEFAULT NEED_FIELD_ANY = \"\"\n"
+      "DEFAULT FIELD_GUARD_SOFT = 0\n"
+      "INCLUDE oop_boot\n"
+      "\n"
+      "PRINT \"oop_ok\" OOP_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"oop init ok\" OK OOP_SESSION_OK\n";
+    static const char *body_obj =
+      "# CubalC live OBJ catalog starter — generated by cubalc init --obj\n"
+      "# INCLUDE obj_boot = agent_boot + obj_guard (NEED_OBJS / NEED_OBJ_ANY)\n"
+      "# NEW instances then set NEED_OBJS, or soft OBJ_GUARD_SOFT=1\n"
+      "DEFAULT NEED_OBJS = \"\"\n"
+      "DEFAULT NEED_OBJ_ANY = \"\"\n"
+      "DEFAULT OBJ_GUARD_SOFT = 0\n"
+      "INCLUDE obj_boot\n"
+      "\n"
+      "PRINT \"obj_ok\" OBJ_GUARD_OK\n"
+      "STATUS\n"
+      "PRINT \"obj init ok\" OK OBJ_GUARD_OK\n";
+    static const char *body_live =
+      "# CubalC live OOP starter — generated by cubalc init --live\n"
+      "# INCLUDE live_boot = agent_boot + live_session (oop_session + obj_guard)\n"
+      "# Define CLASS/METHOD/FIELD, NEW instances, set NEED_* bags, or soft *_GUARD_SOFT=1\n"
+      "DEFAULT NEED_CLASSES = \"\"\n"
+      "DEFAULT NEED_CLASS_ANY = \"\"\n"
+      "DEFAULT CLASS_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_METHODS = \"\"\n"
+      "DEFAULT NEED_METHOD_ANY = \"\"\n"
+      "DEFAULT METHOD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_FIELDS = \"\"\n"
+      "DEFAULT NEED_FIELD_ANY = \"\"\n"
+      "DEFAULT FIELD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_OBJS = \"\"\n"
+      "DEFAULT NEED_OBJ_ANY = \"\"\n"
+      "DEFAULT OBJ_GUARD_SOFT = 0\n"
+      "INCLUDE live_boot\n"
+      "\n"
+      "PRINT \"live_ok\" LIVE_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"live init ok\" OK LIVE_SESSION_OK\n";
+    static const char *body_service =
+      "# CubalC fleet service starter — generated by cubalc init --service\n"
+      "# INCLUDE service_boot = full_session + live_session (product+host+OOP)\n"
+      "# Set NEED_FLAGS/ENVS/PATHS/BINS/LIBS/CLASSES/METHODS/FIELDS/OBJS as needed\n"
+      "DEFAULT NEED_FLAGS = \"\"\n"
+      "DEFAULT NEED_FLAG_ANY = \"\"\n"
+      "DEFAULT NEED_REST_N = 0\n"
+      "DEFAULT NEED_ARGS = \"\"\n"
+      "DEFAULT NEED_ARG_ANY = \"\"\n"
+      "DEFAULT NEED_ENVS = \"\"\n"
+      "DEFAULT NEED_ENV_ANY = \"\"\n"
+      "DEFAULT NEED_TIME = 1\n"
+      "DEFAULT CLI_GUARD_SOFT = 0\n"
+      "DEFAULT ARG_GUARD_SOFT = 0\n"
+      "DEFAULT ENV_GUARD_SOFT = 0\n"
+      "DEFAULT TIME_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_PATHS = \"\"\n"
+      "DEFAULT NEED_PATH_ANY = \"\"\n"
+      "DEFAULT PATH_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_READ_PATHS = \"\"\n"
+      "DEFAULT NEED_WRITE_PATHS = \"\"\n"
+      "DEFAULT RW_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_BINS = \"\"\n"
+      "DEFAULT NEED_BIN_ANY = \"\"\n"
+      "DEFAULT BIN_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_LIBS = \"\"\n"
+      "DEFAULT NEED_LIB_ANY = \"\"\n"
+      "DEFAULT LIB_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_CLASSES = \"\"\n"
+      "DEFAULT NEED_CLASS_ANY = \"\"\n"
+      "DEFAULT CLASS_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_METHODS = \"\"\n"
+      "DEFAULT NEED_METHOD_ANY = \"\"\n"
+      "DEFAULT METHOD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_FIELDS = \"\"\n"
+      "DEFAULT NEED_FIELD_ANY = \"\"\n"
+      "DEFAULT FIELD_GUARD_SOFT = 0\n"
+      "DEFAULT NEED_OBJS = \"\"\n"
+      "DEFAULT NEED_OBJ_ANY = \"\"\n"
+      "DEFAULT OBJ_GUARD_SOFT = 0\n"
+      "INCLUDE service_boot\n"
+      "\n"
+      "PRINT \"service_ok\" SERVICE_SESSION_OK\n"
+      "STATUS\n"
+      "PRINT \"service init ok\" OK SERVICE_SESSION_OK\n";
+    const char *body = body_boot;
+    from_body[0] = 0;
+    for (i = 2; i < argc; i++) {
+      if (!strcmp(argv[i], "--force") || !strcmp(argv[i], "-f") ||
+          !strcmp(argv[i], "--overwrite")) {
+        force = 1;
+      } else if (!strcmp(argv[i], "--list") || !strcmp(argv[i], "--templates") ||
+                 !strcmp(argv[i], "--catalog") || !strcmp(argv[i], "list") ||
+                 !strcmp(argv[i], "templates")) {
+        want_list = 1;
+      } else if (!strcmp(argv[i], "--peer") || !strcmp(argv[i], "--mesh") ||
+                 !strcmp(argv[i], "--multi-plate") || !strcmp(argv[i], "--plates")) {
+        want_peer = 1;
+      } else if (!strcmp(argv[i], "--fat-session") || !strcmp(argv[i], "--fatsession") ||
+                 !strcmp(argv[i], "--durable") || !strcmp(argv[i], "--session-fat") ||
+                 !strcmp(argv[i], "--fat_session") || !strcmp(argv[i], "--full-nest")) {
+        want_fat_session = 1;
+      } else if (!strcmp(argv[i], "--cap") || !strcmp(argv[i], "--capability") ||
+                 !strcmp(argv[i], "--forms") || !strcmp(argv[i], "--form-guard") ||
+                 !strcmp(argv[i], "--formguard") || !strcmp(argv[i], "--caps")) {
+        want_cap = 1;
+      } else if (!strcmp(argv[i], "--onboard") || !strcmp(argv[i], "--welcome") ||
+                 !strcmp(argv[i], "--agent-onboard") || !strcmp(argv[i], "--start-agent") ||
+                 !strcmp(argv[i], "--bootstrap-agent") || !strcmp(argv[i], "--hello-agent")) {
+        want_onboard = 1;
+      } else if (!strcmp(argv[i], "--discover") || !strcmp(argv[i], "--explore") ||
+                 !strcmp(argv[i], "--discovery") || !strcmp(argv[i], "--scout") ||
+                 !strcmp(argv[i], "--open-discover") || !strcmp(argv[i], "--discover-boot")) {
+        want_discover = 1;
+      } else if (!strcmp(argv[i], "--open") || !strcmp(argv[i], "--openplay") ||
+                 !strcmp(argv[i], "--playbook") || !strcmp(argv[i], "--open-boot") ||
+                 !strcmp(argv[i], "--openboot") || !strcmp(argv[i], "--play-open")) {
+        want_open = 1;
+      } else if (!strcmp(argv[i], "--doctor") || !strcmp(argv[i], "--need-doctor") ||
+                 !strcmp(argv[i], "--doctor-boot") || !strcmp(argv[i], "--doctorboot") ||
+                 !strcmp(argv[i], "--install-gate") || !strcmp(argv[i], "--health-boot")) {
+        want_doctor = 1;
+      } else if (!strcmp(argv[i], "--ready") || !strcmp(argv[i], "--need-ready") ||
+                 !strcmp(argv[i], "--ready-boot") || !strcmp(argv[i], "--readyboot") ||
+                 !strcmp(argv[i], "--prove-ready") || !strcmp(argv[i], "--prove-gate") ||
+                 !strcmp(argv[i], "--install-ready") || !strcmp(argv[i], "--needready")) {
+        want_ready = 1;
+      } else if (!strcmp(argv[i], "--arg") || !strcmp(argv[i], "--args") ||
+                 !strcmp(argv[i], "--arg-boot") || !strcmp(argv[i], "--argboot") ||
+                 !strcmp(argv[i], "--arg_boot") || !strcmp(argv[i], "--arg-guard") ||
+                 !strcmp(argv[i], "--argguard") || !strcmp(argv[i], "--need-arg") ||
+                 !strcmp(argv[i], "--need-args") || !strcmp(argv[i], "--arg-contract") ||
+                 !strcmp(argv[i], "--positional") || !strcmp(argv[i], "--positionals")) {
+        want_arg = 1;
+      } else if (!strcmp(argv[i], "--time") || !strcmp(argv[i], "--time-boot") ||
+                 !strcmp(argv[i], "--timeboot") || !strcmp(argv[i], "--time_boot") ||
+                 !strcmp(argv[i], "--timeout-boot") || !strcmp(argv[i], "--timeoutboot") ||
+                 !strcmp(argv[i], "--need-time") || !strcmp(argv[i], "--needtime") ||
+                 !strcmp(argv[i], "--time-guard") || !strcmp(argv[i], "--timeguard") ||
+                 !strcmp(argv[i], "--wall-budget") || !strcmp(argv[i], "--wallbudget") ||
+                 !strcmp(argv[i], "--budget-boot") || !strcmp(argv[i], "--run-timeout-boot")) {
+        want_time = 1;
+      } else if (!strcmp(argv[i], "--env") || !strcmp(argv[i], "--env-boot") ||
+                 !strcmp(argv[i], "--envboot") || !strcmp(argv[i], "--env_boot") ||
+                 !strcmp(argv[i], "--env-guard") || !strcmp(argv[i], "--envguard") ||
+                 !strcmp(argv[i], "--hostenv") || !strcmp(argv[i], "--host-env") ||
+                 !strcmp(argv[i], "--need-env") || !strcmp(argv[i], "--env-contract")) {
+        want_env = 1;
+      } else if (!strcmp(argv[i], "--full-cli") || !strcmp(argv[i], "--cli-full") ||
+                 !strcmp(argv[i], "--clifull") || !strcmp(argv[i], "--tool-full") ||
+                 !strcmp(argv[i], "--toolfull") || !strcmp(argv[i], "--flags-args") ||
+                 !strcmp(argv[i], "--flagsargs") || !strcmp(argv[i], "--cli-args") ||
+                 !strcmp(argv[i], "--cliargs") || !strcmp(argv[i], "--product-cli") ||
+                 !strcmp(argv[i], "--tool-session-full") || !strcmp(argv[i], "--full-tool")) {
+        want_tool = 1;
+      } else if (!strcmp(argv[i], "--product") || !strcmp(argv[i], "--app") ||
+                 !strcmp(argv[i], "--product-session") || !strcmp(argv[i], "--productsession") ||
+                 !strcmp(argv[i], "--product_session") || !strcmp(argv[i], "--full-product") ||
+                 !strcmp(argv[i], "--fullproduct") || !strcmp(argv[i], "--service") ||
+                 !strcmp(argv[i], "--app-session") || !strcmp(argv[i], "--appsession") ||
+                 !strcmp(argv[i], "--product-full") || !strcmp(argv[i], "--host-product") ||
+                 !strcmp(argv[i], "--cli-env-time") || !strcmp(argv[i], "--clienvtime") ||
+                 !strcmp(argv[i], "--full-app") || !strcmp(argv[i], "--fullapp")) {
+        want_product = 1;
+      } else if (!strcmp(argv[i], "--path") || !strcmp(argv[i], "--path-boot") ||
+                 !strcmp(argv[i], "--pathboot") || !strcmp(argv[i], "--path_boot") ||
+                 !strcmp(argv[i], "--path-guard") || !strcmp(argv[i], "--pathguard") ||
+                 !strcmp(argv[i], "--path_guard") || !strcmp(argv[i], "--hostpath") ||
+                 !strcmp(argv[i], "--host-path") || !strcmp(argv[i], "--need-path") ||
+                 !strcmp(argv[i], "--need-paths") || !strcmp(argv[i], "--fs-guard") ||
+                 !strcmp(argv[i], "--fsguard") || !strcmp(argv[i], "--layout-guard")) {
+        want_path = 1;
+      } else if (!strcmp(argv[i], "--rw") || !strcmp(argv[i], "--rw-boot") ||
+                 !strcmp(argv[i], "--rwboot") || !strcmp(argv[i], "--rw_boot") ||
+                 !strcmp(argv[i], "--rw-guard") || !strcmp(argv[i], "--rwguard") ||
+                 !strcmp(argv[i], "--rw_guard") || !strcmp(argv[i], "--access") ||
+                 !strcmp(argv[i], "--access-guard") || !strcmp(argv[i], "--accessguard") ||
+                 !strcmp(argv[i], "--can-rw") || !strcmp(argv[i], "--canrw") ||
+                 !strcmp(argv[i], "--readwrite") || !strcmp(argv[i], "--read-write")) {
+        want_rw = 1;
+      } else if (!strcmp(argv[i], "--bin") || !strcmp(argv[i], "--bin-boot") ||
+                 !strcmp(argv[i], "--binboot") || !strcmp(argv[i], "--bin_boot") ||
+                 !strcmp(argv[i], "--bin-guard") || !strcmp(argv[i], "--binguard") ||
+                 !strcmp(argv[i], "--bin_guard") || !strcmp(argv[i], "--tools") ||
+                 !strcmp(argv[i], "--need-bin") || !strcmp(argv[i], "--need-bins") ||
+                 !strcmp(argv[i], "--path-tools") || !strcmp(argv[i], "--which-guard") ||
+                 !strcmp(argv[i], "--cmd-guard") || !strcmp(argv[i], "--exe-guard")) {
+        want_bin = 1;
+      } else if (!strcmp(argv[i], "--lib-boot") || !strcmp(argv[i], "--libboot") ||
+                 !strcmp(argv[i], "--lib_boot") || !strcmp(argv[i], "--lib-guard") ||
+                 !strcmp(argv[i], "--libguard") || !strcmp(argv[i], "--lib_guard") ||
+                 !strcmp(argv[i], "--need-libs") || !strcmp(argv[i], "--needlibs") ||
+                 !strcmp(argv[i], "--stdlib-guard") || !strcmp(argv[i], "--stdlibguard") ||
+                 !strcmp(argv[i], "--module-guard") || !strcmp(argv[i], "--mod-guard")) {
+        want_lib = 1;
+      } else if (!strcmp(argv[i], "--host") || !strcmp(argv[i], "--host-boot") ||
+                 !strcmp(argv[i], "--hostboot") || !strcmp(argv[i], "--host_boot") ||
+                 !strcmp(argv[i], "--host-session") || !strcmp(argv[i], "--hostsession") ||
+                 !strcmp(argv[i], "--host_session") || !strcmp(argv[i], "--host-ready") ||
+                 !strcmp(argv[i], "--hostready") || !strcmp(argv[i], "--host-preflight") ||
+                 !strcmp(argv[i], "--preflight-host") || !strcmp(argv[i], "--layout-session")) {
+        want_host = 1;
+      } else if (!strcmp(argv[i], "--fleet") || !strcmp(argv[i], "--full-session") ||
+                 !strcmp(argv[i], "--fullsession") || !strcmp(argv[i], "--full_session") ||
+                 !strcmp(argv[i], "--full-boot") || !strcmp(argv[i], "--fullboot") ||
+                 !strcmp(argv[i], "--full_boot") || !strcmp(argv[i], "--service-full") ||
+                 !strcmp(argv[i], "--servicefull") || !strcmp(argv[i], "--product-host") ||
+                 !strcmp(argv[i], "--producthost") || !strcmp(argv[i], "--full-service") ||
+                 !strcmp(argv[i], "--all-session") || !strcmp(argv[i], "--allsession")) {
+        want_full = 1;
+      } else if (!strcmp(argv[i], "--key") || !strcmp(argv[i], "--key-boot") ||
+                 !strcmp(argv[i], "--keyboot") || !strcmp(argv[i], "--key_boot") ||
+                 !strcmp(argv[i], "--plate-guard") || !strcmp(argv[i], "--plateguard") ||
+                 !strcmp(argv[i], "--plate_guard") || !strcmp(argv[i], "--need-keys") ||
+                 !strcmp(argv[i], "--needkeys") || !strcmp(argv[i], "--schema-boot") ||
+                 !strcmp(argv[i], "--schemaboot") || !strcmp(argv[i], "--plate-schema") ||
+                 !strcmp(argv[i], "--key-guard") || !strcmp(argv[i], "--keyguard")) {
+        want_key = 1;
+      } else if (!strcmp(argv[i], "--fn") || !strcmp(argv[i], "--fn-boot") ||
+                 !strcmp(argv[i], "--fnboot") || !strcmp(argv[i], "--fn_boot") ||
+                 !strcmp(argv[i], "--fn-guard") || !strcmp(argv[i], "--fnguard") ||
+                 !strcmp(argv[i], "--fn_guard") || !strcmp(argv[i], "--need-fns") ||
+                 !strcmp(argv[i], "--needfns") || !strcmp(argv[i], "--funcs") ||
+                 !strcmp(argv[i], "--func-guard") || !strcmp(argv[i], "--function-guard")) {
+        want_fn = 1;
+      } else if (!strcmp(argv[i], "--class") || !strcmp(argv[i], "--class-boot") ||
+                 !strcmp(argv[i], "--classboot") || !strcmp(argv[i], "--class_boot") ||
+                 !strcmp(argv[i], "--class-guard") || !strcmp(argv[i], "--classguard") ||
+                 !strcmp(argv[i], "--class_guard") || !strcmp(argv[i], "--need-classes") ||
+                 !strcmp(argv[i], "--needclasses") || !strcmp(argv[i], "--oop-guard") ||
+                 !strcmp(argv[i], "--oopguard") || !strcmp(argv[i], "--classes")) {
+        want_class = 1;
+      } else if (!strcmp(argv[i], "--method") || !strcmp(argv[i], "--method-boot") ||
+                 !strcmp(argv[i], "--methodboot") || !strcmp(argv[i], "--method_boot") ||
+                 !strcmp(argv[i], "--method-guard") || !strcmp(argv[i], "--methodguard") ||
+                 !strcmp(argv[i], "--method_guard") || !strcmp(argv[i], "--need-methods") ||
+                 !strcmp(argv[i], "--need-method") || !strcmp(argv[i], "--methods") ||
+                 !strcmp(argv[i], "--oopmethod") || !strcmp(argv[i], "--meth-guard")) {
+        want_method = 1;
+      } else if (!strcmp(argv[i], "--field") || !strcmp(argv[i], "--field-boot") ||
+                 !strcmp(argv[i], "--fieldboot") || !strcmp(argv[i], "--field_boot") ||
+                 !strcmp(argv[i], "--field-guard") || !strcmp(argv[i], "--fieldguard") ||
+                 !strcmp(argv[i], "--field_guard") || !strcmp(argv[i], "--need-fields") ||
+                 !strcmp(argv[i], "--need-field") || !strcmp(argv[i], "--fields") ||
+                 !strcmp(argv[i], "--oopfield") || !strcmp(argv[i], "--schema-field")) {
+        want_field = 1;
+      } else if (!strcmp(argv[i], "--oop") || !strcmp(argv[i], "--oop-boot") ||
+                 !strcmp(argv[i], "--oopboot") || !strcmp(argv[i], "--oop_boot") ||
+                 !strcmp(argv[i], "--oop-session") || !strcmp(argv[i], "--oopsession") ||
+                 !strcmp(argv[i], "--oop_session") || !strcmp(argv[i], "--oop-guard") ||
+                 !strcmp(argv[i], "--oopguard") || !strcmp(argv[i], "--oop_guard") ||
+                 !strcmp(argv[i], "--need-oop") || !strcmp(argv[i], "--need-oop-session") ||
+                 !strcmp(argv[i], "--oopcatalog")) {
+        want_oop = 1;
+      } else if (!strcmp(argv[i], "--obj") || !strcmp(argv[i], "--obj-boot") ||
+                 !strcmp(argv[i], "--objboot") || !strcmp(argv[i], "--obj_boot") ||
+                 !strcmp(argv[i], "--obj-guard") || !strcmp(argv[i], "--objguard") ||
+                 !strcmp(argv[i], "--obj_guard") || !strcmp(argv[i], "--need-objs") ||
+                 !strcmp(argv[i], "--need-obj") || !strcmp(argv[i], "--objects") ||
+                 !strcmp(argv[i], "--instances") || !strcmp(argv[i], "--liveobj")) {
+        want_obj = 1;
+      } else if (!strcmp(argv[i], "--live") || !strcmp(argv[i], "--live-boot") ||
+                 !strcmp(argv[i], "--liveboot") || !strcmp(argv[i], "--live_boot") ||
+                 !strcmp(argv[i], "--live-session") || !strcmp(argv[i], "--livesession") ||
+                 !strcmp(argv[i], "--live_session") || !strcmp(argv[i], "--live-guard") ||
+                 !strcmp(argv[i], "--need-live") || !strcmp(argv[i], "--liveoop") ||
+                 !strcmp(argv[i], "--oop-live") || !strcmp(argv[i], "--fleet-oop")) {
+        want_live = 1;
+      } else if (!strcmp(argv[i], "--service-boot") || !strcmp(argv[i], "--serviceboot") ||
+                 !strcmp(argv[i], "--service_boot") || !strcmp(argv[i], "--service-session") ||
+                 !strcmp(argv[i], "--servicesession") || !strcmp(argv[i], "--service_session") ||
+                 !strcmp(argv[i], "--svc-boot") || !strcmp(argv[i], "--svcboot") ||
+                 !strcmp(argv[i], "--svc_boot") || !strcmp(argv[i], "--need-service") ||
+                 !strcmp(argv[i], "--fleet-service") || !strcmp(argv[i], "--full-live") ||
+                 !strcmp(argv[i], "--live-fleet") || !strcmp(argv[i], "--svc-full")) {
+        want_service = 1;
+      } else if (!strcmp(argv[i], "--cli-session") || !strcmp(argv[i], "--clisession") ||
+                 !strcmp(argv[i], "--cli-guard") || !strcmp(argv[i], "--cliguard") ||
+                 !strcmp(argv[i], "--cli_session") || !strcmp(argv[i], "--tool-session") ||
+                 !strcmp(argv[i], "--cli-contract")) {
+        want_cli_session = 1;
+      } else if (!strcmp(argv[i], "--cli") || !strcmp(argv[i], "--tool") ||
+                 !strcmp(argv[i], "--cli-boot") || !strcmp(argv[i], "--cliboot") ||
+                 !strcmp(argv[i], "--cli-tool") || !strcmp(argv[i], "--argparse") ||
+                 !strcmp(argv[i], "--cliinfo-boot")) {
+        want_cli = 1;
+      } else if (!strcmp(argv[i], "--fat") || !strcmp(argv[i], "--fat-board") ||
+                 !strcmp(argv[i], "--nest") || !strcmp(argv[i], "--varroom")) {
+        want_fat = 1;
+      } else if (!strcmp(argv[i], "--plate") || !strcmp(argv[i], "--session") ||
+                 !strcmp(argv[i], "--agent-plate") || !strcmp(argv[i], "-p")) {
+        want_plate = 1;
+      } else if (!strncmp(argv[i], "--from=", 7) && argv[i][7]) {
+        from_lib = argv[i] + 7;
+      } else if (!strncmp(argv[i], "--recipe=", 9) && argv[i][9]) {
+        from_lib = argv[i] + 9;
+      } else if ((!strcmp(argv[i], "--from") || !strcmp(argv[i], "--recipe") ||
+                  !strcmp(argv[i], "--lib") || !strcmp(argv[i], "-F") ||
+                  !strcmp(argv[i], "--use-lib")) &&
+                 i + 1 < argc && argv[i + 1][0] != '-') {
+        from_lib = argv[++i];
+      } else if (argv[i][0] != '-') {
+        path = argv[i];
+      }
+    }
+    if (want_list) {
+      /* Agent discovery: which scaffolds exist without reading COOKBOOK. */
+      printf("# CubalC init templates version=%s\n", CUBALC_LANG_VERSION);
+      printf("# run: cubalc init [path] [--plate|--peer|--fat|--fat-session|--cap|--onboard|--discover|--open|--doctor|--ready|--cli|--cli-session|--full-cli|--product|--path|--rw|--bin|--lib-boot|--host|--fleet|--key|--fn|--class|--key|--fn|--class|--fn|--class|--class|--env|--arg|--time|--from lib] [--force]\n");
+      printf("# flag\tid\thint\n");
+      printf("(default)\tagent_boot\tINCLUDE agent_boot + CUBE/PLUG/STATUS\n");
+      printf("--plate|-p\tplate_session\tplate_session + plate_uniform + PRETTYP + save\n");
+      printf("--peer|--mesh\tplate_peer_session\tPLATE+PEER multi-plate + dual save\n");
+      printf("--fat|--nest\tfat_boot\tfat_boot + plate_boot nest room + NEEDP\n");
+      printf("--fat-session|--durable\tfat_session\tINCLUDE fat_session durable nest one-shot\n");
+      printf("--cap|--forms|--capability\tcap_boot\tINCLUDE cap_boot form capability contract\n");
+      printf("--onboard|--welcome\tonboard_boot\tINCLUDE onboard_boot agent START discovery plate\n");
+      printf("--discover|--explore\tdiscover_boot\tINCLUDE discover_boot agent DISCOVER open plate\n");
+      printf("--open|--openplay|--playbook\topen_boot\tINCLUDE open_boot agent OPEN playbook\n");
+      printf("--doctor|--need-doctor\tdoctor_boot\tINCLUDE doctor_boot agent NEEDDOCTOR gate\n");
+      printf("--ready|--need-ready\tready_boot\tINCLUDE ready_boot agent NEEDREADY prove gate\n");
+      printf("--cli|--tool\tcli_boot\tINCLUDE cli_boot agent HELPFLAG+VERSIONFLAG+CLIINFO\n");
+      printf("--cli-session|--cli-guard\tcli_session\tINCLUDE cli_session cli_boot+cli_guard\n");
+      printf("--env|--env-boot|--env-guard|--hostenv\tenv_boot\tINCLUDE env_boot agent_boot+env_guard\n");
+      printf("--arg|--args|--arg-boot|--arg-guard\targ_boot\tINCLUDE arg_boot agent_boot+arg_guard\n");
+      printf("--time|--time-boot|--timeout-boot|--need-time\ttime_boot\tINCLUDE time_boot agent_boot+time_guard\n");
+      printf("--full-cli|--cli-full|--tool-full|--flags-args\ttool_session\tINCLUDE tool_session cli+arg guards\n");
+      printf("--product|--app|--product-session|--full-product|--service\tproduct_session\tINCLUDE product_session tool+env+time\n");
+      printf("--path|--path-boot|--path-guard|--hostpath\tpath_boot\tINCLUDE path_boot agent_boot+path_guard\n");
+      printf("--rw|--rw-boot|--rw-guard|--access\trw_boot\tINCLUDE rw_boot agent_boot+rw_guard\n");
+      printf("--bin|--bin-boot|--bin-guard|--tools\tbin_boot\tINCLUDE bin_boot agent_boot+bin_guard\n");
+      printf("--lib-boot|--lib-guard|--need-libs\tlib_boot\tINCLUDE lib_boot agent_boot+lib_guard\n");
+      printf("--host|--host-boot|--host-session\thost_boot\tINCLUDE host_boot path+rw+bin+lib readiness\n");
+      printf("--fleet|--full-session|--full-boot|--service-full\tfull_boot\tINCLUDE full_boot product+host\n");
+      printf("--key|--key-boot|--plate-guard|--need-keys\tkey_boot\tINCLUDE key_boot plate schema contract\n");
+      printf("--fn|--fn-boot|--fn-guard|--need-fns\tfn_boot\tINCLUDE fn_boot agent_boot+fn_guard\n");
+      printf("--class|--class-boot|--class-guard|--need-classes\tclass_boot\tINCLUDE class_boot agent_boot+class_guard\n");
+      printf("--method|--method-boot|--method-guard|--need-methods\tmethod_boot\tINCLUDE method_boot agent_boot+method_guard\n");
+      printf("--field|--field-boot|--field-guard|--need-fields\tfield_boot\tINCLUDE field_boot agent_boot+field_guard\n");
+      printf("--oop|--oop-boot|--oop-session|--oop-guard|--need-oop\toop_boot\tINCLUDE oop_boot agent_boot+oop_session\n");
+      printf("--obj|--obj-boot|--obj-guard|--need-objs\tobj_boot\tINCLUDE obj_boot agent_boot+obj_guard\n");
+      printf("--live|--live-boot|--live-session|--need-live\tlive_boot\tINCLUDE live_boot agent_boot+live_session\n");
+      printf("--service-boot|--service-session|--need-service|--svc-boot\tservice_boot\tINCLUDE service_boot full+live\n");
+      printf("--from|--recipe|-F <lib>\tfrom_recipe\tDEFAULT knobs from lib + INCLUDE (any recipe)\n");
+      printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
+             "\"op\":\"list\",\"n\":34,\"version\":\"%s\","
+             "\"note\":\"scaffold catalog — fixed templates + --from any lib recipe\","
+             "\"templates\":["
+             "{\"id\":\"agent_boot\",\"flags\":\"\",\"default\":true,"
+             "\"hint\":\"INCLUDE agent_boot + CUBE/PLUG/STATUS\"},"
+             "{\"id\":\"plate_session\",\"flags\":\"--plate|-p\","
+             "\"hint\":\"plate_session + plate_uniform + PRETTYP + save\"},"
+             "{\"id\":\"plate_peer_session\",\"flags\":\"--peer|--mesh\","
+             "\"hint\":\"PLATE+PEER multi-plate + dual save\"},"
+             "{\"id\":\"fat_boot\",\"flags\":\"--fat|--nest\","
+             "\"hint\":\"fat_boot + plate_boot nest room + NEEDP\"},"
+             "{\"id\":\"fat_session\",\"flags\":\"--fat-session|--durable\","
+             "\"hint\":\"INCLUDE fat_session durable nest one-shot\"},"
+             "{\"id\":\"cap_boot\",\"flags\":\"--cap|--forms|--capability\","
+             "\"hint\":\"INCLUDE cap_boot form capability contract\"},"
+             "{\"id\":\"onboard_boot\",\"flags\":\"--onboard|--welcome\","
+             "\"hint\":\"INCLUDE onboard_boot agent START discovery plate\"},"
+             "{\"id\":\"discover_boot\",\"flags\":\"--discover|--explore\","
+             "\"hint\":\"INCLUDE discover_boot agent DISCOVER open plate\"},"
+             "{\"id\":\"open_boot\",\"flags\":\"--open|--openplay|--playbook\","
+             "\"hint\":\"INCLUDE open_boot agent OPEN playbook\"},"
+             "{\"id\":\"doctor_boot\",\"flags\":\"--doctor|--need-doctor\","
+             "\"hint\":\"INCLUDE doctor_boot agent NEEDDOCTOR hard gate\"},"
+             "{\"id\":\"ready_boot\",\"flags\":\"--ready|--need-ready\","
+             "\"hint\":\"INCLUDE ready_boot agent NEEDREADY prove gate\"},"
+             "{\"id\":\"cli_boot\",\"flags\":\"--cli|--tool\","
+             "\"hint\":\"INCLUDE cli_boot agent HELPFLAG+VERSIONFLAG+CLIINFO\"},"
+             "{\"id\":\"cli_session\",\"flags\":\"--cli-session|--cli-guard\","
+             "\"hint\":\"INCLUDE cli_session cli_boot+cli_guard one-shot\"},"
+             "{\"id\":\"env_boot\",\"flags\":\"--env|--env-boot|--env-guard|--hostenv\","
+             "\"hint\":\"INCLUDE env_boot agent_boot+env_guard host env contract\"},"
+             "{\"id\":\"arg_boot\",\"flags\":\"--arg|--args|--arg-boot|--arg-guard\","
+             "\"hint\":\"INCLUDE arg_boot agent_boot+arg_guard program-arg contract\"},"
+             "{\"id\":\"time_boot\",\"flags\":\"--time|--time-boot|--timeout-boot|--need-time\","
+             "\"hint\":\"INCLUDE time_boot agent_boot+time_guard wall-budget starter\"},"
+             "{\"id\":\"tool_session\",\"flags\":\"--full-cli|--cli-full|--tool-full|--flags-args\","
+             "\"hint\":\"INCLUDE tool_session cli_boot+cli_guard+arg_guard full CLI\"},"
+             "{\"id\":\"product_session\",\"flags\":\"--product|--app|--product-session|--full-product|--service\","
+             "\"hint\":\"INCLUDE product_session tool_session+env_guard+time_guard product CLI\"},"
+             "{\"id\":\"path_boot\",\"flags\":\"--path|--path-boot|--path-guard|--hostpath\","
+             "\"hint\":\"INCLUDE path_boot agent_boot+path_guard host path contract\"},"
+             "{\"id\":\"rw_boot\",\"flags\":\"--rw|--rw-boot|--rw-guard|--access\","
+             "\"hint\":\"INCLUDE rw_boot agent_boot+rw_guard host access contract\"},"
+             "{\"id\":\"bin_boot\",\"flags\":\"--bin|--bin-boot|--bin-guard|--tools\","
+             "\"hint\":\"INCLUDE bin_boot agent_boot+bin_guard PATH tool contract\"},"
+             "{\"id\":\"lib_boot\",\"flags\":\"--lib-boot|--lib-guard|--need-libs\","
+             "\"hint\":\"INCLUDE lib_boot agent_boot+lib_guard module contract\"},"
+             "{\"id\":\"host_boot\",\"flags\":\"--host|--host-boot|--host-session\","
+             "\"hint\":\"INCLUDE host_boot path+rw+bin+lib host readiness\"},"
+             "{\"id\":\"full_boot\",\"flags\":\"--fleet|--full-session|--full-boot|--service-full\","
+             "\"hint\":\"INCLUDE full_boot product_session+host_session full service\"},"
+             "{\"id\":\"key_boot\",\"flags\":\"--key|--key-boot|--plate-guard|--need-keys\","
+             "\"hint\":\"INCLUDE key_boot plate_boot+plate_guard plate schema\"},"
+             "{\"id\":\"fn_boot\",\"flags\":\"--fn|--fn-boot|--fn-guard|--need-fns\","
+             "\"hint\":\"INCLUDE fn_boot agent_boot+fn_guard FN catalog\"},"
+             "{\"id\":\"class_boot\",\"flags\":\"--class|--class-boot|--class-guard|--need-classes\","
+             "\"hint\":\"INCLUDE class_boot agent_boot+class_guard CLASS catalog\"},"
+             "{\"id\":\"method_boot\",\"flags\":\"--method|--method-boot|--method-guard|--need-methods\","
+             "\"hint\":\"INCLUDE method_boot agent_boot+method_guard METHOD catalog\"},"
+             "{\"id\":\"field_boot\",\"flags\":\"--field|--field-boot|--field-guard|--need-fields\","
+             "\"hint\":\"INCLUDE field_boot agent_boot+field_guard FIELD catalog\"},"
+             "{\"id\":\"oop_boot\",\"flags\":\"--oop|--oop-boot|--oop-session|--oop-guard|--need-oop\","
+             "\"hint\":\"INCLUDE oop_boot agent_boot+oop_session OOP catalog\"},"
+             "{\"id\":\"obj_boot\",\"flags\":\"--obj|--obj-boot|--obj-guard|--need-objs\","
+             "\"hint\":\"INCLUDE obj_boot agent_boot+obj_guard live OBJ catalog\"},"
+             "{\"id\":\"live_boot\",\"flags\":\"--live|--live-boot|--live-session|--need-live\","
+             "\"hint\":\"INCLUDE live_boot agent_boot+live_session live OOP\"},"
+             "{\"id\":\"service_boot\",\"flags\":\"--service-boot|--service-session|--need-service|--svc-boot\","
+             "\"hint\":\"INCLUDE service_boot full_session+live_session fleet service\"},"
+             "{\"id\":\"from_recipe\",\"flags\":\"--from|--recipe|-F <lib>\","
+             "\"hint\":\"any lib DEFAULT knobs + INCLUDE · dual of cubalc recipe\"}"
+             "]}\n",
+             CUBALC_LANG_VERSION);
+      return 0;
+    }
+    /* --from / --recipe wins over fixed templates (any lib becomes a scaffold). */
+    if (from_lib && from_lib[0]) {
+      char rpath[768], stem[160], tried[4][768];
+      int ntry = 0, found = 0, j, nknob = 0;
+      char knobs[32][160];
+      char *src = NULL;
+      FILE *rf = NULL;
+      long sz = 0;
+      size_t nr = 0, bo = 0;
+      const char *lp;
+      {
+        const char *slash = strrchr(from_lib, '/');
+        const char *leaf = slash ? slash + 1 : from_lib;
+        size_t blen;
+        snprintf(stem, sizeof stem, "%s", leaf);
+        blen = strlen(stem);
+        if (blen > 7 && strcmp(stem + blen - 7, ".cubalc") == 0)
+          stem[blen - 7] = 0;
+        snprintf(tried[ntry++], sizeof tried[0], "%s", from_lib);
+        if (ntry < 4)
+          snprintf(tried[ntry++], sizeof tried[0], "programs/lib/%s.cubalc", stem);
+        if (ntry < 4)
+          snprintf(tried[ntry++], sizeof tried[0], "programs/lib/%s", from_lib);
+      }
+      for (j = 0; j < ntry; j++) {
+        if (access(tried[j], R_OK) == 0) {
+          snprintf(rpath, sizeof rpath, "%s", tried[j]);
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        cubalc_host_result hr;
+        if (cubalc_host_find_cubalc(from_lib, &hr) == 0 && hr.str[0] &&
+            access(hr.str, R_OK) == 0) {
+          snprintf(rpath, sizeof rpath, "%s", hr.str);
+          found = 1;
+        }
+      }
+      if (!found) {
+        fprintf(stderr,
+                "cubalc init --from: lib '%s' not found (cubalc libs|recipe|which)\n",
+                from_lib);
+        printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"cmd\":\"init\","
+               "\"op\":\"from\",\"query\":\"%s\",\"err\":\"lib not found\","
+               "\"hint\":\"cubalc libs · cubalc recipe %s · cubalc which %s\","
+               "\"version\":\"%s\"}\n",
+               from_lib, from_lib, from_lib, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      rf = fopen(rpath, "rb");
+      if (!rf) {
+        printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"cmd\":\"init\","
+               "\"op\":\"from\",\"path\":\"%s\",\"err\":\"open fail\","
+               "\"version\":\"%s\"}\n",
+               rpath, CUBALC_LANG_VERSION);
+        return 1;
+      }
+      fseek(rf, 0, SEEK_END);
+      sz = ftell(rf);
+      fseek(rf, 0, SEEK_SET);
+      if (sz < 0) sz = 0;
+      if (sz > 256 * 1024) sz = 256 * 1024;
+      src = malloc((size_t)sz + 1);
+      if (!src) {
+        fclose(rf);
+        printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"err\":\"oom\"}\n");
+        return 2;
+      }
+      nr = fread(src, 1, (size_t)sz, rf);
+      fclose(rf);
+      src[nr] = 0;
+      lp = src;
+      nknob = 0;
+      while (*lp) {
+        char raw[512];
+        size_t ri = 0;
+        const char *p;
+        while (*lp && *lp != '\n' && ri + 1 < sizeof raw)
+          raw[ri++] = *lp++;
+        raw[ri] = 0;
+        if (*lp == '\n') lp++;
+        p = raw;
+        while (*p == ' ' || *p == '\t') p++;
+        if (*p == '#' || !*p) continue;
+        if (p[0] == 'D' && p[1] == 'E' && p[2] == 'F' && p[3] == 'A' &&
+            p[4] == 'U' && p[5] == 'L' && p[6] == 'T' &&
+            (p[7] == ' ' || p[7] == '\t')) {
+          char key[64], val[128], kv[200];
+          size_t ki = 0, vi = 0;
+          p += 7;
+          while (*p == ' ' || *p == '\t') p++;
+          while (*p && *p != ' ' && *p != '\t' && *p != '=' && ki + 1 < sizeof key)
+            key[ki++] = *p++;
+          key[ki] = 0;
+          while (*p == ' ' || *p == '\t') p++;
+          if (*p == '=') { p++; while (*p == ' ' || *p == '\t') p++; }
+          if (*p == '"' || *p == '\'') {
+            char q = *p++;
+            /* honor \\ and \" so JSON DEFAULT knobs round-trip (PLATE_SEED) */
+            while (*p && vi + 1 < sizeof val) {
+              if (*p == '\\' && p[1]) {
+                p++;
+                val[vi++] = *p++;
+                continue;
+              }
+              if (*p == q) break;
+              val[vi++] = *p++;
+            }
+            if (*p == q) p++;
+            val[vi] = 0;
+          } else {
+            while (*p && *p != '#' && vi + 1 < sizeof val) val[vi++] = *p++;
+            val[vi] = 0;
+            while (vi > 0 && (val[vi - 1] == ' ' || val[vi - 1] == '\t'))
+              val[--vi] = 0;
+          }
+          if (key[0] && nknob < 32) {
+            snprintf(kv, sizeof kv, "%s=%s", key, val);
+            snprintf(knobs[nknob++], sizeof knobs[0], "%s", kv);
+          }
+        }
+      }
+      free(src);
+      /* build scaffold: header + DEFAULT knobs + INCLUDE + STATUS */
+      bo = 0;
+      bo += (size_t)snprintf(from_body + bo, sizeof from_body - bo,
+        "# CubalC starter — generated by cubalc init --from %s\n"
+        "# recipe path=%s · knobs from LIBDEFAULTS (set-if-unset before INCLUDE)\n"
+        "# dual of: cubalc recipe %s · RECIPE %s\n",
+        stem, rpath, stem, stem);
+      for (j = 0; j < nknob && bo + 8 < sizeof from_body; j++) {
+        char key[64], val[128];
+        const char *eq = strchr(knobs[j], '=');
+        size_t klen;
+        int need_quote = 0, vi;
+        if (!eq || eq == knobs[j]) continue;
+        klen = (size_t)(eq - knobs[j]);
+        if (klen >= sizeof key) klen = sizeof key - 1;
+        memcpy(key, knobs[j], klen);
+        key[klen] = 0;
+        snprintf(val, sizeof val, "%s", eq + 1);
+        /* quote non-numeric values for safe DEFAULT form */
+        if (!val[0]) {
+          need_quote = 1;
+        } else {
+          for (vi = 0; val[vi]; vi++) {
+            if (!(val[vi] >= '0' && val[vi] <= '9') &&
+                !(vi == 0 && val[vi] == '-')) {
+              need_quote = 1;
+              break;
+            }
+          }
+        }
+        if (need_quote) {
+          char esc[200];
+          size_t a = 0, b = 0;
+          for (a = 0; val[a] && b + 2 < sizeof esc; a++) {
+            if (val[a] == '\\' || val[a] == '"') {
+              esc[b++] = '\\';
+              esc[b++] = val[a];
+            } else if ((unsigned char)val[a] >= 32) {
+              esc[b++] = val[a];
+            }
+          }
+          esc[b] = 0;
+          bo += (size_t)snprintf(from_body + bo, sizeof from_body - bo,
+                                 "DEFAULT %s = \"%s\"\n", key, esc);
+        } else {
+          bo += (size_t)snprintf(from_body + bo, sizeof from_body - bo,
+                                 "DEFAULT %s = %s\n", key, val);
+        }
+      }
+      if (nknob == 0 && bo + 80 < sizeof from_body)
+        bo += (size_t)snprintf(from_body + bo, sizeof from_body - bo,
+                               "# (no DEFAULT knobs in recipe — bare INCLUDE)\n");
+      bo += (size_t)snprintf(from_body + bo, sizeof from_body - bo,
+                             "INCLUDE %s\n"
+                             "\n"
+                             "STATUS\n"
+                             "PRINT \"init from %s ok\" OK LAST_N\n",
+                             stem, stem);
+      body = from_body;
+      tmpl = stem;
+      (void)bo;
+    } else if (want_peer) {
+      body = body_peer;
+      tmpl = "plate_peer_session";
+    } else if (want_arg) {
+      body = body_arg;
+      tmpl = "arg_boot";
+    } else if (want_time) {
+      body = body_time;
+      tmpl = "time_boot";
+    } else if (want_env) {
+      body = body_env;
+      tmpl = "env_boot";
+    } else if (want_service) {
+      body = body_service;
+      tmpl = "service_boot";
+    } else if (want_live) {
+      body = body_live;
+      tmpl = "live_boot";
+    } else if (want_obj) {
+      body = body_obj;
+      tmpl = "obj_boot";
+    } else if (want_oop) {
+      body = body_oop;
+      tmpl = "oop_boot";
+    } else if (want_field) {
+      body = body_field;
+      tmpl = "field_boot";
+    } else if (want_method) {
+      body = body_method;
+      tmpl = "method_boot";
+    } else if (want_class) {
+      body = body_class;
+      tmpl = "class_boot";
+    } else if (want_fn) {
+      body = body_fn;
+      tmpl = "fn_boot";
+    } else if (want_key) {
+      body = body_key;
+      tmpl = "key_boot";
+    } else if (want_full) {
+      body = body_full;
+      tmpl = "full_boot";
+    } else if (want_host) {
+      body = body_host;
+      tmpl = "host_boot";
+    } else if (want_lib) {
+      body = body_lib;
+      tmpl = "lib_boot";
+    } else if (want_bin) {
+      body = body_bin;
+      tmpl = "bin_boot";
+    } else if (want_rw) {
+      body = body_rw;
+      tmpl = "rw_boot";
+    } else if (want_path) {
+      body = body_path;
+      tmpl = "path_boot";
+    } else if (want_product) {
+      body = body_product;
+      tmpl = "product_session";
+    } else if (want_tool) {
+      body = body_tool;
+      tmpl = "tool_session";
+    } else if (want_cli_session) {
+      body = body_cli_session;
+      tmpl = "cli_session";
+    } else if (want_cli) {
+      body = body_cli;
+      tmpl = "cli_boot";
+    } else if (want_ready) {
+      body = body_ready;
+      tmpl = "ready_boot";
+    } else if (want_doctor) {
+      body = body_doctor;
+      tmpl = "doctor_boot";
+    } else if (want_open) {
+      body = body_open;
+      tmpl = "open_boot";
+    } else if (want_discover) {
+      body = body_discover;
+      tmpl = "discover_boot";
+    } else if (want_onboard) {
+      body = body_onboard;
+      tmpl = "onboard_boot";
+    } else if (want_cap) {
+      body = body_cap;
+      tmpl = "cap_boot";
+    } else if (want_fat_session) {
+      body = body_fat_session;
+      tmpl = "fat_session";
+    } else if (want_fat) {
+      body = body_fat;
+      tmpl = "fat_boot";
+    } else if (want_plate) {
+      body = body_plate;
+      tmpl = "plate_session";
+    }
+    if (!path[0]) path = "program.cubalc";
+    /* ensure .cubalc suffix for bare names without extension */
+    {
+      const char *dot = strrchr(path, '.');
+      const char *slash = strrchr(path, '/');
+      int bare = (!dot || (slash && dot < slash));
+      if (bare) {
+        snprintf(abspath, sizeof abspath, "%s.cubalc", path);
+        path = abspath;
+      }
+    }
+    existed = (access(path, F_OK) == 0);
+    if (existed && !force) {
+      fprintf(stderr, "cubalc init: %s exists (use --force to overwrite)\n", path);
+      printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"cmd\":\"init\","
+             "\"path\":\"%s\",\"existed\":true,\"wrote\":false,"
+             "\"err\":\"exists\",\"hint\":\"cubalc init %s --force\","
+             "\"version\":\"%s\"}\n",
+             path, path, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    /* mkdir parent if path has directory component */
+    {
+      const char *slash = strrchr(path, '/');
+      if (slash && slash > path) {
+        size_t n = (size_t)(slash - path);
+        if (n + 1 < sizeof parent) {
+          memcpy(parent, path, n);
+          parent[n] = 0;
+          ensure_dir(parent);
+        }
+      }
+    }
+    f = fopen(path, "w");
+    if (!f) {
+      fprintf(stderr, "cubalc init: cannot write %s: %s\n", path, strerror(errno));
+      printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"cmd\":\"init\","
+             "\"path\":\"%s\",\"err\":\"write_fail\",\"version\":\"%s\"}\n",
+             path, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    if (fputs(body, f) >= 0) wrote = 1;
+    fclose(f);
+    if (!wrote) {
+      printf("{\"schema\":\"cubalc.init.v1\",\"ok\":false,\"cmd\":\"init\","
+             "\"path\":\"%s\",\"err\":\"write_fail\",\"version\":\"%s\"}\n",
+             path, CUBALC_LANG_VERSION);
+      return 1;
+    }
+    body_bytes = strlen(body);
+    printf("# CubalC init wrote %s template=%s version=%s\n",
+           path, tmpl, CUBALC_LANG_VERSION);
+    if (from_lib && from_lib[0])
+      printf("# next: cubalc run %s · cubalc recipe %s · RECIPE %s\n",
+             path, tmpl, tmpl);
+    else if (want_peer)
+      printf("# next: cubalc run %s · cubalc cat plate_peer_session · multi-plate PLATE+PEER\n", path);
+    else if (want_arg)
+      printf("# next: cubalc run %s · DEFAULT NEED_ARGS · INCLUDE arg_boot\n", path);
+    else if (want_time)
+      printf("# next: cubalc run %s · DEFAULT NEED_TIME · INCLUDE time_boot\n", path);
+    else if (want_env)
+      printf("# next: cubalc run %s · DEFAULT NEED_ENVS · INCLUDE env_boot\n", path);
+    else if (want_service)
+      printf("# next: cubalc run %s · DEFAULT NEED_* product+host+OOP · INCLUDE service_boot\n", path);
+    else if (want_live)
+      printf("# next: cubalc run %s · DEFAULT NEED_CLASSES/METHODS/FIELDS/OBJS · INCLUDE live_boot\n", path);
+    else if (want_obj)
+      printf("# next: cubalc run %s · DEFAULT NEED_OBJS · NEW instances · INCLUDE obj_boot\n", path);
+    else if (want_oop)
+      printf("# next: cubalc run %s · DEFAULT NEED_CLASSES/METHODS/FIELDS · INCLUDE oop_boot\n", path);
+    else if (want_field)
+      printf("# next: cubalc run %s · DEFAULT NEED_FIELDS Class.field · INCLUDE field_boot\n", path);
+    else if (want_method)
+      printf("# next: cubalc run %s · DEFAULT NEED_METHODS Class.method · INCLUDE method_boot\n", path);
+    else if (want_class)
+      printf("# next: cubalc run %s · DEFAULT NEED_CLASSES · DEFINE CLASS · INCLUDE class_boot\n", path);
+    else if (want_fn)
+      printf("# next: cubalc run %s · DEFAULT NEED_FNALL · DEFINE FNs · INCLUDE fn_boot\n", path);
+    else if (want_key)
+      printf("# next: cubalc run %s · DEFAULT NEED_KEYS · INCLUDE key_boot\n", path);
+    else if (want_full)
+      printf("# next: cubalc run %s · DEFAULT NEED_FLAGS/NEED_ENVS/NEED_PATHS · INCLUDE full_boot\n", path);
+    else if (want_host)
+      printf("# next: cubalc run %s · DEFAULT NEED_PATHS/NEED_BINS/NEED_LIBS · INCLUDE host_boot\n", path);
+    else if (want_lib)
+      printf("# next: cubalc run %s · DEFAULT NEED_LIBS · INCLUDE lib_boot\n", path);
+    else if (want_bin)
+      printf("# next: cubalc run %s · DEFAULT NEED_BINS · INCLUDE bin_boot\n", path);
+    else if (want_rw)
+      printf("# next: cubalc run %s · DEFAULT NEED_READ_PATHS/NEED_WRITE_PATHS · INCLUDE rw_boot\n", path);
+    else if (want_path)
+      printf("# next: cubalc run %s · DEFAULT NEED_PATHS · INCLUDE path_boot\n", path);
+    else if (want_product)
+      printf("# next: cubalc run %s · DEFAULT NEED_FLAGS/NEED_ENVS/NEED_TIME · INCLUDE product_session\n", path);
+    else if (want_tool)
+      printf("# next: cubalc run %s · DEFAULT NEED_FLAGS/NEED_ARGS · INCLUDE tool_session\n", path);
+    else if (want_cli_session)
+      printf("# next: cubalc run %s · DEFAULT NEED_FLAGS · INCLUDE cli_session\n", path);
+    else if (want_cli)
+      printf("# next: cubalc run %s · cubalc cliinfo · HELPFLAG --help · INCLUDE cli_boot\n", path);
+    else if (want_ready)
+      printf("# next: cubalc run %s · cubalc ready · run -Y · INCLUDE ready_boot\n", path);
+    else if (want_doctor)
+      printf("# next: cubalc run %s · cubalc needdoctor · INCLUDE doctor_boot\n", path);
+    else if (want_open)
+      printf("# next: cubalc run %s · cubalc open · RUNSNIP OPEN_FIRST · cubalc cat open_boot\n", path);
+    else if (want_discover)
+      printf("# next: cubalc run %s · cubalc discover · GUIDE DISCOVER_FIRST · cubalc cat discover_boot\n", path);
+    else if (want_onboard)
+      printf("# next: cubalc run %s · cubalc onboard · GUIDE general · cubalc cat onboard_boot\n", path);
+    else if (want_cap)
+      printf("# next: cubalc run %s · cubalc cat cap_boot · HASFORMS / NEED_FORMS\n", path);
+    else if (want_fat_session)
+      printf("# next: cubalc run %s · cubalc recipe fat_session · durable nest\n", path);
+    else if (want_fat)
+      printf("# next: cubalc run %s · cubalc cat fat_boot · VARROOM free-slot gate\n", path);
+    else if (want_plate)
+      printf("# next: cubalc run %s · cubalc cat plate_uniform · plate pretty state/agent_plate.json\n", path);
+    else
+      printf("# next: cubalc run %s · cubalc cat agent_boot\n", path);
+    printf("{\"schema\":\"cubalc.init.v1\",\"ok\":true,\"cmd\":\"init\","
+           "\"path\":\"%s\",\"existed\":%s,\"wrote\":true,\"force\":%s,"
+           "\"template\":\"%s\",\"from\":%s,\"bytes\":%zu,"
+           "\"version\":\"%s\","
+           "\"note\":\"%s\"}\n",
+           path, existed ? "true" : "false", force ? "true" : "false",
+           tmpl,
+           (from_lib && from_lib[0]) ? "true" : "false",
+           body_bytes, CUBALC_LANG_VERSION,
+           (from_lib && from_lib[0])
+               ? "DEFAULT knobs from lib recipe + INCLUDE · dual of cubalc recipe"
+               : (want_peer
+               ? "INCLUDE plate_peer_session + PLATE/PEER SETP FROM + save both"
+               : (want_arg
+               ? "INCLUDE arg_boot agent_boot+arg_guard program-arg contract"
+               : (want_time
+               ? "INCLUDE time_boot agent_boot+time_guard wall-budget starter"
+               : (want_env
+               ? "INCLUDE env_boot agent_boot+env_guard host env contract"
+               : (want_service
+               ? "INCLUDE service_boot full_session+live_session fleet service contract"
+               : (want_live
+               ? "INCLUDE live_boot agent_boot+live_session live OOP catalog contract"
+               : (want_obj
+               ? "INCLUDE obj_boot agent_boot+obj_guard live OBJ catalog contract"
+               : (want_oop
+               ? "INCLUDE oop_boot agent_boot+oop_session OOP catalog contract"
+               : (want_field
+               ? "INCLUDE field_boot agent_boot+field_guard FIELD catalog contract"
+               : (want_method
+               ? "INCLUDE method_boot agent_boot+method_guard METHOD catalog contract"
+               : (want_class
+               ? "INCLUDE class_boot agent_boot+class_guard CLASS catalog contract"
+               : (want_fn
+               ? "INCLUDE fn_boot agent_boot+fn_guard FN catalog contract"
+               : (want_key
+               ? "INCLUDE key_boot plate_boot+plate_guard plate schema"
+               : (want_full
+               ? "INCLUDE full_boot product_session+host_session full service"
+               : (want_host
+               ? "INCLUDE host_boot path+rw+bin+lib host readiness"
+               : (want_lib
+               ? "INCLUDE lib_boot agent_boot+lib_guard module contract"
+               : (want_bin
+               ? "INCLUDE bin_boot agent_boot+bin_guard PATH tool contract"
+               : (want_rw
+               ? "INCLUDE rw_boot agent_boot+rw_guard host access contract"
+               : (want_path
+               ? "INCLUDE path_boot agent_boot+path_guard host path contract"
+               : (want_product
+               ? "INCLUDE product_session tool_session+env_guard+time_guard product CLI"
+               : (want_tool
+               ? "INCLUDE tool_session cli_boot+cli_guard+arg_guard full CLI"
+               : (want_cli_session
+               ? "INCLUDE cli_session cli_boot+cli_guard one-shot"
+               : (want_cli
+               ? "INCLUDE cli_boot agent HELPFLAG+VERSIONFLAG+CLIINFO"
+               : (want_ready
+               ? "INCLUDE ready_boot agent NEEDREADY prove gate"
+               : (want_doctor
+               ? "INCLUDE doctor_boot agent NEEDDOCTOR hard gate"
+               : (want_open
+               ? "INCLUDE open_boot agent OPEN playbook"
+               : (want_discover
+               ? "INCLUDE discover_boot agent DISCOVER open plate"
+               : (want_onboard
+               ? "INCLUDE onboard_boot agent START discovery plate"
+               : (want_cap
+               ? "INCLUDE cap_boot form capability contract + CUBE/PLUG"
+               : (want_fat_session
+               ? "INCLUDE fat_session durable nest one-shot"
+               : (want_fat
+               ? "INCLUDE fat_boot + plate_boot nest room + NEEDP + save"
+               : (want_plate
+               ? "INCLUDE plate_session + plate_uniform + PRETTYP + plate_save"
+               : "INCLUDE agent_boot + CUBE/PLUG/FLOW/STATUS starter")))))))))))))))))))))))))))))))));
+    return 0;
+  }
+
+  return 2;
+}

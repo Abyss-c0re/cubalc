@@ -1,0 +1,6540 @@
+/* flow fstr peel from flow_class */
+#include "lang/cubalc_lang_ops_flow_fstr_b.h"
+#include "lang/cubalc_lang_ops_flow_oop.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+int cubalc_lang_ops_flow_try_fstr_b(VM *vm, Lex *L) {
+  if (kw(&L->cur, "CHILDCOUNT") || kw(&L->cur, "COUNTCHILDREN") ||
+      kw(&L->cur, "NUMCHILDREN") || kw(&L->cur, "NCHILDREN") ||
+      kw(&L->cur, "KIDCOUNT") || kw(&L->cur, "DIRECTKIDS") ||
+      kw(&L->cur, "CHILD_COUNT") || kw(&L->cur, "COUNT_CHILDREN") ||
+      kw(&L->cur, "DESCENDANTCOUNT") || kw(&L->cur, "COUNTDESCENDANTS") ||
+      kw(&L->cur, "NUMDESCENDANTS") || kw(&L->cur, "NDESCENDANTS") ||
+      kw(&L->cur, "PROGENYCOUNT") || kw(&L->cur, "DESCENDANT_COUNT") ||
+      kw(&L->cur, "COUNT_DESCENDANTS") || kw(&L->cur, "ALLSUBSCOUNT") ||
+      kw(&L->cur, "SUBTREESIZE") || kw(&L->cur, "TREESIZE") ||
+      kw(&L->cur, "NODESIN") || kw(&L->cur, "SUBTREE_SIZE") ||
+      kw(&L->cur, "TREE_SIZE") || kw(&L->cur, "COUNTNODES") ||
+      kw(&L->cur, "SUBTREECARD") || kw(&L->cur, "CLASSTREE_N")) {
+    int want_childc = kw(&L->cur, "CHILDCOUNT") || kw(&L->cur, "COUNTCHILDREN") ||
+                      kw(&L->cur, "NUMCHILDREN") || kw(&L->cur, "NCHILDREN") ||
+                      kw(&L->cur, "KIDCOUNT") || kw(&L->cur, "DIRECTKIDS") ||
+                      kw(&L->cur, "CHILD_COUNT") || kw(&L->cur, "COUNT_CHILDREN");
+    int want_descc = kw(&L->cur, "DESCENDANTCOUNT") || kw(&L->cur, "COUNTDESCENDANTS") ||
+                     kw(&L->cur, "NUMDESCENDANTS") || kw(&L->cur, "NDESCENDANTS") ||
+                     kw(&L->cur, "PROGENYCOUNT") || kw(&L->cur, "DESCENDANT_COUNT") ||
+                     kw(&L->cur, "COUNT_DESCENDANTS") || kw(&L->cur, "ALLSUBSCOUNT");
+    int want_sub = kw(&L->cur, "SUBTREESIZE") || kw(&L->cur, "TREESIZE") ||
+                   kw(&L->cur, "NODESIN") || kw(&L->cur, "SUBTREE_SIZE") ||
+                   kw(&L->cur, "TREE_SIZE") || kw(&L->cur, "COUNTNODES") ||
+                   kw(&L->cur, "SUBTREECARD") || kw(&L->cur, "CLASSTREE_N");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, guard = 0;
+    const char *opname = want_childc ? "CHILDCOUNT"
+                         : want_descc ? "DESCENDANTCOUNT"
+                                        : "SUBTREESIZE";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_childc ? "CHILDCOUNT Class|obj"
+                         : (want_descc ? "DESCENDANTCOUNT Class|obj"
+                                       : "SUBTREESIZE Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (cda && ai >= 0) {
+      if (want_childc) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == ai) n++;
+        }
+      } else {
+        /* BFS descendants; subtree = 1 + descendants */
+        int queue[512];
+        int qh = 0, qt = 0;
+        int seen[512];
+        int ndesc = 0;
+        for (i = 0; i < 512; i++) seen[i] = 0;
+        queue[qt++] = ai;
+        seen[ai] = 1;
+        guard = 0;
+        while (qh < qt && guard++ < CUBALC_MAX_CLASSES * 4) {
+          int cur = queue[qh++];
+          if (cur < 0 || cur >= vm->n_classes) continue;
+          for (i = 0; i < vm->n_classes; i++) {
+            if (vm->classes[i].parent_idx == cur && !seen[i] && qt < 512) {
+              seen[i] = 1;
+              queue[qt++] = i;
+              ndesc++;
+            }
+          }
+        }
+        n = want_descc ? ndesc : (ndesc + 1);
+      }
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    if (want_childc) {
+      var_set_num(vm, "CHILDCOUNT_N", n);
+      var_set_num(vm, "COUNTCHILDREN_N", n);
+      var_set_num(vm, "NUMCHILDREN_N", n);
+      var_set_num(vm, "NCHILDREN_N", n);
+      var_set_num(vm, "KIDCOUNT_N", n);
+    } else if (want_descc) {
+      var_set_num(vm, "DESCENDANTCOUNT_N", n);
+      var_set_num(vm, "COUNTDESCENDANTS_N", n);
+      var_set_num(vm, "NUMDESCENDANTS_N", n);
+      var_set_num(vm, "NDESCENDANTS_N", n);
+      var_set_num(vm, "PROGENYCOUNT_N", n);
+      var_set_num(vm, "DESCENDANTCOUNT", n);
+    } else {
+      var_set_num(vm, "SUBTREESIZE_N", n);
+      var_set_num(vm, "TREESIZE_N", n);
+      var_set_num(vm, "NODESIN_N", n);
+      var_set_num(vm, "SUBTREESIZE", n);
+      var_set_num(vm, "TREESIZE", n);
+    }
+    /* also mirror common count aliases for bag duals */
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d\n", opname, a, n);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* NTHSIBLING|FIRSTSIBLING|LASTSIBLING (multifile EXTEND)
+   * FIRSTSIBLING / LASTSIBLING Class|obj — first/last peer sharing parent_idx (excl self).
+   * NTHSIBLING Class|obj N — sibling at index N (0-based, declaration order); soft empty OOB.
+   * Complements SIBLINGS bag + NTHCHILD + NTHPARENT. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NTHSIBLING") || kw(&L->cur, "SIBLINGAT") ||
+      kw(&L->cur, "NTH_SIBLING") || kw(&L->cur, "SIBLING_AT") ||
+      kw(&L->cur, "PEERAT") || kw(&L->cur, "NTHPEER") ||
+      kw(&L->cur, "FIRSTSIBLING") || kw(&L->cur, "ELDERSIBLING") ||
+      kw(&L->cur, "OLDESTSIBLING") || kw(&L->cur, "FIRST_SIBLING") ||
+      kw(&L->cur, "FIRSTPEER") || kw(&L->cur, "ELDERPEER") ||
+      kw(&L->cur, "LASTSIBLING") || kw(&L->cur, "YOUNGSIBLING") ||
+      kw(&L->cur, "NEWESTSIBLING") || kw(&L->cur, "LAST_SIBLING") ||
+      kw(&L->cur, "YOUNGESTSIBLING") || kw(&L->cur, "LASTPEER") ||
+      kw(&L->cur, "YOUNGPEER")) {
+    int want_nth = kw(&L->cur, "NTHSIBLING") || kw(&L->cur, "SIBLINGAT") ||
+                   kw(&L->cur, "NTH_SIBLING") || kw(&L->cur, "SIBLING_AT") ||
+                   kw(&L->cur, "PEERAT") || kw(&L->cur, "NTHPEER");
+    int want_first = kw(&L->cur, "FIRSTSIBLING") || kw(&L->cur, "ELDERSIBLING") ||
+                     kw(&L->cur, "OLDESTSIBLING") || kw(&L->cur, "FIRST_SIBLING") ||
+                     kw(&L->cur, "FIRSTPEER") || kw(&L->cur, "ELDERPEER");
+    int want_last = kw(&L->cur, "LASTSIBLING") || kw(&L->cur, "YOUNGSIBLING") ||
+                    kw(&L->cur, "NEWESTSIBLING") || kw(&L->cur, "LAST_SIBLING") ||
+                    kw(&L->cur, "YOUNGESTSIBLING") || kw(&L->cur, "LASTPEER") ||
+                    kw(&L->cur, "YOUNGPEER");
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, idx_want = -1, hit = 0;
+    int sibs[512];
+    int ns = 0;
+    const char *opname = want_nth ? "NTHSIBLING"
+                         : want_first ? "FIRSTSIBLING"
+                                      : "LASTSIBLING";
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_nth ? "NTHSIBLING Class|obj N"
+                        : (want_first ? "FIRSTSIBLING Class|obj"
+                                      : "LASTSIBLING Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (want_nth) {
+      if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+          kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+        lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx_want = (int)L->cur.num;
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx_want = (int)vv->val;
+        else { fail(vm, "NTHSIBLING Class|obj N"); return -1; }
+        lex_next(L);
+      } else { fail(vm, "NTHSIBLING Class|obj N"); return -1; }
+    }
+    pick[0] = 0;
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ns = 0;
+    if (cda && ai >= 0) {
+      int par = cda->parent_idx;
+      if (par >= 0 && par < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (i == ai) continue;
+          if (vm->classes[i].parent_idx == par) {
+            if (ns < 512) sibs[ns++] = i;
+          }
+        }
+      }
+    }
+    hit = 0;
+    if (want_first && ns > 0) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[0]].name);
+      hit = 1;
+    } else if (want_last && ns > 0) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[ns - 1]].name);
+      hit = 1;
+    } else if (want_nth && idx_want >= 0 && idx_want < ns) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[sibs[idx_want]].name);
+      hit = 1;
+    }
+    var_set_str(vm, "LAST", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    var_set_str(vm, "SIBLING", pick);
+    var_set_str(vm, "NTHSIBLING", pick);
+    var_set_str(vm, "FIRSTSIBLING", pick);
+    var_set_str(vm, "LASTSIBLING", pick);
+    var_set_str(vm, "SIBLINGAT", pick);
+    var_set_num(vm, "NTHSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "FIRSTSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "LASTSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "SIBLINGS_N", ns);
+    var_set_num(vm, "SIBLINGCOUNT_N", ns);
+    n = hit ? 1 : 0;
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d hit=%d sibs=%d\n", opname, a, n, hit, ns);
+    bump(vm);
+    return 1;
+  }
+
+  /* NEXTSIBLING + PREVSIBLING + CHILDRANK (multifile EXTEND)
+   * NEXTSIBLING Class|obj — next peer after self under same parent (decl order); soft empty.
+   * PREVSIBLING Class|obj — previous peer before self; soft empty.
+   * CHILDRANK Class|obj — 0-based index among parent's children (self rank); -1/soft 0 if root.
+   * Complements NTHSIBLING + FIRST/LASTSIBLING + SIBLINGS bag. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NEXTSIBLING") || kw(&L->cur, "NEXTPEER") ||
+      kw(&L->cur, "SIBLINGNEXT") || kw(&L->cur, "NEXT_SIBLING") ||
+      kw(&L->cur, "FOLLOWINGSIB") || kw(&L->cur, "RIGHTSIBLING") ||
+      kw(&L->cur, "PREVSIBLING") || kw(&L->cur, "PREVPEER") ||
+      kw(&L->cur, "SIBLINGPREV") || kw(&L->cur, "PREV_SIBLING") ||
+      kw(&L->cur, "PRECEDINGSIB") || kw(&L->cur, "LEFTSIBLING") ||
+      kw(&L->cur, "PRIORSIBLING") ||
+      kw(&L->cur, "CHILDRANK") || kw(&L->cur, "SIBLINGRANK") ||
+      kw(&L->cur, "INDEXOFCHILD") || kw(&L->cur, "CHILD_RANK") ||
+      kw(&L->cur, "RANKAMONGSIBS") || kw(&L->cur, "MYCHILDIX") ||
+      kw(&L->cur, "CHILDINDEX") || kw(&L->cur, "SIBINDEX")) {
+    int want_next = kw(&L->cur, "NEXTSIBLING") || kw(&L->cur, "NEXTPEER") ||
+                    kw(&L->cur, "SIBLINGNEXT") || kw(&L->cur, "NEXT_SIBLING") ||
+                    kw(&L->cur, "FOLLOWINGSIB") || kw(&L->cur, "RIGHTSIBLING");
+    int want_prev = kw(&L->cur, "PREVSIBLING") || kw(&L->cur, "PREVPEER") ||
+                    kw(&L->cur, "SIBLINGPREV") || kw(&L->cur, "PREV_SIBLING") ||
+                    kw(&L->cur, "PRECEDINGSIB") || kw(&L->cur, "LEFTSIBLING") ||
+                    kw(&L->cur, "PRIORSIBLING");
+    int want_rank = kw(&L->cur, "CHILDRANK") || kw(&L->cur, "SIBLINGRANK") ||
+                    kw(&L->cur, "INDEXOFCHILD") || kw(&L->cur, "CHILD_RANK") ||
+                    kw(&L->cur, "RANKAMONGSIBS") || kw(&L->cur, "MYCHILDIX") ||
+                    kw(&L->cur, "CHILDINDEX") || kw(&L->cur, "SIBINDEX");
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, hit = 0, rank = -1;
+    int kids[512];
+    int nk = 0;
+    const char *opname = want_next ? "NEXTSIBLING"
+                         : want_prev ? "PREVSIBLING"
+                                       : "CHILDRANK";
+    lex_next(L);
+    a[0] = pick[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_rank ? "CHILDRANK Class|obj"
+                         : (want_next ? "NEXTSIBLING Class|obj"
+                                      : "PREVSIBLING Class|obj"));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == parent && nk < 512)
+            kids[nk++] = i;
+        }
+        for (i = 0; i < nk; i++) {
+          if (kids[i] == ai) { rank = i; break; }
+        }
+      } else {
+        /* root / orphan: rank 0 alone; no siblings */
+        rank = 0;
+        nk = 0;
+      }
+    }
+    if (want_rank) {
+      n = (rank >= 0) ? rank : 0;
+      hit = (cda && rank >= 0) ? 1 : 0;
+      /* roots report rank 0 with OK=1 and LAST_N=0 meaning rank value in LAST_N */
+      var_set_num(vm, "LAST_N", (cda && rank >= 0) ? rank : 0);
+      vm->last_n = (cda && rank >= 0) ? rank : 0;
+      var_set_num(vm, "CHILDRANK", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "CHILDRANK_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "SIBLINGRANK_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "INDEXOFCHILD_N", (cda && rank >= 0) ? rank : 0);
+      var_set_num(vm, "CHILDINDEX_N", (cda && rank >= 0) ? rank : 0);
+      n = (cda && rank >= 0) ? rank : 0;
+    } else {
+      pick[0] = 0;
+      hit = 0;
+      if (rank >= 0 && nk > 0) {
+        int j = want_next ? (rank + 1) : (rank - 1);
+        if (j >= 0 && j < nk) {
+          snprintf(pick, sizeof pick, "%s", vm->classes[kids[j]].name);
+          hit = 1;
+        }
+      }
+      var_set_str(vm, "LAST", pick);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+      var_set_str(vm, "NEXTSIBLING", pick);
+      var_set_str(vm, "PREVSIBLING", pick);
+      var_set_str(vm, "NEXTPEER", pick);
+      var_set_str(vm, "PREVPEER", pick);
+      var_set_num(vm, "LAST_N", hit ? 1 : 0);
+      vm->last_n = hit ? 1 : 0;
+      var_set_num(vm, "NEXTSIBLING_N", hit ? 1 : 0);
+      var_set_num(vm, "PREVSIBLING_N", hit ? 1 : 0);
+      n = hit ? 1 : 0;
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> rank=%d hit=%d n=%d\n", opname, a, rank, hit, n);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* ISROOT + ISFIRSTCHILD/ISLASTCHILD + ONLYCHILD (multifile EXTEND)
+   * ISROOT Class|obj — 1 if no parent_idx (top of EXTEND chain).
+   * ISFIRSTCHILD / ISLASTCHILD — 1 if self is first/last among parent's kids.
+   * ONLYCHILD — 1 if parent has exactly one direct child (self alone).
+   * Complements CHILDRANK + NEXT/PREVSIBLING + ISLEAF + ROOTOF.
+   * LAST_N / form_N = 0|1 soft. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ISROOT") || kw(&L->cur, "IS_ROOT") ||
+      kw(&L->cur, "NOROOTPARENT") || kw(&L->cur, "TOPCLASS") ||
+      kw(&L->cur, "ISFIRSTCHILD") || kw(&L->cur, "IS_FIRST_CHILD") ||
+      kw(&L->cur, "ISELDERCHILD") || kw(&L->cur, "ISOLDESTCHILD") ||
+      kw(&L->cur, "ISFIRSTKID") || kw(&L->cur, "ELDESTCHILD_P") ||
+      kw(&L->cur, "ISLASTCHILD") || kw(&L->cur, "IS_LAST_CHILD") ||
+      kw(&L->cur, "ISYOUNGCHILD") || kw(&L->cur, "ISNEWESTCHILD") ||
+      kw(&L->cur, "ISLASTKID") || kw(&L->cur, "YOUNGESTCHILD_P") ||
+      kw(&L->cur, "ONLYCHILD") || kw(&L->cur, "ISONLYCHILD") ||
+      kw(&L->cur, "ONLY_CHILD") || kw(&L->cur, "IS_ONLY_CHILD") ||
+      kw(&L->cur, "SOLECHILD") || kw(&L->cur, "HASNOSIB")) {
+    int want_root = kw(&L->cur, "ISROOT") || kw(&L->cur, "IS_ROOT") ||
+                    kw(&L->cur, "NOROOTPARENT") || kw(&L->cur, "TOPCLASS");
+    int want_first = kw(&L->cur, "ISFIRSTCHILD") || kw(&L->cur, "IS_FIRST_CHILD") ||
+                     kw(&L->cur, "ISELDERCHILD") || kw(&L->cur, "ISOLDESTCHILD") ||
+                     kw(&L->cur, "ISFIRSTKID") || kw(&L->cur, "ELDESTCHILD_P");
+    int want_last = kw(&L->cur, "ISLASTCHILD") || kw(&L->cur, "IS_LAST_CHILD") ||
+                    kw(&L->cur, "ISYOUNGCHILD") || kw(&L->cur, "ISNEWESTCHILD") ||
+                    kw(&L->cur, "ISLASTKID") || kw(&L->cur, "YOUNGESTCHILD_P");
+    int want_only = kw(&L->cur, "ONLYCHILD") || kw(&L->cur, "ISONLYCHILD") ||
+                    kw(&L->cur, "ONLY_CHILD") || kw(&L->cur, "IS_ONLY_CHILD") ||
+                    kw(&L->cur, "SOLECHILD") || kw(&L->cur, "HASNOSIB");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, n = 0, nk = 0, rank = -1;
+    const char *opname = want_root ? "ISROOT"
+                         : want_first ? "ISFIRSTCHILD"
+                         : want_last ? "ISLASTCHILD"
+                                       : "ONLYCHILD";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_root ? "ISROOT Class|obj"
+                         : (want_first ? "ISFIRSTCHILD Class|obj"
+                         : (want_last ? "ISLASTCHILD Class|obj"
+                                      : "ONLYCHILD Class|obj")));
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    n = 0;
+    nk = 0;
+    rank = -1;
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (want_root) {
+        n = (parent < 0 || parent >= vm->n_classes) ? 1 : 0;
+      } else if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (vm->classes[i].parent_idx == parent) {
+            if (i == ai) rank = nk;
+            nk++;
+          }
+        }
+        if (want_first) n = (rank == 0) ? 1 : 0;
+        else if (want_last) n = (rank >= 0 && rank == nk - 1) ? 1 : 0;
+        else if (want_only) n = (nk == 1) ? 1 : 0;
+      } else {
+        /* root: not a child; first/last/only soft 0 */
+        n = 0;
+      }
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", n);
+    var_set_str(vm, "LAST", vm->last_str);
+    if (want_root) {
+      var_set_num(vm, "ISROOT_N", n);
+      var_set_num(vm, "ISROOT", n);
+    } else if (want_first) {
+      var_set_num(vm, "ISFIRSTCHILD_N", n);
+      var_set_num(vm, "ISFIRSTCHILD", n);
+    } else if (want_last) {
+      var_set_num(vm, "ISLASTCHILD_N", n);
+      var_set_num(vm, "ISLASTCHILD", n);
+    } else {
+      var_set_num(vm, "ONLYCHILD_N", n);
+      var_set_num(vm, "ONLYCHILD", n);
+      var_set_num(vm, "ISONLYCHILD_N", n);
+    }
+    if (rank >= 0) {
+      var_set_num(vm, "CHILDRANK_N", rank);
+      var_set_num(vm, "CHILDCOUNT_N", nk);
+    }
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d rank=%d kids=%d\n", opname, a, n, rank, nk);
+    bump(vm);
+    return 1;
+  }
+
+  /* SIBLINGCOUNT + HASSIBLING (multifile EXTEND)
+   * SIBLINGCOUNT Class|obj — peer count under same parent (excludes self).
+   * HASSIBLING Class|obj — 1 if at least one peer, else 0.
+   * ONLYCHILD lives with ISROOT/ISFIRSTCHILD block (parent-child cardinality).
+   * Complements SIBLINGS bag + NTHSIBLING + CHILDRANK. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "SIBLINGCOUNT") || kw(&L->cur, "COUNTSIBLINGS") ||
+      kw(&L->cur, "NUMSIBLINGS") || kw(&L->cur, "NSIBLINGS") ||
+      kw(&L->cur, "PEERCOUNT") || kw(&L->cur, "SIBLING_COUNT") ||
+      kw(&L->cur, "COUNT_SIBLINGS") || kw(&L->cur, "NPEERS") ||
+      kw(&L->cur, "HASSIBLING") || kw(&L->cur, "HASSIBLINGS") ||
+      kw(&L->cur, "HASPEER") || kw(&L->cur, "HASPEERS") ||
+      kw(&L->cur, "HAS_SIBLING") || kw(&L->cur, "HAS_SIBLINGS")) {
+    int want_cnt = kw(&L->cur, "SIBLINGCOUNT") || kw(&L->cur, "COUNTSIBLINGS") ||
+                   kw(&L->cur, "NUMSIBLINGS") || kw(&L->cur, "NSIBLINGS") ||
+                   kw(&L->cur, "PEERCOUNT") || kw(&L->cur, "SIBLING_COUNT") ||
+                   kw(&L->cur, "COUNT_SIBLINGS") || kw(&L->cur, "NPEERS");
+    int want_has = kw(&L->cur, "HASSIBLING") || kw(&L->cur, "HASSIBLINGS") ||
+                   kw(&L->cur, "HASPEER") || kw(&L->cur, "HASPEERS") ||
+                   kw(&L->cur, "HAS_SIBLING") || kw(&L->cur, "HAS_SIBLINGS");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, nsib = 0, flag = 0;
+    const char *opname = want_cnt ? "SIBLINGCOUNT" : "HASSIBLING";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_cnt ? "SIBLINGCOUNT Class|obj" : "HASSIBLING Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    nsib = 0;
+    if (cda && ai >= 0) {
+      int parent = cda->parent_idx;
+      if (parent >= 0 && parent < vm->n_classes) {
+        for (i = 0; i < vm->n_classes; i++) {
+          if (i != ai && vm->classes[i].parent_idx == parent)
+            nsib++;
+        }
+      }
+      /* roots: no peers under a parent → 0 siblings */
+    }
+    flag = nsib > 0 ? 1 : 0;
+    var_set_num(vm, "LAST_N", want_cnt ? nsib : flag);
+    vm->last_n = want_cnt ? nsib : flag;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", want_cnt ? nsib : flag);
+    var_set_str(vm, "LAST", vm->last_str);
+    if (want_cnt) {
+      var_set_num(vm, "SIBLINGCOUNT", nsib);
+      var_set_num(vm, "SIBLINGCOUNT_N", nsib);
+      var_set_num(vm, "PEERCOUNT_N", nsib);
+      var_set_num(vm, "NSIBLINGS", nsib);
+    } else {
+      var_set_num(vm, "HASSIBLING", flag);
+      var_set_num(vm, "HASSIBLING_N", flag);
+      var_set_num(vm, "HASSIBLINGS_N", flag);
+      var_set_num(vm, "HASPEER_N", flag);
+    }
+    /* also mirror peer card for both */
+    var_set_num(vm, "SIBLINGCOUNT_N", nsib);
+    var_set_num(vm, "HASSIBLING_N", flag);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> nsib=%d flag=%d\n", opname, a, nsib, flag);
+    bump(vm);
+    return 1;
+  }
+
+  /* ARESIBLINGS + ISSIBLING/SIBLINGOF/PEEROF (multifile EXTEND)
+   * ARESIBLINGS|ISSIBLING|SIBLINGOF|PEEROF|ISPEEROF|SHAREPARENT_P Class|obj Class|obj
+   * — soft 0|1 if both resolve and share the same parent_idx (distinct classes).
+   * Roots / unknown / self-pair → 0. Complements SIBLINGCOUNT + HASSIBLING +
+   * SIBLINGS bag + CHILDRANK. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ARESIBLINGS") || kw(&L->cur, "ARE_SIBLINGS") ||
+      kw(&L->cur, "ISSIBLING") || kw(&L->cur, "IS_SIBLING") ||
+      kw(&L->cur, "SIBLINGOF") || kw(&L->cur, "SIBLING_OF") ||
+      kw(&L->cur, "PEEROF") || kw(&L->cur, "PEER_OF") ||
+      kw(&L->cur, "ISPEEROF") || kw(&L->cur, "IS_PEER_OF") ||
+      kw(&L->cur, "SHAREPARENT_P") || kw(&L->cur, "SAMEPARENT_P") ||
+      kw(&L->cur, "COSIBLING") || kw(&L->cur, "CO_SIBLING")) {
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1, hit = 0;
+    const char *opname = "ARESIBLINGS";
+    lex_next(L);
+    a[0] = b[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARESIBLINGS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AND") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "IS") || kw(&L->cur, "TO") || kw(&L->cur, "VS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARESIBLINGS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    hit = 0;
+    if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+      int pa = cda->parent_idx;
+      int pb = cdb->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes && pa == pb)
+        hit = 1;
+    }
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+    var_set_str(vm, "LAST", vm->last_str);
+    var_set_num(vm, "ARESIBLINGS_N", hit ? 1 : 0);
+    var_set_num(vm, "ARESIBLINGS", hit ? 1 : 0);
+    var_set_num(vm, "ISSIBLING_N", hit ? 1 : 0);
+    var_set_num(vm, "ISSIBLING", hit ? 1 : 0);
+    var_set_num(vm, "SIBLINGOF_N", hit ? 1 : 0);
+    var_set_num(vm, "PEEROF_N", hit ? 1 : 0);
+    var_set_num(vm, "OK", (cda && cdb) ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "PEER", cdb->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> %d\n", opname, a, b, hit);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* COUSINCOUNT + HASCOUSIN (multifile EXTEND)
+   * COUSINCOUNT Class|obj — count of classes that share the same grandparent
+   *   via a different parent (first-cousin peers on EXTEND lattice). Excludes self.
+   * HASCOUSIN Class|obj — 1 if COUSINCOUNT > 0, else 0.
+   * Soft 0 for roots / only-child-of-root / unknown. Complements ARESIBLINGS +
+   * SIBLINGCOUNT + COMMONANCESTOR. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "COUSINCOUNT") || kw(&L->cur, "COUNTCOUSINS") ||
+      kw(&L->cur, "NUMCOUSINS") || kw(&L->cur, "NCOUSINS") ||
+      kw(&L->cur, "COUSIN_COUNT") || kw(&L->cur, "PEERCOUSINCOUNT") ||
+      kw(&L->cur, "HASCOUSIN") || kw(&L->cur, "HASCOUSINS") ||
+      kw(&L->cur, "HAS_COUSIN") || kw(&L->cur, "HAS_COUSINS") ||
+      kw(&L->cur, "HASCOUSIN_P") || kw(&L->cur, "COUSINED_P")) {
+    int want_cnt = kw(&L->cur, "COUSINCOUNT") || kw(&L->cur, "COUNTCOUSINS") ||
+                   kw(&L->cur, "NUMCOUSINS") || kw(&L->cur, "NCOUSINS") ||
+                   kw(&L->cur, "COUSIN_COUNT") || kw(&L->cur, "PEERCOUSINCOUNT");
+    char a[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, ncos = 0, flag = 0;
+    int pa = -1, gpa = -1;
+    const char *opname = want_cnt ? "COUSINCOUNT" : "HASCOUSIN";
+    lex_next(L);
+    a[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_cnt ? "COUSINCOUNT Class|obj" : "HASCOUSIN Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ncos = 0;
+    if (cda && ai >= 0) {
+      pa = cda->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes) {
+        gpa = vm->classes[pa].parent_idx;
+        if (gpa >= 0 && gpa < vm->n_classes) {
+          for (i = 0; i < vm->n_classes; i++) {
+            int p2;
+            if (i == ai) continue;
+            p2 = vm->classes[i].parent_idx;
+            if (p2 < 0 || p2 >= vm->n_classes) continue;
+            if (p2 == pa) continue;
+            if (vm->classes[p2].parent_idx != gpa) continue;
+            ncos++;
+          }
+        }
+      }
+    }
+    flag = ncos > 0 ? 1 : 0;
+    if (want_cnt) {
+      var_set_num(vm, "LAST_N", ncos);
+      vm->last_n = ncos;
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", ncos);
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "COUSINCOUNT", ncos);
+      var_set_num(vm, "COUSINCOUNT_N", ncos);
+      var_set_num(vm, "COUNTCOUSINS_N", ncos);
+      var_set_num(vm, "NUMCOUSINS_N", ncos);
+    } else {
+      var_set_num(vm, "LAST_N", flag);
+      vm->last_n = flag;
+      snprintf(vm->last_str, sizeof vm->last_str, "%d", flag);
+      var_set_str(vm, "LAST", vm->last_str);
+      var_set_num(vm, "HASCOUSIN", flag);
+      var_set_num(vm, "HASCOUSIN_N", flag);
+      var_set_num(vm, "HASCOUSINS_N", flag);
+    }
+    var_set_num(vm, "COUSINCOUNT_N", ncos);
+    var_set_num(vm, "HASCOUSIN_N", flag);
+    var_set_num(vm, "OK", cda ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> ncos=%d flag=%d\n", opname, a, ncos, flag);
+    bump(vm);
+    return 1;
+  }
+
+  /* ARECOUSINS + ISCOUSIN/COUSINOF (multifile EXTEND)
+   * ARECOUSINS|ISCOUSIN|COUSINOF Class|obj Class|obj
+   * — soft 0|1 if both resolve, distinct, different parents, and those parents
+   * share the same parent_idx (first cousins on EXTEND lattice).
+   * Self / siblings / roots / unknown → 0. Complements COUSINCOUNT + HASCOUSIN +
+   * ARESIBLINGS + COMMONANCESTOR. Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "ARECOUSINS") || kw(&L->cur, "ARE_COUSINS") ||
+      kw(&L->cur, "ISCOUSIN") || kw(&L->cur, "IS_COUSIN") ||
+      kw(&L->cur, "COUSINOF") || kw(&L->cur, "COUSIN_OF") ||
+      kw(&L->cur, "ISCOUSINOF") || kw(&L->cur, "IS_COUSIN_OF") ||
+      kw(&L->cur, "SHAREGRANDPARENT_P") || kw(&L->cur, "SAMEGRAND_P") ||
+      kw(&L->cur, "COCOUSIN") || kw(&L->cur, "CO_COUSIN")) {
+    char a[48], b[48];
+    ClassDef *cda = NULL, *cdb = NULL;
+    ObjInst *ob;
+    int ai = -1, bi = -1, hit = 0;
+    int pa = -1, pb = -1, ga = -1, gb = -1;
+    const char *opname = "ARECOUSINS";
+    lex_next(L);
+    a[0] = b[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARECOUSINS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AND") || kw(&L->cur, "WITH") ||
+        kw(&L->cur, "IS") || kw(&L->cur, "TO") || kw(&L->cur, "VS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ARECOUSINS Class|obj Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(b, sizeof b, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(b, sizeof b, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(b, sizeof b, "%s", vv->sval);
+        else
+          snprintf(b, sizeof b, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    ob = oop_find_obj(vm, b);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cdb = &vm->classes[ob->class_idx];
+      bi = ob->class_idx;
+    } else {
+      cdb = oop_find_class(vm, b);
+      if (cdb) bi = (int)(cdb - vm->classes);
+    }
+    hit = 0;
+    if (cda && cdb && ai >= 0 && bi >= 0 && ai != bi) {
+      pa = cda->parent_idx;
+      pb = cdb->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes && pb >= 0 && pb < vm->n_classes &&
+          pa != pb) {
+        ga = vm->classes[pa].parent_idx;
+        gb = vm->classes[pb].parent_idx;
+        if (ga >= 0 && ga < vm->n_classes && ga == gb)
+          hit = 1;
+      }
+    }
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    snprintf(vm->last_str, sizeof vm->last_str, "%d", hit ? 1 : 0);
+    var_set_str(vm, "LAST", vm->last_str);
+    var_set_num(vm, "ARECOUSINS_N", hit ? 1 : 0);
+    var_set_num(vm, "ARECOUSINS", hit ? 1 : 0);
+    var_set_num(vm, "ISCOUSIN_N", hit ? 1 : 0);
+    var_set_num(vm, "ISCOUSIN", hit ? 1 : 0);
+    var_set_num(vm, "COUSINOF_N", hit ? 1 : 0);
+    var_set_num(vm, "OK", (cda && cdb) ? 1 : 0);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    if (cdb) var_set_str(vm, "PEER", cdb->name);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %s -> %d\n", opname, a, b, hit);
+    bump(vm);
+    return 1;
+  }
+
+  /* COUSINS|COUSINBAG|LISTCOUSINS|PEERCOUSINS Class|obj
+   * — newline bag of first cousins (same grandparent, different parents).
+   * FIRSTCOUSIN|HEADCOUSIN|ELDESTCOUSIN Class|obj — first cousin name (may empty).
+   * LASTCOUSIN|TAILCOUSIN|YOUNGESTCOUSIN Class|obj — last cousin name (may empty).
+   * Soft empty OK=1 when root/shallow/unknown/no cousins. LAST=bag|name; LAST_N=count|0|1.
+   * Complements ARECOUSINS/COUSINCOUNT/HASCOUSIN + SIBLINGS bag without scrape.
+   * Multi-file CLASS/EXTEND usability. Cube Law: free energy must flow. */
+  if (kw(&L->cur, "COUSINS") || kw(&L->cur, "COUSINBAG") ||
+      kw(&L->cur, "LISTCOUSINS") || kw(&L->cur, "PEERCOUSINS") ||
+      kw(&L->cur, "COUSINS_OF") || kw(&L->cur, "LIST_COUSINS") ||
+      kw(&L->cur, "COUSINLIST") || kw(&L->cur, "ALLCOUSINS") ||
+      kw(&L->cur, "FIRSTCOUSIN") || kw(&L->cur, "HEADCOUSIN") ||
+      kw(&L->cur, "ELDESTCOUSIN") || kw(&L->cur, "FIRST_COUSIN") ||
+      kw(&L->cur, "HEAD_COUSIN") || kw(&L->cur, "STARTCOUSIN") ||
+      kw(&L->cur, "LASTCOUSIN") || kw(&L->cur, "TAILCOUSIN") ||
+      kw(&L->cur, "YOUNGESTCOUSIN") || kw(&L->cur, "LAST_COUSIN") ||
+      kw(&L->cur, "TAIL_COUSIN") || kw(&L->cur, "ENDCOUSIN")) {
+    int want_first =
+        kw(&L->cur, "FIRSTCOUSIN") || kw(&L->cur, "HEADCOUSIN") ||
+        kw(&L->cur, "ELDESTCOUSIN") || kw(&L->cur, "FIRST_COUSIN") ||
+        kw(&L->cur, "HEAD_COUSIN") || kw(&L->cur, "STARTCOUSIN");
+    int want_last =
+        kw(&L->cur, "LASTCOUSIN") || kw(&L->cur, "TAILCOUSIN") ||
+        kw(&L->cur, "YOUNGESTCOUSIN") || kw(&L->cur, "LAST_COUSIN") ||
+        kw(&L->cur, "TAIL_COUSIN") || kw(&L->cur, "ENDCOUSIN");
+    int want_bag = !want_first && !want_last;
+    char a[48], bag[2048];
+    char first_nm[48], last_nm[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, ci, self_i = -1, parent_i = -1, gparent_i = -1;
+    const char *wh = "COUSINS";
+    lex_next(L);
+    a[0] = 0;
+    bag[0] = 0;
+    first_nm[0] = 0;
+    last_nm[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, want_first ? "FIRSTCOUSIN Class|obj"
+                           : want_last ? "LASTCOUSIN Class|obj"
+                                       : "COUSINS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) self_i = (int)(cd - vm->classes);
+    if (cd && self_i >= 0) parent_i = cd->parent_idx;
+    if (parent_i >= 0 && parent_i < vm->n_classes)
+      gparent_i = vm->classes[parent_i].parent_idx;
+    if (cd && self_i >= 0 && parent_i >= 0 && gparent_i >= 0 &&
+        gparent_i < vm->n_classes) {
+      for (ci = 0; ci < vm->n_classes; ci++) {
+        int p, gp;
+        ClassDef *c;
+        const char *nm;
+        size_t ln;
+        if (ci == self_i) continue;
+        c = &vm->classes[ci];
+        p = c->parent_idx;
+        if (p < 0 || p >= vm->n_classes) continue;
+        if (p == parent_i) continue; /* sibling, not cousin */
+        gp = vm->classes[p].parent_idx;
+        if (gp != gparent_i) continue;
+        nm = c->name;
+        ln = strlen(nm);
+        if (!ln) continue;
+        if (!first_nm[0]) snprintf(first_nm, sizeof first_nm, "%s", nm);
+        snprintf(last_nm, sizeof last_nm, "%s", nm);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, nm, ln);
+          o += ln;
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    if (want_first) wh = "FIRSTCOUSIN";
+    else if (want_last) wh = "LASTCOUSIN";
+    else wh = "COUSINS";
+    if (want_bag) {
+      var_set_str(vm, "LAST", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      var_set_num(vm, "LAST_N", n);
+      vm->last_n = n;
+      var_set_str(vm, "COUSINS", bag);
+      var_set_str(vm, "COUSINBAG", bag);
+      var_set_str(vm, "LISTCOUSINS", bag);
+      var_set_str(vm, "PEERCOUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINBAG_N", n);
+      var_set_num(vm, "LISTCOUSINS_N", n);
+      var_set_num(vm, "PEERCOUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_num(vm, "NCOUSINS", n);
+      var_set_num(vm, "NUMCOUSINS", n);
+      var_set_num(vm, "HASCOUSIN", n > 0 ? 1 : 0);
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+      var_set_num(vm, "FIRSTCOUSIN_N", first_nm[0] ? 1 : 0);
+      var_set_num(vm, "LASTCOUSIN_N", last_nm[0] ? 1 : 0);
+    } else if (want_first) {
+      var_set_str(vm, "LAST", first_nm);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", first_nm);
+      var_set_num(vm, "LAST_N", first_nm[0] ? 1 : 0);
+      vm->last_n = first_nm[0] ? 1 : 0;
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+      var_set_str(vm, "HEADCOUSIN", first_nm);
+      var_set_str(vm, "ELDESTCOUSIN", first_nm);
+      var_set_num(vm, "FIRSTCOUSIN_N", first_nm[0] ? 1 : 0);
+      var_set_str(vm, "COUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+    } else {
+      var_set_str(vm, "LAST", last_nm);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", last_nm);
+      var_set_num(vm, "LAST_N", last_nm[0] ? 1 : 0);
+      vm->last_n = last_nm[0] ? 1 : 0;
+      var_set_str(vm, "LASTCOUSIN", last_nm);
+      var_set_str(vm, "TAILCOUSIN", last_nm);
+      var_set_str(vm, "YOUNGESTCOUSIN", last_nm);
+      var_set_num(vm, "LASTCOUSIN_N", last_nm[0] ? 1 : 0);
+      var_set_str(vm, "COUSINS", bag);
+      var_set_num(vm, "COUSINS_N", n);
+      var_set_num(vm, "COUSINCOUNT", n);
+      var_set_str(vm, "FIRSTCOUSIN", first_nm);
+    }
+    if (cd) var_set_str(vm, "CLASS", cd->name);
+    if (parent_i >= 0 && parent_i < vm->n_classes)
+      var_set_str(vm, "PARENT", vm->classes[parent_i].name);
+    else
+      var_set_str(vm, "PARENT", "");
+    if (gparent_i >= 0 && gparent_i < vm->n_classes)
+      var_set_str(vm, "GRANDPARENT", vm->classes[gparent_i].name);
+    else
+      var_set_str(vm, "GRANDPARENT", "");
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s -> n=%d first=%s last=%s gp=%d\n", wh, a, n,
+              first_nm[0] ? first_nm : "-", last_nm[0] ? last_nm : "-",
+              gparent_i);
+    bump(vm);
+    return 1;
+  }
+  /* NTHCOUSIN|COUSINAT|COUSIN_AT (multifile EXTEND)
+   * NTHCOUSIN Class|obj N — first-cousin name at 0-based index (declaration order).
+   * Soft empty LAST="" LAST_N=0 on OOB / root / no cousins. OK=1 always when parse ok.
+   * Complements COUSINS bag + FIRSTCOUSIN + LASTCOUSIN + COUSINCOUNT + ARECOUSINS.
+   * Cube is SoT. Free energy must flow. */
+  if (kw(&L->cur, "NTHCOUSIN") || kw(&L->cur, "COUSINAT") ||
+      kw(&L->cur, "NTH_COUSIN") || kw(&L->cur, "COUSIN_AT") ||
+      kw(&L->cur, "COUSIN_NTH") || kw(&L->cur, "PEERCOUSINAT") ||
+      kw(&L->cur, "NTHPEERCOUSIN") || kw(&L->cur, "COUSININDEX")) {
+    char a[48], pick[48];
+    ClassDef *cda = NULL;
+    ObjInst *ob;
+    int ai = -1, i, idx_want = -1, hit = 0;
+    int pa = -1, gpa = -1;
+    int cous[512];
+    int nc = 0;
+    const char *opname = "NTHCOUSIN";
+    lex_next(L);
+    a[0] = 0;
+    pick[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "NTHCOUSIN Class|obj N");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (kw(&L->cur, "AT") || kw(&L->cur, "INDEX") || kw(&L->cur, "N") ||
+        kw(&L->cur, "OF") || kw(&L->cur, "POS"))
+      lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      idx_want = (int)L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && !vv->is_str) idx_want = (int)vv->val;
+      else { fail(vm, "NTHCOUSIN Class|obj N"); return -1; }
+      lex_next(L);
+    } else { fail(vm, "NTHCOUSIN Class|obj N"); return -1; }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cda = &vm->classes[ob->class_idx];
+      ai = ob->class_idx;
+    } else {
+      cda = oop_find_class(vm, a);
+      if (cda) ai = (int)(cda - vm->classes);
+    }
+    nc = 0;
+    if (cda && ai >= 0) {
+      pa = cda->parent_idx;
+      if (pa >= 0 && pa < vm->n_classes) {
+        gpa = vm->classes[pa].parent_idx;
+        if (gpa >= 0 && gpa < vm->n_classes) {
+          for (i = 0; i < vm->n_classes; i++) {
+            int p2;
+            if (i == ai) continue;
+            p2 = vm->classes[i].parent_idx;
+            if (p2 < 0 || p2 >= vm->n_classes) continue;
+            if (p2 == pa) continue;
+            if (vm->classes[p2].parent_idx != gpa) continue;
+            if (nc < 512) cous[nc++] = i;
+          }
+        }
+      }
+    }
+    hit = 0;
+    pick[0] = 0;
+    if (idx_want >= 0 && idx_want < nc) {
+      snprintf(pick, sizeof pick, "%s", vm->classes[cous[idx_want]].name);
+      hit = 1;
+    }
+    var_set_str(vm, "LAST", pick);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", pick);
+    var_set_num(vm, "LAST_N", hit ? 1 : 0);
+    vm->last_n = hit ? 1 : 0;
+    var_set_str(vm, "COUSIN", pick);
+    var_set_str(vm, "NTHCOUSIN", pick);
+    var_set_str(vm, "COUSINAT", pick);
+    var_set_num(vm, "NTHCOUSIN_N", hit ? 1 : 0);
+    var_set_num(vm, "COUSINAT_N", hit ? 1 : 0);
+    var_set_num(vm, "COUSINS_N", nc);
+    var_set_num(vm, "COUSINCOUNT_N", nc);
+    if (cda) var_set_str(vm, "CLASS", cda->name);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s %d -> hit=%d cous=%d\n", opname, a, idx_want, hit, nc);
+    bump(vm);
+    return 1;
+  }
+
+
+
+  /* LISTOVERRIDEFIELDS|OVERRIDEFIELDS|REDEFINEDFIELDS Class|obj — newline bag of
+   * fields owned here that also exist on an ancestor (default override / redefine).
+   * Multi-file EXTEND pack: contribution that shadows parent slots.
+   * Partition: LISTOWN = introduced+override; LISTINHERITED = pure inherit;
+   * LISTOVERRIDE = own∩ancestor. LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTOVERRIDEFIELDS") || kw(&L->cur, "OVERRIDEFIELDS") ||
+      kw(&L->cur, "REDEFINEDFIELDS") || kw(&L->cur, "OVERRIDE_FIELDS") ||
+      kw(&L->cur, "LISTREDEFINEDFIELDS") || kw(&L->cur, "FIELDS_OVERRIDE")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, fi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOVERRIDEFIELDS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (fi = 0; fi < cd->n_fields; fi++) {
+        FieldDef *fd = &cd->fields[fi];
+        const char *fname = fd->name;
+        int own = 0, seen = 0;
+        if (cd->parent_idx < 0 || cd->parent_idx >= vm->n_classes) {
+          own = 1; /* root: no ancestor → not override */
+        } else {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int g = 0;
+          while (walk && g++ < CUBALC_MAX_CLASSES) {
+            int pfi = oop_field_idx(walk, fname);
+            if (pfi >= 0) {
+              seen = 1;
+              if (!oop_field_def_same(fd, &walk->fields[pfi]))
+                own = 1; /* override default */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+          if (!seen) own = 1; /* introduced here — not override */
+        }
+        /* override = owned AND seen on ancestor with different def */
+        if (own && seen) {
+          size_t ln = strlen(fname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, fname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOVERRIDEFIELDS", bag);
+    var_set_str(vm, "OVERRIDEFIELDS", bag);
+    var_set_str(vm, "REDEFINEDFIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OVERRIDEFIELDS_N", n);
+    var_set_num(vm, "LISTOVERRIDEFIELDS_N", n);
+    var_set_num(vm, "REDEFINEDFIELDS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTOVERRIDEMETHODS|OVERRIDEMETHODS|REDEFINEDMETHODS Class|obj — newline bag
+   * of methods owned here that also exist on an ancestor (body override).
+   * Multi-file EXTEND pack shadow probe. Dual of LISTOVERRIDEFIELDS.
+   * LAST = bag; LAST_N = count. Soft empty OK=1. */
+  if (kw(&L->cur, "LISTOVERRIDEMETHODS") || kw(&L->cur, "OVERRIDEMETHODS") ||
+      kw(&L->cur, "REDEFINEDMETHODS") || kw(&L->cur, "OVERRIDE_METHODS") ||
+      kw(&L->cur, "LISTREDEFINEDMETHODS") || kw(&L->cur, "METHODS_OVERRIDE")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int n = 0, mi;
+    lex_next(L);
+    a[0] = bag[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTOVERRIDEMETHODS Class|obj");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text); lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id))
+        snprintf(a, sizeof a, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    cd = oop_find_class(vm, a);
+    if (!cd) {
+      ob = oop_find_obj(vm, a);
+      if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+        cd = &vm->classes[ob->class_idx];
+    }
+    if (cd) {
+      for (mi = 0; mi < cd->n_methods; mi++) {
+        MethodDef *md = &cd->methods[mi];
+        const char *mname = md->name;
+        int own = 1, seen = 0;
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes) {
+          ClassDef *walk = &vm->classes[cd->parent_idx];
+          int pguard = 0;
+          while (walk && pguard++ < CUBALC_MAX_CLASSES) {
+            MethodDef *pm = oop_find_method(walk, mname);
+            if (pm) {
+              seen = 1;
+              if (pm->body == md->body && pm->len == md->len)
+                own = 0; /* pure inherit same body pointer */
+              break;
+            }
+            if (walk->parent_idx < 0 || walk->parent_idx >= vm->n_classes) break;
+            walk = &vm->classes[walk->parent_idx];
+          }
+        }
+        /* override = owned body AND ancestor had same name */
+        if (own && seen) {
+          size_t ln = strlen(mname);
+          if (ln && o + ln + 2 < sizeof bag) {
+            if (o) bag[o++] = '\n';
+            memcpy(bag + o, mname, ln);
+            o += ln;
+          }
+          bag[o] = 0;
+          n++;
+        }
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOVERRIDEMETHODS", bag);
+    var_set_str(vm, "OVERRIDEMETHODS", bag);
+    var_set_str(vm, "REDEFINEDMETHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "OVERRIDEMETHODS_N", n);
+    var_set_num(vm, "LISTOVERRIDEMETHODS_N", n);
+    var_set_num(vm, "REDEFINEDMETHODS_N", n);
+    if (a[0]) var_set_str(vm, "CLASS", a);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* ISCLASS|ISA|OFCLASS|INSTANCEOF obj Class â soft 0|1 probe if live obj
+   * is an instance of Class. Complements CLASSNAME + EQS without string glue.
+   * Miss obj / wrong class / unknown Class â LAST_N=0 OK=1 (probe, not fail).
+   * LAST = actual class name when live, else "". Usability: agent IF after
+   * ENSURENEW/TRYNEW without CLASSNAME+EQS dual. */
+  if (kw(&L->cur, "ISCLASS") || kw(&L->cur, "ISA") ||
+      kw(&L->cur, "OFCLASS") || kw(&L->cur, "INSTANCEOF") ||
+      kw(&L->cur, "IS_A") || kw(&L->cur, "ISINSTANCE") ||
+      kw(&L->cur, "OBJISA") || kw(&L->cur, "TYPEIS")) {
+    char oname[48], cname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "ISCLASS object Class"); return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AS") || kw(&L->cur, "IS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "ISCLASS object Class"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, "LAST", cd->name);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+      var_set_str(vm, "OBJECT", oname);
+      if (cname[0] && oop_isof_chain(vm, ob->class_idx, cname))
+        hit = 1;
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "ISCLASS_N", hit);
+    var_set_num(vm, "ISA_N", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# ISCLASS %s %s -> %d\n", oname, cname, hit);
+    bump(vm);
+    return 1;
+  }
+
+  /* NEEDISA|REQUIRE ISA|NEEDCLASS_OF obj Class â fail-fast if not instance.
+   * Soft dual is ISCLASS. Usability: agent contract after ENSURENEW. */
+  if (kw(&L->cur, "NEEDISA") || kw(&L->cur, "NEEDISCLASS") ||
+      kw(&L->cur, "REQUIREISA") || kw(&L->cur, "NEEDINSTANCEOF")) {
+    char oname[48], cname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "NEEDISA object Class"); return -1;
+    }
+    if (kw(&L->cur, "OF") || kw(&L->cur, "AS") || kw(&L->cur, "IS"))
+      lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "NEEDISA object Class"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, oname);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      if (cname[0] && strcmp(cd->name, cname) == 0)
+        hit = 1;
+      else {
+        snprintf(vm->err, sizeof vm->err,
+                 "NEEDISA: %s is %s not %s", oname, cd->name, cname);
+      }
+    } else {
+      snprintf(vm->err, sizeof vm->err, "NEEDISA: unknown object %s", oname);
+    }
+    if (!hit) {
+      fail(vm, vm->err);
+      return -1;
+    }
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_str(vm, "CLASS", cname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "NEEDISA_N", 1);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASCLASS|KNOWNCLASS|CLASS? name â soft 0|1 probe if CLASS is defined.
+   * Complements REQUIRE CLASS (fail-fast) and LISTCLASSES+HASLINE glue.
+   * String-var class names expand. LAST = name when hit, else "".
+   * Usability: IF before ENSURENEW/TRYNEW without bag materialize. */
+  if (kw(&L->cur, "HASCLASS") || kw(&L->cur, "KNOWNCLASS") ||
+      kw(&L->cur, "CLASS?") || kw(&L->cur, "HAS_CLASS") ||
+      kw(&L->cur, "ISDEFINEDCLASS") || kw(&L->cur, "CLASSDEF?") ||
+      kw(&L->cur, "TYPEDEFINED") || kw(&L->cur, "HASTYPE")) {
+    char cname[48];
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASCLASS name"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(cname, sizeof cname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_class(vm, id))
+        snprintf(cname, sizeof cname, "%s", id);
+      else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(cname, sizeof cname, "%s", vv->sval);
+        else
+          snprintf(cname, sizeof cname, "%s", id);
+      }
+    }
+    hit = oop_find_class(vm, cname) ? 1 : 0;
+    if (hit) {
+      var_set_str(vm, "LAST", cname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", cname);
+      var_set_str(vm, "CLASS", cname);
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASCLASS_N", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# HASCLASS %s -> %d\n", cname, hit);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASCLASSES|NEEDCLASSES nameâ¦ â multi CLASS capability gate (all-or-CLASSMISS).
+   * Soft: LAST_N 0|1 Â· CLASSMISS bag Â· NEEDCLASSES fail-fast first miss.
+   * Usability: agent boot contracts without NÃ HASCLASS glue Â· bag/CSV/idents.
+   * Twin of HASFORMS for OOP plane Â· dual REQUIRE CLASS multi. */
+  if (kw(&L->cur, "HASCLASSES") || kw(&L->cur, "HAS_CLASSES") ||
+      kw(&L->cur, "ALLCLASSES") || kw(&L->cur, "CLASSESOK") ||
+      kw(&L->cur, "NEEDCLASSES") || kw(&L->cur, "NEED_CLASSES") ||
+      kw(&L->cur, "REQUIRECLASSES") || kw(&L->cur, "MUSTCLASSES")) {
+    int hard = kw(&L->cur, "NEEDCLASSES") || kw(&L->cur, "NEED_CLASSES") ||
+               kw(&L->cur, "REQUIRECLASSES") || kw(&L->cur, "MUSTCLASSES");
+    char names[32][48];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "HASFORM") ||
+           oop_stmt_kw(L)))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_class(vm, L->cur.text)) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDCLASSES nameâ¦ â NEEDCLASSES Ticket Cell Â· HASCLASSES bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASCLASSES_N", 0);
+      var_set_num(vm, "CLASSMISS_N", 0);
+      var_set_str(vm, "CLASSMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASCLASSES: need names â HASCLASSES Ticket Cell");
+      var_set_str(vm, "ERR", "HASCLASSES: need names â HASCLASSES Ticket Cell");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_class(vm, names[i]))
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[192];
+        snprintf(em, sizeof em,
+                 "NEEDCLASSES miss line %d: '%s' (+%d more?) â CLASS/INCLUDE Â· HASCLASS Â· LISTCLASSES",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "CLASSMISS", miss);
+    var_set_num(vm, "CLASSMISS_N", nmiss);
+    var_set_num(vm, "HASCLASSES_N", nname - nmiss);
+    var_set_num(vm, "NEEDCLASSES_N", nname);
+    var_set_num(vm, "CLASSES_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[200];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASCLASSES miss (%d/%d): %s â CLASS/INCLUDE Â· NEEDCLASSES Â· LISTCLASSES",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d miss=%d\n",
+              hard ? "NEEDCLASSES" : "HASCLASSES", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASCLASSANY|NEEDCLASSANY nameâ¦ â multi CLASS any-of gate (HASCLASSES twin).
+   * Soft: LAST_N 1 if any CLASS defined Â· CLASSHAVE bag Â· CLASSMISS bag.
+   * NEEDCLASSANY fail-fast if none of the listed classes exist.
+   * Usability: optional plugin class OR without NÃ HASCLASS IF glue. */
+  if (kw(&L->cur, "HASCLASSANY") || kw(&L->cur, "HAS_CLASS_ANY") ||
+      kw(&L->cur, "ANYCLASS") || kw(&L->cur, "CLASSANY") ||
+      kw(&L->cur, "HASANYCLASS") || kw(&L->cur, "NEEDCLASSANY") ||
+      kw(&L->cur, "NEED_CLASS_ANY") || kw(&L->cur, "REQUIRECLASSANY") ||
+      kw(&L->cur, "MUSTCLASSANY")) {
+    int hard = kw(&L->cur, "NEEDCLASSANY") || kw(&L->cur, "NEED_CLASS_ANY") ||
+               kw(&L->cur, "REQUIRECLASSANY") || kw(&L->cur, "MUSTCLASSANY");
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASCLASSES") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "HASFORM") || oop_stmt_kw(L)))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *pp = s;
+          while (*pp && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*pp == ' ' || *pp == '\t' || *pp == '\n' || *pp == ',' || *pp == ':')
+              pp++;
+            if (!*pp) break;
+            while (pp[tl] && pp[tl] != '\n' && pp[tl] != ',' && pp[tl] != ' ' &&
+                   pp[tl] != '\t' && pp[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = pp[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            pp += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *pp = vv->sval;
+          while (*pp && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*pp == ' ' || *pp == '\t' || *pp == '\n' || *pp == ',' || *pp == ':')
+              pp++;
+            if (!*pp) break;
+            while (pp[tl] && pp[tl] != '\n' && pp[tl] != ',' && pp[tl] != ' ' &&
+                   pp[tl] != '\t' && pp[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = pp[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            pp += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_class(vm, L->cur.text)) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDCLASSANY nameâ¦ â NEEDCLASSANY Ticket Cell Â· HASCLASSANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASCLASSANY_N", 0);
+      var_set_num(vm, "CLASSMISS_N", 0);
+      var_set_num(vm, "CLASSHAVE_N", 0);
+      var_set_str(vm, "CLASSMISS", "");
+      var_set_str(vm, "CLASSHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASCLASSANY: need names â HASCLASSANY Ticket Ghost");
+      var_set_str(vm, "ERR", "HASCLASSANY: need names â HASCLASSANY Ticket Ghost");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_class(vm, names[i])) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "CLASSMISS", miss);
+    var_set_str(vm, "CLASSHAVE", havebag);
+    var_set_num(vm, "CLASSMISS_N", nmiss);
+    var_set_num(vm, "CLASSHAVE_N", nhave);
+    var_set_num(vm, "HASCLASSANY_N", nhave);
+    var_set_num(vm, "NEEDCLASSANY_N", nname);
+    var_set_num(vm, "CLASSES_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDCLASSANY miss line %d: need one of [%s] â CLASS/INCLUDE Â· HASCLASSANY Â· LISTCLASSES",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASCLASSANY miss (0/%d): need one of %s â NEEDCLASSANY Â· INCLUDE",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDCLASSANY" : "HASCLASSANY", nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTCLASSES|CLASSES â newline bag of defined class names.
+   * LAST = bag; LAST_N / NCLASSES = count. Agent discovery after INCLUDE. */
+  if (kw(&L->cur, "LISTCLASSES") || kw(&L->cur, "CLASSES") ||
+      kw(&L->cur, "CLASSLIST") || kw(&L->cur, "LISTCLASS")) {
+    char bag[2048];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_classes; i++) {
+      size_t ln = strlen(vm->classes[i].name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, vm->classes[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTCLASSES", bag);
+    var_set_str(vm, "CLASSES", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NCLASSES", n);
+    var_set_num(vm, "LISTCLASSES_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTOBJS|OBJECTS [ClassName] â live object names (optional class filter).
+   * LAST = newline bag; LAST_N / NOBJS = count. Optional: only that class. */
+  if (kw(&L->cur, "LISTOBJS") || kw(&L->cur, "OBJECTS") ||
+      kw(&L->cur, "OBJLIST") || kw(&L->cur, "LISTOBJECTS") ||
+      kw(&L->cur, "LISTINST")) {
+    char bag[2048], filt[48];
+    size_t o = 0;
+    int i, n = 0, has_filt = 0;
+    lex_next(L);
+    filt[0] = 0;
+    if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+        !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") && !kw(&L->cur, "SYS") &&
+        !kw(&L->cur, "PRINT") && !kw(&L->cur, "CUBE") && !kw(&L->cur, "END")) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    bag[0] = 0;
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      size_t ln;
+      if (!ob->live) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      ln = strlen(ob->name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, ob->name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTOBJS", bag);
+    var_set_str(vm, "OBJECTS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NOBJS", n);
+    var_set_num(vm, "LISTOBJS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* PICKOBJ|RANDOBJ|SAMPLEOBJ [Class]
+   * â random live object name (optional class filter). Soft empty â "" / -1.
+   * LAST=name; LAST_N/PICKOBJ_I = 0-based index among candidates; PICKOBJ_TOTAL=pool.
+   * Uses vm->rng (SEED / CUBALC_SEED). Usability: peer/work sample without LISTOBJS+SYS PICK. */
+  if (kw(&L->cur, "PICKOBJ") || kw(&L->cur, "RANDOBJ") ||
+      kw(&L->cur, "SAMPLEOBJ") || kw(&L->cur, "ANYOBJ") ||
+      kw(&L->cur, "DRAWOBJ") || kw(&L->cur, "LOTTOBJ") ||
+      kw(&L->cur, "CHOICEOBJ") || kw(&L->cur, "RANDINST") ||
+      kw(&L->cur, "PICKINST") || kw(&L->cur, "SAMPLEINST")) {
+    char filt[48], bag_names[CUBALC_MAX_OBJS][48];
+    int has_filt = 0, i, n = 0, idx = -1;
+    uint32_t x;
+    lex_next(L);
+    filt[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "FROM")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "PICKOBJ OF Class"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+               !kw(&L->cur, "CUBE") && oop_find_class(vm, L->cur.text)) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      /* string class name even if not yet defined â empty pool */
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      snprintf(bag_names[n], sizeof bag_names[n], "%s", ob->name);
+      n++;
+    }
+    if (n <= 0) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "PICKOBJ", "");
+      var_set_str(vm, "RANDOBJ", "");
+      var_set_str(vm, "OBJECT", "");
+      vm->last_str[0] = 0;
+      vm->last_n = -1;
+      var_set_num(vm, "LAST_N", -1);
+      var_set_num(vm, "PICKOBJ_I", -1);
+      var_set_num(vm, "PICKOBJ_N", -1);
+      var_set_num(vm, "PICKOBJ_TOTAL", 0);
+      var_set_num(vm, "PICKOBJ_HIT", 0);
+      if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    x = vm->rng;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    if (!x) x = 1;
+    vm->rng = x;
+    idx = (int)(x % (uint32_t)n);
+    var_set_str(vm, "LAST", bag_names[idx]);
+    var_set_str(vm, "PICKOBJ", bag_names[idx]);
+    var_set_str(vm, "RANDOBJ", bag_names[idx]);
+    var_set_str(vm, "SAMPLEOBJ", bag_names[idx]);
+    var_set_str(vm, "OBJECT", bag_names[idx]);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag_names[idx]);
+    vm->last_n = idx;
+    var_set_num(vm, "LAST_N", idx);
+    var_set_num(vm, "PICKOBJ_I", idx);
+    var_set_num(vm, "PICKOBJ_N", idx);
+    var_set_num(vm, "PICKOBJ_TOTAL", n);
+    var_set_num(vm, "PICKOBJ_HIT", 1);
+    var_set_num(vm, "NOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* DRAWNOBJ|SAMPLEKOBJ|PICKNOBJ [Class] k
+   * â sample k unique live object names without replacement (partial FisherâYates).
+   * k<=0 â empty; k>=pool â all shuffled. LAST bag; LAST_N=count; DRAWNOBJ_TOTAL=pool.
+   * Uses vm->rng (SEED/CUBALC_SEED). Usability: multi-peer sample without LISTOBJS+DRAWN. */
+  if (kw(&L->cur, "DRAWNOBJ") || kw(&L->cur, "SAMPLEKOBJ") ||
+      kw(&L->cur, "PICKNOBJ") || kw(&L->cur, "NPICKOBJ") ||
+      kw(&L->cur, "TAKERANDOBJ") || kw(&L->cur, "DRAWNINST") ||
+      kw(&L->cur, "SAMPLEKINST") || kw(&L->cur, "DRAWKOBJ") ||
+      kw(&L->cur, "RSAMPLEOBJ") || kw(&L->cur, "MULTIDRAWOBJ")) {
+    char filt[48], bag_names[CUBALC_MAX_OBJS][48], bag[4096], tmp[48];
+    int has_filt = 0, i, n = 0, take = 0, out_n = 0;
+    long karg = 0;
+    uint32_t x;
+    size_t o = 0;
+    lex_next(L);
+    filt[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "FROM")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "DRAWNOBJ OF Class k"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if ((L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) &&
+               L->cur.kind != TK_NUM) {
+      /* Class name only if known class and next looks like k */
+      if (L->cur.kind == TK_STR) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      } else if (oop_find_class(vm, L->cur.text) &&
+                 !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+                 !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+                 !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+        char maybe[48];
+        snprintf(maybe, sizeof maybe, "%s", L->cur.text);
+        lex_next(L);
+        /* if next is k (num/ident/TAKE/K) treat maybe as class; else fail later as k */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+            kw(&L->cur, "K") || kw(&L->cur, "TAKE") || kw(&L->cur, "COUNT") ||
+            kw(&L->cur, "LIMIT") ||
+            (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+             !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET"))) {
+          snprintf(filt, sizeof filt, "%s", maybe);
+          has_filt = 1;
+        } else {
+          /* put back: treat maybe as k via re-parse impossible; use as k string */
+          fail(vm, "DRAWNOBJ [Class] k"); return -1;
+        }
+      }
+    }
+    /* optional K|TAKE|COUNT|LIMIT sugar â avoid bare N (steals var n) */
+    if (kw(&L->cur, "TAKE") || kw(&L->cur, "COUNT") ||
+        kw(&L->cur, "LIMIT") || kw(&L->cur, "SIZE") || kw(&L->cur, "DRAW"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      karg = atol(L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+      karg = vm->last_n;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW")) {
+      Var *sv = var_get(vm, L->cur.text, 0);
+      if (sv && sv->is_str)
+        karg = atol(sv->sval);
+      else
+        karg = parse_expr(vm, L);
+      if (sv && sv->is_str) lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+               L->cur.kind == TK_LPAREN) {
+      karg = parse_expr(vm, L);
+    } else {
+      fail(vm, "DRAWNOBJ [Class] k"); return -1;
+    }
+    if (karg < 0) karg = 0;
+    take = (int)karg;
+    if (take > CUBALC_MAX_OBJS) take = CUBALC_MAX_OBJS;
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      snprintf(bag_names[n], sizeof bag_names[n], "%s", ob->name);
+      n++;
+    }
+    out_n = take < n ? take : n;
+    /* partial FisherâYates: shuffle first out_n into front */
+    for (i = 0; i < out_n; i++) {
+      int r;
+      x = vm->rng;
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      if (!x) x = 1;
+      vm->rng = x;
+      r = i + (int)(x % (uint32_t)(n - i));
+      if (r != i) {
+        snprintf(tmp, sizeof tmp, "%s", bag_names[i]);
+        snprintf(bag_names[i], sizeof bag_names[i], "%s", bag_names[r]);
+        snprintf(bag_names[r], sizeof bag_names[r], "%s", tmp);
+      }
+    }
+    for (i = 0; i < out_n; i++) {
+      size_t ln = strlen(bag_names[i]);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, bag_names[i], ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "DRAWNOBJ", bag);
+    var_set_str(vm, "SAMPLEKOBJ", bag);
+    var_set_str(vm, "PICKNOBJ", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = out_n;
+    var_set_num(vm, "LAST_N", out_n);
+    var_set_num(vm, "DRAWNOBJ_N", out_n);
+    var_set_num(vm, "SAMPLEKOBJ_N", out_n);
+    var_set_num(vm, "PICKNOBJ_N", out_n);
+    var_set_num(vm, "DRAWNOBJ_TOTAL", n);
+    var_set_num(vm, "DRAWNOBJ_REQ", karg);
+    var_set_num(vm, "NOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* SHUFFLEOBJS|SHUFOBJS|PERMUTEOBJS [Class]
+   * â FisherâYates shuffle of live object names â bag (optional class filter).
+   * Soft empty â "". LAST bag; LAST_N/SHUFFLEOBJS_N = count. Uses vm->rng (SEED).
+   * Usability: randomize fleet order without LISTOBJS + SYS SHUFFLE glue. */
+  if (kw(&L->cur, "SHUFFLEOBJS") || kw(&L->cur, "SHUFOBJS") ||
+      kw(&L->cur, "PERMUTEOBJS") || kw(&L->cur, "SHUFFLEOBJ") ||
+      kw(&L->cur, "MIXOBJS") || kw(&L->cur, "SCRAMBLEOBJS") ||
+      kw(&L->cur, "RANDOBJORDER") || kw(&L->cur, "SHUFINST") ||
+      kw(&L->cur, "SHUFFLEINST") || kw(&L->cur, "OBJSHUFFLE")) {
+    char filt[48], bag_names[CUBALC_MAX_OBJS][48], bag[4096], tmp[48];
+    int has_filt = 0, i, n = 0;
+    uint32_t x;
+    size_t o = 0;
+    lex_next(L);
+    filt[0] = 0;
+    bag[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE") ||
+        kw(&L->cur, "FROM")) {
+      lex_next(L);
+      if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+        fail(vm, "SHUFFLEOBJS OF Class"); return -1;
+      }
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "NEW") &&
+               !kw(&L->cur, "CUBE") && oop_find_class(vm, L->cur.text)) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs && n < CUBALC_MAX_OBJS; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      snprintf(bag_names[n], sizeof bag_names[n], "%s", ob->name);
+      n++;
+    }
+    /* FisherâYates */
+    for (i = n - 1; i > 0; i--) {
+      int r;
+      x = vm->rng;
+      x ^= x << 13;
+      x ^= x >> 17;
+      x ^= x << 5;
+      if (!x) x = 1;
+      vm->rng = x;
+      r = (int)(x % (uint32_t)(i + 1));
+      if (r != i) {
+        snprintf(tmp, sizeof tmp, "%s", bag_names[i]);
+        snprintf(bag_names[i], sizeof bag_names[i], "%s", bag_names[r]);
+        snprintf(bag_names[r], sizeof bag_names[r], "%s", tmp);
+      }
+    }
+    for (i = 0; i < n; i++) {
+      size_t ln = strlen(bag_names[i]);
+      if (i > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, bag_names[i], ln);
+        o += ln;
+      }
+      bag[o] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "SHUFFLEOBJS", bag);
+    var_set_str(vm, "SHUFOBJS", bag);
+    var_set_str(vm, "PERMUTEOBJS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "SHUFFLEOBJS_N", n);
+    var_set_num(vm, "SHUFOBJS_N", n);
+    var_set_num(vm, "PERMUTEOBJS_N", n);
+    var_set_num(vm, "NOBJS", n);
+    if (has_filt && filt[0]) var_set_str(vm, "CLASS", filt);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASMETHOD obj|Class method â LAST_N 1|0 soft probe before SEND.
+   * First arg object (live) or ClassName. String-vars expand (METHOD_ON / name bags).
+   * Usability: agent IF without fatal Â· twin of SEND method-name resolve. */
+  if (kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETH") ||
+      kw(&L->cur, "CANCALL") || kw(&L->cur, "RESPONDS") ||
+      kw(&L->cur, "RESPONDSTO") || kw(&L->cur, "METHOD?")) {
+    char a[48], mname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    MethodDef *md;
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASMETHOD obj|Class method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      /* prefer live obj / class literal; else expand string-var (METHOD_ON) */
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASMETHOD method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else
+        snprintf(mname, sizeof mname, "%s", id);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      md = oop_find_method(cd, mname);
+      if (md) hit = 1;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASMETHOD_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASMETHODS|NEEDMETHODS Class|obj methodâ¦ | Class.method bag â
+   * multi method capability gate (all-or-METHODMISS).
+   * Soft: LAST_N 0|1 Â· METHODMISS/METHMISS bag Â· NEEDMETHODS fail-fast first miss.
+   * Forms: HASMETHODS Cell tick init Â· HASMETHODS bag_of_Class.method (multi-class).
+   * Usability: agent SEND / method_guard contracts without NÃ HASMETHOD soup. */
+  if (kw(&L->cur, "HASMETHODS") || kw(&L->cur, "HAS_METHODS") ||
+      kw(&L->cur, "ALLMETHODS") || kw(&L->cur, "METHODSOK") ||
+      kw(&L->cur, "NEEDMETHODS") || kw(&L->cur, "NEED_METHODS") ||
+      kw(&L->cur, "REQUIREMETHODS") || kw(&L->cur, "MUSTMETHODS")) {
+    int hard = kw(&L->cur, "NEEDMETHODS") || kw(&L->cur, "NEED_METHODS") ||
+               kw(&L->cur, "REQUIREMETHODS") || kw(&L->cur, "MUSTMETHODS");
+    char first[1024];
+    char target[48];
+    char names[32][48];
+    char miss[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int nname = 0, nmiss = 0, i, aln = L->cur.line, dotted = 0;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    first[0] = 0;
+    target[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      if (hard) {
+        fail_at(vm, L, "NEEDMETHODS Class|obj methodâ¦ â NEEDMETHODS Cell tick Â· bag Class.method");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASMETHODS_N", 0);
+      var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_str(vm, "METHODMISS", "");
+      var_set_str(vm, "METHMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASMETHODS: need Class|obj methodâ¦ or Class.method bag");
+      var_set_str(vm, "ERR", "HASMETHODS: need Class|obj methodâ¦ or Class.method bag");
+      bump(vm);
+      return 1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(first, sizeof first, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(first, sizeof first, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(first, sizeof first, "%s", vv->sval);
+        else
+          snprintf(first, sizeof first, "%s", id);
+      }
+    }
+    /* Class.method bag mode when first has dots and is bag/CSV or lone Class.method */
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDMETHODS Class.methodâ¦ â NEEDMETHODS Ticket.ping Order.pay");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASMETHODS_N", 0);
+        var_set_num(vm, "METHODMISS_N", 0);
+        var_set_num(vm, "METHMISS_N", 0);
+        var_set_str(vm, "METHODMISS", "");
+        var_set_str(vm, "METHMISS", "");
+        var_set_str(vm, "METHOD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASMETHODS: need Class.method bag");
+        var_set_str(vm, "ERR", "HASMETHODS: need Class.method bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], mname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        cname[0] = 0;
+        mname[0] = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          }
+          snprintf(mname, sizeof mname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_find_method(cd, mname))
+            hit = 1;
+        }
+        if (hit)
+          continue;
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+        if (hard) {
+          char em[220];
+          snprintf(em, sizeof em,
+                   "NEEDMETHODS miss line %d: '%s' (+%d more?) â CLASS METHOD Â· HASMETHOD Â· LISTMETHODS",
+                   aln, names[i], nname - i - 1);
+          fail_at(vm, L, em);
+          return -1;
+        }
+      }
+      var_set_str(vm, "METHODMISS", miss);
+      var_set_str(vm, "METHMISS", miss);
+      var_set_num(vm, "METHODMISS_N", nmiss);
+      var_set_num(vm, "METHMISS_N", nmiss);
+      var_set_num(vm, "HASMETHODS_N", nname - nmiss);
+      var_set_num(vm, "NEEDMETHODS_N", nname);
+      var_set_num(vm, "METHODS_N", nname);
+      var_set_str(vm, "METHOD_ON", "*");
+      if (nmiss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[220];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASMETHODS miss (%d/%d): %s â CLASS METHOD Â· NEEDMETHODS Â· LISTMETHODS",
+                 nmiss, nname, miss);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d miss=%d\n",
+                hard ? "NEEDMETHODS" : "HASMETHODS", nname, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj methodâ¦ form */
+    snprintf(target, sizeof target, "%s", first);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ") || kw(&L->cur, "ASSERT")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   strchr(vv->sval, '.') == NULL &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDMETHODS Class|obj methodâ¦ â NEEDMETHODS Cell tick init");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASMETHODS_N", 0);
+      var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_str(vm, "METHODMISS", "");
+      var_set_str(vm, "METHMISS", "");
+      var_set_str(vm, "METHOD_ON", target);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASMETHODS: need methods â HASMETHODS Cell tick init");
+      var_set_str(vm, "ERR", "HASMETHODS: need methods â HASMETHODS Cell tick init");
+      bump(vm);
+      return 1;
+    }
+    ob = oop_find_obj(vm, target);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, target);
+    for (i = 0; i < nname; i++) {
+      int hit = 0;
+      if (cd && oop_find_method(cd, names[i]))
+        hit = 1;
+      if (hit)
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDMETHODS miss line %d: '%s.%s' (+%d more?) â CLASS METHOD Â· HASMETHOD Â· LISTMETHODS",
+                 aln, target[0] ? target : "?", names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "METHODMISS", miss);
+    var_set_str(vm, "METHMISS", miss);
+    var_set_num(vm, "METHODMISS_N", nmiss);
+    var_set_num(vm, "METHMISS_N", nmiss);
+    var_set_num(vm, "HASMETHODS_N", nname - nmiss);
+    var_set_num(vm, "NEEDMETHODS_N", nname);
+    var_set_num(vm, "METHODS_N", nname);
+    var_set_str(vm, "METHOD_ON", target);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASMETHODS miss (%d/%d) on %s: %s â CLASS METHOD Â· NEEDMETHODS Â· LISTMETHODS",
+               nmiss, nname, target[0] ? target : "?", miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s n=%d miss=%d\n",
+              hard ? "NEEDMETHODS" : "HASMETHODS", target, nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASMETHODANY|NEEDMETHODANY Class|obj methodâ¦ | Class.method bag â
+   * multi method any-of gate (HASMETHODS twin).
+   * Soft: LAST_N 1 if any match Â· METHODHAVE/METHHAVE Â· METHODMISS/METHMISS.
+   * Forms: HASMETHODANY Cell tick die Â· HASMETHODANY bag_of_Class.method.
+   * NEEDMETHODANY fail-fast if none match. */
+  if (kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "HAS_METHOD_ANY") ||
+      kw(&L->cur, "ANYMETHOD") || kw(&L->cur, "METHODANY") ||
+      kw(&L->cur, "HASANYMETHOD") || kw(&L->cur, "NEEDMETHODANY") ||
+      kw(&L->cur, "NEED_METHOD_ANY") || kw(&L->cur, "REQUIREMETHODANY") ||
+      kw(&L->cur, "MUSTMETHODANY")) {
+    int hard = kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEED_METHOD_ANY") ||
+               kw(&L->cur, "REQUIREMETHODANY") || kw(&L->cur, "MUSTMETHODANY");
+    char first[1024];
+    char target[48];
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line, dotted = 0;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    first[0] = 0;
+    target[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      if (hard) {
+        fail_at(vm, L, "NEEDMETHODANY Class|obj methodâ¦ â NEEDMETHODANY Cell tick Â· bag Class.method");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASMETHODANY_N", 0);
+      var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHODHAVE_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_num(vm, "METHHAVE_N", 0);
+      var_set_str(vm, "METHODMISS", "");
+      var_set_str(vm, "METHODHAVE", "");
+      var_set_str(vm, "METHMISS", "");
+      var_set_str(vm, "METHHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASMETHODANY: need Class|obj methodâ¦ or Class.method bag");
+      var_set_str(vm, "ERR", "HASMETHODANY: need Class|obj methodâ¦ or Class.method bag");
+      bump(vm);
+      return 1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(first, sizeof first, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(first, sizeof first, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(first, sizeof first, "%s", vv->sval);
+        else
+          snprintf(first, sizeof first, "%s", id);
+      }
+    }
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDMETHODANY Class.methodâ¦ â NEEDMETHODANY Ticket.ping Order.pay");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASMETHODANY_N", 0);
+        var_set_num(vm, "METHODMISS_N", 0);
+        var_set_num(vm, "METHODHAVE_N", 0);
+        var_set_num(vm, "METHMISS_N", 0);
+        var_set_num(vm, "METHHAVE_N", 0);
+        var_set_str(vm, "METHODMISS", "");
+        var_set_str(vm, "METHODHAVE", "");
+        var_set_str(vm, "METHMISS", "");
+        var_set_str(vm, "METHHAVE", "");
+        var_set_str(vm, "METHOD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASMETHODANY: need Class.method bag");
+        var_set_str(vm, "ERR", "HASMETHODANY: need Class.method bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], mname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          } else
+            cname[0] = 0;
+          snprintf(mname, sizeof mname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_find_method(cd, mname))
+            hit = 1;
+        }
+        if (hit) {
+          nhave++;
+          if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (ho + ln < sizeof havebag) {
+              memcpy(havebag + ho, names[i], ln);
+              ho += ln;
+              havebag[ho] = 0;
+            }
+          }
+        } else {
+          nmiss++;
+          if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (mo + ln < sizeof miss) {
+              memcpy(miss + mo, names[i], ln);
+              mo += ln;
+              miss[mo] = 0;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "METHODMISS", miss);
+      var_set_str(vm, "METHODHAVE", havebag);
+      var_set_str(vm, "METHMISS", miss);
+      var_set_str(vm, "METHHAVE", havebag);
+      var_set_num(vm, "METHODMISS_N", nmiss);
+      var_set_num(vm, "METHODHAVE_N", nhave);
+      var_set_num(vm, "METHMISS_N", nmiss);
+      var_set_num(vm, "METHHAVE_N", nhave);
+      var_set_num(vm, "HASMETHODANY_N", nhave);
+      var_set_num(vm, "NEEDMETHODANY_N", nname);
+      var_set_num(vm, "METHODS_ANY_N", nname);
+      var_set_str(vm, "METHOD_ON", "*");
+      if (nhave > 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else if (hard) {
+        char em[240];
+        snprintf(em, sizeof em,
+                 "NEEDMETHODANY miss line %d: need one of [%s] â CLASS METHOD Â· HASMETHODANY Â· LISTMETHODS",
+                 aln, miss[0] ? miss : "?");
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        fail_at(vm, L, em);
+        return -1;
+      } else {
+        char em[240];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASMETHODANY miss (0/%d): need one of %s â NEEDMETHODANY Â· LISTMETHODS",
+                 nname, miss[0] ? miss : "?");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d have=%d miss=%d\n",
+                hard ? "NEEDMETHODANY" : "HASMETHODANY", nname, nhave, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj methodâ¦ form */
+    snprintf(target, sizeof target, "%s", first);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   strchr(vv->sval, '.') == NULL &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDMETHODANY Class|obj methodâ¦ â NEEDMETHODANY Cell tick die");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASMETHODANY_N", 0);
+      var_set_num(vm, "METHODMISS_N", 0);
+      var_set_num(vm, "METHODHAVE_N", 0);
+      var_set_num(vm, "METHMISS_N", 0);
+      var_set_num(vm, "METHHAVE_N", 0);
+      var_set_str(vm, "METHODMISS", "");
+      var_set_str(vm, "METHODHAVE", "");
+      var_set_str(vm, "METHMISS", "");
+      var_set_str(vm, "METHHAVE", "");
+      var_set_str(vm, "METHOD_ON", target);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASMETHODANY: need methods â HASMETHODANY Cell tick ghost");
+      var_set_str(vm, "ERR", "HASMETHODANY: need methods â HASMETHODANY Cell tick ghost");
+      bump(vm);
+      return 1;
+    }
+    ob = oop_find_obj(vm, target);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, target);
+    for (i = 0; i < nname; i++) {
+      if (cd && oop_find_method(cd, names[i])) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "METHODMISS", miss);
+    var_set_str(vm, "METHODHAVE", havebag);
+    var_set_str(vm, "METHMISS", miss);
+    var_set_str(vm, "METHHAVE", havebag);
+    var_set_num(vm, "METHODMISS_N", nmiss);
+    var_set_num(vm, "METHODHAVE_N", nhave);
+    var_set_num(vm, "METHMISS_N", nmiss);
+    var_set_num(vm, "METHHAVE_N", nhave);
+    var_set_num(vm, "HASMETHODANY_N", nhave);
+    var_set_num(vm, "NEEDMETHODANY_N", nname);
+    var_set_num(vm, "METHODS_ANY_N", nname);
+    var_set_str(vm, "METHOD_ON", target);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDMETHODANY miss line %d: need one of %s.%s â CLASS METHOD Â· HASMETHODANY Â· LISTMETHODS",
+               aln, target[0] ? target : "?", miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASMETHODANY miss (0/%d) on %s: need one of %s â NEEDMETHODANY Â· LISTMETHODS",
+               nname, target[0] ? target : "?", miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDMETHODANY" : "HASMETHODANY", target, nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTMETHODS Class|obj â newline bag of method names on class/object.
+   * LAST_N / NMETHODS = count. Soft empty if unknown. String-var expands (METHOD_ON). */
+  if (kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "METHODS") ||
+      kw(&L->cur, "METHODLIST") || kw(&L->cur, "LISTMETH")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTMETHODS Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    if (cd) {
+      for (i = 0; i < cd->n_methods; i++) {
+        size_t ln = strlen(cd->methods[i].name);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, cd->methods[i].name, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTMETHODS", bag);
+    var_set_str(vm, "METHODS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NMETHODS", n);
+    var_set_num(vm, "LISTMETHODS_N", n);
+    var_set_num(vm, "OK", cd ? 1 : 0);
+    if (!cd) {
+      var_set_str(vm, "LAST_ERR", "LISTMETHODS: unknown class/obj");
+      var_set_str(vm, "ERR", "LISTMETHODS: unknown class/obj");
+    }
+    bump(vm);
+    return 1;
+  }
+
+    /* BINDTHIS|USEOBJ|ASTHIS|SETHIS name â bind THIS/SELF to live object without SEND.
+   * Soft miss OK=0 sticky LAST_ERR. Usability: multi-step GETF/SETF THIS after
+   * ENSURENEW without inventing a method or hard-coding the slot name each line.
+   * CLEARTHIS|UNBINDTHIS clears the binding. */
+  if (kw(&L->cur, "BINDTHIS") || kw(&L->cur, "USEOBJ") ||
+      kw(&L->cur, "ASTHIS") || kw(&L->cur, "SETHIS") ||
+      kw(&L->cur, "USETHIS") || kw(&L->cur, "ASOBJ") ||
+      kw(&L->cur, "FOCUSOBJ") || kw(&L->cur, "SELECTOBJ") ||
+      kw(&L->cur, "TRYBINDTHIS") || kw(&L->cur, "TRYUSEOBJ")) {
+    char oname[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int soft = 1; /* always soft â bind is never fatal */
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "BINDTHIS name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "BINDTHIS_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "BINDTHIS: unknown object");
+      var_set_str(vm, "ERR", "BINDTHIS: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# BINDTHIS soft miss %s\n", oname);
+      bump(vm);
+      return 1;
+    }
+    snprintf(vm->this_obj, sizeof vm->this_obj, "%s", oname);
+    var_set_str(vm, "THIS", oname);
+    var_set_str(vm, "SELF", oname);
+    var_set_str(vm, "OBJECT", oname);
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "BINDTHIS_N", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "LAST_ERR", "");
+    var_set_str(vm, "ERR", "");
+    if (vm->trace) fprintf(vm->trace, "# BINDTHIS %s\n", oname);
+    bump(vm);
+    return 1;
+  }
+
+  /* CLEARTHIS|UNBINDTHIS|NOTHIS|DROPTHIS â clear THIS/SELF binding.
+   * Always soft OK=1. LAST_N=1 if had binding, 0 if already empty. */
+  if (kw(&L->cur, "CLEARTHIS") || kw(&L->cur, "UNBINDTHIS") ||
+      kw(&L->cur, "NOTHIS") || kw(&L->cur, "DROPTHIS") ||
+      kw(&L->cur, "RELEASETTHIS") || kw(&L->cur, "UNFOCUS") ||
+      kw(&L->cur, "CLEAR_THIS")) {
+    int had = vm->this_obj[0] ? 1 : 0;
+    lex_next(L);
+    vm->this_obj[0] = 0;
+    var_set_str(vm, "THIS", "");
+    var_set_str(vm, "SELF", "");
+    var_set_num(vm, "LAST_N", had);
+    vm->last_n = had;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", had);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "CLEARTHIS_N", had);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# CLEARTHIS had=%d\n", had);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASTHIS|BOUNDTHIS â soft 0|1 probe if THIS is bound to a live object.
+   * LAST = bound name when live, else "". Usability: IF before SETF THIS. */
+  if (kw(&L->cur, "HASTHIS") || kw(&L->cur, "BOUNDTHIS") ||
+      kw(&L->cur, "THIS?") || kw(&L->cur, "HASTHISOBJ") ||
+      kw(&L->cur, "THISBOUND")) {
+    int hit = 0;
+    lex_next(L);
+    if (vm->this_obj[0] && oop_find_obj(vm, vm->this_obj)) {
+      hit = 1;
+      var_set_str(vm, "LAST", vm->this_obj);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", vm->this_obj);
+    } else {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASTHIS_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+/* HASOBJ|LIVES|ISOBJ|ALIVEOBJ name â soft probe if live object exists.
+   * LAST_N 1|0. Usability: IF before SEND/GETF without fatal. */
+  if (kw(&L->cur, "HASOBJ") || kw(&L->cur, "LIVES") || kw(&L->cur, "ISOBJ") ||
+      kw(&L->cur, "ALIVEOBJ") || kw(&L->cur, "OBJ?") || kw(&L->cur, "HASOBJECT") ||
+      kw(&L->cur, "OBJEXISTS") || kw(&L->cur, "EXISTS_OBJ")) {
+    char oname[48];
+    ObjInst *ob;
+    int hit = 0;
+    lex_next(L);
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "HASOBJ name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    hit = ob ? 1 : 0;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASOBJ_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASOBJS|NEEDOBJS nameâ¦ â multi live-object capability gate (all-or-OBJMISS).
+   * Soft: LAST_N 0|1 Â· OBJMISS bag Â· NEEDOBJS fail-fast first miss.
+   * Usability: agent live_session contracts without NÃ HASOBJ glue Â· bag/CSV/idents.
+   * Twin of HASCLASSES for live instances Â· dual of obj_guard ALL path. */
+  if (kw(&L->cur, "HASOBJS") || kw(&L->cur, "HAS_OBJS") ||
+      kw(&L->cur, "ALLOBJS") || kw(&L->cur, "OBJSOK") ||
+      kw(&L->cur, "NEEDOBJS") || kw(&L->cur, "NEED_OBJS") ||
+      kw(&L->cur, "REQUIREOBJS") || kw(&L->cur, "MUSTOBJS")) {
+    int hard = kw(&L->cur, "NEEDOBJS") || kw(&L->cur, "NEED_OBJS") ||
+               kw(&L->cur, "REQUIREOBJS") || kw(&L->cur, "MUSTOBJS");
+    char names[32][48];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASOBJ") ||
+           kw(&L->cur, "HASOBJS") || kw(&L->cur, "NEEDOBJS") ||
+           kw(&L->cur, "HASOBJANY") || kw(&L->cur, "NEEDOBJANY") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASFORM") || kw(&L->cur, "SEND") || kw(&L->cur, "GETF") ||
+           kw(&L->cur, "SETF") || kw(&L->cur, "DELETEOBJ") ||
+           kw(&L->cur, "TRYDELETE")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_obj(vm, L->cur.text)) {
+          /* expand string-var object name when ident is not a live obj */
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDOBJS nameâ¦ â NEEDOBJS a b Â· HASOBJS bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASOBJS_N", 0);
+      var_set_num(vm, "OBJMISS_N", 0);
+      var_set_str(vm, "OBJMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASOBJS: need names â HASOBJS a b");
+      var_set_str(vm, "ERR", "HASOBJS: need names â HASOBJS a b");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_obj(vm, names[i]))
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDOBJS miss line %d: '%s' (+%d more?) â NEW/ENSURENEW Â· HASOBJ Â· LISTOBJS",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "OBJMISS", miss);
+    var_set_num(vm, "OBJMISS_N", nmiss);
+    var_set_num(vm, "HASOBJS_N", nname - nmiss);
+    var_set_num(vm, "NEEDOBJS_N", nname);
+    var_set_num(vm, "OBJS_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASOBJS miss (%d/%d): %s â NEW/ENSURENEW Â· NEEDOBJS Â· LISTOBJS",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d miss=%d\n",
+              hard ? "NEEDOBJS" : "HASOBJS", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASOBJANY|NEEDOBJANY nameâ¦ â multi live-object any-of gate (HASOBJS twin).
+   * Soft: LAST_N 1 if any live Â· OBJHAVE bag Â· OBJMISS bag.
+   * NEEDOBJANY fail-fast if none of the listed objects exist.
+   * Usability: optional peer/session OR without NÃ HASOBJ IF glue. */
+  if (kw(&L->cur, "HASOBJANY") || kw(&L->cur, "HAS_OBJ_ANY") ||
+      kw(&L->cur, "OBJANY") || kw(&L->cur, "HASANYOBJ") ||
+      kw(&L->cur, "LIVESANY") || kw(&L->cur, "NEEDOBJANY") ||
+      kw(&L->cur, "NEED_OBJ_ANY") || kw(&L->cur, "REQUIREOBJANY") ||
+      kw(&L->cur, "MUSTOBJANY")) {
+    int hard = kw(&L->cur, "NEEDOBJANY") || kw(&L->cur, "NEED_OBJ_ANY") ||
+               kw(&L->cur, "REQUIREOBJANY") || kw(&L->cur, "MUSTOBJANY");
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "HASOBJ") ||
+           kw(&L->cur, "HASOBJS") || kw(&L->cur, "NEEDOBJS") ||
+           kw(&L->cur, "HASOBJANY") || kw(&L->cur, "NEEDOBJANY") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASCLASS") ||
+           kw(&L->cur, "HASFORM") || kw(&L->cur, "SEND") || kw(&L->cur, "GETF") ||
+           kw(&L->cur, "SETF") || kw(&L->cur, "DELETEOBJ") ||
+           kw(&L->cur, "TRYDELETE")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] && !oop_find_obj(vm, L->cur.text)) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDOBJANY nameâ¦ â NEEDOBJANY a b Â· HASOBJANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASOBJANY_N", 0);
+      var_set_num(vm, "OBJMISS_N", 0);
+      var_set_num(vm, "OBJHAVE_N", 0);
+      var_set_str(vm, "OBJMISS", "");
+      var_set_str(vm, "OBJHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASOBJANY: need names â HASOBJANY a b");
+      var_set_str(vm, "ERR", "HASOBJANY: need names â HASOBJANY a b");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      if (oop_find_obj(vm, names[i])) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "OBJMISS", miss);
+    var_set_str(vm, "OBJHAVE", havebag);
+    var_set_num(vm, "OBJMISS_N", nmiss);
+    var_set_num(vm, "OBJHAVE_N", nhave);
+    var_set_num(vm, "HASOBJANY_N", nhave);
+    var_set_num(vm, "NEEDOBJANY_N", nname);
+    var_set_num(vm, "OBJS_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDOBJANY miss line %d: need one of [%s] â NEW/ENSURENEW Â· HASOBJANY Â· LISTOBJS",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASOBJANY miss (0/%d): need one of %s â NEEDOBJANY Â· NEW/ENSURENEW",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDOBJANY" : "HASOBJANY", nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* DELETEOBJ|FREEOBJ|TRYDELETE|SOFTDELETE name â mark live object dead (free slot).
+   * Note: DESTROY is cube DECONSTRUCT (ops_cell) â not this form.
+   * Soft OK=0 if missing (always soft). NEW reuses same name. Usability: pool recycle.
+   * TRYDELETE|DELETEOBJ SOFT|SOFTDELETE â explicit TRY* dual of DELETEOBJ (twin TRYCLONE/
+   * TRYRENAME/TRYSWAP) Â· sets TRYDELETE_N Â· agent GC without HASOBJ+IF glue. */
+  if (kw(&L->cur, "TRYDELETE") || kw(&L->cur, "SOFTDELETE") ||
+      kw(&L->cur, "DELETEOBJSOFT") || kw(&L->cur, "TRYFREEOBJ") ||
+      kw(&L->cur, "TRYDELOBJ") || kw(&L->cur, "SOFTFREE") ||
+      kw(&L->cur, "TRYDISPOSE") || kw(&L->cur, "SOFTDISPOSE") ||
+      kw(&L->cur, "DELETEOBJ") || kw(&L->cur, "FREEOBJ") ||
+      kw(&L->cur, "DELOBJ") || kw(&L->cur, "RELEASE") ||
+      kw(&L->cur, "KILLOBJ") || kw(&L->cur, "DISPOSE") ||
+      kw(&L->cur, "UNOBJ") || kw(&L->cur, "OBJDEL") ||
+      kw(&L->cur, "DEL_OBJ") || kw(&L->cur, "FREESLOT")) {
+    char oname[48], op0[32];
+    ObjInst *ob;
+    int soft_try = 0;
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    soft_try = (strcmp(op0, "TRYDELETE") == 0 || strcmp(op0, "SOFTDELETE") == 0 ||
+                strcmp(op0, "DELETEOBJSOFT") == 0 || strcmp(op0, "TRYFREEOBJ") == 0 ||
+                strcmp(op0, "TRYDELOBJ") == 0 || strcmp(op0, "SOFTFREE") == 0 ||
+                strcmp(op0, "TRYDISPOSE") == 0 || strcmp(op0, "SOFTDISPOSE") == 0);
+    lex_next(L);
+    /* DELETEOBJ SOFT name Â· FREE SOFT name */
+    if (!soft_try && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY"))) {
+      soft_try = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(oname, sizeof oname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(oname, sizeof oname, "%s", vm->last_str);
+        lex_next(L);
+      } else {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        lex_next(L);
+      }
+    } else {
+      fail(vm, soft_try ? "TRYDELETE name" : "DELETEOBJ name"); return -1;
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "DELETEOBJ_N", 0);
+      var_set_num(vm, "FREEOBJ_N", 0);
+      var_set_num(vm, "TRYDELETE_N", 0);
+      var_set_str(vm, "LAST_ERR", "DELETEOBJ: unknown object");
+      var_set_str(vm, "ERR", "DELETEOBJ: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# TRYDELETE soft miss %s\n", oname);
+      bump(vm);
+      return 1;
+    }
+    ob->live = 0;
+    /* clear this if receiver destroyed */
+    if (strcmp(vm->this_obj, oname) == 0)
+      vm->this_obj[0] = 0;
+    var_set_str(vm, "LAST", oname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", oname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "DELETEOBJ_N", 1);
+    var_set_num(vm, "FREEOBJ_N", 1);
+    if (soft_try) var_set_num(vm, "TRYDELETE_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s\n", soft_try ? "TRYDELETE" : "DELETEOBJ", oname);
+    bump(vm);
+    return 1;
+  }
+
+  /* DELETEALL|FREEALL|CLEAROBJS [Class] â free every live object (optional class).
+   * Soft always; LAST_N/DELETEALL_N = count freed. Complements DELETEOBJ + SENDALL.
+   * Usability: pool wipe without EACH OBJ + DELETEOBJ glue. */
+  if (kw(&L->cur, "DELETEALL") || kw(&L->cur, "FREEALL") ||
+      kw(&L->cur, "CLEAROBJS") || kw(&L->cur, "CLEAROBJECTS") ||
+      kw(&L->cur, "PURGEOBJS") || kw(&L->cur, "KILLALL") ||
+      kw(&L->cur, "DELOBJALL") || kw(&L->cur, "OBJCLEAR")) {
+    char filt[48];
+    int has_filt = 0, i, n = 0;
+    lex_next(L);
+    filt[0] = 0;
+    if (kw(&L->cur, "OF") || kw(&L->cur, "CLASS") || kw(&L->cur, "TYPE")) {
+      lex_next(L);
+      if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR) {
+        snprintf(filt, sizeof filt, "%s", L->cur.text);
+        lex_next(L);
+        has_filt = 1;
+      }
+    } else if (L->cur.kind == TK_STR) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    } else if (L->cur.kind == TK_IDENT && !oop_stmt_kw(L) &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+               !kw(&L->cur, "SYS") && !kw(&L->cur, "PRINT") &&
+               !kw(&L->cur, "END") && !kw(&L->cur, "CUBE") &&
+               !kw(&L->cur, "NEW") && !kw(&L->cur, "OF")) {
+      snprintf(filt, sizeof filt, "%s", L->cur.text);
+      lex_next(L);
+      has_filt = 1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      ObjInst *ob = &vm->objs[i];
+      ClassDef *cd;
+      if (!ob->live) continue;
+      if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) continue;
+      cd = &vm->classes[ob->class_idx];
+      if (has_filt && filt[0] && strcmp(cd->name, filt) != 0) continue;
+      ob->live = 0;
+      if (strcmp(vm->this_obj, ob->name) == 0)
+        vm->this_obj[0] = 0;
+      n++;
+    }
+    var_set_num(vm, "LAST_N", n);
+    vm->last_n = n;
+    var_set_num(vm, "DELETEALL_N", n);
+    var_set_num(vm, "FREEALL_N", n);
+    var_set_num(vm, "CLEAROBJS_N", n);
+    {
+      char nb[16];
+      snprintf(nb, sizeof nb, "%d", n);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* CLONEOBJ|COPYOBJ|DUPLOBJ|TRYCLONE|ENSURECLONE src dst â shallow copy live
+   * object fields into new instance of same class. Does not re-run init.
+   * Soft miss src always OK=0. TRYCLONE|CLONE SOFT: dst redefine/pool soft.
+   * ENSURECLONE|CLONE OR: if dst already live â keep (ENSURECLONE_N=0);
+   * if missing â soft clone (ENSURECLONE_N=1). Twin of ENSURENEW for protos.
+   * Hard CLONEOBJ: dst live already â fatal redefine.
+   * Usability: template spawn without HASOBJ+IF+CLONE glue. */
+  if (kw(&L->cur, "ENSURECLONE") || kw(&L->cur, "GETORCLONE") ||
+      kw(&L->cur, "CLONEIFMISS") || kw(&L->cur, "ENSURECOPY") ||
+      kw(&L->cur, "TRYCLONE") || kw(&L->cur, "SOFTCLONE") ||
+      kw(&L->cur, "CLONEOBJSOFT") || kw(&L->cur, "TRYCOPYOBJ") ||
+      kw(&L->cur, "CLONEOBJ") || kw(&L->cur, "COPYOBJ") ||
+      kw(&L->cur, "DUPLOBJ") || kw(&L->cur, "CLONE") ||
+      kw(&L->cur, "OBJCLONE") || kw(&L->cur, "OBJCOPY") ||
+      kw(&L->cur, "DUP_OBJ") || kw(&L->cur, "COPY_OBJ")) {
+    char sname[48], dname[48];
+    ObjInst *src, *dst;
+    ClassDef *cd;
+    int fi, soft = 0, ensure = 0, rc;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "ENSURECLONE") == 0 || strcmp(op0, "GETORCLONE") == 0 ||
+        strcmp(op0, "CLONEIFMISS") == 0 || strcmp(op0, "ENSURECOPY") == 0) {
+      ensure = 1;
+      soft = 1;
+    } else if (strcmp(op0, "TRYCLONE") == 0 || strcmp(op0, "SOFTCLONE") == 0 ||
+        strcmp(op0, "CLONEOBJSOFT") == 0 || strcmp(op0, "TRYCOPYOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && !ensure && (kw(&L->cur, "OR") || kw(&L->cur, "ENSURE") ||
+                  kw(&L->cur, "IFMISS") || kw(&L->cur, "UNLESS"))) {
+      /* CLONE OR src dst â ensure dual of ENSURECLONE */
+      ensure = 1;
+      soft = 1;
+      lex_next(L);
+    } else if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, sname, sizeof sname,
+                      ensure ? "ENSURECLONE src" : (soft ? "TRYCLONE src" : "CLONEOBJ src")) < 0)
+      return -1;
+    if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
+      lex_next(L);
+    if (oop_read_name(vm, L, dname, sizeof dname,
+                      ensure ? "ENSURECLONE dst" : (soft ? "TRYCLONE dst" : "CLONEOBJ dst")) < 0)
+      return -1;
+    /* ENSURECLONE: dst already live â keep without re-clone */
+    if (ensure && oop_find_obj(vm, dname)) {
+      var_set_str(vm, "LAST", dname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dname);
+      var_set_str(vm, "OBJECT", dname);
+      var_set_str(vm, "CLONEOBJ", dname);
+      var_set_str(vm, "CLONE_SRC", sname);
+      var_set_num(vm, "LAST_N", 0); /* 0 = already present */
+      vm->last_n = 0;
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "ENSURECLONE_N", 0);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
+      if (vm->trace) fprintf(vm->trace, "# ENSURECLONE already %s\n", dname);
+      bump(vm);
+      return 1;
+    }
+    src = oop_find_obj(vm, sname);
+    if (!src) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "TRYCLONE_N", 0);
+      if (ensure) {
+        var_set_num(vm, "ENSURECLONE_N", 0);
+        var_set_num(vm, "ENSURED", 0);
+      }
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLONEOBJ: unknown source");
+      var_set_str(vm, "ERR", "CLONEOBJ: unknown source");
+      bump(vm);
+      return 1;
+    }
+    if (src->class_idx < 0 || src->class_idx >= vm->n_classes) {
+      fail(vm, "CLONEOBJ bad class"); return -1;
+    }
+    cd = &vm->classes[src->class_idx];
+    /* allocate dst without ctor (field defaults then overwrite from src) */
+    rc = oop_new_instance(vm, cd->name, dname, -1, NULL, 0, soft);
+    if (rc == -1) return -1;
+    if (rc == -2) {
+      /* soft redefine / pool full â sticky already set by oop_new_instance */
+      var_set_num(vm, "CLONEOBJ_N", 0);
+      var_set_num(vm, "TRYCLONE_N", 0);
+      if (ensure) {
+        var_set_num(vm, "ENSURECLONE_N", 0);
+        var_set_num(vm, "ENSURED", 0);
+      }
+      if (vm->trace) fprintf(vm->trace, "# TRYCLONE soft miss %s -> %s\n", sname, dname);
+      bump(vm);
+      return 1;
+    }
+    dst = oop_find_obj(vm, dname);
+    if (!dst) {
+      fail(vm, "CLONEOBJ alloc fail"); return -1;
+    }
+    for (fi = 0; fi < cd->n_fields && fi < CUBALC_MAX_FIELDS; fi++) {
+      dst->fis_str[fi] = src->fis_str[fi];
+      if (src->fis_str[fi])
+        snprintf(dst->fstr[fi], sizeof dst->fstr[fi], "%s", src->fstr[fi]);
+      else
+        dst->fnum[fi] = src->fnum[fi];
+    }
+    /* pure object clone: not bound to src cube */
+    dst->cube_idx = -1;
+    var_set_str(vm, "LAST", dname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", dname);
+    var_set_str(vm, "OBJECT", dname);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "CLONEOBJ", dname);
+    var_set_str(vm, "CLONE_SRC", sname);
+    var_set_num(vm, "LAST_N", cd->n_fields);
+    vm->last_n = cd->n_fields;
+    var_set_num(vm, "CLONEOBJ_N", 1);
+    if (soft && !ensure) var_set_num(vm, "TRYCLONE_N", 1);
+    if (ensure) {
+      var_set_num(vm, "ENSURECLONE_N", 1);
+      var_set_num(vm, "ENSURED", 1);
+      var_set_str(vm, "LAST_ERR", "");
+      var_set_str(vm, "ERR", "");
+    }
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n",
+                           ensure ? "ENSURECLONE" : (soft ? "TRYCLONE" : "CLONEOBJ"),
+                           sname, dname);
+    bump(vm);
+    return 1;
+  }
+
+  /* RENAMEOBJ|MOVEOBJ|TRYRENAME old [AS|TO] new â rename live object slot in place.
+   * Soft miss old always OK=0. Hard RENAMEOBJ: live destination â fatal redefine.
+   * TRYRENAME|RENAMEOBJ SOFT|MOVE SOFT: redefine also soft (OK=0 LAST_ERR) â
+   * twin of TRYCLONE for promote-after-clone pipelines without HASOBJ+IF glue.
+   * Dead destination name cleared so pool recycle stays unique. Updates THIS.
+   * Usability: promote temp/proto names after CLONE without re-NEW. */
+  if (kw(&L->cur, "TRYRENAME") || kw(&L->cur, "SOFTRENAME") ||
+      kw(&L->cur, "RENAMEOBJSOFT") || kw(&L->cur, "TRYMOVEOBJ") ||
+      kw(&L->cur, "SOFTMOVEOBJ") || kw(&L->cur, "TRYRENOBJ") ||
+      kw(&L->cur, "RENAMEOBJ") || kw(&L->cur, "MOVEOBJ") ||
+      kw(&L->cur, "RENOBJ") || kw(&L->cur, "OBJRENAME") ||
+      kw(&L->cur, "RENAME_OBJ") || kw(&L->cur, "MVOBJ") ||
+      kw(&L->cur, "OBJMOVE") || kw(&L->cur, "ALIASOBJ")) {
+    char oname[48], nname[48], oldn[48];
+    ObjInst *ob;
+    ClassDef *cd;
+    int i, soft = 0;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "TRYRENAME") == 0 || strcmp(op0, "SOFTRENAME") == 0 ||
+        strcmp(op0, "RENAMEOBJSOFT") == 0 || strcmp(op0, "TRYMOVEOBJ") == 0 ||
+        strcmp(op0, "SOFTMOVEOBJ") == 0 || strcmp(op0, "TRYRENOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, oname, sizeof oname, soft ? "TRYRENAME old" : "RENAMEOBJ old") < 0)
+      return -1;
+    if (kw(&L->cur, "AS") || kw(&L->cur, "TO") || kw(&L->cur, "INTO"))
+      lex_next(L);
+    if (oop_read_name(vm, L, nname, sizeof nname, soft ? "TRYRENAME new" : "RENAMEOBJ new") < 0)
+      return -1;
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "RENAMEOBJ_N", 0);
+      var_set_num(vm, "TRYRENAME_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "RENAMEOBJ: unknown object");
+      var_set_str(vm, "ERR", "RENAMEOBJ: unknown object");
+      if (vm->trace) fprintf(vm->trace, "# TRYRENAME soft miss %s\n", oname);
+      bump(vm);
+      return 1;
+    }
+    /* no-op same name */
+    if (strcmp(oname, nname) == 0) {
+      var_set_str(vm, "LAST", nname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "RENAMEOBJ_N", 1);
+      if (soft) var_set_num(vm, "TRYRENAME_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    /* destination live already? */
+    if (oop_find_obj(vm, nname)) {
+      if (soft) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "RENAMEOBJ_N", 0);
+        var_set_num(vm, "TRYRENAME_N", 0);
+        var_set_num(vm, "OK", 0);
+        {
+          char msg[96];
+          snprintf(msg, sizeof msg, "RENAMEOBJ: redefine %s", nname);
+          var_set_str(vm, "LAST_ERR", msg);
+          var_set_str(vm, "ERR", msg);
+        }
+        if (vm->trace) fprintf(vm->trace, "# TRYRENAME soft redefine %s -> %s\n", oname, nname);
+        bump(vm);
+        return 1;
+      }
+      snprintf(vm->err, sizeof vm->err, "RENAMEOBJ destination live %s", nname);
+      fail(vm, vm->err);
+      return -1;
+    }
+    /* clear dead slots that hold destination name (pool uniqueness) */
+    for (i = 0; i < vm->n_objs; i++) {
+      if (&vm->objs[i] == ob) continue;
+      if (!vm->objs[i].live && strcmp(vm->objs[i].name, nname) == 0)
+        vm->objs[i].name[0] = 0;
+    }
+    snprintf(oldn, sizeof oldn, "%s", ob->name);
+    snprintf(ob->name, sizeof ob->name, "%s", nname);
+    if (strcmp(vm->this_obj, oldn) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", nname);
+      var_set_str(vm, "THIS", nname);
+      var_set_str(vm, "SELF", nname);
+    }
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, nname, cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", nname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", nname);
+    var_set_str(vm, "OBJECT", nname);
+    var_set_str(vm, "RENAMEOBJ", nname);
+    var_set_str(vm, "RENAME_FROM", oldn);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "RENAMEOBJ_N", 1);
+    if (soft) var_set_num(vm, "TRYRENAME_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s -> %s\n", soft ? "TRYRENAME" : "RENAMEOBJ", oname, nname);
+    bump(vm);
+    return 1;
+  }
+
+  /* SWAPOBJ|EXCHANGEOBJ|XCHOBJ a [WITH|AND] b â swap live object slot names.
+   * Soft miss either side always OK=0 LAST_ERR. TRYSWAP|SWAPOBJ SOFT same soft path.
+   * No-op same name OK=1. Dead slots holding either name cleared for pool uniqueness.
+   * Updates THIS if receiver is either side. Usability: role flip / primary-backup
+   * without temp+RENAMEOBJ+RENAMEOBJ glue (agent promote/demote). */
+  if (kw(&L->cur, "TRYSWAP") || kw(&L->cur, "SOFTSWAP") ||
+      kw(&L->cur, "TRYSWAPOBJ") || kw(&L->cur, "SOFTSWAPOBJ") ||
+      kw(&L->cur, "SWAPOBJSOFT") || kw(&L->cur, "TRYXCHOBJ") ||
+      kw(&L->cur, "SWAPOBJ") || kw(&L->cur, "EXCHANGEOBJ") ||
+      kw(&L->cur, "XCHOBJ") || kw(&L->cur, "OBJSWAP") ||
+      kw(&L->cur, "SWAP_OBJ") || kw(&L->cur, "XCHGOBJ") ||
+      kw(&L->cur, "SWAPNAMES") || kw(&L->cur, "NAMESWAP")) {
+    char aname[48], bname[48], tmpn[48];
+    ObjInst *oa, *ob;
+    ClassDef *cd;
+    int i, soft = 0;
+    char op0[32];
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    if (strcmp(op0, "TRYSWAP") == 0 || strcmp(op0, "SOFTSWAP") == 0 ||
+        strcmp(op0, "TRYSWAPOBJ") == 0 || strcmp(op0, "SOFTSWAPOBJ") == 0 ||
+        strcmp(op0, "SWAPOBJSOFT") == 0 || strcmp(op0, "TRYXCHOBJ") == 0)
+      soft = 1;
+    lex_next(L);
+    if (!soft && (kw(&L->cur, "SOFT") || kw(&L->cur, "TRY") ||
+                  kw(&L->cur, "OPTIONAL") || kw(&L->cur, "MAYBE") ||
+                  kw(&L->cur, "OPT"))) {
+      soft = 1;
+      lex_next(L);
+    }
+    if (oop_read_name(vm, L, aname, sizeof aname, soft ? "TRYSWAP a" : "SWAPOBJ a") < 0)
+      return -1;
+    if (kw(&L->cur, "WITH") || kw(&L->cur, "AND") || kw(&L->cur, "TO") ||
+        kw(&L->cur, "AS") || kw(&L->cur, "FOR"))
+      lex_next(L);
+    if (oop_read_name(vm, L, bname, sizeof bname, soft ? "TRYSWAP b" : "SWAPOBJ b") < 0)
+      return -1;
+    /* no-op same name */
+    if (strcmp(aname, bname) == 0) {
+      oa = oop_find_obj(vm, aname);
+      if (!oa) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_num(vm, "SWAPOBJ_N", 0);
+        var_set_num(vm, "TRYSWAP_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "SWAPOBJ: unknown object");
+        var_set_str(vm, "ERR", "SWAPOBJ: unknown object");
+        bump(vm);
+        return 1;
+      }
+      var_set_str(vm, "LAST", aname);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", aname);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "SWAPOBJ_N", 1);
+      if (soft) var_set_num(vm, "TRYSWAP_N", 1);
+      var_set_num(vm, "OK", 1);
+      bump(vm);
+      return 1;
+    }
+    oa = oop_find_obj(vm, aname);
+    ob = oop_find_obj(vm, bname);
+    if (!oa || !ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "SWAPOBJ_N", 0);
+      var_set_num(vm, "TRYSWAP_N", 0);
+      var_set_num(vm, "OK", 0);
+      {
+        char msg[96];
+        if (!oa && !ob)
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown objects %s and %s", aname, bname);
+        else if (!oa)
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown object %s", aname);
+        else
+          snprintf(msg, sizeof msg, "SWAPOBJ: unknown object %s", bname);
+        var_set_str(vm, "LAST_ERR", msg);
+        var_set_str(vm, "ERR", msg);
+      }
+      if (vm->trace) fprintf(vm->trace, "# TRYSWAP soft miss %s <-> %s\n", aname, bname);
+      bump(vm);
+      return 1;
+    }
+    /* clear dead slots that hold either name (pool uniqueness) */
+    for (i = 0; i < vm->n_objs; i++) {
+      if (&vm->objs[i] == oa || &vm->objs[i] == ob) continue;
+      if (!vm->objs[i].live &&
+          (strcmp(vm->objs[i].name, aname) == 0 ||
+           strcmp(vm->objs[i].name, bname) == 0))
+        vm->objs[i].name[0] = 0;
+    }
+    /* swap names via temp (no third live slot needed) */
+    snprintf(tmpn, sizeof tmpn, "%s", oa->name);
+    snprintf(oa->name, sizeof oa->name, "%s", bname);
+    snprintf(ob->name, sizeof ob->name, "%s", tmpn);
+    /* THIS follows the receiver instance (by pointer), rename both sides */
+    if (strcmp(vm->this_obj, aname) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", bname);
+      var_set_str(vm, "THIS", bname);
+      var_set_str(vm, "SELF", bname);
+    } else if (strcmp(vm->this_obj, bname) == 0) {
+      snprintf(vm->this_obj, sizeof vm->this_obj, "%s", aname);
+      var_set_str(vm, "THIS", aname);
+      var_set_str(vm, "SELF", aname);
+    }
+    /* rebind class-name vars for both new slot names */
+    if (oa->class_idx >= 0 && oa->class_idx < vm->n_classes) {
+      cd = &vm->classes[oa->class_idx];
+      var_set_str(vm, oa->name, cd->name);
+    }
+    if (ob->class_idx >= 0 && ob->class_idx < vm->n_classes) {
+      cd = &vm->classes[ob->class_idx];
+      var_set_str(vm, ob->name, cd->name);
+      var_set_str(vm, "CLASS", cd->name);
+    }
+    var_set_str(vm, "LAST", bname);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bname);
+    var_set_str(vm, "OBJECT", bname);
+    var_set_str(vm, "SWAPOBJ", bname);
+    var_set_str(vm, "SWAP_A", aname);
+    var_set_str(vm, "SWAP_B", bname);
+    var_set_str(vm, "SWAP_FROM", aname);
+    var_set_str(vm, "SWAP_TO", bname);
+    var_set_num(vm, "LAST_N", 1);
+    vm->last_n = 1;
+    var_set_num(vm, "SWAPOBJ_N", 1);
+    if (soft) var_set_num(vm, "TRYSWAP_N", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace) fprintf(vm->trace, "# %s %s <-> %s\n", soft ? "TRYSWAP" : "SWAPOBJ", aname, bname);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFIELD obj|Class field â soft 0|1 probe before GETF/SETF.
+   * Class/obj and field names expand string-vars (FIELD_ON / name bags).
+   * Twin of HASMETHOD resolve. */
+  if (kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASF") ||
+      kw(&L->cur, "FIELD?") || kw(&L->cur, "HASFILD") ||
+      kw(&L->cur, "HAS_FIELD")) {
+    char a[48], fname[48];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int hit = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASFIELD obj|Class field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "HASFIELD field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      vv = var_get(vm, id, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else
+        snprintf(fname, sizeof fname, "%s", id);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob) cd = &vm->classes[ob->class_idx];
+    else cd = oop_find_class(vm, a);
+    if (cd && oop_field_idx(cd, fname) >= 0) hit = 1;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASFIELD_N", hit);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFIELDS|NEEDFIELDS Class|obj fieldâ¦ | Class.field bag â
+   * multi field capability gate (all-or-FIELDMISS).
+   * Soft: LAST_N 0|1 Â· FIELDMISS/FLDMISS bag Â· NEEDFIELDS fail-fast first miss.
+   * Forms: HASFIELDS Cell x y Â· HASFIELDS bag_of_Class.field (multi-class).
+   * Usability: agent GETF/SETF / field_guard contracts without NÃ HASFIELD soup. */
+  if (kw(&L->cur, "HASFIELDS") || kw(&L->cur, "HAS_FIELDS") ||
+      kw(&L->cur, "ALLFIELDS") || kw(&L->cur, "FIELDSOK") ||
+      kw(&L->cur, "NEEDFIELDS") || kw(&L->cur, "NEED_FIELDS") ||
+      kw(&L->cur, "REQUIREFIELDS") || kw(&L->cur, "MUSTFIELDS")) {
+    int hard = kw(&L->cur, "NEEDFIELDS") || kw(&L->cur, "NEED_FIELDS") ||
+               kw(&L->cur, "REQUIREFIELDS") || kw(&L->cur, "MUSTFIELDS");
+    char first[1024];
+    char target[48];
+    char names[32][48];
+    char miss[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int nname = 0, nmiss = 0, i, aln = L->cur.line, dotted = 0;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    first[0] = 0;
+    target[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFIELDS Class|obj fieldâ¦ â NEEDFIELDS Cell x Â· bag Class.field");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFIELDS_N", 0);
+      var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_str(vm, "FIELDMISS", "");
+      var_set_str(vm, "FLDMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFIELDS: need Class|obj fieldâ¦ or Class.field bag");
+      var_set_str(vm, "ERR", "HASFIELDS: need Class|obj fieldâ¦ or Class.field bag");
+      bump(vm);
+      return 1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(first, sizeof first, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(first, sizeof first, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(first, sizeof first, "%s", vv->sval);
+        else
+          snprintf(first, sizeof first, "%s", id);
+      }
+    }
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDFIELDS Class.fieldâ¦ â NEEDFIELDS Ticket.id Order.n");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASFIELDS_N", 0);
+        var_set_num(vm, "FIELDMISS_N", 0);
+        var_set_num(vm, "FLDMISS_N", 0);
+        var_set_str(vm, "FIELDMISS", "");
+        var_set_str(vm, "FLDMISS", "");
+        var_set_str(vm, "FIELD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASFIELDS: need Class.field bag");
+        var_set_str(vm, "ERR", "HASFIELDS: need Class.field bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], fname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        cname[0] = 0;
+        fname[0] = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          }
+          snprintf(fname, sizeof fname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_field_idx(cd, fname) >= 0)
+            hit = 1;
+        }
+        if (hit)
+          continue;
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+        if (hard) {
+          char em[220];
+          snprintf(em, sizeof em,
+                   "NEEDFIELDS miss line %d: '%s' (+%d more?) â CLASS FIELD Â· HASFIELD Â· LISTFIELDS",
+                   aln, names[i], nname - i - 1);
+          fail_at(vm, L, em);
+          return -1;
+        }
+      }
+      var_set_str(vm, "FIELDMISS", miss);
+      var_set_str(vm, "FLDMISS", miss);
+      var_set_num(vm, "FIELDMISS_N", nmiss);
+      var_set_num(vm, "FLDMISS_N", nmiss);
+      var_set_num(vm, "HASFIELDS_N", nname - nmiss);
+      var_set_num(vm, "NEEDFIELDS_N", nname);
+      var_set_num(vm, "FIELDS_N", nname);
+      var_set_str(vm, "FIELD_ON", "*");
+      if (nmiss == 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else {
+        char em[220];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASFIELDS miss (%d/%d): %s â CLASS FIELD Â· NEEDFIELDS Â· LISTFIELDS",
+                 nmiss, nname, miss);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d miss=%d\n",
+                hard ? "NEEDFIELDS" : "HASFIELDS", nname, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj fieldâ¦ form */
+    snprintf(target, sizeof target, "%s", first);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ") || kw(&L->cur, "ASSERT")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   strchr(vv->sval, '.') == NULL &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFIELDS Class|obj fieldâ¦ â NEEDFIELDS Cell x y");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFIELDS_N", 0);
+      var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_str(vm, "FIELDMISS", "");
+      var_set_str(vm, "FLDMISS", "");
+      var_set_str(vm, "FIELD_ON", target);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFIELDS: need fields â HASFIELDS Cell x y");
+      var_set_str(vm, "ERR", "HASFIELDS: need fields â HASFIELDS Cell x y");
+      bump(vm);
+      return 1;
+    }
+    ob = oop_find_obj(vm, target);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, target);
+    for (i = 0; i < nname; i++) {
+      int hit = 0;
+      if (cd && oop_field_idx(cd, names[i]) >= 0)
+        hit = 1;
+      if (hit)
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDFIELDS miss line %d: '%s.%s' (+%d more?) â CLASS FIELD Â· HASFIELD Â· LISTFIELDS",
+                 aln, target[0] ? target : "?", names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "FIELDMISS", miss);
+    var_set_str(vm, "FLDMISS", miss);
+    var_set_num(vm, "FIELDMISS_N", nmiss);
+    var_set_num(vm, "FLDMISS_N", nmiss);
+    var_set_num(vm, "HASFIELDS_N", nname - nmiss);
+    var_set_num(vm, "NEEDFIELDS_N", nname);
+    var_set_num(vm, "FIELDS_N", nname);
+    var_set_str(vm, "FIELD_ON", target);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFIELDS miss (%d/%d) on %s: %s â CLASS FIELD Â· NEEDFIELDS Â· LISTFIELDS",
+               nmiss, nname, target[0] ? target : "?", miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s n=%d miss=%d\n",
+              hard ? "NEEDFIELDS" : "HASFIELDS", target, nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFIELDANY|NEEDFIELDANY Class|obj fieldâ¦ | Class.field bag â
+   * multi field any-of gate (HASFIELDS twin).
+   * Soft: LAST_N 1 if any match Â· FIELDHAVE/FLDHAVE Â· FIELDMISS/FLDMISS.
+   * Forms: HASFIELDANY Cell alive Â· HASFIELDANY bag_of_Class.field.
+   * NEEDFIELDANY fail-fast if none match. */
+  if (kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "HAS_FIELD_ANY") ||
+      kw(&L->cur, "ANYFIELD") || kw(&L->cur, "FIELDANY") ||
+      kw(&L->cur, "HASANYFIELD") || kw(&L->cur, "NEEDFIELDANY") ||
+      kw(&L->cur, "NEED_FIELD_ANY") || kw(&L->cur, "REQUIREFIELDANY") ||
+      kw(&L->cur, "MUSTFIELDANY")) {
+    int hard = kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "NEED_FIELD_ANY") ||
+               kw(&L->cur, "REQUIREFIELDANY") || kw(&L->cur, "MUSTFIELDANY");
+    char first[1024];
+    char target[48];
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    int nname = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line, dotted = 0;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    first[0] = 0;
+    target[0] = 0;
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFIELDANY Class|obj fieldâ¦ â NEEDFIELDANY Cell alive Â· bag Class.field");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFIELDANY_N", 0);
+      var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FIELDHAVE_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_num(vm, "FLDHAVE_N", 0);
+      var_set_str(vm, "FIELDMISS", "");
+      var_set_str(vm, "FIELDHAVE", "");
+      var_set_str(vm, "FLDMISS", "");
+      var_set_str(vm, "FLDHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFIELDANY: need Class|obj fieldâ¦ or Class.field bag");
+      var_set_str(vm, "ERR", "HASFIELDANY: need Class|obj fieldâ¦ or Class.field bag");
+      bump(vm);
+      return 1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(first, sizeof first, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(first, sizeof first, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(first, sizeof first, "%s", vv->sval);
+        else
+          snprintf(first, sizeof first, "%s", id);
+      }
+    }
+    if (strchr(first, '.')) {
+      int more = (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT);
+      if (more && L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        more = 0;
+      if (!more || strchr(first, '\n') || strchr(first, ',') || strchr(first, ' '))
+        dotted = 1;
+    }
+    if (dotted) {
+      const char *p = first;
+      while (*p && nname < 32) {
+        char tok[48];
+        size_t tl = 0;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+          p++;
+        if (!*p) break;
+        while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+               p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+          tok[tl] = p[tl];
+          tl++;
+        }
+        tok[tl] = 0;
+        p += tl;
+        if (tok[0])
+          snprintf(names[nname++], sizeof names[0], "%s", tok);
+      }
+      if (nname == 0) {
+        if (hard) {
+          fail_at(vm, L, "NEEDFIELDANY Class.fieldâ¦ â NEEDFIELDANY Ticket.id Order.n");
+          return -1;
+        }
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "HASFIELDANY_N", 0);
+        var_set_num(vm, "FIELDMISS_N", 0);
+        var_set_num(vm, "FIELDHAVE_N", 0);
+        var_set_num(vm, "FLDMISS_N", 0);
+        var_set_num(vm, "FLDHAVE_N", 0);
+        var_set_str(vm, "FIELDMISS", "");
+        var_set_str(vm, "FIELDHAVE", "");
+        var_set_str(vm, "FLDMISS", "");
+        var_set_str(vm, "FLDHAVE", "");
+        var_set_str(vm, "FIELD_ON", "*");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "HASFIELDANY: need Class.field bag");
+        var_set_str(vm, "ERR", "HASFIELDANY: need Class.field bag");
+        bump(vm);
+        return 1;
+      }
+      for (i = 0; i < nname; i++) {
+        char cname[48], fname[48];
+        const char *dot = strchr(names[i], '.');
+        int hit = 0;
+        if (dot && dot != names[i] && dot[1]) {
+          size_t cl = (size_t)(dot - names[i]);
+          if (cl + 1 < sizeof cname) {
+            memcpy(cname, names[i], cl);
+            cname[cl] = 0;
+          } else
+            cname[0] = 0;
+          snprintf(fname, sizeof fname, "%s", dot + 1);
+          ob = oop_find_obj(vm, cname);
+          if (ob)
+            cd = &vm->classes[ob->class_idx];
+          else
+            cd = oop_find_class(vm, cname);
+          if (cd && oop_field_idx(cd, fname) >= 0)
+            hit = 1;
+        }
+        if (hit) {
+          nhave++;
+          if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (ho + ln < sizeof havebag) {
+              memcpy(havebag + ho, names[i], ln);
+              ho += ln;
+              havebag[ho] = 0;
+            }
+          }
+        } else {
+          nmiss++;
+          if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+          {
+            size_t ln = strlen(names[i]);
+            if (mo + ln < sizeof miss) {
+              memcpy(miss + mo, names[i], ln);
+              mo += ln;
+              miss[mo] = 0;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "FIELDMISS", miss);
+      var_set_str(vm, "FIELDHAVE", havebag);
+      var_set_str(vm, "FLDMISS", miss);
+      var_set_str(vm, "FLDHAVE", havebag);
+      var_set_num(vm, "FIELDMISS_N", nmiss);
+      var_set_num(vm, "FIELDHAVE_N", nhave);
+      var_set_num(vm, "FLDMISS_N", nmiss);
+      var_set_num(vm, "FLDHAVE_N", nhave);
+      var_set_num(vm, "HASFIELDANY_N", nhave);
+      var_set_num(vm, "NEEDFIELDANY_N", nname);
+      var_set_num(vm, "FIELDS_ANY_N", nname);
+      var_set_str(vm, "FIELD_ON", "*");
+      if (nhave > 0) {
+        var_set_num(vm, "LAST_N", 1);
+        vm->last_n = 1;
+        var_set_str(vm, "LAST", "1");
+        snprintf(vm->last_str, sizeof vm->last_str, "1");
+        var_set_num(vm, "OK", 1);
+      } else if (hard) {
+        char em[240];
+        snprintf(em, sizeof em,
+                 "NEEDFIELDANY miss line %d: need one of [%s] â CLASS FIELD Â· HASFIELDANY Â· LISTFIELDS",
+                 aln, miss[0] ? miss : "?");
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        fail_at(vm, L, em);
+        return -1;
+      } else {
+        char em[240];
+        var_set_num(vm, "LAST_N", 0);
+        vm->last_n = 0;
+        var_set_str(vm, "LAST", "0");
+        snprintf(vm->last_str, sizeof vm->last_str, "0");
+        snprintf(em, sizeof em,
+                 "HASFIELDANY miss (0/%d): need one of %s â NEEDFIELDANY Â· LISTFIELDS",
+                 nname, miss[0] ? miss : "?");
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", em);
+        var_set_str(vm, "ERR", em);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# %s dotted n=%d have=%d miss=%d\n",
+                hard ? "NEEDFIELDANY" : "HASFIELDANY", nname, nhave, nmiss);
+      bump(vm);
+      return 1;
+    }
+    /* classic Class|obj fieldâ¦ form */
+    snprintf(target, sizeof target, "%s", first);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "HASCLASS") || kw(&L->cur, "HASCLASSES") ||
+           kw(&L->cur, "HASMETHOD") || kw(&L->cur, "HASMETHODS") ||
+           kw(&L->cur, "HASMETHODANY") || kw(&L->cur, "NEEDMETHODS") ||
+           kw(&L->cur, "NEEDMETHODANY") || kw(&L->cur, "NEEDCLASSES") ||
+           kw(&L->cur, "HASFIELD") || kw(&L->cur, "HASFIELDS") ||
+           kw(&L->cur, "HASFIELDANY") || kw(&L->cur, "NEEDFIELDS") ||
+           kw(&L->cur, "NEEDFIELDANY") || kw(&L->cur, "LISTFIELDS") ||
+           kw(&L->cur, "LISTMETHODS") || kw(&L->cur, "LISTCLASSES") ||
+           kw(&L->cur, "LISTOBJS") || kw(&L->cur, "HASFORM") ||
+           kw(&L->cur, "HASOBJ")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0] &&
+                   strchr(vv->sval, '.') == NULL &&
+                   !strchr(vv->sval, '\n') && !strchr(vv->sval, ',') &&
+                   !strchr(vv->sval, ' ')) {
+          snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFIELDANY Class|obj fieldâ¦ â NEEDFIELDANY Cell alive energy");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFIELDANY_N", 0);
+      var_set_num(vm, "FIELDMISS_N", 0);
+      var_set_num(vm, "FIELDHAVE_N", 0);
+      var_set_num(vm, "FLDMISS_N", 0);
+      var_set_num(vm, "FLDHAVE_N", 0);
+      var_set_str(vm, "FIELDMISS", "");
+      var_set_str(vm, "FIELDHAVE", "");
+      var_set_str(vm, "FLDMISS", "");
+      var_set_str(vm, "FLDHAVE", "");
+      var_set_str(vm, "FIELD_ON", target);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFIELDANY: need fields â HASFIELDANY Cell alive ghost");
+      var_set_str(vm, "ERR", "HASFIELDANY: need fields â HASFIELDANY Cell alive ghost");
+      bump(vm);
+      return 1;
+    }
+    ob = oop_find_obj(vm, target);
+    if (ob)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, target);
+    for (i = 0; i < nname; i++) {
+      if (cd && oop_field_idx(cd, names[i]) >= 0) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "FIELDMISS", miss);
+    var_set_str(vm, "FIELDHAVE", havebag);
+    var_set_str(vm, "FLDMISS", miss);
+    var_set_str(vm, "FLDHAVE", havebag);
+    var_set_num(vm, "FIELDMISS_N", nmiss);
+    var_set_num(vm, "FIELDHAVE_N", nhave);
+    var_set_num(vm, "FLDMISS_N", nmiss);
+    var_set_num(vm, "FLDHAVE_N", nhave);
+    var_set_num(vm, "HASFIELDANY_N", nhave);
+    var_set_num(vm, "NEEDFIELDANY_N", nname);
+    var_set_num(vm, "FIELDS_ANY_N", nname);
+    var_set_str(vm, "FIELD_ON", target);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDFIELDANY miss line %d: need one of %s.%s â CLASS FIELD Â· HASFIELDANY Â· LISTFIELDS",
+               aln, target[0] ? target : "?", miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFIELDANY miss (0/%d) on %s: need one of %s â NEEDFIELDANY Â· LISTFIELDS",
+               nname, target[0] ? target : "?", miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDFIELDANY" : "HASFIELDANY", target, nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTFIELDS Class|obj â newline bag of field names.
+   * String-var expands (FIELD_ON / class name bags) Â· twin of LISTMETHODS. */
+  if (kw(&L->cur, "LISTFIELDS") || kw(&L->cur, "FIELDS") ||
+      kw(&L->cur, "FIELDLIST") || kw(&L->cur, "LISTF")) {
+    char a[48], bag[2048];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "LISTFIELDS Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text); lex_next(L);
+    } else {
+      char id[48];
+      Var *vv;
+      snprintf(id, sizeof id, "%s", L->cur.text);
+      lex_next(L);
+      if (oop_find_obj(vm, id) || oop_find_class(vm, id)) {
+        snprintf(a, sizeof a, "%s", id);
+      } else {
+        vv = var_get(vm, id, 0);
+        if (vv && vv->is_str && vv->sval[0])
+          snprintf(a, sizeof a, "%s", vv->sval);
+        else
+          snprintf(a, sizeof a, "%s", id);
+      }
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob) cd = &vm->classes[ob->class_idx];
+    else cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    if (cd) {
+      for (i = 0; i < cd->n_fields; i++) {
+        size_t ln = strlen(cd->fields[i].name);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, cd->fields[i].name, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFIELDS", bag);
+    var_set_str(vm, "FIELDS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFIELDS", n);
+    var_set_num(vm, "LISTFIELDS_N", n);
+    var_set_num(vm, "OK", cd ? 1 : 0);
+    if (!cd) {
+      var_set_str(vm, "LAST_ERR", "LISTFIELDS: unknown class/obj");
+      var_set_str(vm, "ERR", "LISTFIELDS: unknown class/obj");
+    }
+    bump(vm);
+    return 1;
+  }
+
+  /* FIELDINFO|DUMPFIELD|DESCRIBEFIELD [JSON] Class|obj field
+   * â field kind/default plate for agent SETF/NEW prep (twin of METHODINFO).
+   * Default bag: name/class/kind/has_def/default[/value if live obj].
+   * JSON â cubalc.field.v1. Soft OK=0 if class or field missing. */
+  if (kw(&L->cur, "FIELDINFO") || kw(&L->cur, "DUMPFIELD") ||
+      kw(&L->cur, "DESCRIBEFIELD") || kw(&L->cur, "FIELDDEF") ||
+      kw(&L->cur, "INSPECTFIELD") || kw(&L->cur, "FIELDMETA") ||
+      kw(&L->cur, "FIELDSCHEMA") || kw(&L->cur, "PROPINFO") ||
+      kw(&L->cur, "ATTRINFO") || kw(&L->cur, "MEMBERINFO")) {
+    char a[48], fname[48], bag[2048], defbuf[160], valbuf[160];
+    ClassDef *cd = NULL;
+    FieldDef *fd = NULL;
+    ObjInst *ob = NULL;
+    int fi = -1, as_json = 0, has_live = 0;
+    const char *kind;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "FIELDINFO [JSON] Class|obj field"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional FIELD|PROP keyword (not NAME â conflicts with field id) */
+    if (kw(&L->cur, "FIELD") || kw(&L->cur, "PROP") || kw(&L->cur, "ATTR") ||
+        kw(&L->cur, "MEMBER") || kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "FIELDINFO [JSON] Class|obj field"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) {
+      fi = oop_field_idx(cd, fname);
+      if (fi >= 0) fd = &cd->fields[fi];
+    }
+    bag[0] = 0;
+    defbuf[0] = 0;
+    valbuf[0] = 0;
+    if (!cd || !fd) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "FIELDINFO_N", 0);
+      var_set_num(vm, "HAS_DEF", 0);
+      var_set_num(vm, "IS_STR", 0);
+      var_set_str(vm, "FIELDINFO", "");
+      var_set_str(vm, "KIND", "");
+      var_set_str(vm, "DEFAULT", "");
+      var_set_str(vm, "FIELD", fname);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  !cd ? "FIELDINFO: unknown class/obj"
+                      : "FIELDINFO: unknown field");
+      var_set_str(vm, "ERR",
+                  !cd ? "FIELDINFO: unknown class/obj"
+                      : "FIELDINFO: unknown field");
+      bump(vm);
+      return 1;
+    }
+    if (fd->is_str) kind = "str";
+    else if (fd->has_def) kind = "num";
+    else kind = "num"; /* unset defaults act as numeric 0 on NEW */
+    if (fd->has_def) {
+      if (fd->is_str)
+        snprintf(defbuf, sizeof defbuf, "%s", fd->def_str);
+      else
+        snprintf(defbuf, sizeof defbuf, "%ld", fd->def_num);
+    }
+    if (ob && fi >= 0 && fi < CUBALC_MAX_FIELDS) {
+      has_live = 1;
+      if (ob->fis_str[fi])
+        snprintf(valbuf, sizeof valbuf, "%s", ob->fstr[fi]);
+      else
+        snprintf(valbuf, sizeof valbuf, "%ld", ob->fnum[fi]);
+    }
+    if (as_json) {
+      if (has_live) {
+        if (ob->fis_str[fi])
+          snprintf(bag, sizeof bag,
+                   "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                   "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                   "\"is_str\":%d,\"default\":\"%s\",\"value\":\"%s\"}",
+                   cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                   fd->is_str ? 1 : 0, defbuf, valbuf);
+        else
+          snprintf(bag, sizeof bag,
+                   "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                   "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                   "\"is_str\":%d,\"default\":%s,\"value\":%s}",
+                   cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                   fd->is_str ? 1 : 0,
+                   fd->has_def ? defbuf : "null",
+                   valbuf);
+      } else if (fd->is_str) {
+        snprintf(bag, sizeof bag,
+                 "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                 "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                 "\"is_str\":1,\"default\":\"%s\"}",
+                 cd->name, fd->name, kind, fd->has_def ? 1 : 0, defbuf);
+      } else {
+        snprintf(bag, sizeof bag,
+                 "{\"schema\":\"cubalc.field.v1\",\"class\":\"%s\","
+                 "\"name\":\"%s\",\"kind\":\"%s\",\"has_def\":%d,"
+                 "\"is_str\":0,\"default\":%s}",
+                 cd->name, fd->name, kind, fd->has_def ? 1 : 0,
+                 fd->has_def ? defbuf : "null");
+      }
+    } else {
+      if (has_live)
+        snprintf(bag, sizeof bag,
+                 "name:%s\nclass:%s\nkind:%s\nhas_def:%d\nis_str:%d\n"
+                 "default:%s\nvalue:%s",
+                 fd->name, cd->name, kind, fd->has_def ? 1 : 0,
+                 fd->is_str ? 1 : 0, defbuf, valbuf);
+      else
+        snprintf(bag, sizeof bag,
+                 "name:%s\nclass:%s\nkind:%s\nhas_def:%d\nis_str:%d\n"
+                 "default:%s",
+                 fd->name, cd->name, kind, fd->has_def ? 1 : 0,
+                 fd->is_str ? 1 : 0, defbuf);
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FIELDINFO", bag);
+    var_set_str(vm, "DUMPFIELD", bag);
+    var_set_str(vm, "DESCRIBEFIELD", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = fd->has_def ? 1 : 0;
+    var_set_num(vm, "LAST_N", fd->has_def ? 1 : 0);
+    var_set_num(vm, "FIELDINFO_N", 1);
+    var_set_num(vm, "HAS_DEF", fd->has_def ? 1 : 0);
+    var_set_num(vm, "IS_STR", fd->is_str ? 1 : 0);
+    var_set_str(vm, "FIELD", fd->name);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "KIND", kind);
+    var_set_str(vm, "DEFAULT", defbuf);
+    if (has_live) var_set_str(vm, "VALUE", valbuf);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* CLASSINFO|DUMPCLASS|DESCRIBECLASS [JSON] Class|obj
+   * â one-shot class schema plate for agents (fields + methods + live count).
+   * Default: key:value bag (LOOKUP-ready). JSON|ASJSON â cubalc.class.v1.
+   * Soft OK=0 if unknown. Usability: no LISTFIELDS+LISTMETHODS+COUNTOBJ glue. */
+  if (kw(&L->cur, "CLASSINFO") || kw(&L->cur, "DUMPCLASS") ||
+      kw(&L->cur, "DESCRIBECLASS") || kw(&L->cur, "CLASSSCHEMA") ||
+      kw(&L->cur, "INSPECTCLASS") || kw(&L->cur, "SCHEMACLASS") ||
+      kw(&L->cur, "CLASSMETA") || kw(&L->cur, "TYPEINFO") ||
+      kw(&L->cur, "DESCRIBE") || kw(&L->cur, "CLASSDEF")) {
+    char a[48], bag[4096], fbag[1024], mbag[1024];
+    ClassDef *cd = NULL;
+    ObjInst *ob;
+    size_t o = 0, fo = 0, mo = 0;
+    int i, n_live = 0, as_json = 0;
+    /* DESCRIBE alone may be too broad â keep as alias */
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "CLASSINFO [JSON] Class|obj"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    bag[0] = 0;
+    fbag[0] = 0;
+    mbag[0] = 0;
+    if (!cd) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NFIELDS", 0);
+      var_set_num(vm, "NMETHODS", 0);
+      var_set_num(vm, "CLASSINFO_N", 0);
+      var_set_num(vm, "CLASSINFO_LIVE", 0);
+      var_set_str(vm, "CLASSINFO", "");
+      var_set_str(vm, "DUMPCLASS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CLASSINFO: unknown class/obj");
+      var_set_str(vm, "ERR", "CLASSINFO: unknown class/obj");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < vm->n_objs; i++) {
+      if (vm->objs[i].live && vm->objs[i].class_idx >= 0 &&
+          vm->objs[i].class_idx < vm->n_classes &&
+          &vm->classes[vm->objs[i].class_idx] == cd)
+        n_live++;
+    }
+    /* field/method name bags (comma-joined for compact plate) */
+    for (i = 0; i < cd->n_fields; i++) {
+      size_t ln = strlen(cd->fields[i].name);
+      if (i > 0 && fo + 1 < sizeof fbag) fbag[fo++] = ',';
+      if (fo + ln < sizeof fbag) {
+        memcpy(fbag + fo, cd->fields[i].name, ln);
+        fo += ln;
+      }
+      fbag[fo] = 0;
+    }
+    for (i = 0; i < cd->n_methods; i++) {
+      size_t ln = strlen(cd->methods[i].name);
+      if (i > 0 && mo + 1 < sizeof mbag) mbag[mo++] = ',';
+      if (mo + ln < sizeof mbag) {
+        memcpy(mbag + mo, cd->methods[i].name, ln);
+        mo += ln;
+      }
+      mbag[mo] = 0;
+    }
+    if (as_json) {
+      {
+        const char *parent_name = "";
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes)
+          parent_name = vm->classes[cd->parent_idx].name;
+        o = (size_t)snprintf(
+            bag, sizeof bag,
+            "{\"schema\":\"cubalc.class.v1\",\"name\":\"%s\",\"role\":\"%s\","
+            "\"parent\":\"%s\",\"n_fields\":%d,\"n_methods\":%d,\"live\":%d,\"fields\":[",
+            cd->name, cd->role[0] ? cd->role : "", parent_name,
+            cd->n_fields, cd->n_methods, n_live);
+      }
+      for (i = 0; i < cd->n_fields && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
+                              cd->fields[i].name);
+      }
+      if (o + 16 < sizeof bag)
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "],\"methods\":[");
+      for (i = 0; i < cd->n_methods && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
+                              cd->methods[i].name);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      {
+        const char *parent_name = "";
+        if (cd->parent_idx >= 0 && cd->parent_idx < vm->n_classes)
+          parent_name = vm->classes[cd->parent_idx].name;
+        o = (size_t)snprintf(
+            bag, sizeof bag,
+            "name:%s\nrole:%s\nparent:%s\nn_fields:%d\nn_methods:%d\nlive:%d\n"
+            "fields:%s\nmethods:%s",
+            cd->name, cd->role[0] ? cd->role : "", parent_name,
+            cd->n_fields, cd->n_methods, n_live, fbag, mbag);
+        if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+        var_set_str(vm, "BASE", parent_name);
+        var_set_str(vm, "PARENTCLASS", parent_name);
+        var_set_num(vm, "HASPARENT_N", parent_name[0] ? 1 : 0);
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "CLASSINFO", bag);
+    var_set_str(vm, "DUMPCLASS", bag);
+    var_set_str(vm, "DESCRIBECLASS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = cd->n_fields;
+    var_set_num(vm, "LAST_N", cd->n_fields);
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "NMETHODS", cd->n_methods);
+    var_set_num(vm, "CLASSINFO_N", cd->n_fields);
+    var_set_num(vm, "CLASSINFO_LIVE", n_live);
+    var_set_num(vm, "CLASSINFO_METHODS", cd->n_methods);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "FIELDS", fbag);
+    var_set_str(vm, "METHODS", mbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* METHODINFO|DUMPMETHOD|DESCRIBEMETHOD [JSON] Class|obj method
+   * â method arity/params plate for agent SEND prep.
+   * Default bag: name/class/n_params/params. JSON â cubalc.method.v1.
+   * Soft OK=0 if class or method missing. Complements HASMETHOD + CLASSINFO. */
+  if (kw(&L->cur, "METHODINFO") || kw(&L->cur, "DUMPMETHOD") ||
+      kw(&L->cur, "DESCRIBEMETHOD") || kw(&L->cur, "METHINFO") ||
+      kw(&L->cur, "INSPECTMETHOD") || kw(&L->cur, "METHODMETA") ||
+      kw(&L->cur, "ARITY") || kw(&L->cur, "METHODDEF") ||
+      kw(&L->cur, "METHODSCHEMA") || kw(&L->cur, "PARAMINFO")) {
+    char a[48], mname[48], bag[2048], pbag[512];
+    ClassDef *cd = NULL;
+    MethodDef *md = NULL;
+    ObjInst *ob;
+    size_t o = 0, po = 0;
+    int i, as_json = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind != TK_IDENT && L->cur.kind != TK_STR) {
+      fail(vm, "METHODINFO [JSON] Class|obj method"); return -1;
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(a, sizeof a, "%s", vm->last_str);
+      else
+        snprintf(a, sizeof a, "%s", L->cur.text);
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional METHOD keyword before name */
+    if (kw(&L->cur, "METHOD") || kw(&L->cur, "METH") || kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(mname, sizeof mname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(mname, sizeof mname, "%s", vm->last_str);
+      else
+        snprintf(mname, sizeof mname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "METHODINFO [JSON] Class|obj method"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, a);
+    if (ob && ob->class_idx >= 0 && ob->class_idx < vm->n_classes)
+      cd = &vm->classes[ob->class_idx];
+    else
+      cd = oop_find_class(vm, a);
+    if (cd) md = oop_find_method(cd, mname);
+    bag[0] = 0;
+    pbag[0] = 0;
+    if (!cd || !md) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NPARAMS", 0);
+      var_set_num(vm, "METHODINFO_N", 0);
+      var_set_num(vm, "ARITY", 0);
+      var_set_str(vm, "METHODINFO", "");
+      var_set_str(vm, "PARAMS", "");
+      var_set_str(vm, "METHOD", mname);
+      if (cd) var_set_str(vm, "CLASS", cd->name);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR",
+                  !cd ? "METHODINFO: unknown class/obj"
+                      : "METHODINFO: unknown method");
+      var_set_str(vm, "ERR",
+                  !cd ? "METHODINFO: unknown class/obj"
+                      : "METHODINFO: unknown method");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < md->n_params; i++) {
+      size_t ln = strlen(md->params[i]);
+      if (i > 0 && po + 1 < sizeof pbag) pbag[po++] = ',';
+      if (po + ln < sizeof pbag) {
+        memcpy(pbag + po, md->params[i], ln);
+        po += ln;
+      }
+      pbag[po] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.method.v1\",\"class\":\"%s\",\"name\":\"%s\","
+          "\"n_params\":%d,\"params\":[",
+          cd->name, md->name, md->n_params);
+      for (i = 0; i < md->n_params && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"", md->params[i]);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nclass:%s\nn_params:%d\nparams:%s",
+          md->name, cd->name, md->n_params, pbag);
+      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "METHODINFO", bag);
+    var_set_str(vm, "DUMPMETHOD", bag);
+    var_set_str(vm, "DESCRIBEMETHOD", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = md->n_params;
+    var_set_num(vm, "LAST_N", md->n_params);
+    var_set_num(vm, "NPARAMS", md->n_params);
+    var_set_num(vm, "METHODINFO_N", md->n_params);
+    var_set_num(vm, "ARITY", md->n_params);
+    var_set_str(vm, "METHOD", md->name);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "PARAMS", pbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* FNINFO|DUMPFN|DESCRIBEFN [JSON] name
+   * â FN arity/params plate for agent CALL prep (twin of METHODINFO for SEND).
+   * Default bag: name/n_params/params. JSON â cubalc.fn.v1.
+   * Soft OK=0 if FN missing. Sets NPARAMS/ARITY/FNINFO_N, PARAMS, FN. */
+  if (kw(&L->cur, "FNINFO") || kw(&L->cur, "DUMPFN") ||
+      kw(&L->cur, "DESCRIBEFN") || kw(&L->cur, "FUNCINFO") ||
+      kw(&L->cur, "INSPECTFN") || kw(&L->cur, "FNMETA") ||
+      kw(&L->cur, "FNDEF") || kw(&L->cur, "FNSCHEMA") ||
+      kw(&L->cur, "FUNCTIONINFO") || kw(&L->cur, "FNARITY") ||
+      kw(&L->cur, "DESCRIBEFUNC") || kw(&L->cur, "DUMPFUNC")) {
+    char fname[48], bag[2048], pbag[512];
+    FnDef *fn = NULL;
+    size_t o = 0, po = 0;
+    int i, as_json = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* optional FN|FUNC keyword before name (not NAME â conflicts with var id) */
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "FNINFO [JSON] name"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    for (i = 0; i < vm->n_fns; i++) {
+      if (strcmp(vm->fns[i].name, fname) == 0) {
+        fn = &vm->fns[i];
+        break;
+      }
+    }
+    bag[0] = 0;
+    pbag[0] = 0;
+    if (!fn) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NPARAMS", 0);
+      var_set_num(vm, "FNINFO_N", 0);
+      var_set_num(vm, "ARITY", 0);
+      var_set_str(vm, "FNINFO", "");
+      var_set_str(vm, "PARAMS", "");
+      var_set_str(vm, "FN", fname);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "FNINFO: unknown FN");
+      var_set_str(vm, "ERR", "FNINFO: unknown FN");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < fn->n_params; i++) {
+      size_t ln = strlen(fn->params[i]);
+      if (i > 0 && po + 1 < sizeof pbag) pbag[po++] = ',';
+      if (po + ln < sizeof pbag) {
+        memcpy(pbag + po, fn->params[i], ln);
+        po += ln;
+      }
+      pbag[po] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.fn.v1\",\"name\":\"%s\","
+          "\"n_params\":%d,\"params\":[",
+          fn->name, fn->n_params);
+      for (i = 0; i < fn->n_params && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"", fn->params[i]);
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = ']';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nn_params:%d\nparams:%s",
+          fn->name, fn->n_params, pbag);
+      if (o >= sizeof bag) bag[sizeof bag - 1] = 0;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FNINFO", bag);
+    var_set_str(vm, "DUMPFN", bag);
+    var_set_str(vm, "DESCRIBEFN", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = fn->n_params;
+    var_set_num(vm, "LAST_N", fn->n_params);
+    var_set_num(vm, "NPARAMS", fn->n_params);
+    var_set_num(vm, "FNINFO_N", fn->n_params);
+    var_set_num(vm, "ARITY", fn->n_params);
+    var_set_str(vm, "FN", fn->name);
+    var_set_str(vm, "PARAMS", pbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* LISTFNS|FUNCTIONS â newline bag of defined FN names for agent discovery.
+   * LAST_N / NFNS = count. Complements FNINFO (per-FN arity) and LISTMETHODS. */
+  if (kw(&L->cur, "LISTFNS") || kw(&L->cur, "FUNCTIONS") ||
+      kw(&L->cur, "LISTFUNCS") || kw(&L->cur, "FUNCS") ||
+      kw(&L->cur, "FNLIST") || kw(&L->cur, "LISTFUNCTIONS") ||
+      kw(&L->cur, "FNS") || kw(&L->cur, "DEFS")) {
+    char bag[4096];
+    size_t o = 0;
+    int i, n = 0;
+    lex_next(L);
+    bag[0] = 0;
+    for (i = 0; i < vm->n_fns; i++) {
+      size_t ln = strlen(vm->fns[i].name);
+      if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+      if (o + ln < sizeof bag) {
+        memcpy(bag + o, vm->fns[i].name, ln);
+        o += ln;
+      }
+      bag[o] = 0;
+      n++;
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFNS", bag);
+    var_set_str(vm, "FUNCTIONS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFNS", n);
+    var_set_num(vm, "LISTFNS_N", n);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFN|HASFUNC name â soft 0|1 probe before CALL.
+   * Name may be IDENT, "string", or string-var. Usability: IF without fatal. */
+  if (kw(&L->cur, "HASFN") || kw(&L->cur, "HASFUNC") ||
+      kw(&L->cur, "HASFUNCTION") || kw(&L->cur, "FN?") ||
+      kw(&L->cur, "FUNC?") || kw(&L->cur, "FNEXISTS") ||
+      kw(&L->cur, "FUNCEXISTS") || kw(&L->cur, "DEFINEDFN") ||
+      kw(&L->cur, "ISFN") || kw(&L->cur, "CANCALLFN")) {
+    char fname[48];
+    int i, hit = 0;
+    lex_next(L);
+    /* optional FN|FUNC keyword before name (not NAME â conflicts with var id) */
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    if (L->cur.kind == TK_STR) {
+      snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(fname, sizeof fname, "%s", vv->sval);
+      else if (strcmp(L->cur.text, "LAST") == 0)
+        snprintf(fname, sizeof fname, "%s", vm->last_str);
+      else
+        snprintf(fname, sizeof fname, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail(vm, "HASFN name"); return -1;
+    }
+    for (i = 0; i < vm->n_fns; i++) {
+      if (strcmp(vm->fns[i].name, fname) == 0) {
+        hit = 1;
+        break;
+      }
+    }
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    {
+      char nb[8];
+      snprintf(nb, sizeof nb, "%d", hit);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb);
+    }
+    var_set_num(vm, "HASFN_N", hit);
+    var_set_str(vm, "FN", fname);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+  /* HASFNS|NEEDFNS nameâ¦ â multi FN capability gate (all-or-FNMISS).
+   * Soft: LAST_N 0|1 Â· FNMISS bag Â· NEEDFNS fail-fast first miss.
+   * Usability: agent CALL contracts without NÃ HASFN glue Â· bag/CSV/idents.
+   * Twin of HASOBJS for FN plane Â· dual of single HASFN. */
+  if (kw(&L->cur, "HASFNS") || kw(&L->cur, "HAS_FNS") ||
+      kw(&L->cur, "ALLFNS") || kw(&L->cur, "FNSOK") ||
+      kw(&L->cur, "HASFUNCS") || kw(&L->cur, "ALLFUNCS") ||
+      kw(&L->cur, "NEEDFNS") || kw(&L->cur, "NEED_FNS") ||
+      kw(&L->cur, "REQUIREFNS") || kw(&L->cur, "MUSTFNS") ||
+      kw(&L->cur, "NEEDFUNCS") || kw(&L->cur, "REQUIREFUNCS")) {
+    int hard = kw(&L->cur, "NEEDFNS") || kw(&L->cur, "NEED_FNS") ||
+               kw(&L->cur, "REQUIREFNS") || kw(&L->cur, "MUSTFNS") ||
+               kw(&L->cur, "NEEDFUNCS") || kw(&L->cur, "REQUIREFUNCS");
+    char names[32][48];
+    char miss[1024];
+    int nname = 0, nmiss = 0, i, j, aln = L->cur.line;
+    size_t mo = 0;
+    lex_next(L);
+    miss[0] = 0;
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "FN") ||
+           kw(&L->cur, "HASFN") || kw(&L->cur, "HASFNS") || kw(&L->cur, "NEEDFNS") ||
+           kw(&L->cur, "HASFNANY") || kw(&L->cur, "NEEDFNANY") ||
+           kw(&L->cur, "LISTFNS") || kw(&L->cur, "CALL") || kw(&L->cur, "FNINFO") ||
+           kw(&L->cur, "SEND") || kw(&L->cur, "GETF") || kw(&L->cur, "SETF")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          int already = 0;
+          for (j = 0; j < vm->n_fns; j++) {
+            if (strcmp(vm->fns[j].name, L->cur.text) == 0) {
+              already = 1;
+              break;
+            }
+          }
+          if (!already) {
+            snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+            lex_next(L);
+          } else {
+            snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+            lex_next(L);
+          }
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFNS nameâ¦ â NEEDFNS add greet Â· HASFNS bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFNS_N", 0);
+      var_set_num(vm, "FNMISS_N", 0);
+      var_set_str(vm, "FNMISS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFNS: need names â HASFNS add greet");
+      var_set_str(vm, "ERR", "HASFNS: need names â HASFNS add greet");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      int hit = 0;
+      for (j = 0; j < vm->n_fns; j++) {
+        if (strcmp(vm->fns[j].name, names[i]) == 0) {
+          hit = 1;
+          break;
+        }
+      }
+      if (hit)
+        continue;
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(names[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, names[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+      if (hard) {
+        char em[220];
+        snprintf(em, sizeof em,
+                 "NEEDFNS miss line %d: '%s' (+%d more?) â DEFINE/INCLUDE Â· HASFN Â· LISTFNS",
+                 aln, names[i], nname - i - 1);
+        fail_at(vm, L, em);
+        return -1;
+      }
+    }
+    var_set_str(vm, "FNMISS", miss);
+    var_set_num(vm, "FNMISS_N", nmiss);
+    var_set_num(vm, "HASFNS_N", nname - nmiss);
+    var_set_num(vm, "NEEDFNS_N", nname);
+    var_set_num(vm, "FNS_N", nname);
+    if (nmiss == 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else {
+      char em[220];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFNS miss (%d/%d): %s â DEFINE/INCLUDE Â· NEEDFNS Â· LISTFNS",
+               nmiss, nname, miss);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d miss=%d\n",
+              hard ? "NEEDFNS" : "HASFNS", nname, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFNANY|NEEDFNANY nameâ¦ â multi FN any-of gate (HASFNS twin).
+   * Soft: LAST_N 1 if any listed FN defined Â· FNHAVE bag Â· FNMISS bag.
+   * NEEDFNANY fail-fast if none of the listed FNs exist.
+   * Usability: optional CALL plugin FN OR without NÃ HASFN IF glue. */
+  if (kw(&L->cur, "HASFNANY") || kw(&L->cur, "HAS_FN_ANY") ||
+      kw(&L->cur, "ANYFN") || kw(&L->cur, "FNANY") ||
+      kw(&L->cur, "HASANYFN") || kw(&L->cur, "ANYFUNC") ||
+      kw(&L->cur, "NEEDFNANY") || kw(&L->cur, "NEED_FN_ANY") ||
+      kw(&L->cur, "REQUIREFNANY") || kw(&L->cur, "MUSTFNANY") ||
+      kw(&L->cur, "NEEDFUNCANY") || kw(&L->cur, "REQUIREFUNCANY")) {
+    int hard = kw(&L->cur, "NEEDFNANY") || kw(&L->cur, "NEED_FN_ANY") ||
+               kw(&L->cur, "REQUIREFNANY") || kw(&L->cur, "MUSTFNANY") ||
+               kw(&L->cur, "NEEDFUNCANY") || kw(&L->cur, "REQUIREFUNCANY");
+    char names[32][48];
+    char miss[1024], havebag[1024];
+    int nname = 0, nmiss = 0, nhave = 0, i, j, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    if (kw(&L->cur, "FN") || kw(&L->cur, "FUNC") || kw(&L->cur, "FUNCTION") ||
+        kw(&L->cur, "OF"))
+      lex_next(L);
+    while (nname < 32 &&
+           (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT)) {
+      if (L->cur.kind == TK_IDENT &&
+          (kw(&L->cur, "ASSERT") || kw(&L->cur, "LET") || kw(&L->cur, "PRINT") ||
+           kw(&L->cur, "REQUIRE") || kw(&L->cur, "END") ||
+           kw(&L->cur, "IF") || kw(&L->cur, "ELSE") || kw(&L->cur, "ELIF") ||
+           kw(&L->cur, "PASS") || kw(&L->cur, "FAIL") || kw(&L->cur, "INCLUDE") ||
+           kw(&L->cur, "SYS") || kw(&L->cur, "HELP") || kw(&L->cur, "CLEAR_ERR") ||
+           kw(&L->cur, "NOTE") || kw(&L->cur, "EXIT") || kw(&L->cur, "DEFAULT") ||
+           kw(&L->cur, "VERSION") || kw(&L->cur, "STATUS") || kw(&L->cur, "FOR") ||
+           kw(&L->cur, "WHILE") || kw(&L->cur, "LOOP") || kw(&L->cur, "EACH") ||
+           kw(&L->cur, "CUBE") || kw(&L->cur, "PLUG") || kw(&L->cur, "HOLD_FLASH") ||
+           kw(&L->cur, "CLASS") || kw(&L->cur, "NEW") || kw(&L->cur, "FN") ||
+           kw(&L->cur, "HASFN") || kw(&L->cur, "HASFNS") || kw(&L->cur, "NEEDFNS") ||
+           kw(&L->cur, "HASFNANY") || kw(&L->cur, "NEEDFNANY") ||
+           kw(&L->cur, "LISTFNS") || kw(&L->cur, "CALL") || kw(&L->cur, "FNINFO") ||
+           kw(&L->cur, "SEND") || kw(&L->cur, "GETF") || kw(&L->cur, "SETF")))
+        break;
+      if (L->cur.kind == TK_STR) {
+        const char *s = L->cur.text;
+        if (strchr(s, '\n') || strchr(s, ',') || strchr(s, ' ')) {
+          const char *p = s;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+          continue;
+        }
+        snprintf(names[nname++], sizeof names[0], "%s", s);
+        lex_next(L);
+      } else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && vv->is_str && vv->sval[0] &&
+            (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+             strchr(vv->sval, ' '))) {
+          const char *p = vv->sval;
+          while (*p && nname < 32) {
+            char tok[48];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != ':' && tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (tok[0])
+              snprintf(names[nname++], sizeof names[0], "%s", tok);
+          }
+          lex_next(L);
+        } else if (vv && vv->is_str && vv->sval[0]) {
+          int already = 0;
+          for (j = 0; j < vm->n_fns; j++) {
+            if (strcmp(vm->fns[j].name, L->cur.text) == 0) {
+              already = 1;
+              break;
+            }
+          }
+          if (!already) {
+            snprintf(names[nname++], sizeof names[0], "%s", vv->sval);
+            lex_next(L);
+          } else {
+            snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+            lex_next(L);
+          }
+        } else if (strcmp(L->cur.text, "LAST") == 0) {
+          snprintf(names[nname++], sizeof names[0], "%s", vm->last_str);
+          lex_next(L);
+        } else {
+          snprintf(names[nname++], sizeof names[0], "%s", L->cur.text);
+          lex_next(L);
+        }
+      }
+    }
+    if (nname == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDFNANY nameâ¦ â NEEDFNANY add ghost Â· HASFNANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASFNANY_N", 0);
+      var_set_num(vm, "FNMISS_N", 0);
+      var_set_num(vm, "FNHAVE_N", 0);
+      var_set_str(vm, "FNMISS", "");
+      var_set_str(vm, "FNHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASFNANY: need names â HASFNANY add ghost");
+      var_set_str(vm, "ERR", "HASFNANY: need names â HASFNANY add ghost");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nname; i++) {
+      int hit = 0;
+      for (j = 0; j < vm->n_fns; j++) {
+        if (strcmp(vm->fns[j].name, names[i]) == 0) {
+          hit = 1;
+          break;
+        }
+      }
+      if (hit) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, names[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+      } else {
+        nmiss++;
+        if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+        {
+          size_t ln = strlen(names[i]);
+          if (mo + ln < sizeof miss) {
+            memcpy(miss + mo, names[i], ln);
+            mo += ln;
+            miss[mo] = 0;
+          }
+        }
+      }
+    }
+    var_set_str(vm, "FNMISS", miss);
+    var_set_str(vm, "FNHAVE", havebag);
+    var_set_num(vm, "FNMISS_N", nmiss);
+    var_set_num(vm, "FNHAVE_N", nhave);
+    var_set_num(vm, "HASFNANY_N", nhave);
+    var_set_num(vm, "NEEDFNANY_N", nname);
+    var_set_num(vm, "FNS_ANY_N", nname);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[240];
+      snprintf(em, sizeof em,
+               "NEEDFNANY miss line %d: need one of [%s] â DEFINE/INCLUDE Â· HASFNANY Â· LISTFNS",
+               aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASFNANY miss (0/%d): need one of %s â NEEDFNANY Â· DEFINE",
+               nname, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# %s n=%d have=%d miss=%d\n",
+              hard ? "NEEDFNANY" : "HASFNANY", nname, nhave, nmiss);
+    bump(vm);
+    return 1;
+  }
+
+
+  /* DUMPOBJ|INSPECT|OBJDUMP|DUMPF obj â field:value bag of live object state.
+   * Complements LISTFIELDS (names only): one-shot snapshot for agents without
+   * EACH+GETF. LAST = newline bag field:val (LOOKUP/KVGET ready); LAST_N =
+   * NFIELDS count. Soft OK=0 if missing. Optional JSON flag â cubalc.obj.v1. */
+  if (kw(&L->cur, "DUMPOBJ") || kw(&L->cur, "INSPECT") ||
+      kw(&L->cur, "OBJDUMP") || kw(&L->cur, "DUMPF") ||
+      kw(&L->cur, "INSPECTOBJ") || kw(&L->cur, "OBJINSPECT") ||
+      kw(&L->cur, "SHOWOBJ") || kw(&L->cur, "DUMPFIELDS")) {
+    char oname[48], bag[4096];
+    ObjInst *ob;
+    ClassDef *cd;
+    size_t o = 0;
+    int i, n = 0, as_json = 0;
+    lex_next(L);
+    /* optional JSON|ASJSON before or after name */
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    if (L->cur.kind == TK_STR) {
+      snprintf(oname, sizeof oname, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      if (strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(oname, sizeof oname, "%s", vm->last_str);
+        lex_next(L);
+      } else if (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+                 kw(&L->cur, "TOJSON") || kw(&L->cur, "J")) {
+        as_json = 1;
+        lex_next(L);
+        if (L->cur.kind == TK_STR) {
+          snprintf(oname, sizeof oname, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(oname, sizeof oname, "%s", vm->last_str);
+          else
+            snprintf(oname, sizeof oname, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail(vm, "DUMPOBJ name"); return -1;
+        }
+      } else {
+        snprintf(oname, sizeof oname, "%s", L->cur.text);
+        lex_next(L);
+      }
+    } else {
+      fail(vm, "DUMPOBJ name"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NFIELDS", 0);
+      var_set_num(vm, "DUMPOBJ_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "DUMPOBJ: unknown object");
+      var_set_str(vm, "ERR", "DUMPOBJ: unknown object");
+      bump(vm);
+      return 1;
+    }
+    if (ob->class_idx < 0 || ob->class_idx >= vm->n_classes) {
+      fail(vm, "DUMPOBJ bad class"); return -1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    bag[0] = 0;
+    if (as_json) {
+      /* compact cubalc.obj.v1 â fields as object; numbers bare, strings quoted */
+      o = (size_t)snprintf(bag, sizeof bag,
+                           "{\"schema\":\"cubalc.obj.v1\",\"name\":\"%s\","
+                           "\"class\":\"%s\",\"n\":%d,\"fields\":{",
+                           oname, cd->name, cd->n_fields);
+      for (i = 0; i < cd->n_fields && o + 8 < sizeof bag; i++) {
+        FieldDef *fd = &cd->fields[i];
+        char vb[160];
+        size_t need;
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        if (ob->fis_str[i]) {
+          /* escape " \ and control minimally for plate safety */
+          size_t vi, vo = 0;
+          vb[vo++] = '"';
+          for (vi = 0; ob->fstr[i][vi] && vo + 3 < sizeof vb; vi++) {
+            char c = ob->fstr[i][vi];
+            if (c == '"' || c == '\\') { vb[vo++] = '\\'; vb[vo++] = c; }
+            else if ((unsigned char)c < 0x20) { /* skip controls */ }
+            else vb[vo++] = c;
+          }
+          vb[vo++] = '"';
+          vb[vo] = 0;
+        } else {
+          snprintf(vb, sizeof vb, "%ld", ob->fnum[i]);
+        }
+        need = strlen(fd->name) + 3 + strlen(vb);
+        if (o + need >= sizeof bag) break;
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\":%s", fd->name,
+                              vb);
+        n++;
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = '}';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      /* field:value bag â LOOKUP/KVGET/TOPKEY ready */
+      for (i = 0; i < cd->n_fields; i++) {
+        FieldDef *fd = &cd->fields[i];
+        char line[192];
+        size_t ln;
+        if (ob->fis_str[i])
+          snprintf(line, sizeof line, "%s:%s", fd->name, ob->fstr[i]);
+        else
+          snprintf(line, sizeof line, "%s:%ld", fd->name, ob->fnum[i]);
+        ln = strlen(line);
+        if (n > 0 && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, line, ln);
+          o += ln;
+        }
+        bag[o] = 0;
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "DUMPOBJ", bag);
+    var_set_str(vm, "INSPECT", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFIELDS", n);
+    var_set_num(vm, "DUMPOBJ_N", n);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* OBJINFO|DESCRIBEOBJ|OBJMETA [JSON] obj
+   * â live object plate: name/class/methods + field values in one shot.
+   * Complements DUMPOBJ (fields only) + CLASSINFO/LISTMETHODS (schema only).
+   * Soft OK=0 if missing. JSON â cubalc.objinfo.v1. */
+  if (kw(&L->cur, "OBJINFO") || kw(&L->cur, "DESCRIBEOBJ") ||
+      kw(&L->cur, "OBJMETA") || kw(&L->cur, "OBJSCHEMA") ||
+      kw(&L->cur, "OBJECTINFO") || kw(&L->cur, "INFOOBJ") ||
+      kw(&L->cur, "SUMMARYOBJ") || kw(&L->cur, "OBJSUMMARY") ||
+      kw(&L->cur, "SHOWOBJINFO") || kw(&L->cur, "EXPLAINOBJ")) {
+    char oname[48], bag[4096], mbag[1024];
+    ObjInst *ob;
+    ClassDef *cd;
+    size_t o = 0, mo = 0;
+    int i, n = 0, as_json = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    /* Use oop_resolve_obj_name: NEW sets var(name)=Class â do not expand that. */
+    if (oop_resolve_obj_name(vm, L, oname, sizeof oname) < 0) {
+      fail(vm, "OBJINFO [JSON] name"); return -1;
+    }
+    if (L->cur.kind == TK_IDENT &&
+        (kw(&L->cur, "JSON") || kw(&L->cur, "ASJSON") ||
+         kw(&L->cur, "TOJSON") || kw(&L->cur, "J"))) {
+      as_json = 1;
+      lex_next(L);
+    }
+    ob = oop_find_obj(vm, oname);
+    if (!ob || ob->class_idx < 0 || ob->class_idx >= vm->n_classes) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "NFIELDS", 0);
+      var_set_num(vm, "NMETHODS", 0);
+      var_set_num(vm, "OBJINFO_N", 0);
+      var_set_str(vm, "OBJINFO", "");
+      var_set_str(vm, "METHODS", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "OBJINFO: unknown object");
+      var_set_str(vm, "ERR", "OBJINFO: unknown object");
+      bump(vm);
+      return 1;
+    }
+    cd = &vm->classes[ob->class_idx];
+    bag[0] = 0;
+    mbag[0] = 0;
+    for (i = 0; i < cd->n_methods; i++) {
+      size_t ln = strlen(cd->methods[i].name);
+      if (i > 0 && mo + 1 < sizeof mbag) mbag[mo++] = ',';
+      if (mo + ln < sizeof mbag) {
+        memcpy(mbag + mo, cd->methods[i].name, ln);
+        mo += ln;
+      }
+      mbag[mo] = 0;
+    }
+    if (as_json) {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "{\"schema\":\"cubalc.objinfo.v1\",\"name\":\"%s\",\"class\":\"%s\","
+          "\"n_fields\":%d,\"n_methods\":%d,\"methods\":[",
+          oname, cd->name, cd->n_fields, cd->n_methods);
+      for (i = 0; i < cd->n_methods && o + 8 < sizeof bag; i++) {
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\"",
+                              cd->methods[i].name);
+      }
+      if (o + 16 < sizeof bag)
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "],\"fields\":{");
+      for (i = 0; i < cd->n_fields && o + 8 < sizeof bag; i++) {
+        FieldDef *fd = &cd->fields[i];
+        char vb[160];
+        size_t need;
+        if (i > 0 && o + 1 < sizeof bag) bag[o++] = ',';
+        if (ob->fis_str[i]) {
+          size_t vi, vo = 0;
+          vb[vo++] = '"';
+          for (vi = 0; ob->fstr[i][vi] && vo + 3 < sizeof vb; vi++) {
+            char c = ob->fstr[i][vi];
+            if (c == '"' || c == '\\') { vb[vo++] = '\\'; vb[vo++] = c; }
+            else if ((unsigned char)c < 0x20) { /* skip */ }
+            else vb[vo++] = c;
+          }
+          vb[vo++] = '"';
+          vb[vo] = 0;
+        } else {
+          snprintf(vb, sizeof vb, "%ld", ob->fnum[i]);
+        }
+        need = strlen(fd->name) + 3 + strlen(vb);
+        if (o + need >= sizeof bag) break;
+        o += (size_t)snprintf(bag + o, sizeof bag - o, "\"%s\":%s", fd->name,
+                              vb);
+        n++;
+      }
+      if (o + 3 < sizeof bag) {
+        bag[o++] = '}';
+        bag[o++] = '}';
+        bag[o] = 0;
+      }
+    } else {
+      o = (size_t)snprintf(
+          bag, sizeof bag,
+          "name:%s\nclass:%s\nn_fields:%d\nn_methods:%d\nmethods:%s",
+          oname, cd->name, cd->n_fields, cd->n_methods, mbag);
+      if (o >= sizeof bag) o = sizeof bag - 1;
+      for (i = 0; i < cd->n_fields; i++) {
+        FieldDef *fd = &cd->fields[i];
+        char line[192];
+        size_t ln;
+        if (ob->fis_str[i])
+          snprintf(line, sizeof line, "\n%s:%s", fd->name, ob->fstr[i]);
+        else
+          snprintf(line, sizeof line, "\n%s:%ld", fd->name, ob->fnum[i]);
+        ln = strlen(line);
+        if (o + ln < sizeof bag) {
+          memcpy(bag + o, line, ln);
+          o += ln;
+          bag[o] = 0;
+        }
+        n++;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "OBJINFO", bag);
+    var_set_str(vm, "DESCRIBEOBJ", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "NFIELDS", cd->n_fields);
+    var_set_num(vm, "NMETHODS", cd->n_methods);
+    var_set_num(vm, "OBJINFO_N", n);
+    var_set_str(vm, "OBJECT", oname);
+    var_set_str(vm, "CLASS", cd->name);
+    var_set_str(vm, "METHODS", mbag);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+
+  /* plane ops_flow */
+  return 0;
+  return 0;
+}

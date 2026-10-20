@@ -1,0 +1,36 @@
+{
+  "schema": "cubalc.ceilings.v1",
+  "ts": 1792537656.667725,
+  "iso": "2026-10-20T23:07:36Z",
+  "law": "hold_ceilings;anti_bloat;DO_NOT_AMALGAMATE_CORE",
+  "lines": {
+    "lang_ops_flow": 6997,
+    "lang_ops_core": 87,
+    "lang_ops_smx": 10,
+    "cubalc_main": 9281,
+    "lang_ops_dual": 9969,
+    "lang_ops_cell": 9926,
+    "cubalc_hostops": 9984,
+    "cubalc_quantum": 388,
+    "cubalc_dim5": 216,
+    "cubalc_relativity": 245,
+    "cubalc_chaos": 239,
+    "cubalc_science_loop": 514
+  },
+  "caps": {
+    "lang_ops_core": 200,
+    "lang_ops_smx": 50,
+    "cubalc_quantum": 500,
+    "cubalc_dim5": 300,
+    "cubalc_relativity": 300,
+    "cubalc_chaos": 300,
+    "cubalc_science_loop": 600,
+    "lang_ops_flow": 7000,
+    "cubalc_main": 10000,
+    "lang_ops_dual": 10000,
+    "lang_ops_cell": 10000,
+    "cubalc_hostops": 10000
+  },
+  "ok": true,
+  "creed": "Cube is SoT. Free energy. Pure science. Zero bloat."
+}

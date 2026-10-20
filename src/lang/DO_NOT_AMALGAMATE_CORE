@@ -1,0 +1,6 @@
+LAW: lang_ops_core.c and lang_ops_smx.c are THIN dispatchers only.
+Never paste monolit bodies back. Shards: lang_ops_core_*.c / lang_ops_smx_*.c
+Monolit bak lives only under /tmp/*.monolit.bak — not in tree.
+If core > 200 lines or smx > 50 lines → HERESY re-amalgamation; restore thin SoT.
+make thin-guard && make modular-check enforce this.
+HEAD may still hold old monolit until meaningful commit — do NOT git checkout these files from monolit HEAD.

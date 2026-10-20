@@ -1,0 +1,7475 @@
+/* CubalC lang — lang_ops_core_sys.c
+ * SYS/HOST megablock dispatch (mesh vote A_split_lang_ops_core).
+ * Peel of ~33k-line SYS plane from lang_ops_core.
+ */
+#include "lang/cubalc_lang_ops_core_sys.h"
+#include "lang/cubalc_lang_ops_sys_plate.h"
+#include "lang/cubalc_lang_ops_sys_path_fs.h"
+#include "lang/cubalc_lang_ops_sys_env.h"
+#include "lang/cubalc_lang_ops_sys_string.h"
+#include "lang/cubalc_lang_ops_sys_wait.h"
+#include "lang/cubalc_lang_ops_sys_stat.h"
+#include "lang/cubalc_lang_ops_sys_bulk.h"
+#include "lang/cubalc_lang_ops_sys_bulk_mut.h"
+#include "lang/cubalc_lang_ops_sys_net.h"
+#include "lang/cubalc_lang_ops_sys_files.h"
+#include "lang/cubalc_lang_ops_sys_json.h"
+#include "lang/cubalc_lang_ops_sys_streq.h"
+#include "lang/cubalc_lang_ops_sys_hostmeta.h"
+#include "lang/cubalc_lang_ops_sys_kv.h"
+#include "lang/cubalc_lang_ops_sys_kvmath.h"
+#include "lang/cubalc_lang_ops_sys_kvfilter.h"
+#include "lang/cubalc_lang_ops_sys_grep.h"
+#include "lang/cubalc_lang_ops_sys_identity.h"
+#include "lang/cubalc_lang_ops_sys_codec.h"
+#include "lang/cubalc_lang_ops_sys_time_walk.h"
+#include "lang/cubalc_lang_ops_sys_plate_expand.h"
+#include "lang/cubalc_lang_ops_sys_cli.h"
+#include "lang/cubalc_lang_ops_core_help.h"
+#include "cubalc_hostops.h"
+#include "cubalc_async.h"
+#include "cubalc_smx.h"
+#include "cubalc_law.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <math.h>
+#include <time.h>
+#include <errno.h>
+#if !defined(CUBALC_OS_WINDOWS)
+#  include <unistd.h>
+#  include <dirent.h>
+#  include <sys/stat.h>
+#  include <sys/statvfs.h>
+#  include <fcntl.h>
+#  include <poll.h>
+#  include <pwd.h>
+#  include <grp.h>
+#  include <fnmatch.h>
+#  include <sys/utsname.h>
+#  include <sys/resource.h>
+#  include <sys/socket.h>
+#  include <sys/wait.h>
+#  include <netinet/in.h>
+#  include <arpa/inet.h>
+/* getloadavg is BSD/POSIX extension; declare if libc omits under strict feature macros. */
+int getloadavg(double loadavg[], int nelem);
+#endif
+
+int cubalc_lang_ops_core_try_sys(VM *vm, Lex *L) {
+  /* SYS host ops — C runtime (Grokium without Python) */
+  if (kw(&L->cur,"SYS") || kw(&L->cur,"HOST")){
+    lex_next(L);
+    skip_nl(L);
+    /* plate/JSON-file theme → lang_ops_sys_plate.c (mesh vote A2) */
+    {
+      int pr = cubalc_lang_ops_sys_try_plate(vm, L);
+      if (pr != 0) return pr;
+    }
+
+    /* path/FS theme → lang_ops_sys_path_fs.c (mesh vote A2) */
+    {
+      int fr = cubalc_lang_ops_sys_try_path_fs(vm, L);
+      if (fr != 0) return fr;
+    }
+
+    /* ENV/process theme → lang_ops_sys_env.c (mesh vote A2) */
+    {
+      int er = cubalc_lang_ops_sys_try_env(vm, L);
+      if (er != 0) return er;
+    }
+
+    /* string/codec theme → lang_ops_sys_string.c (mesh vote A2) */
+    {
+      int sr = cubalc_lang_ops_sys_try_string(vm, L);
+      if (sr != 0) return sr;
+    }
+
+    /* wait/poll theme → lang_ops_sys_wait.c (mesh vote A2) */
+    {
+      int wr = cubalc_lang_ops_sys_try_wait(vm, L);
+      if (wr != 0) return wr;
+    }
+
+    /* stat/meta theme → lang_ops_sys_stat.c (mesh vote A2) */
+    {
+      int tr = cubalc_lang_ops_sys_try_stat(vm, L);
+      if (tr != 0) return tr;
+    }
+
+    /* bulk bag map/filter → lang_ops_sys_bulk.c (mesh vote A2) */
+    {
+      int br = cubalc_lang_ops_sys_try_bulk(vm, L);
+      if (br != 0) return br;
+    }
+
+    /* bulk mutate → lang_ops_sys_bulk_mut.c (mesh vote A2) */
+    {
+      int mr = cubalc_lang_ops_sys_try_bulk_mut(vm, L);
+      if (mr != 0) return mr;
+    }
+
+    /* net/TCP peer xfer → lang_ops_sys_net.c (mesh vote A2) */
+    {
+      int nr = cubalc_lang_ops_sys_try_net(vm, L);
+      if (nr != 0) return nr;
+    }
+
+    /* files bag/content → lang_ops_sys_files.c */
+    {
+      int fir = cubalc_lang_ops_sys_try_files(vm, L);
+      if (fir != 0) return fir;
+    }
+
+    if (kw(&L->cur,"SPAWN")){
+      lex_next(L);
+      if (L->cur.kind!=TK_STR && L->cur.kind!=TK_IDENT){ fail(vm,"SYS SPAWN bin [args…]"); return -1; }
+      char bin[512];
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        /* if not path, which */
+        if (strchr(L->cur.text, '/')) snprintf(bin,sizeof bin,"%s",L->cur.text);
+        else {
+          cubalc_host_result wh;
+          if (cubalc_host_which(L->cur.text, &wh)==0) snprintf(bin,sizeof bin,"%s",wh.str);
+          else snprintf(bin,sizeof bin,"%s",L->cur.text);
+        }
+        lex_next(L);
+      }
+      char *av[16]; char abuf[16][256]; int ac=0;
+      av[ac++] = bin;
+      while (ac < 15 && (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT || L->cur.kind==TK_NUM)){
+        snprintf(abuf[ac], sizeof abuf[ac], "%s", L->cur.text);
+        av[ac] = abuf[ac];
+        ac++; lex_next(L);
+      }
+      av[ac] = NULL;
+      cubalc_host_result hr;
+      cubalc_host_spawn(bin, av, &hr);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      var_set_str(vm, "LAST", hr.str);
+      var_set_num(vm, "LAST_N", hr.n);
+      var_set_num(vm, "EXIT", hr.code);
+      var_set_num(vm, "OK", hr.ok ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS JOIN|PATH a b → LAST = a/b (portable path join, no double slash).
+     * Usability: build plate paths from STATE/TMP/LIST names without shell. */
+    if (kw(&L->cur,"JOIN") || kw(&L->cur,"PATH") || kw(&L->cur,"PATHJOIN") ||
+        kw(&L->cur,"JOINPATH")){
+      lex_next(L);
+      char a[512]="", b[512]="";
+      cubalc_host_result hr;
+      if (resolve_str_arg(vm, L, a, sizeof a) != 0){
+        fail(vm,"SYS JOIN a b"); return -1;
+      }
+      if (resolve_str_arg(vm, L, b, sizeof b) != 0){
+        fail(vm,"SYS JOIN a b"); return -1;
+      }
+      if (cubalc_host_join(a,b,&hr)!=0){ fail(vm, hr.err[0]?hr.err:"JOIN"); return -1; }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_str(vm,"JOIN",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    /* JSON plate theme → lang_ops_sys_json.c (A2) */
+    {
+      int jr = cubalc_lang_ops_sys_try_json(vm, L);
+      if (jr != 0) return jr;
+    }
+
+    /* SYS CHAT "local"|"grok" ["model"] — msg from GROKIUM_MSG / CUBALC_MSG env */
+    if (kw(&L->cur,"CHAT") || kw(&L->cur,"ASK")){
+      lex_next(L);
+      char be[32]="local", model[128]="";
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        snprintf(be,sizeof be,"%s",L->cur.text); lex_next(L);
+      }
+      if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        /* model or message string */
+        if (strcmp(L->cur.text,"local")==0 || strcmp(L->cur.text,"grok")==0 ||
+            strncmp(L->cur.text,"grok",4)==0 || strstr(L->cur.text,"/") ||
+            strstr(L->cur.text,".gguf")) {
+          snprintf(model,sizeof model,"%s",L->cur.text); lex_next(L);
+        }
+      }
+      char msg[2000]; msg[0]=0;
+      if (L->cur.kind==TK_STR){
+        snprintf(msg,sizeof msg,"%s",L->cur.text); lex_next(L);
+      } else {
+        const char *e = getenv("GROKIUM_MSG");
+        if (!e || !e[0]) e = getenv("CUBALC_MSG");
+        if (e) snprintf(msg,sizeof msg,"%s",e);
+      }
+      if (!msg[0]){ fail(vm,"SYS CHAT needs msg or GROKIUM_MSG"); return -1; }
+      if (!model[0]){
+        const char *em = getenv("GROKIUM_MODEL");
+        if (em && em[0]) snprintf(model,sizeof model,"%s",em);
+      }
+      const char *st = getenv("CUBALC_STATE");
+      cubalc_host_result hr;
+      if (cubalc_host_chat(be, model, msg, st, &hr)!=0){
+        var_set_str(vm,"LAST", hr.err[0]?hr.err:"chat fail");
+        var_set_num(vm,"OK",0);
+        var_set_num(vm,"HTTP_CODE", hr.code);
+        if (vm->trace) fprintf(vm->trace, "# chat fail %s\n", hr.err);
+        bump(vm); return 1; /* soft */
+      }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      vm->last_code = hr.code;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"HTTP_CODE",hr.code);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    /* SYS ARGC|ARGCOUNT — number of program args (CUBALC_ARGC or scan ARG0..) */
+    if (kw(&L->cur,"ARGC") || kw(&L->cur,"ARGCOUNT") || kw(&L->cur,"NARGS")){
+      long n = 0;
+      const char *ac = getenv("CUBALC_ARGC");
+      lex_next(L);
+      if (ac && ac[0]) {
+        n = strtol(ac, NULL, 10);
+        if (n < 0) n = 0;
+        if (n > 32) n = 32;
+      } else {
+        int k;
+        for (k = 0; k < 32; k++) {
+          char nm[32];
+          const char *v;
+          snprintf(nm, sizeof nm, "CUBALC_ARG%d", k);
+          v = getenv(nm);
+          if (!v) break;
+          n++;
+        }
+      }
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "ARGC", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ARGS|ARGVALL|ALLARGS — newline bag of CUBALC_ARG0.. · LAST_N=count.
+     * Usability: walk program args without SYS ARG 0/1/2 glue. */
+    if (kw(&L->cur,"ARGS") || kw(&L->cur,"ARGVALL") || kw(&L->cur,"ALLARGS") ||
+        kw(&L->cur,"ARGBAG")){
+      char bag[CUBALC_HOST_STR_MAX];
+      size_t o = 0;
+      long n = 0;
+      int k;
+      lex_next(L);
+      bag[0] = 0;
+      for (k = 0; k < 32; k++) {
+        char nm[32];
+        const char *v;
+        size_t vl;
+        snprintf(nm, sizeof nm, "CUBALC_ARG%d", k);
+        v = getenv(nm);
+        if (!v) break;
+        vl = strlen(v);
+        if (n && o + 1 < sizeof bag) bag[o++] = '\n';
+        if (o + vl >= sizeof bag) {
+          if (o + 1 < sizeof bag) {
+            vl = sizeof bag - o - 1;
+            memcpy(bag + o, v, vl);
+            o += vl;
+            bag[o] = 0;
+          }
+          n++;
+          break;
+        }
+        memcpy(bag + o, v, vl + 1);
+        o += vl;
+        n++;
+      }
+      var_set_str(vm, "LAST", bag);
+      var_set_str(vm, "ARGS", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "ARGC", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ARG n|name [OR "fallback"] — CUBALC_ARGn / named env with default */
+    if (kw(&L->cur,"ARG") || kw(&L->cur,"ARGV")){
+      lex_next(L);
+      char name[64];
+      if (L->cur.kind==TK_NUM){
+        snprintf(name,sizeof name,"CUBALC_ARG%s", L->cur.text);
+        lex_next(L);
+      } else if (L->cur.kind==TK_STR || L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"MSG")==0) snprintf(name,sizeof name,"GROKIUM_MSG");
+        else if (strcmp(L->cur.text,"BACKEND")==0) snprintf(name,sizeof name,"GROKIUM_BACKEND");
+        else if (strcmp(L->cur.text,"MODEL")==0) snprintf(name,sizeof name,"GROKIUM_MODEL");
+        else snprintf(name,sizeof name,"%s", L->cur.text);
+        lex_next(L);
+      } else { fail(vm,"SYS ARG n|name [OR fallback]"); return -1; }
+      cubalc_host_result hr;
+      cubalc_host_env(name, &hr);
+      if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+          kw(&L->cur,"FALLBACK")){
+        lex_next(L);
+        char fb[512];
+        if (resolve_str_arg(vm, L, fb, sizeof fb) != 0){
+          fail(vm,"SYS ARG n|name OR \"fallback\""); return -1;
+        }
+        if (!hr.str[0] || hr.n <= 0){
+          snprintf(hr.str, sizeof hr.str, "%s", fb);
+          hr.n = (long)strlen(hr.str);
+          hr.ok = 1;
+        }
+      }
+      snprintf(vm->last_str,sizeof vm->last_str,"%s",hr.str);
+      vm->last_n = hr.n;
+      var_set_str(vm,"LAST",hr.str);
+      var_set_num(vm,"LAST_N",hr.n);
+      var_set_num(vm,"OK", hr.n > 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS NUM|INT — parse LAST as integer → LAST_N (CubeBrain digit fold) */
+    if (kw(&L->cur,"NUM") || kw(&L->cur,"INT") || kw(&L->cur,"ATOI")){
+      lex_next(L);
+      const char *s = vm->last_str;
+      if (L->cur.kind==TK_STR){ s = L->cur.text; lex_next(L); }
+      else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")!=0){
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) s = v->sval;
+        else if (v) { var_set_num(vm,"LAST_N", v->val); vm->last_n = v->val; bump(vm); return 1; }
+        lex_next(L);
+      } else if (L->cur.kind==TK_IDENT && strcmp(L->cur.text,"LAST")==0){
+        lex_next(L);
+      }
+      long n = 0;
+      if (s && s[0]) n = strtol(s, NULL, 10);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS STR|ITOA|NUMSTR|TOSTR [expr|LAST_N] — integer → decimal string LAST.
+     * Usability: dual of SYS NUM; fill REPLACEALL templates {{COUNT}} without shell. */
+    if (kw(&L->cur,"STR") || kw(&L->cur,"ITOA") || kw(&L->cur,"NUMSTR") ||
+        kw(&L->cur,"TOSTR") || kw(&L->cur,"STRNUM") || kw(&L->cur,"DECIMAL")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      char buf[40];
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "STR", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HUMANSIZE|BYTESFMT|HUMANSZ|PRETTYBYTES [n|LAST_N]
+     * — integer B/K/M/G/T label for byte counts (1024-base floor).
+     * LAST = e.g. "1K"; LAST_N = scaled value; HUMANSIZE_UNIT; HUMANSIZE_BYTES.
+     * Usability: SIZE/SIZEALL inventory plates without shell numfmt. */
+    if (kw(&L->cur,"HUMANSIZE") || kw(&L->cur,"BYTESFMT") || kw(&L->cur,"HUMANSZ") ||
+        kw(&L->cur,"PRETTYBYTES") || kw(&L->cur,"HSIZE") || kw(&L->cur,"BYTEHUMAN") ||
+        kw(&L->cur,"FMTBYTES") || kw(&L->cur,"HUMANBYTES") || kw(&L->cur,"SIZEFMT")){
+      long n = vm->last_n;
+      unsigned long long u, scaled;
+      const char *unit = "B";
+      char buf[48];
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      u = (unsigned long long)n;
+      if (u >= 1024ULL * 1024ULL * 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL * 1024ULL * 1024ULL);
+        unit = "T";
+      } else if (u >= 1024ULL * 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL * 1024ULL);
+        unit = "G";
+      } else if (u >= 1024ULL * 1024ULL) {
+        scaled = u / (1024ULL * 1024ULL);
+        unit = "M";
+      } else if (u >= 1024ULL) {
+        scaled = u / 1024ULL;
+        unit = "K";
+      } else {
+        scaled = u;
+        unit = "B";
+      }
+      snprintf(buf, sizeof buf, "%llu%s", scaled, unit);
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANSIZE", buf);
+      var_set_str(vm, "BYTESFMT", buf);
+      var_set_str(vm, "HUMANSIZE_UNIT", unit);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = (long)scaled;
+      var_set_num(vm, "LAST_N", (long)scaled);
+      var_set_num(vm, "HUMANSIZE_N", (long)scaled);
+      var_set_num(vm, "HUMANSIZE_BYTES", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PARSESIZE|FROMHUMAN|PARSEBYTES|UNHUMAN [str]
+     * — parse "512" / "1K" / "2M" / "1G" / "1T" (1024-base) → bytes.
+     * LAST = decimal string of bytes; LAST_N / PARSESIZE_N = bytes.
+     * Soft fail OK=0 on empty/bad unit. Usability: agent size configs reverse of HUMANSIZE. */
+    if (kw(&L->cur,"PARSESIZE") || kw(&L->cur,"FROMHUMAN") || kw(&L->cur,"PARSEBYTES") ||
+        kw(&L->cur,"UNHUMAN") || kw(&L->cur,"PARSEHUMAN") || kw(&L->cur,"HUMANPARSE") ||
+        kw(&L->cur,"TOBYTES") || kw(&L->cur,"SIZEPARSE") || kw(&L->cur,"BYTESPARSE")){
+      char src[256], out[48], unitc = 0;
+      const char *p;
+      unsigned long long n = 0, mul = 1;
+      char *end = NULL;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      /* trim leading/trailing whitespace */
+      p = src;
+      while (*p == ' ' || *p == '\t') p++;
+      if (!*p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: empty");
+        var_set_str(vm, "ERR", "PARSESIZE: empty");
+        bump(vm); return 1;
+      }
+      n = strtoull(p, &end, 10);
+      if (end == p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: bad number");
+        var_set_str(vm, "ERR", "PARSESIZE: bad number");
+        bump(vm); return 1;
+      }
+      while (*end == ' ' || *end == '\t') end++;
+      unitc = *end;
+      if (unitc >= 'a' && unitc <= 'z') unitc = (char)(unitc - 'a' + 'A');
+      if (unitc == 0 || unitc == 'B') {
+        mul = 1;
+      } else if (unitc == 'K') {
+        mul = 1024ULL;
+      } else if (unitc == 'M') {
+        mul = 1024ULL * 1024ULL;
+      } else if (unitc == 'G') {
+        mul = 1024ULL * 1024ULL * 1024ULL;
+      } else if (unitc == 'T') {
+        mul = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+      } else {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSESIZE_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSESIZE: bad unit");
+        var_set_str(vm, "ERR", "PARSESIZE: bad unit");
+        bump(vm); return 1;
+      }
+      /* optional trailing iB/B after unit letter (KiB, MB) — skip one more letter if B/I */
+      if (unitc && end[1]) {
+        char c2 = end[1];
+        if (c2 >= 'a' && c2 <= 'z') c2 = (char)(c2 - 'a' + 'A');
+        if (!(c2 == 'B' || c2 == 'I' || c2 == 0 || c2 == ' ' || c2 == '\t')) {
+          /* e.g. "1XX" — only allow B/i after unit */
+          if (unitc != 'B') {
+            /* already consumed unit; if junk after, soft fail unless only B/iB */
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "PARSESIZE_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", "PARSESIZE: bad unit");
+            var_set_str(vm, "ERR", "PARSESIZE: bad unit");
+            bump(vm); return 1;
+          }
+        }
+      }
+      n = n * mul;
+      if (n > (unsigned long long)LONG_MAX) n = (unsigned long long)LONG_MAX;
+      snprintf(out, sizeof out, "%llu", n);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "PARSESIZE_N", (long)n);
+      var_set_str(vm, "PARSESIZE", out);
+      var_set_str(vm, "FROMHUMAN", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PARSEMS|DURATION|TOMS|PARSEDUR [str]
+     * — parse duration → milliseconds. Single: "250"/"250ms"/"5s"/"2m"/"1h"/"1d"/"1w".
+     * Compound (HUMANMS dual): "1h30m", "2m15s", "1d12h", "1s250ms" (spaces ok).
+     * Bare number = ms. LAST_N / PARSEMS_N = total ms. Soft fail empty/bad.
+     * Usability: config timeouts + round-trip HUMANMS without shell. Cap LONG_MAX. */
+    if (kw(&L->cur,"PARSEMS") || kw(&L->cur,"DURATION") || kw(&L->cur,"TOMS") ||
+        kw(&L->cur,"PARSEDUR") || kw(&L->cur,"DURMS") || kw(&L->cur,"MSDUR") ||
+        kw(&L->cur,"PARSE_MS") || kw(&L->cur,"TO_MS") || kw(&L->cur,"ASMS") ||
+        kw(&L->cur,"HUMANMS_PARSE") || kw(&L->cur,"PARSE_DURATION")){
+      char src[256], out[48];
+      long total = 0;
+      int segs = 0;
+      const char *err = NULL;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (cubalc_parse_duration_ms(src, &total, &segs, &err) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSEMS_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", err ? err : "PARSEMS: fail");
+        var_set_str(vm, "ERR", err ? err : "PARSEMS: fail");
+        bump(vm); return 1;
+      }
+      snprintf(out, sizeof out, "%ld", total);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = total;
+      var_set_num(vm, "LAST_N", total);
+      var_set_num(vm, "PARSEMS_N", total);
+      var_set_num(vm, "DURATION_N", total);
+      var_set_num(vm, "PARSEMS_SEGS", (long)segs);
+      var_set_str(vm, "PARSEMS", out);
+      var_set_str(vm, "DURATION", out);
+      var_set_str(vm, "TOMS", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HUMANMS|FMTMS|HUMANDUR|PRETTYMS [n|LAST_N]
+     * — format milliseconds as compact human duration (reverse of PARSEMS).
+     * LAST = e.g. "5s", "1m30s", "1h2m", "250ms"; LAST_N / HUMANMS_MS = original ms.
+     * Units: w d h m s ms (compound, omit zero parts). Usability: plate labels for
+     * WAITFILE_MS / SLEEP_MS / elapsed without shell. */
+    if (kw(&L->cur,"HUMANMS") || kw(&L->cur,"FMTMS") || kw(&L->cur,"HUMANDUR") ||
+        kw(&L->cur,"PRETTYMS") || kw(&L->cur,"MSFMT") || kw(&L->cur,"FMTTIME") ||
+        kw(&L->cur,"DURSTR") || kw(&L->cur,"MSHUMAN") || kw(&L->cur,"PRETTYDUR") ||
+        kw(&L->cur,"FORMATMS") || kw(&L->cur,"MS_HUMAN")){
+      long n = vm->last_n;
+      unsigned long long u, w, d, h, m, s, ms;
+      char buf[96];
+      size_t o = 0;
+      int parts = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      u = (unsigned long long)n;
+      w = u / (7ULL * 24ULL * 60ULL * 60ULL * 1000ULL);
+      u %= (7ULL * 24ULL * 60ULL * 60ULL * 1000ULL);
+      d = u / (24ULL * 60ULL * 60ULL * 1000ULL);
+      u %= (24ULL * 60ULL * 60ULL * 1000ULL);
+      h = u / (60ULL * 60ULL * 1000ULL);
+      u %= (60ULL * 60ULL * 1000ULL);
+      m = u / (60ULL * 1000ULL);
+      u %= (60ULL * 1000ULL);
+      s = u / 1000ULL;
+      ms = u % 1000ULL;
+      buf[0] = 0;
+      o = 0;
+#define CUBALC_HMS_PART(val, suf) do { \
+        if ((val) > 0) { \
+          int wrote = snprintf(buf + o, sizeof(buf) - o, "%llu%s", \
+                               (unsigned long long)(val), (suf)); \
+          if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0; \
+          o += (size_t)wrote; \
+          parts++; \
+        } \
+      } while (0)
+      CUBALC_HMS_PART(w, "w");
+      CUBALC_HMS_PART(d, "d");
+      CUBALC_HMS_PART(h, "h");
+      CUBALC_HMS_PART(m, "m");
+      CUBALC_HMS_PART(s, "s");
+      /* include ms when non-zero, or when whole duration is zero, or only sub-second */
+      if (ms > 0 || parts == 0) {
+        int wrote = snprintf(buf + o, sizeof(buf) - o, "%llums",
+                             (unsigned long long)ms);
+        if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0;
+        o += (size_t)wrote;
+        parts++;
+      }
+#undef CUBALC_HMS_PART
+      if (o >= sizeof(buf)) o = sizeof(buf) - 1;
+      buf[o] = 0;
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANMS", buf);
+      var_set_str(vm, "FMTMS", buf);
+      var_set_str(vm, "HUMANDUR", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "HUMANMS_N", n);
+      var_set_num(vm, "HUMANMS_MS", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HUMANSECS|HUMANAGE|FMTSECS|SECSFMT|PRETTYSECS [n|LAST_N]
+     * — format non-negative seconds as compact human duration (no ms unit).
+     * LAST e.g. "0s", "5s", "1m30s", "2h", "1d". LAST_N / HUMANSECS_N = input secs.
+     * Signed input: leading "-" on label, magnitude formatted (DIFFISO ages).
+     * Usability: AGE / REMAINING / TIMEDIFF / DIFFISO plate labels without
+     * SEC2MS + HUMANMS glue. Dual of HUMANMS for host second-plane values. */
+    if (kw(&L->cur,"HUMANSECS") || kw(&L->cur,"HUMANAGE") || kw(&L->cur,"FMTSECS") ||
+        kw(&L->cur,"SECSFMT") || kw(&L->cur,"PRETTYSECS") || kw(&L->cur,"SECSHUMAN") ||
+        kw(&L->cur,"HUMANS") || kw(&L->cur,"AGESTR") || kw(&L->cur,"FMTAGE") ||
+        kw(&L->cur,"SECHUMAN") || kw(&L->cur,"PRETTYAGE") || kw(&L->cur,"DURSECS")){
+      long n = vm->last_n, mag;
+      int neg = 0;
+      unsigned long long u, w, d, h, m, s;
+      char buf[96];
+      size_t o = 0;
+      int parts = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      mag = n;
+      if (mag < 0) {
+        neg = 1;
+        if (mag <= -LONG_MAX) mag = LONG_MAX;
+        else mag = -mag;
+      }
+      u = (unsigned long long)mag;
+      w = u / (7ULL * 24ULL * 60ULL * 60ULL);
+      u %= (7ULL * 24ULL * 60ULL * 60ULL);
+      d = u / (24ULL * 60ULL * 60ULL);
+      u %= (24ULL * 60ULL * 60ULL);
+      h = u / (60ULL * 60ULL);
+      u %= (60ULL * 60ULL);
+      m = u / 60ULL;
+      s = u % 60ULL;
+      buf[0] = 0;
+      o = 0;
+      if (neg) {
+        buf[o++] = '-';
+        buf[o] = 0;
+      }
+#define CUBALC_HSEC_PART(val, suf) do { \
+        if ((val) > 0) { \
+          int wrote = snprintf(buf + o, sizeof(buf) - o, "%llu%s", \
+                               (unsigned long long)(val), (suf)); \
+          if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0; \
+          o += (size_t)wrote; \
+          parts++; \
+        } \
+      } while (0)
+      CUBALC_HSEC_PART(w, "w");
+      CUBALC_HSEC_PART(d, "d");
+      CUBALC_HSEC_PART(h, "h");
+      CUBALC_HSEC_PART(m, "m");
+      /* always include seconds when zero whole duration or residual secs */
+      if (s > 0 || parts == 0) {
+        int wrote = snprintf(buf + o, sizeof(buf) - o, "%llus",
+                             (unsigned long long)s);
+        if (wrote < 0 || (size_t)wrote >= sizeof(buf) - o) wrote = 0;
+        o += (size_t)wrote;
+        parts++;
+      }
+#undef CUBALC_HSEC_PART
+      if (o >= sizeof(buf)) o = sizeof(buf) - 1;
+      buf[o] = 0;
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "HUMANSECS", buf);
+      var_set_str(vm, "HUMANAGE", buf);
+      var_set_str(vm, "FMTSECS", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "HUMANSECS_N", n);
+      var_set_num(vm, "HUMANAGE_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MS2SEC|TOSECS|FROMMS|MS_TO_SEC [n|LAST_N]
+     * — floor(ms / 1000) → seconds for DEADLINE/ADDTIME after PARSEMS.
+     * SYS SEC2MS|MSECFROM|SECS2MS|SEC_TO_MS [n|LAST_N]
+     * — secs * 1000 → ms for SLEEP/WAIT after REMAINING/TTL.
+     * LAST_N = result; clamp n>=0. Usability: unit bridge without shell $(( )). */
+    if (kw(&L->cur,"MS2SEC") || kw(&L->cur,"TOSECS") || kw(&L->cur,"FROMMS") ||
+        kw(&L->cur,"MS_TO_SEC") || kw(&L->cur,"MSTOSEC") || kw(&L->cur,"MSSECS") ||
+        kw(&L->cur,"MILLI2SEC") || kw(&L->cur,"MSDIV") ||
+        kw(&L->cur,"SEC2MS") || kw(&L->cur,"MSECFROM") || kw(&L->cur,"SECS2MS") ||
+        kw(&L->cur,"SEC_TO_MS") || kw(&L->cur,"SECTOMS") || kw(&L->cur,"S2MS") ||
+        kw(&L->cur,"SECMS") || kw(&L->cur,"TOMILLISEC")){
+      char op[24];
+      int to_ms = 0;
+      long n = vm->last_n, outn = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      to_ms = (strcmp(op, "SEC2MS") == 0 || strcmp(op, "MSECFROM") == 0 ||
+               strcmp(op, "SECS2MS") == 0 || strcmp(op, "SEC_TO_MS") == 0 ||
+               strcmp(op, "SECTOMS") == 0 || strcmp(op, "S2MS") == 0 ||
+               strcmp(op, "SECMS") == 0 || strcmp(op, "TOMILLISEC") == 0);
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      if (to_ms) {
+        /* overflow guard: LONG_MAX/1000 */
+        if (n > (LONG_MAX / 1000L))
+          outn = LONG_MAX;
+        else
+          outn = n * 1000L;
+        var_set_num(vm, "SEC2MS_N", outn);
+        var_set_num(vm, "SEC2MS_SECS", n);
+      } else {
+        outn = n / 1000L;
+        var_set_num(vm, "MS2SEC_N", outn);
+        var_set_num(vm, "MS2SEC_MS", n);
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"LEN") || kw(&L->cur,"LENGTH") || kw(&L->cur,"STRLEN")){
+      lex_next(L);
+      long n = 0;
+      if (L->cur.kind==TK_STR){ n = (long)strlen(L->cur.text); lex_next(L); }
+      else if (L->cur.kind==TK_IDENT){
+        if (strcmp(L->cur.text,"LAST")==0){ n = (long)strlen(vm->last_str); lex_next(L); }
+        else {
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && v->is_str) n = (long)strlen(v->sval);
+          else if (v) n = v->val;
+          lex_next(L);
+        }
+      } else n = (long)strlen(vm->last_str);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LENALL|MAPLEN|FIELDLENS [bag] — length of every newline field as a
+     * decimal string bag → LAST. LAST_N/LENALL_N = field count;
+     * LENALL_SUM = sum of lengths (total chars excl. newlines).
+     * Usability: size rollups / max field width without EACH+LEN+PUSH glue;
+     * pairs with SYS SUM/MAX/AVG/SORTN on the length bag. */
+    if (kw(&L->cur,"LENALL") || kw(&L->cur,"MAPLEN") || kw(&L->cur,"FIELDLENS") ||
+        kw(&L->cur,"STRLENS") || kw(&L->cur,"LENBAG") || kw(&L->cur,"LENGTHS") ||
+        kw(&L->cur,"SIZES") || kw(&L->cur,"BYTELENS") || kw(&L->cur,"WIDTHS")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], nbuf[32];
+      const char *p, *start;
+      size_t olen = 0, flen, nlen;
+      long kept = 0, sum = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          sum += (long)flen;
+          snprintf(nbuf, sizeof nbuf, "%ld", (long)flen);
+          nlen = strlen(nbuf);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + nlen < sizeof out) {
+            memcpy(out + olen, nbuf, nlen);
+            olen += nlen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, nbuf, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "LENALL_N", kept);
+      var_set_num(vm, "LENALL_SUM", sum);
+      var_set_num(vm, "MAPLEN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MAXLEN|MAXWIDTH|FIELDMAX [bag] — max string length among bag fields → LAST_N.
+     * SYS MINLEN|MINWIDTH|FIELDMIN [bag] — min length. LAST = decimal of that length.
+     * MAXLEN_N/MINLEN_N = field count; MAXLEN_I/MINLEN_I = 0-based index of first extreme
+     * (-1 if empty bag). Empty bag → LAST_N 0.
+     * Usability: column width for PADALL without LENALL+MAX glue. */
+    if (kw(&L->cur,"MAXLEN") || kw(&L->cur,"MAXWIDTH") || kw(&L->cur,"FIELDMAX") ||
+        kw(&L->cur,"LONGEST_LEN") || kw(&L->cur,"MAXSTRLEN") || kw(&L->cur,"BAGMAXLEN") ||
+        kw(&L->cur,"MINLEN") || kw(&L->cur,"MINWIDTH") || kw(&L->cur,"FIELDMIN") ||
+        kw(&L->cur,"SHORTEST_LEN") || kw(&L->cur,"MINSTRLEN") || kw(&L->cur,"BAGMINLEN")){
+      char op[20];
+      int is_min = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[40];
+      const char *p, *start;
+      size_t flen;
+      long kept = 0, best = 0, best_i = -1, idx = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "MINLEN") == 0 || strcmp(op, "MINWIDTH") == 0 ||
+          strcmp(op, "FIELDMIN") == 0 || strcmp(op, "SHORTEST_LEN") == 0 ||
+          strcmp(op, "MINSTRLEN") == 0 || strcmp(op, "BAGMINLEN") == 0)
+        is_min = 1;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept == 0) {
+            best = (long)flen;
+            best_i = idx;
+          } else if (is_min) {
+            if ((long)flen < best) {
+              best = (long)flen;
+              best_i = idx;
+            }
+          } else {
+            if ((long)flen > best) {
+              best = (long)flen;
+              best_i = idx;
+            }
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      snprintf(out, sizeof out, "%ld", kept ? best : 0L);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept ? best : 0;
+      var_set_num(vm, "LAST_N", kept ? best : 0);
+      if (is_min) {
+        var_set_num(vm, "MINLEN", kept ? best : 0);
+        var_set_num(vm, "MINLEN_N", kept);
+        var_set_num(vm, "MINLEN_I", best_i);
+        var_set_num(vm, "MINWIDTH", kept ? best : 0);
+      } else {
+        var_set_num(vm, "MAXLEN", kept ? best : 0);
+        var_set_num(vm, "MAXLEN_N", kept);
+        var_set_num(vm, "MAXLEN_I", best_i);
+        var_set_num(vm, "MAXWIDTH", kept ? best : 0);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LONGEST|LONGESTLINE|MAXFIELD [bag] — first longest bag field text → LAST.
+     * SYS SHORTEST|SHORTESTLINE|MINFIELD [bag] — first shortest field.
+     * LAST_N 0|1 found; LONGEST_I/SHORTEST_I = index (-1 miss);
+     * LONGEST_LEN/SHORTEST_LEN = length of that field; LONGEST_N = field count.
+     * Distinct from MAXLEN/MINLEN (numeric length only) and LONGEST_LEN alias of MAXLEN.
+     * Usability: pick longest error/payload without MAXLEN_I+NTH glue. */
+    if (kw(&L->cur,"LONGEST") || kw(&L->cur,"LONGESTLINE") || kw(&L->cur,"MAXFIELD") ||
+        kw(&L->cur,"LONGESTSTR") || kw(&L->cur,"PICKLONGEST") || kw(&L->cur,"BAGLONGEST") ||
+        kw(&L->cur,"SHORTEST") || kw(&L->cur,"SHORTESTLINE") || kw(&L->cur,"MINFIELD") ||
+        kw(&L->cur,"SHORTESTSTR") || kw(&L->cur,"PICKSHORTEST") || kw(&L->cur,"BAGSHORTEST")){
+      char op[20];
+      int is_short = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[512];
+      const char *p, *start;
+      size_t flen, best_len = 0;
+      long kept = 0, best_i = -1, idx = 0, found = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "SHORTEST") == 0 || strcmp(op, "SHORTESTLINE") == 0 ||
+          strcmp(op, "MINFIELD") == 0 || strcmp(op, "SHORTESTSTR") == 0 ||
+          strcmp(op, "PICKSHORTEST") == 0 || strcmp(op, "BAGSHORTEST") == 0)
+        is_short = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept == 0 ||
+              (is_short && flen < best_len) ||
+              (!is_short && flen > best_len)) {
+            best_len = flen;
+            best_i = idx;
+            {
+              size_t take = flen;
+              if (take >= sizeof out) take = sizeof out - 1;
+              memcpy(out, start, take);
+              out[take] = 0;
+            }
+            found = 1;
+          }
+          kept++;
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      if (is_short) {
+        var_set_num(vm, "SHORTEST_N", kept);
+        var_set_num(vm, "SHORTEST_I", best_i);
+        var_set_num(vm, "SHORTEST_LEN", found ? (long)best_len : 0);
+        var_set_str(vm, "SHORTEST", out);
+      } else {
+        var_set_num(vm, "LONGEST_N", kept);
+        var_set_num(vm, "LONGEST_I", best_i);
+        var_set_num(vm, "LONGEST_LEN", found ? (long)best_len : 0);
+        var_set_str(vm, "LONGEST", out);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS COMMONPREFIX|LCP|SHAREDPREFIX [bag] — longest common prefix of all fields.
+     * SYS COMMONSUFFIX|LCS|SHAREDSUFFIX [bag] — longest common suffix.
+     * LAST = shared string; LAST_N = its length; COMMONPREFIX_N = field count.
+     * Empty bag / no share → LAST empty, LAST_N 0. Single field → whole field.
+     * Usability: path/peer dir roots or shared ext without EACH+STARTS glue. */
+    if (kw(&L->cur,"COMMONPREFIX") || kw(&L->cur,"LCP") || kw(&L->cur,"SHAREDPREFIX") ||
+        kw(&L->cur,"COMMONPRE") || kw(&L->cur,"BAGPREFIX") || kw(&L->cur,"SHAREPRE") ||
+        kw(&L->cur,"COMMONSUFFIX") || kw(&L->cur,"LCS") || kw(&L->cur,"SHAREDSUFFIX") ||
+        kw(&L->cur,"COMMONSUF") || kw(&L->cur,"BAGSUFFIX") || kw(&L->cur,"SHARESUF")){
+      char op[20];
+      int is_suf = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[512];
+      char fields[64][256];
+      size_t flens[64];
+      const char *p, *start;
+      size_t flen, i, j, n = 0, plen = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "COMMONSUFFIX") == 0 || strcmp(op, "LCS") == 0 ||
+          strcmp(op, "SHAREDSUFFIX") == 0 || strcmp(op, "COMMONSUF") == 0 ||
+          strcmp(op, "BAGSUFFIX") == 0 || strcmp(op, "SHARESUF") == 0)
+        is_suf = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof fields[0]) flen = sizeof fields[0] - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          flens[n] = flen;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (n == 0) {
+        plen = 0;
+      } else if (n == 1) {
+        plen = flens[0];
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        memcpy(out, fields[0], plen);
+        out[plen] = 0;
+      } else if (!is_suf) {
+        /* longest common prefix */
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m && fields[0][j] == fields[i][j]) j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        memcpy(out, fields[0], plen);
+        out[plen] = 0;
+      } else {
+        /* longest common suffix */
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m &&
+                 fields[0][flens[0] - 1 - j] == fields[i][flens[i] - 1 - j])
+            j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof out) plen = sizeof out - 1;
+        if (plen > 0)
+          memcpy(out, fields[0] + (flens[0] - plen), plen);
+        out[plen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)plen;
+      var_set_num(vm, "LAST_N", (long)plen);
+      if (is_suf) {
+        var_set_num(vm, "COMMONSUFFIX_N", (long)n);
+        var_set_num(vm, "COMMONSUFFIX_LEN", (long)plen);
+        var_set_str(vm, "COMMONSUFFIX", out);
+        var_set_num(vm, "LCS_N", (long)n);
+      } else {
+        var_set_num(vm, "COMMONPREFIX_N", (long)n);
+        var_set_num(vm, "COMMONPREFIX_LEN", (long)plen);
+        var_set_str(vm, "COMMONPREFIX", out);
+        var_set_num(vm, "LCP_N", (long)n);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS STRIPPREFIX|MAPSTRIPPRE bag [prefix] — remove leading prefix from each field
+     * if present (only when field starts with prefix). Empty prefix → no-op copy.
+     * SYS STRIPSUFFIX|MAPSTRIPSUF bag [suffix] — strip trailing suffix when present.
+     * SYS STRIPCOMMON|STRIPLCP [bag] — compute LCP then strip it from every field
+     * (relative paths in one step). LAST = bag; LAST_N = field count;
+     * STRIPPREFIX_HIT / STRIPSUFFIX_HIT / STRIPCOMMON_HIT = fields shortened;
+     * STRIPCOMMON_PRE = prefix removed (STRIPCOMMON only).
+     * Usability: path relative after COMMONPREFIX without EACH+AFTER glue. */
+    if (kw(&L->cur,"STRIPPREFIX") || kw(&L->cur,"MAPSTRIPPRE") || kw(&L->cur,"DROPPREFIX") ||
+        kw(&L->cur,"REMOVEPREFIX") || kw(&L->cur,"CHOPPREFIX") || kw(&L->cur,"UNPREFIX") ||
+        kw(&L->cur,"STRIPSUFFIX") || kw(&L->cur,"MAPSTRIPSUF") || kw(&L->cur,"DROPSUFFIX") ||
+        kw(&L->cur,"REMOVESUFFIX") || kw(&L->cur,"CHOPSUFFIX") || kw(&L->cur,"UNSUFFIX") ||
+        kw(&L->cur,"STRIPCOMMON") || kw(&L->cur,"STRIPLCP") || kw(&L->cur,"RELPATHS") ||
+        kw(&L->cur,"STRIPROOT") || kw(&L->cur,"COMMONSTRIP")){
+      char op[20];
+      int is_suf = 0, is_common = 0;
+      char bag[CUBALC_HOST_STR_MAX], needle[512], out[CUBALC_HOST_STR_MAX];
+      char field[512], clipped[512];
+      char fields[64][256];
+      size_t flens[64];
+      const char *p, *start;
+      size_t flen, nlen, olen = 0, sn, i, j, n = 0, plen = 0;
+      long kept = 0, hit = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "STRIPSUFFIX") == 0 || strcmp(op, "MAPSTRIPSUF") == 0 ||
+          strcmp(op, "DROPSUFFIX") == 0 || strcmp(op, "REMOVESUFFIX") == 0 ||
+          strcmp(op, "CHOPSUFFIX") == 0 || strcmp(op, "UNSUFFIX") == 0)
+        is_suf = 1;
+      if (strcmp(op, "STRIPCOMMON") == 0 || strcmp(op, "STRIPLCP") == 0 ||
+          strcmp(op, "RELPATHS") == 0 || strcmp(op, "STRIPROOT") == 0 ||
+          strcmp(op, "COMMONSTRIP") == 0)
+        is_common = 1;
+      lex_next(L);
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (!is_common) {
+        if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      }
+      /* parse fields; for STRIPCOMMON also compute LCP into needle */
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= sizeof fields[0]) flen = sizeof fields[0] - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          flens[n] = flen;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (is_common && n > 0) {
+        plen = flens[0];
+        for (i = 1; i < n; i++) {
+          size_t m = flens[i] < plen ? flens[i] : plen;
+          j = 0;
+          while (j < m && fields[0][j] == fields[i][j]) j++;
+          plen = j;
+          if (plen == 0) break;
+        }
+        if (plen >= sizeof needle) plen = sizeof needle - 1;
+        memcpy(needle, fields[0], plen);
+        needle[plen] = 0;
+      }
+      nlen = strlen(needle);
+      for (i = 0; i < n; i++) {
+        flen = flens[i];
+        memcpy(field, fields[i], flen + 1);
+        sn = flen;
+        if (nlen > 0 && flen >= nlen) {
+          if (!is_suf) {
+            if (memcmp(field, needle, nlen) == 0) {
+              sn = flen - nlen;
+              memcpy(clipped, field + nlen, sn);
+              clipped[sn] = 0;
+              hit++;
+            } else {
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+            }
+          } else {
+            if (memcmp(field + (flen - nlen), needle, nlen) == 0) {
+              sn = flen - nlen;
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+              hit++;
+            } else {
+              memcpy(clipped, field, sn);
+              clipped[sn] = 0;
+            }
+          }
+        } else {
+          memcpy(clipped, field, sn);
+          clipped[sn] = 0;
+        }
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + sn < sizeof out) {
+          memcpy(out + olen, clipped, sn);
+          olen += sn;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, clipped, t);
+          olen += t;
+        }
+        out[olen] = 0;
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "STRIPPREFIX_N", kept);
+      var_set_num(vm, "STRIPSUFFIX_N", kept);
+      var_set_num(vm, "STRIPCOMMON_N", kept);
+      if (is_common) {
+        var_set_num(vm, "STRIPCOMMON_HIT", hit);
+        var_set_str(vm, "STRIPCOMMON_PRE", needle);
+        var_set_num(vm, "STRIPCOMMON_LEN", (long)nlen);
+      } else if (is_suf) {
+        var_set_num(vm, "STRIPSUFFIX_HIT", hit);
+      } else {
+        var_set_num(vm, "STRIPPREFIX_HIT", hit);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS EMPTY|ISEMPTY [str|LAST] — LAST_N 1 if zero-length string.
+     * SYS BLANK|ISBLANK|WS — LAST_N 1 if empty or only space/tab/CR/LF.
+     * SYS NONEMPTY|NONEMPTY — invert of EMPTY (1 if any char).
+     * Usability: soft plate / optional config IF without LEN + compare glue. */
+    if (kw(&L->cur,"EMPTY") || kw(&L->cur,"ISEMPTY") || kw(&L->cur,"ISEMPTYSTR") ||
+        kw(&L->cur,"BLANK") || kw(&L->cur,"ISBLANK") || kw(&L->cur,"WS") ||
+        kw(&L->cur,"ISWS") || kw(&L->cur,"WHITESPACE") ||
+        kw(&L->cur,"NONEMPTY") || kw(&L->cur,"NOTEMPTY") || kw(&L->cur,"HASCHARS")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int want_blank = (strcmp(op, "BLANK") == 0 || strcmp(op, "ISBLANK") == 0 ||
+                        strcmp(op, "WS") == 0 || strcmp(op, "ISWS") == 0 ||
+                        strcmp(op, "WHITESPACE") == 0);
+      int want_non = (strcmp(op, "NONEMPTY") == 0 || strcmp(op, "NOTEMPTY") == 0 ||
+                      strcmp(op, "HASCHARS") == 0);
+      char s[CUBALC_HOST_STR_MAX];
+      long hit = 0;
+      lex_next(L);
+      s[0] = 0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      if (want_blank) {
+        const char *p = s;
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+        hit = (*p == 0) ? 1 : 0;
+      } else if (want_non) {
+        hit = (s[0] != 0) ? 1 : 0;
+      } else {
+        hit = (s[0] == 0) ? 1 : 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "EMPTY_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS COALESCE|FIRSTS|NVL|IFNUL a b [c…] — first non-empty string arg → LAST.
+     * SYS COALESCE BLANK|NB a b… — first non-blank (not only whitespace).
+     * LAST_N = length of chosen; all empty → "" LAST_N=0 OK=1.
+     * Usability: default chain for ENV/ARG plates without nested IF EMPTY. */
+    if (kw(&L->cur,"COALESCE") || kw(&L->cur,"FIRSTS") || kw(&L->cur,"NVL") ||
+        kw(&L->cur,"IFNUL") || kw(&L->cur,"IFNULL") || kw(&L->cur,"FIRSTNON") ||
+        kw(&L->cur,"ORSTR") || kw(&L->cur,"FIRSTNONEMPTY")){
+      char chosen[CUBALC_HOST_STR_MAX];
+      char arg[CUBALC_HOST_STR_MAX];
+      int skip_blank = 0, got = 0;
+      long out_n = 0;
+      lex_next(L);
+      if (kw(&L->cur,"BLANK") || kw(&L->cur,"NB") || kw(&L->cur,"NONBLANK") ||
+          kw(&L->cur,"TRIM") || kw(&L->cur,"WS")) {
+        skip_blank = 1;
+        lex_next(L);
+      }
+      chosen[0] = 0;
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+             L->cur.kind == TK_NUM) {
+        arg[0] = 0;
+        if (L->cur.kind == TK_NUM) {
+          snprintf(arg, sizeof arg, "%ld", L->cur.num);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, arg, sizeof arg) != 0) {
+          break;
+        }
+        if (!got) {
+          int empty = (arg[0] == 0);
+          if (skip_blank && !empty) {
+            const char *p = arg;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+            empty = (*p == 0);
+          }
+          if (!empty) {
+            snprintf(chosen, sizeof chosen, "%s", arg);
+            got = 1;
+          }
+        }
+        /* still consume remaining args even after choice */
+      }
+      out_n = (long)strlen(chosen);
+      var_set_str(vm, "LAST", chosen);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", chosen);
+      vm->last_n = out_n;
+      var_set_num(vm, "LAST_N", out_n);
+      var_set_num(vm, "COALESCE_N", out_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    if (kw(&L->cur,"TIME") || kw(&L->cur,"NOW") || kw(&L->cur,"EPOCH")){
+      lex_next(L);
+      long n = (long)time(NULL);
+      vm->last_n = n; var_set_num(vm, "LAST_N", n); var_set_num(vm, "TIME", n); var_set_num(vm, "OK", 1);
+      char buf[32]; snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf); snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS MS|MILLIS|TIME_MS|EPOCH_MS — wall clock milliseconds since epoch.
+     * Usability: agents need finer stamps than SYS TIME (seconds) for plates/timing. */
+    if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS") ||
+        kw(&L->cur,"TIME_MS") || kw(&L->cur,"EPOCH_MS") || kw(&L->cur,"NOW_MS")){
+      struct timespec ts;
+      long n;
+      char buf[40];
+      lex_next(L);
+      if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
+        n = (long)time(NULL) * 1000L;
+      } else {
+        n = (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+      }
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "MS", n);
+      var_set_num(vm, "TIME_MS", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS MONOTONIC|MONO|CLOCK_MONO|STEADY_MS — CLOCK_MONOTONIC ms.
+     * LAST_N / MONOTONIC_N = ms (arbitrary epoch, steady for deltas).
+     * Usability: elapsed timing that ignores wall-clock jumps; pairs with MS/SLEEP. */
+    if (kw(&L->cur,"MONOTONIC") || kw(&L->cur,"MONO") || kw(&L->cur,"CLOCK_MONO") ||
+        kw(&L->cur,"STEADY_MS") || kw(&L->cur,"MONO_MS") || kw(&L->cur,"STEADY") ||
+        kw(&L->cur,"MONOTONIC_MS") || kw(&L->cur,"CLOCK_MONOTONIC")){
+      struct timespec ts;
+      long n;
+      char buf[40];
+      lex_next(L);
+#if defined(CLOCK_MONOTONIC)
+      if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+        n = (long)time(NULL) * 1000L;
+      } else {
+        n = (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+      }
+#else
+      n = (long)time(NULL) * 1000L;
+#endif
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "MONOTONIC", n);
+      var_set_num(vm, "MONOTONIC_N", n);
+      var_set_num(vm, "MONO", n);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* host-meta theme → lang_ops_sys_hostmeta.c (mesh vote A2) */
+    {
+      int hm = cubalc_lang_ops_sys_try_hostmeta(vm, L);
+      if (hm != 0) return hm;
+    }
+
+    /* SYS SLEEP|MSLEEP|DELAY [MS] n|"duration"
+     * — pause n milliseconds (cap 60s). Numeric still works (ms).
+     * String/LAST/str-var: PARSEMS human duration ("250ms","1s","1s500ms").
+     * Soft-fail bad duration (OK=0, no sleep). Usability: backoff without
+     * SYS PARSEMS + SLEEP glue; pairs with SYS MS / HUMANMS. */
+    if (kw(&L->cur,"SLEEP") || kw(&L->cur,"MSLEEP") || kw(&L->cur,"DELAY") ||
+        kw(&L->cur,"PAUSE") || kw(&L->cur,"WAIT_MS")){
+      long ms = 0;
+      char buf[40], src[256];
+      int from_dur = 0;
+      const char *derr = NULL;
+      lex_next(L);
+      /* optional unit keyword MS|MILLIS before or after value is ignored as unit */
+      if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+        lex_next(L);
+      src[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+          from_dur = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        /* String vars / LAST hold duration text; numeric idents use parse_expr. */
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+            from_dur = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0)
+              from_dur = 1;
+          } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                     L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
+            ms = parse_expr(vm, L);
+          }
+        }
+      } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN ||
+                 L->cur.kind==TK_MINUS) {
+        ms = parse_expr(vm, L);
+      }
+      if (from_dur) {
+        if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "SLEEP_MS", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", derr ? derr : "SLEEP: bad duration");
+          var_set_str(vm, "ERR", derr ? derr : "SLEEP: bad duration");
+          bump(vm); return 1;
+        }
+      }
+      if (kw(&L->cur,"MS") || kw(&L->cur,"MILLIS") || kw(&L->cur,"MILLISECONDS"))
+        lex_next(L);
+      if (ms < 0) ms = 0;
+      if (ms > 60000) ms = 60000; /* hard cap — avoid hung agents */
+      /* Honor CUBALC_RUN_TIMEOUT / -T: clamp or fail before long sleep. */
+      if (vm->run_deadline_ms > 0) {
+        long rem = cubalc_lang_timeout_remain_ms(vm);
+        if (rem <= 0) {
+          cubalc_lang_check_timeout(vm, L->cur.line);
+          bump(vm); return 1;
+        }
+        if (ms > rem) ms = rem;
+      }
+      if (ms > 0) {
+        struct timespec ts;
+        ts.tv_sec = ms / 1000;
+        ts.tv_nsec = (ms % 1000) * 1000000L;
+        nanosleep(&ts, NULL);
+      }
+      /* After sleep, surface budget expiry so loops stop cleanly. */
+      if (vm->run_deadline_ms > 0 && cubalc_lang_timeout_remain_ms(vm) <= 0) {
+        cubalc_lang_check_timeout(vm, L->cur.line);
+        bump(vm); return 1;
+      }
+      vm->last_n = ms;
+      var_set_num(vm, "LAST_N", ms);
+      var_set_num(vm, "SLEEP_MS", ms);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", ms);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS RAND|RANDOM [n] | [lo hi] — uniform integer for agent jitter/sampling.
+     * No args → 0..999999; one arg n>0 → 0..n-1; two args → inclusive [lo,hi].
+     * Seed: once per process via time^pid (CUBALC_SEED override if set numeric).
+     * Distinct from cube-plane RAND (stack/cell). Usability: backoff jitter without shell. */
+    if (kw(&L->cur,"RAND") || kw(&L->cur,"RANDOM") || kw(&L->cur,"RND") ||
+        kw(&L->cur,"IRAND") || kw(&L->cur,"RANDINT") || kw(&L->cur,"URAND")){
+      static int seeded = 0;
+      long a = -1, b = -1, out = 0, span;
+      int has_a = 0, has_b = 0;
+      char buf[40];
+      const char *se;
+      lex_next(L);
+      /* Track presence separately: single negative arg must not look like "no args"
+       * (old a<0&&b<0 sentinel treated SYS RAND -3 as default 0..999999). */
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS) {
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS) {
+        b = parse_expr(vm, L);
+        has_b = 1;
+      }
+      if (!seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        seeded = 1;
+      }
+      if (!has_a) {
+        /* default wide range */
+        out = (long)(rand() % 1000000);
+      } else if (!has_b) {
+        /* single arg: 0..a-1; non-positive → 0 */
+        if (a <= 0) out = 0;
+        else out = (long)(rand() % (int)(a > 0x7fffffffL ? 0x7fffffffL : a));
+      } else {
+        long lo = a, hi = b;
+        if (lo > hi) { long t = lo; lo = hi; hi = t; }
+        span = hi - lo + 1;
+        if (span <= 0) out = lo;
+        else if (span > 0x7fffffffL) {
+          out = lo + (long)(rand() % 0x7fffffff);
+        } else {
+          out = lo + (long)(rand() % (int)span);
+        }
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "RAND", out);
+      var_set_num(vm, "RANDOM", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS PICK|CHOICE|SAMPLE [str|LAST] — random newline field → LAST.
+     * LAST_N/PICK_N = 0-based index chosen; empty bag → LAST="", LAST_N=-1, OK=0 soft.
+     * Shares RAND seed (CUBALC_SEED). Usability: sample LIST/RANGE bag without shell. */
+    if (kw(&L->cur,"PICK") || kw(&L->cur,"CHOICE") || kw(&L->cur,"SAMPLE") ||
+        kw(&L->cur,"RANDLINE") || kw(&L->cur,"PICKLINE") || kw(&L->cur,"ANYLINE") ||
+        kw(&L->cur,"DRAW") || kw(&L->cur,"LOT")){
+      static int pick_seeded = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      enum { PICK_MAX = 256, PICK_FLEN = 192 };
+      char fields[PICK_MAX][PICK_FLEN];
+      int n = 0, idx = -1;
+      const char *p, *start;
+      const char *se;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p && n < PICK_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= PICK_FLEN) flen = PICK_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!pick_seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        pick_seeded = 1;
+      }
+      if (n <= 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = -1;
+        var_set_num(vm, "LAST_N", -1);
+        var_set_num(vm, "PICK_N", -1);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      idx = (int)(rand() % n);
+      var_set_str(vm, "LAST", fields[idx]);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", fields[idx]);
+      vm->last_n = (long)idx;
+      var_set_num(vm, "LAST_N", (long)idx);
+      var_set_num(vm, "PICK_N", (long)idx);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SHUFFLE|SHUF|RANDPERM [str|LAST] — Fisher–Yates shuffle of newline fields → LAST.
+     * LAST_N/SHUFFLE_N = field count; empty → "" OK=1. Shares RAND/CUBALC_SEED seed.
+     * Usability: randomize peer/work bags without shell shuf; pairs with PICK/TAKE. */
+    if (kw(&L->cur,"SHUFFLE") || kw(&L->cur,"SHUF") || kw(&L->cur,"RANDPERM") ||
+        kw(&L->cur,"SHUFFLEL") || kw(&L->cur,"SHUFFLELINES") || kw(&L->cur,"SCRAMBLE") ||
+        kw(&L->cur,"MIXLINES") || kw(&L->cur,"PERMUTE")){
+      static int shuf_seeded = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { SHUF_MAX = 256, SHUF_FLEN = 192 };
+      char fields[SHUF_MAX][SHUF_FLEN];
+      int n = 0, i, j;
+      const char *p, *start, *se;
+      size_t olen = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p && n < SHUF_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= SHUF_FLEN) flen = SHUF_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!shuf_seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        shuf_seeded = 1;
+      }
+      /* Fisher–Yates */
+      for (i = n - 1; i > 0; i--) {
+        j = (int)(rand() % (i + 1));
+        if (j != i) {
+          char tmp[SHUF_FLEN];
+          memcpy(tmp, fields[i], SHUF_FLEN);
+          memcpy(fields[i], fields[j], SHUF_FLEN);
+          memcpy(fields[j], tmp, SHUF_FLEN);
+        }
+      }
+      out[0] = 0;
+      for (i = 0; i < n; i++) {
+        size_t flen = strlen(fields[i]);
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, fields[i], flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, fields[i], take);
+          olen += take;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "SHUFFLE_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS DRAWN|SAMPLEK|NPICK|TAKERAND k [bag] — sample k unique bag fields without
+     * replacement → LAST bag. Partial Fisher–Yates; k<=0 → empty; k>=n → all shuffled.
+     * LAST_N/DRAWN_N = count returned. Distinct from PICK/SAMPLE (single field).
+     * Shares RAND/CUBALC_SEED. Usability: multi-peer/work sample without SHUFFLE+TAKE. */
+    if (kw(&L->cur,"DRAWN") || kw(&L->cur,"SAMPLEK") || kw(&L->cur,"NPICK") ||
+        kw(&L->cur,"TAKERAND") || kw(&L->cur,"RSAMPLE") || kw(&L->cur,"DRAWK") ||
+        kw(&L->cur,"SAMPLE_N") || kw(&L->cur,"PICKN") || kw(&L->cur,"CHOICEN") ||
+        kw(&L->cur,"RANDTAKE")){
+      static int drawn_seeded = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { DRAW_MAX = 256, DRAW_FLEN = 192 };
+      char fields[DRAW_MAX][DRAW_FLEN];
+      int n = 0, i, j, k = 0, take;
+      const char *p, *start, *se;
+      size_t olen = 0;
+      long kwant = 0;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        kwant = parse_expr(vm, L);
+      if (kwant < 0) kwant = 0;
+      if (kwant > DRAW_MAX) kwant = DRAW_MAX;
+      k = (int)kwant;
+      src[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p && n < DRAW_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= DRAW_FLEN) flen = DRAW_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!drawn_seeded) {
+        unsigned long s = (unsigned long)time(NULL);
+#if !defined(CUBALC_OS_WINDOWS)
+        s ^= (unsigned long)getpid() << 16;
+#endif
+        se = getenv("CUBALC_SEED");
+        if (se && se[0]) {
+          char *end = 0;
+          unsigned long v = strtoul(se, &end, 0);
+          if (end && end != se) s = v;
+        }
+        srand((unsigned)(s & 0xffffffffu));
+        drawn_seeded = 1;
+      }
+      take = k;
+      if (take > n) take = n;
+      /* partial Fisher–Yates: randomize first `take` positions */
+      for (i = 0; i < take; i++) {
+        int r = i + (int)(rand() % (n - i));
+        if (r != i) {
+          char tmp[DRAW_FLEN];
+          memcpy(tmp, fields[i], DRAW_FLEN);
+          memcpy(fields[i], fields[r], DRAW_FLEN);
+          memcpy(fields[r], tmp, DRAW_FLEN);
+        }
+      }
+      for (i = 0; i < take; i++) {
+        size_t flen = strlen(fields[i]);
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, fields[i], flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, fields[i], t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)take;
+      var_set_num(vm, "LAST_N", (long)take);
+      var_set_num(vm, "DRAWN_N", (long)take);
+      var_set_num(vm, "SAMPLEK_N", (long)take);
+      var_set_num(vm, "NPICK_N", (long)take);
+      var_set_num(vm, "DRAWN_TOTAL", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MIN|MAX a b [c…]|bag — host-plane min/max of integer args → LAST_N.
+     * Bag mode (like SUM): one string/LAST with newline numeric fields.
+     * SYS CLAMP x lo hi — bound x into [lo,hi] (lo/hi swapped if inverted).
+     * COUNT = n used in bag mode. Distinct from cube ISA stack MIN/MAX/CLAMP.
+     * Usability: cap retries/jitter; after LENALL find max field width without
+     * SORTN+TAIL glue. */
+    if (kw(&L->cur,"MIN") || kw(&L->cur,"MINIMUM") || kw(&L->cur,"MAX") ||
+        kw(&L->cur,"MAXIMUM") || kw(&L->cur,"CLAMP") || kw(&L->cur,"BOUND") ||
+        kw(&L->cur,"CLIP") || kw(&L->cur,"SATURATE") ||
+        kw(&L->cur,"MINBAG") || kw(&L->cur,"MAXBAG") || kw(&L->cur,"BAGMIN") ||
+        kw(&L->cur,"BAGMAX") || kw(&L->cur,"MINALL") || kw(&L->cur,"MAXALL")){
+      char op[16];
+      long vals[64];
+      int n = 0, i, is_min, is_max, is_clamp, bag = 0;
+      long out = 0;
+      char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_min = (strcmp(op, "MIN") == 0 || strcmp(op, "MINIMUM") == 0 ||
+                strcmp(op, "MINBAG") == 0 || strcmp(op, "BAGMIN") == 0 ||
+                strcmp(op, "MINALL") == 0);
+      is_max = (strcmp(op, "MAX") == 0 || strcmp(op, "MAXIMUM") == 0 ||
+                strcmp(op, "MAXBAG") == 0 || strcmp(op, "BAGMAX") == 0 ||
+                strcmp(op, "MAXALL") == 0);
+      is_clamp = (strcmp(op, "CLAMP") == 0 || strcmp(op, "BOUND") == 0 ||
+                  strcmp(op, "CLIP") == 0 || strcmp(op, "SATURATE") == 0);
+      /* force bag mode for *BAG / *ALL aliases */
+      if (strcmp(op, "MINBAG") == 0 || strcmp(op, "MAXBAG") == 0 ||
+          strcmp(op, "BAGMIN") == 0 || strcmp(op, "BAGMAX") == 0 ||
+          strcmp(op, "MINALL") == 0 || strcmp(op, "MAXALL") == 0)
+        bag = 1;
+      lex_next(L);
+      if (is_clamp) {
+        /* parse_prim: spaces between args must not become binary minus. */
+        while (n < 16 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                          L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
+        }
+        {
+          long x, lo, hi;
+          if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
+          else if (n == 1) { x = vals[0]; lo = 0; hi = vals[0]; }
+          else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
+          else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
+          if (lo > hi) { long t = lo; lo = hi; hi = t; }
+          out = x;
+          if (out < lo) out = lo;
+          if (out > hi) out = hi;
+        }
+      } else {
+        /* bag mode: string literal, string var, or no numeric-looking arg (→ LAST) */
+        if (!bag) {
+          if (L->cur.kind == TK_STR) {
+            bag = 1;
+          } else if (L->cur.kind == TK_IDENT) {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str) bag = 1;
+          } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                       L->cur.kind == TK_LPAREN)) {
+            bag = 1; /* bare: aggregate LAST bag/text */
+          }
+        }
+        if (bag) {
+          src[0] = 0;
+          if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+            if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+              snprintf(src, sizeof src, "%s", vm->last_str);
+          } else {
+            snprintf(src, sizeof src, "%s", vm->last_str);
+          }
+          {
+            const char *p = src;
+            while (*p && n < 64) {
+              const char *start = p;
+              char *end = NULL;
+              long v;
+              while (*p && *p != '\n') p++;
+              if (start == p) {
+                if (*p == '\n') p++;
+                continue;
+              }
+              {
+                char tmp[48];
+                size_t flen = (size_t)(p - start);
+                if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+                memcpy(tmp, start, flen);
+                tmp[flen] = 0;
+                v = strtol(tmp, &end, 10);
+                if (end != tmp) {
+                  while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                    end++;
+                  if (end && *end == 0)
+                    vals[n++] = v;
+                }
+              }
+              if (*p == '\n') p++;
+            }
+          }
+        } else {
+          /* parse_prim (not parse_expr): SYS MIN -3 -1 → [-3,-1] not (-3 - 1). */
+          while (n < 64 && (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT ||
+                            L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS)) {
+            vals[n++] = parse_prim(vm, L);
+          }
+        }
+        if (n <= 0) {
+          out = bag ? 0 : vm->last_n;
+        } else {
+          out = vals[0];
+          for (i = 1; i < n; i++) {
+            if (is_min && vals[i] < out) out = vals[i];
+            if (is_max && vals[i] > out) out = vals[i];
+          }
+        }
+        var_set_num(vm, "COUNT", (long)n);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      if (is_min) var_set_num(vm, "MIN", out);
+      if (is_max) var_set_num(vm, "MAX", out);
+      if (is_clamp) var_set_num(vm, "CLAMP", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS ARGMAX|ARGMIN a b [c…]|bag — 0-based index of first extreme → LAST_N.
+     * LAST = extreme value as decimal; ARGMAX_V/ARGMIN_V = value; COUNT = n.
+     * Empty / no numbers → LAST_N=-1, OK=0. Bag mode like MIN/MAX/SUM.
+     * Usability: LENALL → ARGMAX → NTH to pick longest field without EACH. */
+    if (kw(&L->cur,"ARGMAX") || kw(&L->cur,"ARGMIN") || kw(&L->cur,"MAXIDX") ||
+        kw(&L->cur,"MINIDX") || kw(&L->cur,"WHICHMAX") || kw(&L->cur,"WHICHMIN") ||
+        kw(&L->cur,"IMAX") || kw(&L->cur,"IMIN") || kw(&L->cur,"INDEXMAX") ||
+        kw(&L->cur,"INDEXMIN") || kw(&L->cur,"MAXI") || kw(&L->cur,"MINI")){
+      char op[20];
+      long vals[64];
+      int n = 0, i, is_min, bag = 0;
+      long best_i = -1, best_v = 0;
+      char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_min = (strcmp(op, "ARGMIN") == 0 || strcmp(op, "MINIDX") == 0 ||
+                strcmp(op, "WHICHMIN") == 0 || strcmp(op, "IMIN") == 0 ||
+                strcmp(op, "INDEXMIN") == 0 || strcmp(op, "MINI") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_STR) {
+        bag = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) bag = 1;
+      } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                   L->cur.kind == TK_LPAREN)) {
+        bag = 1;
+      }
+      if (bag) {
+        src[0] = 0;
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+            snprintf(src, sizeof src, "%s", vm->last_str);
+        } else {
+          snprintf(src, sizeof src, "%s", vm->last_str);
+        }
+        {
+          const char *p = src;
+          while (*p && n < 64) {
+            const char *start = p;
+            char *end = NULL;
+            long v;
+            while (*p && *p != '\n') p++;
+            if (start == p) {
+              if (*p == '\n') p++;
+              continue;
+            }
+            {
+              char tmp[48];
+              size_t flen = (size_t)(p - start);
+              if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+              memcpy(tmp, start, flen);
+              tmp[flen] = 0;
+              v = strtol(tmp, &end, 10);
+              if (end != tmp) {
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end == 0)
+                  vals[n++] = v;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        while (n < 64 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
+        }
+      }
+      if (n <= 0) {
+        best_i = -1;
+        best_v = 0;
+        var_set_num(vm, "OK", 0);
+      } else {
+        best_i = 0;
+        best_v = vals[0];
+        for (i = 1; i < n; i++) {
+          if (is_min) {
+            if (vals[i] < best_v) { best_v = vals[i]; best_i = i; }
+          } else {
+            if (vals[i] > best_v) { best_v = vals[i]; best_i = i; }
+          }
+        }
+        var_set_num(vm, "OK", 1);
+      }
+      vm->last_n = best_i;
+      var_set_num(vm, "LAST_N", best_i);
+      if (is_min) {
+        var_set_num(vm, "ARGMIN_I", best_i);
+        var_set_num(vm, "ARGMIN_V", best_v);
+        var_set_num(vm, "MINIDX", best_i);
+      } else {
+        var_set_num(vm, "ARGMAX_I", best_i);
+        var_set_num(vm, "ARGMAX_V", best_v);
+        var_set_num(vm, "MAXIDX", best_i);
+      }
+      var_set_num(vm, "COUNT", (long)n);
+      snprintf(buf, sizeof buf, "%ld", best_v);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS IN|WITHIN|INRANGE x lo hi — inclusive numeric range membership → LAST_N 0|1.
+     * lo/hi swapped if inverted. Distinct from SYS BETWEEN (string peel).
+     * Usability: IF/guard retries and score bands without dual CMP tests. */
+    if (kw(&L->cur,"IN") || kw(&L->cur,"WITHIN") || kw(&L->cur,"INRANGE") ||
+        kw(&L->cur,"BETWEENN") || kw(&L->cur,"NUMIN") || kw(&L->cur,"ISIN") ||
+        kw(&L->cur,"INCL") || kw(&L->cur,"BOUNDS")){
+      long vals[8];
+      int n = 0;
+      long x, lo, hi, out;
+      char buf[16];
+      lex_next(L);
+      while (n < 8 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                        L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+        vals[n++] = parse_prim(vm, L);
+      }
+      if (n < 1) { x = vm->last_n; lo = 0; hi = 0; }
+      else if (n == 1) { x = vals[0]; lo = 0; hi = 0; }
+      else if (n == 2) { x = vals[0]; lo = vals[1]; hi = vals[1]; }
+      else { x = vals[0]; lo = vals[1]; hi = vals[2]; }
+      if (lo > hi) { long t = lo; lo = hi; hi = t; }
+      out = (x >= lo && x <= hi) ? 1L : 0L;
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "IN", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS CMP|NCMP a b — three-way numeric compare → LAST_N -1|0|1.
+     * SYS SCMP|CMPS|STRCMP a b — lexicographic string compare → LAST_N -1|0|1.
+     * SYS SCMPI|CMPSI — case-insensitive string compare.
+     * Usability: sort keys / IF without dual LT+GT tests; pairs with MIN/MAX. */
+    if (kw(&L->cur,"CMP") || kw(&L->cur,"NCMP") || kw(&L->cur,"ICMP") ||
+        kw(&L->cur,"CMP3") || kw(&L->cur,"COMPARE") ||
+        kw(&L->cur,"SCMP") || kw(&L->cur,"CMPS") || kw(&L->cur,"STRCMP") ||
+        kw(&L->cur,"SCMPI") || kw(&L->cur,"CMPSI") || kw(&L->cur,"STRCMPI") ||
+        kw(&L->cur,"IABS") || kw(&L->cur,"ABSVAL") || kw(&L->cur,"ABSNUM") ||
+        kw(&L->cur,"NABS")){
+      char op[16];
+      long out = 0;
+      char buf[40];
+      int is_str, is_icase, is_abs;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_abs = (strcmp(op, "IABS") == 0 || strcmp(op, "ABSVAL") == 0 ||
+                strcmp(op, "ABSNUM") == 0 || strcmp(op, "NABS") == 0);
+      is_str = (strcmp(op, "SCMP") == 0 || strcmp(op, "CMPS") == 0 ||
+                strcmp(op, "STRCMP") == 0 || strcmp(op, "SCMPI") == 0 ||
+                strcmp(op, "CMPSI") == 0 || strcmp(op, "STRCMPI") == 0);
+      is_icase = (strcmp(op, "SCMPI") == 0 || strcmp(op, "CMPSI") == 0 ||
+                  strcmp(op, "STRCMPI") == 0);
+      lex_next(L);
+      if (is_abs) {
+        long x = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          x = parse_prim(vm, L);
+        else
+          x = vm->last_n;
+        out = (x < 0) ? -x : x;
+        var_set_num(vm, "ABS", out);
+      } else if (is_str) {
+        char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+        int r;
+        a[0] = 0; b[0] = 0;
+        if (!is_icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                          kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                          kw(&L->cur,"CI"))) {
+          is_icase = 1;
+          lex_next(L);
+        }
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0) b[0] = 0;
+        if (!is_icase) {
+          r = strcmp(a, b);
+        } else {
+          const char *p = a, *q = b;
+          r = 0;
+          while (*p && *q) {
+            char ca = *p, cb = *q;
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) { r = (ca < cb) ? -1 : 1; break; }
+            p++; q++;
+          }
+          if (r == 0) {
+            if (*p) r = 1;
+            else if (*q) r = -1;
+          }
+        }
+        out = (r < 0) ? -1L : (r > 0 ? 1L : 0L);
+        var_set_num(vm, "SCMP", out);
+      } else {
+        long a = 0, b = 0;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          a = parse_prim(vm, L);
+        else
+          a = vm->last_n;
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          b = parse_prim(vm, L);
+        else
+          b = 0;
+        out = (a < b) ? -1L : (a > b ? 1L : 0L);
+        var_set_num(vm, "CMP", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS SIGN|SGN x — signum → LAST_N -1|0|1 (pairs with IABS/CMP).
+     * SYS DIV|IDIV|QUOT a b — trunc-toward-zero integer divide; /0 → 0 soft.
+     * SYS MOD|REM|REMAINDER a b — a % b; %0 → 0 soft. Not path ABS/REALPATH.
+     * Usability: page index, bucket, parity without cube ISA DIV/MOD soup. */
+    if (kw(&L->cur,"SIGN") || kw(&L->cur,"SGN") || kw(&L->cur,"SIGNUM") ||
+        kw(&L->cur,"DIV") || kw(&L->cur,"IDIV") || kw(&L->cur,"QUOT") ||
+        kw(&L->cur,"QUOTIENT") || kw(&L->cur,"INTDIV") ||
+        kw(&L->cur,"MOD") || kw(&L->cur,"REM") || kw(&L->cur,"REMAINDER") ||
+        kw(&L->cur,"MODULO") || kw(&L->cur,"IMOD")){
+      char op[16];
+      long out = 0, a = 0, b = 0;
+      char buf[40];
+      int is_sign, is_div, is_mod;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sign = (strcmp(op, "SIGN") == 0 || strcmp(op, "SGN") == 0 ||
+                 strcmp(op, "SIGNUM") == 0);
+      is_div = (strcmp(op, "DIV") == 0 || strcmp(op, "IDIV") == 0 ||
+                strcmp(op, "QUOT") == 0 || strcmp(op, "QUOTIENT") == 0 ||
+                strcmp(op, "INTDIV") == 0);
+      is_mod = (strcmp(op, "MOD") == 0 || strcmp(op, "REM") == 0 ||
+                strcmp(op, "REMAINDER") == 0 || strcmp(op, "MODULO") == 0 ||
+                strcmp(op, "IMOD") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        a = parse_prim(vm, L);
+      else
+        a = vm->last_n;
+      if (!is_sign) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+          b = parse_prim(vm, L);
+        else
+          b = 0;
+      }
+      if (is_sign) {
+        out = (a > 0) ? 1L : (a < 0 ? -1L : 0L);
+        var_set_num(vm, "SIGN", out);
+      } else if (is_div) {
+        if (b == 0) out = 0;
+        else if (a == LONG_MIN && b == -1) out = LONG_MAX; /* overflow guard */
+        else out = a / b;
+        var_set_num(vm, "DIV", out);
+        var_set_num(vm, "QUOT", out);
+      } else {
+        /* mod */
+        if (b == 0) out = 0;
+        else if (a == LONG_MIN && b == -1) out = 0;
+        else out = a % b;
+        var_set_num(vm, "MOD", out);
+        var_set_num(vm, "REM", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS GCD|HCF a b [c…] — greatest common divisor of integer args → LAST_N.
+     * SYS LCM a b [c…] — least common multiple (via |a*b|/gcd, overflow-safe-ish).
+     * Abs values used; GCD(0,0)=0; LCM with 0 → 0. Multi-arg reduces left-to-right.
+     * Usability: reduce ratios / cycle periods without cube ISA GCD soup. */
+    if (kw(&L->cur,"GCD") || kw(&L->cur,"HCF") || kw(&L->cur,"GCF") ||
+        kw(&L->cur,"LCM") || kw(&L->cur,"LEASTCM") || kw(&L->cur,"LCMM")){
+      char op[16];
+      long vals[32];
+      int n = 0, i, is_lcm;
+      long out = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_lcm = (strcmp(op, "LCM") == 0 || strcmp(op, "LEASTCM") == 0 ||
+                strcmp(op, "LCMM") == 0);
+      lex_next(L);
+      while (n < 32 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                        L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+        vals[n++] = parse_prim(vm, L);
+      }
+      if (n <= 0) {
+        out = is_lcm ? 1 : 0; /* empty LCM=1, empty GCD=0 */
+      } else {
+        /* abs helper */
+        #define CUBALC_IABS_L(x) ((x) < 0 ? -(x) : (x))
+        out = CUBALC_IABS_L(vals[0]);
+        for (i = 1; i < n; i++) {
+          long a = out, b = CUBALC_IABS_L(vals[i]);
+          if (is_lcm) {
+            long g = a, h = b;
+            while (h) { long t = g % h; g = h; h = t; }
+            if (a == 0 || b == 0) out = 0;
+            else {
+              /* out = a / g * b — reduce first to limit overflow */
+              out = (a / g) * b;
+              if (out < 0) out = -out;
+            }
+          } else {
+            long g = a, h = b;
+            while (h) { long t = g % h; g = h; h = t; }
+            out = g;
+          }
+        }
+        #undef CUBALC_IABS_L
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      if (is_lcm) {
+        var_set_num(vm, "LCM", out);
+      } else {
+        var_set_num(vm, "GCD", out);
+      }
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS POW|POWER|IPOW a e — integer a^e (e>=0; e=0 → 1). Overflow soft-wraps in long.
+     * SYS ISQRT|SQRT|IROOT2 n — floor integer square root (n<0 → 0).
+     * Usability: backoff bases / geometry without cube ISA POW/SQRT soup. */
+    if (kw(&L->cur,"POW") || kw(&L->cur,"POWER") || kw(&L->cur,"IPOW") ||
+        kw(&L->cur,"EXPT") || kw(&L->cur,"EXPON") ||
+        kw(&L->cur,"ISQRT") || kw(&L->cur,"SQRT") || kw(&L->cur,"IROOT2") ||
+        kw(&L->cur,"SQRTR") || kw(&L->cur,"FLOORSQRT")){
+      char op[16];
+      long out = 0, a = 0, e = 0;
+      char buf[40];
+      int is_sqrt;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sqrt = (strcmp(op, "ISQRT") == 0 || strcmp(op, "SQRT") == 0 ||
+                 strcmp(op, "IROOT2") == 0 || strcmp(op, "SQRTR") == 0 ||
+                 strcmp(op, "FLOORSQRT") == 0);
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        a = parse_prim(vm, L);
+      else
+        a = vm->last_n;
+      if (is_sqrt) {
+        if (a < 0) out = 0;
+        else {
+          /* binary search floor sqrt */
+          long lo = 0, hi = a;
+          if (hi > 3037000499L) hi = 3037000499L; /* max for hi*hi in signed 64 */
+          while (lo <= hi) {
+            long mid = lo + (hi - lo) / 2;
+            long sq = mid * mid;
+            if (sq == a) { out = mid; break; }
+            if (sq < a) { out = mid; lo = mid + 1; }
+            else hi = mid - 1;
+          }
+        }
+        var_set_num(vm, "SQRT", out);
+        var_set_num(vm, "ISQRT", out);
+      } else {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+            L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+          e = parse_prim(vm, L);
+        else
+          e = 0;
+        if (e < 0) {
+          out = 0; /* negative exp not supported on ints */
+        } else if (e == 0) {
+          out = 1;
+        } else {
+          long r = 1;
+          long base = a;
+          long ee = e;
+          /* binary exponentiation; soft wrap on overflow */
+          while (ee > 0) {
+            if (ee & 1) r = r * base;
+            ee >>= 1;
+            if (ee) base = base * base;
+          }
+          out = r;
+        }
+        var_set_num(vm, "POW", out);
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "OK", 1);
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS SUM|TOTAL a b [c…] — sum of integer args → LAST_N.
+     * SYS PROD|PRODUCT|MULALL a b [c…] — product of integers.
+     * SYS AVG|MEAN|AVERAGE a b [c…] — integer mean (trunc toward 0).
+     * SYS MEDIAN|P50 a b [c…]|bag — integer median (sort; even → lower mid).
+     * Bag mode: one string (or bare LAST) with newline fields → aggregate numeric
+     * lines; blank/non-numeric fields skipped. COUNT = n used.
+     * Usability: score bags / LIST sizes without shell awk; pairs with MIN/MAX. */
+    if (kw(&L->cur,"SUM") || kw(&L->cur,"TOTAL") || kw(&L->cur,"SUMALL") ||
+        kw(&L->cur,"PROD") || kw(&L->cur,"PRODUCT") || kw(&L->cur,"MULALL") ||
+        kw(&L->cur,"PRODUCTALL") ||
+        kw(&L->cur,"AVG") || kw(&L->cur,"MEAN") || kw(&L->cur,"AVERAGE") ||
+        kw(&L->cur,"AVGALL") ||
+        kw(&L->cur,"MEDIAN") || kw(&L->cur,"P50") || kw(&L->cur,"MED") ||
+        kw(&L->cur,"MIDVAL") || kw(&L->cur,"MEDIANINT")){
+      char op[16];
+      long vals[64];
+      int n = 0, i, is_sum, is_prod, is_avg, is_med, bag = 0;
+      long out = 0, count = 0;
+      char buf[40];
+      char src[CUBALC_HOST_STR_MAX];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_sum = (strcmp(op, "SUM") == 0 || strcmp(op, "TOTAL") == 0 ||
+                strcmp(op, "SUMALL") == 0);
+      is_prod = (strcmp(op, "PROD") == 0 || strcmp(op, "PRODUCT") == 0 ||
+                 strcmp(op, "MULALL") == 0 || strcmp(op, "PRODUCTALL") == 0);
+      is_avg = (strcmp(op, "AVG") == 0 || strcmp(op, "MEAN") == 0 ||
+                strcmp(op, "AVERAGE") == 0 || strcmp(op, "AVGALL") == 0);
+      is_med = (strcmp(op, "MEDIAN") == 0 || strcmp(op, "P50") == 0 ||
+                strcmp(op, "MED") == 0 || strcmp(op, "MIDVAL") == 0 ||
+                strcmp(op, "MEDIANINT") == 0);
+      lex_next(L);
+      /* bag mode: string literal, string var, or no numeric-looking arg (→ LAST) */
+      if (L->cur.kind == TK_STR) {
+        bag = 1;
+      } else if (L->cur.kind == TK_IDENT) {
+        Var *v = var_get(vm, L->cur.text, 0);
+        if (v && v->is_str) bag = 1;
+      } else if (!(L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                   L->cur.kind == TK_LPAREN)) {
+        bag = 1; /* bare: aggregate LAST bag/text */
+      }
+      if (bag) {
+        src[0] = 0;
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+            snprintf(src, sizeof src, "%s", vm->last_str);
+        } else {
+          snprintf(src, sizeof src, "%s", vm->last_str);
+        }
+        {
+          const char *p = src;
+          while (*p && n < 64) {
+            const char *start = p;
+            char *end = NULL;
+            long v;
+            while (*p && *p != '\n') p++;
+            /* empty field between newlines → skip */
+            if (start == p) {
+              if (*p == '\n') p++;
+              continue;
+            }
+            /* parse field [start,p) as integer */
+            {
+              char tmp[48];
+              size_t flen = (size_t)(p - start);
+              if (flen >= sizeof tmp) flen = sizeof tmp - 1;
+              memcpy(tmp, start, flen);
+              tmp[flen] = 0;
+              v = strtol(tmp, &end, 10);
+              if (end != tmp) {
+                /* allow trailing whitespace only */
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end == 0)
+                  vals[n++] = v;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        while (n < 64 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          vals[n++] = parse_prim(vm, L);
+        }
+      }
+      count = n;
+      if (is_med) {
+        /* insertion sort then middle (even n → lower mid, no float) */
+        out = 0;
+        if (n > 0) {
+          for (i = 1; i < n; i++) {
+            long key = vals[i];
+            int j = i - 1;
+            while (j >= 0 && vals[j] > key) {
+              vals[j + 1] = vals[j];
+              j--;
+            }
+            vals[j + 1] = key;
+          }
+          out = vals[(n - 1) / 2];
+        }
+      } else if (is_prod) {
+        out = 1;
+        for (i = 0; i < n; i++) out *= vals[i];
+        if (n == 0) out = 1; /* empty product */
+      } else if (is_avg) {
+        out = 0;
+        if (n > 0) {
+          long s = 0;
+          for (i = 0; i < n; i++) s += vals[i];
+          out = s / n;
+        }
+      } else {
+        /* sum / total */
+        out = 0;
+        for (i = 0; i < n; i++) out += vals[i];
+      }
+      vm->last_n = out;
+      var_set_num(vm, "LAST_N", out);
+      var_set_num(vm, "COUNT", count);
+      var_set_num(vm, "OK", 1);
+      if (is_sum) {
+        var_set_num(vm, "SUM", out);
+        var_set_num(vm, "SUM_N", out);
+      }
+      if (is_prod) {
+        var_set_num(vm, "PROD", out);
+        var_set_num(vm, "PROD_N", out);
+      }
+      if (is_avg) {
+        var_set_num(vm, "AVG", out);
+        var_set_num(vm, "AVG_N", out);
+      }
+      if (is_med) {
+        var_set_num(vm, "MEDIAN", out);
+        var_set_num(vm, "MEDIAN_N", out);
+      }
+      snprintf(buf, sizeof buf, "%ld", out);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      bump(vm); return 1;
+    }
+    /* SYS RANGE lo hi [step] — inclusive integer sequence → newline bag LAST.
+     * SYS SEQ n — 1..n; SYS IOTA n — 0..n-1. Cap 256 fields.
+     * Usability: EACH LINE / SORTN / SUM fixtures without shell seq(1). */
+    if (kw(&L->cur,"RANGE") || kw(&L->cur,"SEQ") || kw(&L->cur,"SEQUENCE") ||
+        kw(&L->cur,"IOTA") || kw(&L->cur,"ENUM") || kw(&L->cur,"NUMS") ||
+        kw(&L->cur,"COUNTTO") || kw(&L->cur,"FROMTO")){
+      char op[16];
+      long lo = 0, hi = 0, step = 1;
+      long n = 0, v, vals[256];
+      int i, is_seq, is_iota, empty = 0;
+      char out[CUBALC_HOST_STR_MAX];
+      size_t olen = 0;
+      char num[32];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_seq = (strcmp(op, "SEQ") == 0 || strcmp(op, "SEQUENCE") == 0 ||
+                strcmp(op, "COUNTTO") == 0);
+      is_iota = (strcmp(op, "IOTA") == 0 || strcmp(op, "ENUM") == 0);
+      lex_next(L);
+      /* parse up to 3 prims: a [b [c]] */
+      {
+        long args[3];
+        int na = 0;
+        while (na < 3 && (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+                          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)) {
+          args[na++] = parse_prim(vm, L);
+        }
+        if (is_iota) {
+          /* IOTA n → 0..n-1; IOTA lo hi → lo..hi-1 half-open; IOTA lo hi step */
+          if (na <= 0 || (na == 1 && args[0] <= 0)) {
+            empty = 1;
+          } else if (na == 1) {
+            lo = 0; hi = args[0] - 1; step = 1;
+          } else if (na == 2) {
+            if (args[1] <= args[0]) empty = 1;
+            else { lo = args[0]; hi = args[1] - 1; step = 1; }
+          } else {
+            if (args[1] <= args[0] && (!args[2] || args[2] > 0)) empty = 1;
+            else {
+              lo = args[0]; hi = args[1] - 1; step = args[2] ? args[2] : 1;
+            }
+          }
+        } else if (is_seq) {
+          /* SEQ n → 1..n; SEQ lo hi [step] inclusive like RANGE */
+          if (na <= 0 || (na == 1 && args[0] <= 0)) {
+            empty = 1;
+          } else if (na == 1) {
+            lo = 1; hi = args[0]; step = 1;
+          } else if (na == 2) {
+            lo = args[0]; hi = args[1]; step = 1;
+          } else {
+            lo = args[0]; hi = args[1]; step = args[2] ? args[2] : 1;
+          }
+        } else {
+          /* RANGE lo hi [step] inclusive */
+          if (na <= 0) {
+            empty = 1;
+          } else if (na == 1) {
+            if (args[0] <= 0) empty = 1;
+            else { lo = 1; hi = args[0]; step = 1; } /* RANGE n ≡ SEQ n */
+          } else if (na == 2) {
+            lo = args[0]; hi = args[1]; step = 1;
+          } else {
+            lo = args[0]; hi = args[1]; step = args[2] ? args[2] : 1;
+          }
+        }
+      }
+      if (!empty) {
+        if (step == 0) step = 1;
+        /* auto-flip step when lo/hi inverted (RANGE 5 1 → descending) */
+        if (lo > hi && step > 0) step = -step;
+        if (lo < hi && step < 0) step = -step;
+        v = lo;
+        if (step > 0) {
+          while (v <= hi && n < 256) { vals[n++] = v; v += step; }
+        } else {
+          while (v >= hi && n < 256) { vals[n++] = v; v += step; }
+        }
+      }
+      out[0] = 0;
+      for (i = 0; i < (int)n; i++) {
+        int nn = snprintf(num, sizeof num, "%ld", vals[i]);
+        if (nn < 0) nn = 0;
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + (size_t)nn < sizeof out) {
+          memcpy(out + olen, num, (size_t)nn);
+          olen += (size_t)nn;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, num, take);
+          olen += take;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "RANGE_N", n);
+      var_set_num(vm, "SEQ_N", n);
+      var_set_num(vm, "COUNT", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS DATE|ISO|DATETIME|UTC — human-readable UTC stamp for plates/logs.
+     * Usability: agents stamp plates without shell date(1).
+     * LAST/DATE/ISO = "YYYY-MM-DDTHH:MM:SSZ"; LAST_N = strlen; also TIME epoch. */
+    if (kw(&L->cur,"DATE") || kw(&L->cur,"ISO") || kw(&L->cur,"DATETIME") ||
+        kw(&L->cur,"UTC") || kw(&L->cur,"ISO8601") || kw(&L->cur,"TIMESTAMP_ISO")){
+      time_t now;
+      struct tm tm_utc;
+      char iso[40];
+      long epoch;
+      lex_next(L);
+      now = time(NULL);
+      epoch = (long)now;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        struct tm *tp = gmtime(&now);
+        if (tp) tm_utc = *tp;
+        else memset(&tm_utc, 0, sizeof tm_utc);
+      }
+#else
+      if (!gmtime_r(&now, &tm_utc))
+        memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+      snprintf(iso, sizeof iso, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+               tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+               tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+      var_set_str(vm, "DATE", iso);
+      var_set_str(vm, "ISO", iso);
+      var_set_str(vm, "DATETIME", iso);
+      var_set_str(vm, "LAST", iso);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso);
+      vm->last_n = (long)strlen(iso);
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "TIME", epoch);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FROMTIME|EPOCHISO|TOISO|ISOFROM [n|LAST_N]
+     * — format Unix epoch seconds as UTC ISO "YYYY-MM-DDTHH:MM:SSZ".
+     * LAST = stamp; LAST_N / FROMTIME_N / TIME = epoch (input, clamped ≥0).
+     * Default n = LAST_N. Usability: MTIME/AGE plate epochs → human stamps
+     * without shell date -d @epoch (DATE only does "now"). */
+    if (kw(&L->cur,"FROMTIME") || kw(&L->cur,"EPOCHISO") || kw(&L->cur,"TOISO") ||
+        kw(&L->cur,"ISOFROM") || kw(&L->cur,"EPOCH2ISO") || kw(&L->cur,"TIMEISO") ||
+        kw(&L->cur,"UNIXISO") || kw(&L->cur,"FROMEPOCH") || kw(&L->cur,"EPOCH_TO_ISO") ||
+        kw(&L->cur,"TSISO") || kw(&L->cur,"STAMPEPOCH")){
+      long n = vm->last_n;
+      time_t t;
+      struct tm tm_utc;
+      char iso[40];
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      if (n < 0) n = 0;
+      t = (time_t)n;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        struct tm *tp = gmtime(&t);
+        if (tp) tm_utc = *tp;
+        else memset(&tm_utc, 0, sizeof tm_utc);
+      }
+#else
+      if (!gmtime_r(&t, &tm_utc))
+        memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+      snprintf(iso, sizeof iso, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+               tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+               tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+      var_set_str(vm, "LAST", iso);
+      var_set_str(vm, "FROMTIME", iso);
+      var_set_str(vm, "EPOCHISO", iso);
+      var_set_str(vm, "TOISO", iso);
+      var_set_str(vm, "ISO", iso);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "FROMTIME_N", n);
+      var_set_num(vm, "TIME", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PARSEISO|TOEPOCH|ISO2EPOCH|FROMISO [str]
+     * — parse UTC ISO stamp → Unix epoch seconds (dual of FROMTIME).
+     * Accepts: YYYY-MM-DDTHH:MM:SSZ | …SS | space sep | date-only (midnight).
+     * LAST = decimal epoch; LAST_N / PARSEISO_N / TIME = epoch.
+     * Soft fail OK=0 on empty/bad. Usability: plate DATE stamps → age/compare
+     * without shell date -d. */
+    if (kw(&L->cur,"PARSEISO") || kw(&L->cur,"TOEPOCH") || kw(&L->cur,"ISO2EPOCH") ||
+        kw(&L->cur,"FROMISO") || kw(&L->cur,"ISOEPOCH") || kw(&L->cur,"PARSEDATE") ||
+        kw(&L->cur,"DATEPARSE") || kw(&L->cur,"EPOCHFROM") || kw(&L->cur,"ISO_TO_EPOCH") ||
+        kw(&L->cur,"READISO") || kw(&L->cur,"PARSE_ISO")){
+      char src[128], out[40];
+      const char *p;
+      int y=0, mo=0, d=0, H=0, M=0, S=0, nscan;
+      long epoch = 0;
+      /* days from civil date (Howard Hinnant algorithm) → Unix epoch */
+      long era, yoe, doy, doe, days;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      p = src;
+      while (*p == ' ' || *p == '\t') p++;
+      if (!*p) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSEISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSEISO: empty");
+        var_set_str(vm, "ERR", "PARSEISO: empty");
+        bump(vm); return 1;
+      }
+      /* date-only */
+      nscan = sscanf(p, "%d-%d-%d", &y, &mo, &d);
+      if (nscan != 3 || y < 1970 || y > 9999 || mo < 1 || mo > 12 || d < 1 || d > 31) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "PARSEISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "PARSEISO: bad date");
+        var_set_str(vm, "ERR", "PARSEISO: bad date");
+        bump(vm); return 1;
+      }
+      /* optional time after T or space */
+      {
+        const char *t = p;
+        while (*t && *t != 'T' && *t != ' ' && *t != 't') t++;
+        if (*t == 'T' || *t == 't' || *t == ' ') {
+          t++;
+          while (*t == ' ' || *t == '\t') t++;
+          if (*t) {
+            int hs=0, ms=0, ss=0;
+            int nt = sscanf(t, "%d:%d:%d", &hs, &ms, &ss);
+            if (nt < 2) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "PARSEISO_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", "PARSEISO: bad time");
+              var_set_str(vm, "ERR", "PARSEISO: bad time");
+              bump(vm); return 1;
+            }
+            if (nt == 2) ss = 0;
+            if (hs < 0 || hs > 23 || ms < 0 || ms > 59 || ss < 0 || ss > 60) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "PARSEISO_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", "PARSEISO: bad time");
+              var_set_str(vm, "ERR", "PARSEISO: bad time");
+              bump(vm); return 1;
+            }
+            H = hs; M = ms; S = ss;
+            if (S == 60) S = 59; /* leap second clamp */
+          }
+        }
+      }
+      /* civil (y, mo, d) → days since 1970-01-01 (UTC), proleptic Gregorian */
+      {
+        long Y = (long)y;
+        long mp = (long)mo;
+        long dy = (long)d;
+        Y -= mp <= 2;
+        era = (Y >= 0 ? Y : Y - 399) / 400;
+        yoe = Y - era * 400;
+        doy = (153 * (mp + (mp > 2 ? -3 : 9)) + 2) / 5 + dy - 1;
+        doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+        days = era * 146097 + doe - 719468; /* days since 1970-01-01 */
+      }
+      epoch = days * 86400L + (long)H * 3600L + (long)M * 60L + (long)S;
+      if (epoch < 0) epoch = 0;
+      snprintf(out, sizeof out, "%ld", epoch);
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = epoch;
+      var_set_num(vm, "LAST_N", epoch);
+      var_set_num(vm, "PARSEISO_N", epoch);
+      var_set_num(vm, "TOEPOCH_N", epoch);
+      var_set_num(vm, "TIME", epoch);
+      var_set_str(vm, "PARSEISO", out);
+      var_set_str(vm, "TOEPOCH", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ADDISO|SHIFTISO|ISOADD|PLUSISO [iso] [secs|"duration"]
+     * — parse ISO stamp, add seconds (or PARSEMS duration → floor ms/1000),
+     * re-format as UTC ISO. LAST = new stamp; LAST_N / ADDISO_N / TIME = new epoch.
+     * One arg number/duration: offset only, ISO from prior LAST (DATE chain).
+     * One arg ISO string: add 0 (normalize). Soft-fail bad ISO/duration.
+     * Usability: schedule plates without PARSEISO + ADDTIME + FROMTIME glue. */
+    if (kw(&L->cur,"ADDISO") || kw(&L->cur,"SHIFTISO") || kw(&L->cur,"ISOADD") ||
+        kw(&L->cur,"PLUSISO") || kw(&L->cur,"ISO_ADD") || kw(&L->cur,"ADDDATE") ||
+        kw(&L->cur,"SHIFTDATE") || kw(&L->cur,"DATEADD") || kw(&L->cur,"MOVEISO") ||
+        kw(&L->cur,"OFFSETISO") || kw(&L->cur,"ISOOFFSET")){
+      char iso_in[128], iso_out[40], tok[256];
+      long epoch = 0, secs = 0, ms = 0, out_ep = 0;
+      int has_iso = 0, has_off = 0;
+      const char *err = NULL, *derr = NULL;
+      lex_next(L);
+      iso_in[0] = 0;
+      tok[0] = 0;
+      /* number-only first arg → offset; ISO from prior LAST string */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+        secs = parse_expr(vm, L);
+        has_off = 1;
+        snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+        has_iso = iso_in[0] ? 1 : 0;
+      } else if (L->cur.kind == TK_STR ||
+                 (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                  !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        int got = 0;
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          got = (resolve_str_arg(vm, L, tok, sizeof tok) == 0);
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str)
+            got = (resolve_str_arg(vm, L, tok, sizeof tok) == 0);
+          else {
+            /* numeric ident → offset, ISO from LAST */
+            secs = parse_expr(vm, L);
+            has_off = 1;
+            snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+            has_iso = iso_in[0] ? 1 : 0;
+            got = 0;
+          }
+        }
+        if (got) {
+          /* Prefer ISO parse; if fail, treat as duration offset on prior LAST */
+          if (cubalc_parse_iso_epoch(tok, &epoch, &err) == 0) {
+            snprintf(iso_in, sizeof iso_in, "%s", tok);
+            has_iso = 1;
+            /* optional second offset */
+            if (L->cur.kind == TK_STR) {
+              if (resolve_str_arg(vm, L, tok, sizeof tok) == 0) {
+                if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) != 0) {
+                  var_set_str(vm, "LAST", "");
+                  vm->last_str[0] = 0;
+                  vm->last_n = 0;
+                  var_set_num(vm, "LAST_N", 0);
+                  var_set_num(vm, "OK", 0);
+                  var_set_str(vm, "LAST_ERR", derr ? derr : "ADDISO: bad duration");
+                  var_set_str(vm, "ERR", derr ? derr : "ADDISO: bad duration");
+                  bump(vm); return 1;
+                }
+                secs = ms / 1000L;
+                has_off = 1;
+              }
+            } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") &&
+                       !kw(&L->cur,"LET") && !kw(&L->cur,"SYS") &&
+                       !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+              Var *sv2 = (strcmp(L->cur.text, "LAST") == 0) ? NULL :
+                         var_get(vm, L->cur.text, 0);
+              if (strcmp(L->cur.text, "LAST") == 0 || (sv2 && sv2->is_str)) {
+                if (resolve_str_arg(vm, L, tok, sizeof tok) == 0) {
+                  if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) != 0) {
+                    var_set_str(vm, "LAST", "");
+                    vm->last_str[0] = 0;
+                    vm->last_n = 0;
+                    var_set_num(vm, "LAST_N", 0);
+                    var_set_num(vm, "OK", 0);
+                    var_set_str(vm, "LAST_ERR", derr ? derr : "ADDISO: bad duration");
+                    var_set_str(vm, "ERR", derr ? derr : "ADDISO: bad duration");
+                    bump(vm); return 1;
+                  }
+                  secs = ms / 1000L;
+                  has_off = 1;
+                }
+              } else {
+                secs = parse_expr(vm, L);
+                has_off = 1;
+              }
+            } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+                       L->cur.kind == TK_MINUS) {
+              secs = parse_expr(vm, L);
+              has_off = 1;
+            }
+          } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                     L->cur.kind == TK_LPAREN || L->cur.kind == TK_STR ||
+                     (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") &&
+                      !kw(&L->cur,"LET") && !kw(&L->cur,"SYS") &&
+                      !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+            /* first token was meant as ISO but failed; consume offset junk then soft-fail */
+            if (L->cur.kind == TK_STR ||
+                (L->cur.kind == TK_IDENT &&
+                 (strcmp(L->cur.text, "LAST") == 0 ||
+                  (var_get(vm, L->cur.text, 0) && var_get(vm, L->cur.text, 0)->is_str)))) {
+              char skip[256];
+              (void)resolve_str_arg(vm, L, skip, sizeof skip);
+            } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+                       L->cur.kind == TK_LPAREN || L->cur.kind == TK_IDENT) {
+              (void)parse_expr(vm, L);
+            }
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso");
+            var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso");
+            bump(vm); return 1;
+          } else if (cubalc_parse_duration_ms(tok, &ms, NULL, &derr) == 0) {
+            secs = ms / 1000L;
+            has_off = 1;
+            snprintf(iso_in, sizeof iso_in, "%s", vm->last_str);
+            has_iso = iso_in[0] ? 1 : 0;
+          } else {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso/duration");
+            var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso/duration");
+            bump(vm); return 1;
+          }
+        }
+      }
+      if (!has_iso || !iso_in[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "ADDISO: empty iso");
+        var_set_str(vm, "ERR", "ADDISO: empty iso");
+        bump(vm); return 1;
+      }
+      if (cubalc_parse_iso_epoch(iso_in, &epoch, &err) != 0) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", err ? err : "ADDISO: bad iso");
+        var_set_str(vm, "ERR", err ? err : "ADDISO: bad iso");
+        bump(vm); return 1;
+      }
+      if (!has_off) secs = 0;
+      if (secs >= 0) {
+        if (epoch > LONG_MAX - secs) out_ep = LONG_MAX;
+        else out_ep = epoch + secs;
+      } else {
+        if (epoch < -secs) out_ep = 0;
+        else out_ep = epoch + secs;
+      }
+      cubalc_format_epoch_iso(out_ep, iso_out, sizeof iso_out);
+      var_set_str(vm, "LAST", iso_out);
+      var_set_str(vm, "ADDISO", iso_out);
+      var_set_str(vm, "SHIFTISO", iso_out);
+      var_set_str(vm, "ISO", iso_out);
+      var_set_str(vm, "FROMTIME", iso_out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", iso_out);
+      vm->last_n = out_ep;
+      var_set_num(vm, "LAST_N", out_ep);
+      var_set_num(vm, "ADDISO_N", out_ep);
+      var_set_num(vm, "SHIFTISO_N", out_ep);
+      var_set_num(vm, "ADDISO_SECS", secs);
+      var_set_num(vm, "TIME", out_ep);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS DIFFISO|ISODIFF|SUBISO|ISOAGE [a] [b]
+     * — signed second delta between ISO stamps (dual of ADDISO shift).
+     * Two args: LAST_N = epoch(a) - epoch(b). One arg: now - epoch(a) (ISO age).
+     * Zero args: soft empty. LAST = decimal secs; DIFFISO_N mirrors.
+     * Soft-fail bad ISO. Usability: plate age/SLA without PARSEISO+TIMEDIFF. */
+    if (kw(&L->cur,"DIFFISO") || kw(&L->cur,"ISODIFF") || kw(&L->cur,"SUBISO") ||
+        kw(&L->cur,"ISOAGE") || kw(&L->cur,"AGEISO") || kw(&L->cur,"ISO_DIFF") ||
+        kw(&L->cur,"DIFFDATE") || kw(&L->cur,"DATEDIFF") || kw(&L->cur,"ISODELTA") ||
+        kw(&L->cur,"DELTAISO") || kw(&L->cur,"BETWEENISO")){
+      char a_s[128], b_s[128];
+      long ea = 0, eb = 0, outn = 0, now;
+      int has_a = 0, has_b = 0;
+      const char *err = NULL;
+      char buf[40];
+      lex_next(L);
+      a_s[0] = 0; b_s[0] = 0;
+      /* arg a: ISO string / LAST / str-var */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, a_s, sizeof a_s) == 0)
+            has_a = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, a_s, sizeof a_s) == 0)
+              has_a = 1;
+          }
+        }
+      }
+      /* arg b optional */
+      if (L->cur.kind == TK_STR ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))) {
+        if (L->cur.kind == TK_STR || strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, b_s, sizeof b_s) == 0)
+            has_b = 1;
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, b_s, sizeof b_s) == 0)
+              has_b = 1;
+          }
+        }
+      }
+      if (!has_a || !a_s[0]) {
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DIFFISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", "DIFFISO: empty");
+        var_set_str(vm, "ERR", "DIFFISO: empty");
+        bump(vm); return 1;
+      }
+      if (cubalc_parse_iso_epoch(a_s, &ea, &err) != 0) {
+        /* if second arg was present but first bad — already consumed b_s */
+        var_set_str(vm, "LAST", "");
+        vm->last_str[0] = 0;
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "DIFFISO_N", 0);
+        var_set_num(vm, "OK", 0);
+        var_set_str(vm, "LAST_ERR", err ? err : "DIFFISO: bad iso a");
+        var_set_str(vm, "ERR", err ? err : "DIFFISO: bad iso a");
+        bump(vm); return 1;
+      }
+      now = (long)time(NULL);
+      if (has_b) {
+        if (!b_s[0] || cubalc_parse_iso_epoch(b_s, &eb, &err) != 0) {
+          var_set_str(vm, "LAST", "");
+          vm->last_str[0] = 0;
+          vm->last_n = 0;
+          var_set_num(vm, "LAST_N", 0);
+          var_set_num(vm, "DIFFISO_N", 0);
+          var_set_num(vm, "OK", 0);
+          var_set_str(vm, "LAST_ERR", err ? err : "DIFFISO: bad iso b");
+          var_set_str(vm, "ERR", err ? err : "DIFFISO: bad iso b");
+          bump(vm); return 1;
+        }
+        outn = ea - eb;
+      } else {
+        /* one arg: age of stamp vs wall now (dual of TIMEDIFF one-arg) */
+        outn = now - ea;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      var_set_str(vm, "DIFFISO", buf);
+      var_set_str(vm, "ISODIFF", buf);
+      var_set_str(vm, "ISOAGE", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "DIFFISO_N", outn);
+      var_set_num(vm, "ISODIFF_N", outn);
+      var_set_num(vm, "ISOAGE_N", outn);
+      var_set_num(vm, "TIMEDIFF_N", outn);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS TIMEDIFF|ELAPSED|DELTA|DIFFTIME [a] [b]
+     * — epoch-second difference for plate age/deadline math.
+     * Two args: LAST_N = a - b (signed). One arg: LAST_N = now - a.
+     * Zero args: LAST_N = 0. LAST = decimal; TIMEDIFF_N mirrors.
+     * Usability: after PARSEISO/FROMTIME/MTIME compare without shell date.
+     * Distinct from SYS AGE (file mtime age by path). */
+    if (kw(&L->cur,"TIMEDIFF") || kw(&L->cur,"ELAPSED") || kw(&L->cur,"DELTA") ||
+        kw(&L->cur,"DIFFTIME") || kw(&L->cur,"SECDIFF") || kw(&L->cur,"EPOCHDIFF") ||
+        kw(&L->cur,"TDIFF") || kw(&L->cur,"DIFFSEC") || kw(&L->cur,"SUBTIME") ||
+        kw(&L->cur,"TIMEDELTA") || kw(&L->cur,"DTIME")){
+      long a = 0, b = 0, outn = 0;
+      int has_a = 0, has_b = 0;
+      char buf[40];
+      long now;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        b = parse_expr(vm, L);
+        has_b = 1;
+      }
+      now = (long)time(NULL);
+      if (has_a && has_b) {
+        outn = a - b;
+      } else if (has_a) {
+        outn = now - a;
+      } else {
+        /* default: age of prior LAST_N as epoch */
+        outn = now - vm->last_n;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "TIMEDIFF_N", outn);
+      var_set_num(vm, "ELAPSED_N", outn);
+      var_set_num(vm, "DELTA_N", outn);
+      var_set_str(vm, "TIMEDIFF", buf);
+      var_set_str(vm, "ELAPSED", buf);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ADDTIME|ADDEPOCH|PLUSSECS [a] [b]
+     * — epoch + seconds for lease/deadline plates (dual of TIMEDIFF subtract).
+     * Two args: LAST_N = a + b. One arg: LAST_N = prior LAST_N + a.
+     * Zero args: LAST_N unchanged (no-op add 0). LAST = decimal epoch.
+     * Offset args may be PARSEMS duration strings ("5m","30s","1h30m") → floor ms/1000.
+     * SYS DEADLINE|EXPIRESAT|UNTIL [secs|"duration"]
+     * — wall now + secs → LAST_N epoch (lease expiry stamp).
+     * Zero args: now + prior LAST_N. Usability: leases without PARSEMS+MS2SEC glue.
+     * Soft-fail bad duration (OK=0). Pair with EXPIRED/REMAINING/FROMTIME. */
+    if (kw(&L->cur,"ADDTIME") || kw(&L->cur,"ADDEPOCH") || kw(&L->cur,"PLUSSECS") ||
+        kw(&L->cur,"EPOCHADD") || kw(&L->cur,"TIMEADD") || kw(&L->cur,"ADDSECS") ||
+        kw(&L->cur,"PLUSTIME") ||
+        kw(&L->cur,"DEADLINE") || kw(&L->cur,"EXPIRESAT") || kw(&L->cur,"UNTIL") ||
+        kw(&L->cur,"EXPIREAT") || kw(&L->cur,"LEASEEND") || kw(&L->cur,"DUEAT") ||
+        kw(&L->cur,"NOWPLUS")){
+      char op[24], src[256], buf[40];
+      int is_deadline = 0;
+      long a = 0, b = 0, outn = 0, now, ms = 0;
+      int has_a = 0, has_b = 0;
+      const char *derr = NULL;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      is_deadline = (strcmp(op, "DEADLINE") == 0 || strcmp(op, "EXPIRESAT") == 0 ||
+                     strcmp(op, "UNTIL") == 0 || strcmp(op, "EXPIREAT") == 0 ||
+                     strcmp(op, "LEASEEND") == 0 || strcmp(op, "DUEAT") == 0 ||
+                     strcmp(op, "NOWPLUS") == 0);
+      lex_next(L);
+      /* arg a: number secs or duration string → floor(ms/1000) secs */
+      src[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+          if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+            var_set_str(vm, "LAST", "");
+            vm->last_str[0] = 0;
+            vm->last_n = 0;
+            var_set_num(vm, "LAST_N", 0);
+            var_set_num(vm, "OK", 0);
+            var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+            var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+            bump(vm); return 1;
+          }
+          a = ms / 1000L;
+          has_a = 1;
+        }
+      } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                 !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+        if (strcmp(L->cur.text, "LAST") == 0) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+            if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+              var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+              bump(vm); return 1;
+            }
+            a = ms / 1000L;
+            has_a = 1;
+          }
+        } else {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && sv->is_str) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+              if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                var_set_str(vm, "LAST", "");
+                vm->last_str[0] = 0;
+                vm->last_n = 0;
+                var_set_num(vm, "LAST_N", 0);
+                var_set_num(vm, "OK", 0);
+                var_set_str(vm, "LAST_ERR", derr ? derr : "DEADLINE: bad duration");
+                var_set_str(vm, "ERR", derr ? derr : "DEADLINE: bad duration");
+                bump(vm); return 1;
+              }
+              a = ms / 1000L;
+              has_a = 1;
+            }
+          } else {
+            a = parse_expr(vm, L);
+            has_a = 1;
+          }
+        }
+      } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
+        a = parse_expr(vm, L);
+        has_a = 1;
+      }
+      /* ADDTIME second arg: same number|duration rules */
+      if (!is_deadline) {
+        src[0] = 0;
+        derr = NULL;
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+            if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+              var_set_str(vm, "LAST", "");
+              vm->last_str[0] = 0;
+              vm->last_n = 0;
+              var_set_num(vm, "LAST_N", 0);
+              var_set_num(vm, "OK", 0);
+              var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+              var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+              bump(vm); return 1;
+            }
+            b = ms / 1000L;
+            has_b = 1;
+          }
+        } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+                   !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE")) {
+          if (strcmp(L->cur.text, "LAST") == 0) {
+            if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+              if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                var_set_str(vm, "LAST", "");
+                vm->last_str[0] = 0;
+                vm->last_n = 0;
+                var_set_num(vm, "LAST_N", 0);
+                var_set_num(vm, "OK", 0);
+                var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+                var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+                bump(vm); return 1;
+              }
+              b = ms / 1000L;
+              has_b = 1;
+            }
+          } else {
+            Var *sv = var_get(vm, L->cur.text, 0);
+            if (sv && sv->is_str) {
+              if (resolve_str_arg(vm, L, src, sizeof src) == 0) {
+                if (cubalc_parse_duration_ms(src, &ms, NULL, &derr) != 0) {
+                  var_set_str(vm, "LAST", "");
+                  vm->last_str[0] = 0;
+                  vm->last_n = 0;
+                  var_set_num(vm, "LAST_N", 0);
+                  var_set_num(vm, "OK", 0);
+                  var_set_str(vm, "LAST_ERR", derr ? derr : "ADDTIME: bad duration");
+                  var_set_str(vm, "ERR", derr ? derr : "ADDTIME: bad duration");
+                  bump(vm); return 1;
+                }
+                b = ms / 1000L;
+                has_b = 1;
+              }
+            } else {
+              b = parse_expr(vm, L);
+              has_b = 1;
+            }
+          }
+        } else if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS) {
+          b = parse_expr(vm, L);
+          has_b = 1;
+        }
+      }
+      now = (long)time(NULL);
+      if (is_deadline) {
+        if (has_a)
+          outn = now + a;
+        else
+          outn = now + vm->last_n;
+        /* surface offset used for plates (seconds) */
+        var_set_num(vm, "DEADLINE_SECS", has_a ? a : vm->last_n);
+        var_set_num(vm, "LEASE_SECS", has_a ? a : vm->last_n);
+      } else {
+        if (has_a && has_b)
+          outn = a + b;
+        else if (has_a)
+          outn = vm->last_n + a;
+        else
+          outn = vm->last_n;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      var_set_num(vm, "TIME", outn);
+      if (is_deadline) {
+        var_set_num(vm, "DEADLINE_N", outn);
+        var_set_str(vm, "DEADLINE", buf);
+        var_set_num(vm, "EXPIRESAT_N", outn);
+      } else {
+        var_set_num(vm, "ADDTIME_N", outn);
+        var_set_str(vm, "ADDTIME", buf);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS EXPIRED|ISEXPIRED|PAST|ISPAST [epoch|LAST_N]
+     * — LAST_N 1 if wall now >= epoch (lease due), else 0.
+     * SYS REMAINING|LEFTSECS|TTL|TIMELEFT [epoch|LAST_N]
+     * — LAST_N = max(0, epoch - now) seconds until due (0 if past).
+     * Default epoch = prior LAST_N (DEADLINE result).
+     * Usability: SLA/lease IF without TIMEDIFF + CMP glue. */
+    if (kw(&L->cur,"EXPIRED") || kw(&L->cur,"ISEXPIRED") || kw(&L->cur,"PAST") ||
+        kw(&L->cur,"ISPAST") || kw(&L->cur,"IS_EXPIRED") || kw(&L->cur,"DUE") ||
+        kw(&L->cur,"ISDUE") || kw(&L->cur,"OVERDUE") ||
+        kw(&L->cur,"REMAINING") || kw(&L->cur,"LEFTSECS") || kw(&L->cur,"TTL") ||
+        kw(&L->cur,"TIMELEFT") || kw(&L->cur,"SECSLEFT") || kw(&L->cur,"LEFT") ||
+        kw(&L->cur,"COUNTDOWN") || kw(&L->cur,"UNTILLEFT")){
+      char op[24];
+      int is_rem = 0;
+      long ep = 0, now, outn = 0;
+      int has = 0;
+      char buf[40];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      is_rem = (strcmp(op, "REMAINING") == 0 || strcmp(op, "LEFTSECS") == 0 ||
+                strcmp(op, "TTL") == 0 || strcmp(op, "TIMELEFT") == 0 ||
+                strcmp(op, "SECSLEFT") == 0 || strcmp(op, "LEFT") == 0 ||
+                strcmp(op, "COUNTDOWN") == 0 || strcmp(op, "UNTILLEFT") == 0);
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        ep = parse_expr(vm, L);
+        has = 1;
+      }
+      if (!has) ep = vm->last_n;
+      now = (long)time(NULL);
+      if (is_rem) {
+        outn = ep - now;
+        if (outn < 0) outn = 0;
+      } else {
+        outn = (now >= ep) ? 1 : 0;
+      }
+      snprintf(buf, sizeof buf, "%ld", outn);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = outn;
+      var_set_num(vm, "LAST_N", outn);
+      if (is_rem) {
+        var_set_num(vm, "REMAINING_N", outn);
+        var_set_num(vm, "TTL_N", outn);
+        var_set_str(vm, "REMAINING", buf);
+        var_set_str(vm, "TTL", buf);
+      } else {
+        var_set_num(vm, "EXPIRED_N", outn);
+        var_set_num(vm, "ISEXPIRED", outn);
+        var_set_num(vm, "PAST_N", outn);
+      }
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LOCAL|LOCALTIME|LOCALISO|NOW_LOCAL — local wall stamp (no Z).
+     * SYS LOCALDATE|DAYLOCAL — date-only YYYY-MM-DD in local TZ.
+     * LAST/LOCAL/LOCALTIME = "YYYY-MM-DDTHH:MM:SS"; LOCALDATE = "YYYY-MM-DD".
+     * Usability: human log stamps without shell date; complements UTC DATE. */
+    if (kw(&L->cur,"LOCAL") || kw(&L->cur,"LOCALTIME") || kw(&L->cur,"LOCALISO") ||
+        kw(&L->cur,"NOW_LOCAL") || kw(&L->cur,"LOCAL_NOW") || kw(&L->cur,"WALLTIME") ||
+        kw(&L->cur,"LOCALDATE") || kw(&L->cur,"DAYLOCAL") || kw(&L->cur,"LOCAL_DATE") ||
+        kw(&L->cur,"TODAY_LOCAL") || kw(&L->cur,"LOCALDAY")){
+      time_t now;
+      struct tm tm_loc;
+      char full[40], day[16];
+      long epoch;
+      int date_only;
+      date_only = (kw(&L->cur,"LOCALDATE") || kw(&L->cur,"DAYLOCAL") ||
+                   kw(&L->cur,"LOCAL_DATE") || kw(&L->cur,"TODAY_LOCAL") ||
+                   kw(&L->cur,"LOCALDAY"));
+      lex_next(L);
+      now = time(NULL);
+      epoch = (long)now;
+#if defined(CUBALC_OS_WINDOWS)
+      {
+        struct tm *tp = localtime(&now);
+        if (tp) tm_loc = *tp;
+        else memset(&tm_loc, 0, sizeof tm_loc);
+      }
+#else
+      if (!localtime_r(&now, &tm_loc))
+        memset(&tm_loc, 0, sizeof tm_loc);
+#endif
+      snprintf(day, sizeof day, "%04d-%02d-%02d",
+               tm_loc.tm_year + 1900, tm_loc.tm_mon + 1, tm_loc.tm_mday);
+      snprintf(full, sizeof full, "%04d-%02d-%02dT%02d:%02d:%02d",
+               tm_loc.tm_year + 1900, tm_loc.tm_mon + 1, tm_loc.tm_mday,
+               tm_loc.tm_hour, tm_loc.tm_min, tm_loc.tm_sec);
+      var_set_str(vm, "LOCAL", full);
+      var_set_str(vm, "LOCALTIME", full);
+      var_set_str(vm, "LOCALISO", full);
+      var_set_str(vm, "LOCALDATE", day);
+      var_set_num(vm, "TIME", epoch);
+      var_set_num(vm, "OK", 1);
+      if (date_only) {
+        var_set_str(vm, "LAST", day);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", day);
+        vm->last_n = (long)strlen(day);
+      } else {
+        var_set_str(vm, "LAST", full);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", full);
+        vm->last_n = (long)strlen(full);
+      }
+      var_set_num(vm, "LAST_N", vm->last_n);
+      bump(vm); return 1;
+    }
+    /* identity theme → lang_ops_sys_identity.c (mesh vote A2) */
+    {
+      int id = cubalc_lang_ops_sys_try_identity(vm, L);
+      if (id != 0) return id;
+    }
+
+    /* SYS APPEND|LOG path data — append line to file (creates if missing).
+     * Soft fail OK=0 + sticky LAST_ERR. LAST_N = bytes written (data+newline).
+     * Usability: agent history/audit logs without shell >> . */
+    if (kw(&L->cur,"APPEND") || kw(&L->cur,"LOG") || kw(&L->cur,"APPENDLN") ||
+        kw(&L->cur,"LOGAPPEND")){
+      lex_next(L);
+      char path[512]="", data[CUBALC_HOST_STR_MAX];
+      long nbytes = 0;
+      data[0]=0;
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0){
+        fail(vm,"SYS APPEND path data"); return -1;
+      }
+      if (resolve_str_arg(vm, L, data, sizeof data) != 0){
+        /* allow bare number as data */
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_MINUS || L->cur.kind==TK_LPAREN){
+          long n = parse_expr(vm, L);
+          snprintf(data, sizeof data, "%ld", n);
+        } else if (L->cur.kind==TK_IDENT){
+          Var *v = var_get(vm, L->cur.text, 0);
+          if (v && !v->is_str){ snprintf(data, sizeof data, "%ld", v->val); lex_next(L); }
+          else { fail(vm,"SYS APPEND path data"); return -1; }
+        } else {
+          fail(vm,"SYS APPEND path data"); return -1;
+        }
+      }
+      {
+        FILE *af = fopen(path, "a");
+        if (!af){
+          var_set_num(vm,"OK",0);
+          var_set_num(vm,"LAST_N",0);
+          var_set_str(vm,"LAST_ERR","APPEND: open fail");
+          var_set_str(vm,"ERR","APPEND: open fail");
+          bump(vm); return 1;
+        }
+        fputs(data, af);
+        fputc('\n', af);
+        fclose(af);
+        nbytes = (long)strlen(data) + 1;
+      }
+      var_set_str(vm,"LAST",path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = nbytes;
+      var_set_num(vm,"LAST_N",nbytes);
+      var_set_num(vm,"OK",1);
+      bump(vm); return 1;
+    }
+    /* SYS HEX|FROMHEX — parse hex string (LAST default) → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"HEX") || kw(&L->cur,"FROMHEX") || kw(&L->cur,"XTOI")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      /* skip optional 0x / 0X prefix */
+      const char *p = s;
+      if (p[0]=='0' && (p[1]=='x' || p[1]=='X')) p += 2;
+      long n = 0;
+      if (p[0]) n = strtol(p, NULL, 16);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS TOHEX [expr] — format int as lowercase hex → LAST (I/O codec) */
+    if (kw(&L->cur,"TOHEX") || kw(&L->cur,"ITOH") || kw(&L->cur,"HEXOUT")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      char buf[40];
+      snprintf(buf, sizeof buf, "%lx", (unsigned long)n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ORD [str|LAST] — first byte code → LAST_N  (I/O codec) */
+    if (kw(&L->cur,"ORD") || kw(&L->cur,"CODE") || kw(&L->cur,"BYTE")){
+      lex_next(L);
+      char s[512]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long n = s[0] ? (long)(unsigned char)s[0] : 0;
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CHR [expr] — integer → single-byte string LAST  (I/O codec) */
+    if (kw(&L->cur,"CHR") || kw(&L->cur,"CHAR")){
+      lex_next(L);
+      long n = vm->last_n;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          (L->cur.kind==TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+           !kw(&L->cur,"SYS") && !kw(&L->cur,"PRINT") && !kw(&L->cur,"CUBE"))){
+        n = parse_expr(vm, L);
+      }
+      n &= 0xFF;
+      char buf[4];
+      buf[0] = (char)(unsigned char)n;
+      buf[1] = 0;
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MID|SUBSTR|SLICE str start [len] — substring → LAST  (I/O codec) */
+    /* SYS MID host-wide CUBALC_HOST_STR_MAX — multi-KB plate peels. */
+    if (kw(&L->cur,"MID") || kw(&L->cur,"SUBSTR") || kw(&L->cur,"SLICE")){
+      lex_next(L);
+      char s[CUBALC_HOST_STR_MAX]; s[0]=0;
+      if (resolve_str_arg(vm, L, s, sizeof s) != 0)
+        snprintf(s, sizeof s, "%s", vm->last_str);
+      long start = 0, len = -1;
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+          L->cur.kind==TK_IDENT){
+        start = parse_expr(vm, L);
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_LPAREN || L->cur.kind==TK_MINUS ||
+            L->cur.kind==TK_IDENT)
+          len = parse_expr(vm, L);
+      }
+      size_t slen = strlen(s);
+      if (start < 0) start = 0;
+      if ((size_t)start > slen) start = (long)slen;
+      size_t remain = slen - (size_t)start;
+      size_t take = (len < 0) ? remain : (size_t)len;
+      if (take > remain) take = remain;
+      char out[CUBALC_HOST_STR_MAX];
+      if (take >= sizeof out) take = sizeof out - 1;
+      memcpy(out, s + (size_t)start, take);
+      out[take] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)take;
+      var_set_num(vm, "LAST_N", (long)take);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CAT|STRCAT|CONCAT parts… — concatenate 1..N strings → LAST.
+     * Host-wide CUBALC_HOST_STR_MAX buffers (no 512/1024 truncate).
+     * Multi-arg: SYS CAT "a" "b" "c" → "abc" without nested CAT chains.
+     * Numbers / numeric vars accepted as decimal parts. Bare CAT echoes LAST.
+     * LAST_N = byte length; CAT_N = part count.
+     * Usability: multi-KB agent plate messages / paths in one form
+     * (pairs STREPEAT/LPAD wide + FILLP). */
+    if (kw(&L->cur,"CAT") || kw(&L->cur,"STRCAT") || kw(&L->cur,"CONCAT") ||
+        kw(&L->cur,"STRCATN") || kw(&L->cur,"JOINSTR") || kw(&L->cur,"SCAT") ||
+        kw(&L->cur,"STRAPPEND") || kw(&L->cur,"CATN")){
+      lex_next(L);
+      char out[CUBALC_HOST_STR_MAX], part[CUBALC_HOST_STR_MAX];
+      size_t o = 0;
+      long parts = 0;
+      out[0] = 0;
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+             L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+             L->cur.kind == TK_LPAREN) {
+        if (L->cur.kind == TK_IDENT &&
+            (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+             kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+             kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") ||
+             kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"INCLUDE") ||
+             kw(&L->cur,"SETP") || kw(&L->cur,"INCP") || kw(&L->cur,"DELP") ||
+             kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") || kw(&L->cur,"FILLP") ||
+             kw(&L->cur,"FILLPFILE") || kw(&L->cur,"DUMPP") || kw(&L->cur,"NEEDP") ||
+             kw(&L->cur,"HASPANY") || kw(&L->cur,"NEEDPANY") || kw(&L->cur,"REQUIREPANY") ||
+             kw(&L->cur,"EQP") || kw(&L->cur,"NEQP") || kw(&L->cur,"DIFFP") ||
+             kw(&L->cur,"STABLEP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"EQKEYSP") ||
+             kw(&L->cur,"CHANGELOGP") || kw(&L->cur,"SUBSETP") || kw(&L->cur,"COVERSP") ||
+             kw(&L->cur,"PLUCKP") || kw(&L->cur,"GETPALL") || kw(&L->cur,"DELTAP") ||
+             kw(&L->cur,"PICKP") || kw(&L->cur,"KEEPP") || kw(&L->cur,"OMITP") ||
+             kw(&L->cur,"RENAMEP") || kw(&L->cur,"MOVEKEYP") ||
+             kw(&L->cur,"KEYDIFFP") || kw(&L->cur,"KEYCOMMP") ||
+             kw(&L->cur,"COPYP") || kw(&L->cur,"SWAPP") ||
+             kw(&L->cur,"LENP") || kw(&L->cur,"EMPTYP") || kw(&L->cur,"VALSP") ||
+             kw(&L->cur,"TYPEP") || kw(&L->cur,"KINDP") ||
+             kw(&L->cur,"GETOBJ") || kw(&L->cur,"SETOBJ") || kw(&L->cur,"PEEKOBJ") ||
+             kw(&L->cur,"NESTP") || kw(&L->cur,"PUTOBJ") ||
+             kw(&L->cur,"MERGEOBJ") || kw(&L->cur,"DEFAULTOBJ") || kw(&L->cur,"PATCHNEST") ||
+             kw(&L->cur,"GETPOBJ") || kw(&L->cur,"SETPOBJ") || kw(&L->cur,"INCOBJ") ||
+             kw(&L->cur,"DELPOBJ") ||
+             kw(&L->cur,"HASPOBJ") || kw(&L->cur,"TYPEPOBJ") || kw(&L->cur,"KEYSOBJ") ||
+             kw(&L->cur,"NEEDPOBJ") ||
+             kw(&L->cur,"PLUCKOBJ") || kw(&L->cur,"NESTPLUCK") ||
+             kw(&L->cur,"PATHKEYS") || kw(&L->cur,"LEAFKEYS") || kw(&L->cur,"DOTPATHS") ||
+             kw(&L->cur,"FLATKV") || kw(&L->cur,"LEAFKV") || kw(&L->cur,"FLATTENP") ||
+             kw(&L->cur,"UNFLATKV") || kw(&L->cur,"FROMFLAT") || kw(&L->cur,"UNFLATTENP") ||
+             kw(&L->cur,"DIFFFLAT") || kw(&L->cur,"PATHDIFF") || kw(&L->cur,"CHANGELOGFLAT") ||
+             kw(&L->cur,"GREPFLAT") || kw(&L->cur,"GREPVFLAT") || kw(&L->cur,"GREPFLATI") ||
+             kw(&L->cur,"PRUNEFLAT") || kw(&L->cur,"KEEPONLYFLAT") || kw(&L->cur,"DELFLAT") ||
+             kw(&L->cur,"MERGEFLAT") || kw(&L->cur,"OVERLAYFLAT") || kw(&L->cur,"PATCHFLAT") ||
+             kw(&L->cur,"RENAMEFLAT") || kw(&L->cur,"MOVEFLAT") || kw(&L->cur,"PREFIXFLAT") ||
+             kw(&L->cur,"SETFLAT") || kw(&L->cur,"MAPFLAT") || kw(&L->cur,"SETLEAFP") ||
+             kw(&L->cur,"INCFLAT") || kw(&L->cur,"BUMPFLAT") || kw(&L->cur,"ADDFLAT") ||
+             kw(&L->cur,"SUMFLAT") || kw(&L->cur,"TOTALFLAT") || kw(&L->cur,"LEAFSUM") ||
+             kw(&L->cur,"AVGFLAT") || kw(&L->cur,"MEANFLAT") || kw(&L->cur,"MEDIANFLAT") ||
+             kw(&L->cur,"P50FLAT") ||
+             kw(&L->cur,"TOPPATHFLAT") || kw(&L->cur,"BOTPATHFLAT") || kw(&L->cur,"MAXPATHFLAT") ||
+             kw(&L->cur,"THRESHFLAT") || kw(&L->cur,"KEEPVFLAT") || kw(&L->cur,"DROPZEROFLAT") ||
+             kw(&L->cur,"CAPFLAT") || kw(&L->cur,"CLAMPFLAT") || kw(&L->cur,"MAXVFLAT") ||
+             kw(&L->cur,"SCALEFLAT") || kw(&L->cur,"MULFLAT") || kw(&L->cur,"TIMESFLAT") ||
+             kw(&L->cur,"HASFLAT") || kw(&L->cur,"COUNTFLAT") || kw(&L->cur,"ANYFLAT") ||
+             kw(&L->cur,"PATHSFLAT") || kw(&L->cur,"VALSFLAT") || kw(&L->cur,"MATCHPATHS") ||
+             kw(&L->cur,"GETFLAT") || kw(&L->cur,"FIRSTFLAT") || kw(&L->cur,"PEELFLAT") ||
+             kw(&L->cur,"LASTFLAT") || kw(&L->cur,"ENDFLAT") || kw(&L->cur,"TAILFLAT") ||
+             kw(&L->cur,"NTHFLAT") || kw(&L->cur,"INDEXFLAT") || kw(&L->cur,"ATFLAT") ||
+             kw(&L->cur,"GETFLATN") || kw(&L->cur,"FIRSTFLATN") || kw(&L->cur,"NUMFLAT") ||
+             kw(&L->cur,"LASTFLATN") || kw(&L->cur,"ENDFLATN") || kw(&L->cur,"TAILFLATN") ||
+             kw(&L->cur,"NTHFLATN") || kw(&L->cur,"INDEXFLATN") || kw(&L->cur,"ATFLATN") ||
+             kw(&L->cur,"TYPEFLAT") || kw(&L->cur,"KINDFLAT") || kw(&L->cur,"LEAFTYPE") ||
+             kw(&L->cur,"FREQFLAT") || kw(&L->cur,"HISTFLAT") || kw(&L->cur,"COUNTVALFLAT") ||
+             kw(&L->cur,"MODEFLAT") || kw(&L->cur,"TOPVALFLAT") || kw(&L->cur,"MAJORFLAT") ||
+             kw(&L->cur,"PATHBYVAL") || kw(&L->cur,"VALPATH") || kw(&L->cur,"FINDVAL") ||
+             kw(&L->cur,"PATHSBYVAL") || kw(&L->cur,"ALLPATHSBYVAL") || kw(&L->cur,"FINDVALS") ||
+             kw(&L->cur,"COUNTBYVAL") || kw(&L->cur,"NBYVAL") || kw(&L->cur,"HASVAL") ||
+             kw(&L->cur,"SETBYVAL") || kw(&L->cur,"REPLACEVAL") || kw(&L->cur,"REWVAL") ||
+             kw(&L->cur,"DELBYVAL") || kw(&L->cur,"DROPVAL") || kw(&L->cur,"RMVAL") ||
+             kw(&L->cur,"ALLEQFLAT") || kw(&L->cur,"SAMEVALFLAT") || kw(&L->cur,"EQVALSFLAT") ||
+             kw(&L->cur,"FIRSTUNEQFLAT") || kw(&L->cur,"PATHUNEQ") || kw(&L->cur,"DIVERGE1") ||
+             kw(&L->cur,"UNEQPATHS") || kw(&L->cur,"DIVERGEPATHS") || kw(&L->cur,"ALLUNEQ") ||
+             kw(&L->cur,"UNIFORMFLAT") || kw(&L->cur,"CHECKFLAT") || kw(&L->cur,"SAMECHECK") ||
+             kw(&L->cur,"PRETTYP") || kw(&L->cur,"JSONPRETTY") || kw(&L->cur,"PRETTYJSON") ||
+             kw(&L->cur,"UNIQFLAT") || kw(&L->cur,"DISTINCTFLAT") || kw(&L->cur,"UNIQUEFLAT") ||
+             kw(&L->cur,"NEEDFLAT") || kw(&L->cur,"REQUIREFLAT") || kw(&L->cur,"MUSTFLAT") ||
+             kw(&L->cur,"PICKOBJ") || kw(&L->cur,"OMITOBJ") ||
+             kw(&L->cur,"LENOBJ") || kw(&L->cur,"EMPTYOBJ") || kw(&L->cur,"VALSOBJ") ||
+             kw(&L->cur,"RENAMEPOBJ") || kw(&L->cur,"MOVEKEYOBJ") || kw(&L->cur,"NESTRENAME") ||
+             kw(&L->cur,"COPYPOBJ") || kw(&L->cur,"SWAPPOBJ") || kw(&L->cur,"NESTCOPY") ||
+             kw(&L->cur,"TOKVOBJ") || kw(&L->cur,"FROMKVOBJ") || kw(&L->cur,"NESTTOKV") ||
+             kw(&L->cur,"TOKVP") || kw(&L->cur,"FROMKVP") ||
+             kw(&L->cur,"SUMNOBJ") || kw(&L->cur,"TOPKEYOBJ") || kw(&L->cur,"MAXNOBJ") ||
+             kw(&L->cur,"SUMNP") || kw(&L->cur,"TOPKEYP") || kw(&L->cur,"MAXNP") ||
+             kw(&L->cur,"THRESHOBJ") || kw(&L->cur,"DROPZEROOBJ") || kw(&L->cur,"CAPOBJ") ||
+             kw(&L->cur,"THRESHP") || kw(&L->cur,"DROPZEROP") || kw(&L->cur,"CAPP") ||
+             kw(&L->cur,"PCTOBJ") || kw(&L->cur,"SCALEPOBJ") || kw(&L->cur,"ADDPOBJ") ||
+             kw(&L->cur,"PCTP") || kw(&L->cur,"SCALEP") || kw(&L->cur,"ADDP") ||
+             kw(&L->cur,"DIVP") || kw(&L->cur,"SUMMERGEP") || kw(&L->cur,"SUBP") ||
+             kw(&L->cur,"ABSP") || kw(&L->cur,"SIGNP") ||
+             kw(&L->cur,"KEEPKEYOBJ") || kw(&L->cur,"DROPKEYOBJ") ||
+             kw(&L->cur,"KEEPKEYP") || kw(&L->cur,"DROPKEYP") ||
+             kw(&L->cur,"TOPNOBJ") || kw(&L->cur,"BOTNOBJ") ||
+             kw(&L->cur,"TOPNP") || kw(&L->cur,"BOTNP") ||
+             kw(&L->cur,"SORTOBJ") || kw(&L->cur,"SORTBAGOBJ") ||
+             kw(&L->cur,"SORTP") || kw(&L->cur,"SORTBAGP") ||
+             kw(&L->cur,"SUMMERGEOBJ") || kw(&L->cur,"ADDFREQOBJ") ||
+             kw(&L->cur,"SUBVALOBJ") || kw(&L->cur,"SUBFREQOBJ") ||
+             kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
+             kw(&L->cur,"NOTE") || kw(&L->cur,"WHY") || kw(&L->cur,"EXPLAIN") ||
+             kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
+             kw(&L->cur,"VERSION") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"UNSET") ||
+             kw(&L->cur,"CLASS") || kw(&L->cur,"NEW") || kw(&L->cur,"SEND") ||
+             kw(&L->cur,"FN") || kw(&L->cur,"RETURN") || kw(&L->cur,"BREAK") ||
+             kw(&L->cur,"CONTINUE") || kw(&L->cur,"EACH")))
+          break;
+        part[0] = 0;
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(part, sizeof part, "%ld", n);
+        } else if (resolve_str_arg(vm, L, part, sizeof part) != 0) {
+          if (L->cur.kind == TK_IDENT) {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && !v->is_str) {
+              snprintf(part, sizeof part, "%ld", v->val);
+              lex_next(L);
+            } else {
+              /* unknown ident → literal text (path glue helpers) */
+              snprintf(part, sizeof part, "%s", L->cur.text);
+              lex_next(L);
+            }
+          } else {
+            break;
+          }
+        }
+        {
+          size_t pl = strlen(part);
+          if (o + pl >= sizeof out) pl = (o < sizeof out - 1) ? (sizeof out - 1 - o) : 0;
+          if (pl > 0) {
+            memcpy(out + o, part, pl);
+            o += pl;
+          }
+          out[o] = 0;
+          parts++;
+          if (o + 1 >= sizeof out) break; /* full */
+        }
+      }
+      if (parts == 0) {
+        /* bare CAT → echo LAST (agent log mirror) */
+        snprintf(out, sizeof out, "%s", vm->last_str);
+        o = strlen(out);
+        if (out[0]) parts = 1;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)o;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "CAT_N", parts);
+      var_set_num(vm, "STRCAT_N", parts);
+      var_set_str(vm, "CAT", out);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FIND|INDEX hay needle — first index of needle in hay → LAST_N (-1 miss).
+     * SYS FINDI|INDEXI|FIND I — case-insensitive (log/severity locate without UPPER).
+     * Completes EQSI/HASI/GREPI/STARTSI family for position → MID peel. */
+    if (kw(&L->cur,"FIND") || kw(&L->cur,"INDEX") || kw(&L->cur,"STRFIND") ||
+        kw(&L->cur,"FINDI") || kw(&L->cur,"IFIND") || kw(&L->cur,"INDEXI") ||
+        kw(&L->cur,"IINDEX") || kw(&L->cur,"STRFINDI") || kw(&L->cur,"FINDCI")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *p = op; *p; p++)
+        if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 'a' + 'A');
+      int icase = (strcmp(op, "FINDI") == 0 || strcmp(op, "IFIND") == 0 ||
+                   strcmp(op, "INDEXI") == 0 || strcmp(op, "IINDEX") == 0 ||
+                   strcmp(op, "STRFINDI") == 0 || strcmp(op, "FINDCI") == 0);
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      char hay[CUBALC_HOST_STR_MAX]="", needle[CUBALC_HOST_STR_MAX]="";
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0]=0;
+      long idx = -1;
+      if (needle[0] == 0) {
+        if (hay[0]) idx = 0;
+      } else if (!icase) {
+        const char *p = strstr(hay, needle);
+        if (p) idx = (long)(p - hay);
+      } else {
+        /* ASCII case-fold scan */
+        size_t hn = strlen(hay), nn = strlen(needle), i, j;
+        for (i = 0; i + nn <= hn; i++) {
+          int hit = 1;
+          for (j = 0; j < nn; j++) {
+            char a = hay[i + j], b = needle[j];
+            if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+            if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+            if (a != b) { hit = 0; break; }
+          }
+          if (hit) { idx = (long)i; break; }
+        }
+      }
+      vm->last_n = idx;
+      var_set_num(vm, "LAST_N", idx);
+      var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS NTH n [str|LAST] — 0-based newline field → LAST (pairs with SYS LIST).
+     * SYS LINE n [str] — 1-based alias.
+     * SYS HEAD [str] — first field; SYS TAIL [str] — last field.
+     * Soft out-of-range: OK=0 LAST="" LAST_N=0. */
+    if (kw(&L->cur,"NTH") || kw(&L->cur,"LINE") || kw(&L->cur,"FIELD") ||
+        kw(&L->cur,"GETLINE") || kw(&L->cur,"HEAD") || kw(&L->cur,"FIRST") ||
+        kw(&L->cur,"TAIL") || kw(&L->cur,"LASTLINE")){
+      int is_head = (kw(&L->cur,"HEAD") || kw(&L->cur,"FIRST"));
+      int is_tail = (kw(&L->cur,"TAIL") || kw(&L->cur,"LASTLINE"));
+      int one_based = (kw(&L->cur,"LINE") || kw(&L->cur,"GETLINE"));
+      long want = 0, nlines = 0, i;
+      char src[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      char out[512];
+      size_t len;
+      lex_next(L);
+      if (!is_head && !is_tail) {
+        if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+            L->cur.kind==TK_MINUS)
+          want = parse_expr(vm, L);
+        else
+          want = 0;
+        if (one_based) want -= 1;
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      /* count fields; trailing newline does not create an empty last field */
+      if (src[0]) {
+        nlines = 1;
+        for (p = src; *p; p++) {
+          if (*p == '\n' && p[1]) nlines++;
+        }
+      }
+      if (is_head) want = 0;
+      if (is_tail) want = nlines > 0 ? nlines - 1 : -1;
+      if (want < 0 || want >= nlines || !src[0]) {
+        var_set_str(vm, "LAST", "");
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "OK", 0);
+        bump(vm); return 1;
+      }
+      p = src;
+      for (i = 0; i < want; i++) {
+        while (*p && *p != '\n') p++;
+        if (*p == '\n') p++;
+      }
+      start = p;
+      while (*p && *p != '\n') p++;
+      len = (size_t)(p - start);
+      if (len >= sizeof out) len = sizeof out - 1;
+      memcpy(out, start, len);
+      out[len] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)len;
+      var_set_num(vm, "LAST_N", vm->last_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* bag-GREP theme → lang_ops_sys_grep.c (mesh vote A2) */
+    {
+      int gr = cubalc_lang_ops_sys_try_grep(vm, L);
+      if (gr != 0) return gr;
+    }
+
+    /* SYS TAKE|FIRSTN n [str|LAST] — first n newline fields → LAST.
+     * SYS DROP|SKIP|REST n [str] — drop first n fields (keep the rest).
+     * LAST_N/TAKE_N = kept count. n<=0: TAKE empty / DROP all.
+     * Usability: window LIST/GREP text without index math before EACH LINE. */
+    if (kw(&L->cur,"TAKE") || kw(&L->cur,"FIRSTN") || kw(&L->cur,"HEADN") ||
+        kw(&L->cur,"DROP") || kw(&L->cur,"SKIP") || kw(&L->cur,"REST") ||
+        kw(&L->cur,"TAILN") || kw(&L->cur,"DROPN")){
+      int is_drop = (kw(&L->cur,"DROP") || kw(&L->cur,"SKIP") || kw(&L->cur,"REST") ||
+                     kw(&L->cur,"TAILN") || kw(&L->cur,"DROPN"));
+      long nwant = 0, idx = 0, kept = 0;
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0;
+      lex_next(L);
+      if (L->cur.kind==TK_NUM || L->cur.kind==TK_IDENT || L->cur.kind==TK_LPAREN ||
+          L->cur.kind==TK_MINUS)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0] && (is_drop || nwant > 0)) {
+        p = src;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            int keep = 0;
+            if (is_drop) keep = (idx >= nwant);
+            else keep = (idx < nwant);
+            if (keep) {
+              if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + flen < sizeof out) {
+                memcpy(out + olen, start, flen);
+                olen += flen;
+              } else if (olen < sizeof out - 1) {
+                size_t take = sizeof out - 1 - olen;
+                memcpy(out + olen, start, take);
+                olen += take;
+              }
+              out[olen] = 0;
+              kept++;
+            }
+            idx++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      out[olen] = 0;
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "TAKE_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SPLIT|SPLITBY|FIELDS sep [str|LAST] — split on sep → newline fields.
+     * LAST_N/SPLIT_N = field count. Empty sep → whole string one field.
+     * Usability: PATH/CSV/env lists → EACH LINE/GREP/TAKE without shell. */
+    if (kw(&L->cur,"SPLIT") || kw(&L->cur,"SPLITBY") || kw(&L->cur,"FIELDS") ||
+        kw(&L->cur,"STRSPLIT") || kw(&L->cur,"SEPARATE") || kw(&L->cur,"CUTSEP")){
+      char sep[64]="", src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *hit;
+      size_t sepn, olen = 0, flen;
+      long nfields = 0;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0]=0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      sepn = strlen(sep);
+      if (!src[0]) {
+        /* empty source → zero fields */
+      } else if (sepn == 0) {
+        /* no separator → single field */
+        snprintf(out, sizeof out, "%s", src);
+        nfields = 1;
+        olen = strlen(out);
+      } else {
+        p = src;
+        for (;;) {
+          hit = strstr(p, sep);
+          if (hit) flen = (size_t)(hit - p);
+          else flen = strlen(p);
+          if (nfields > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, p, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, p, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          nfields++;
+          if (!hit) break;
+          p = hit + sepn;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "SPLIT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "SPLIT_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS WORDS|TOKENIZE|FIELDSW [str|LAST] — whitespace tokenize → newline fields.
+     * Collapses runs of space/tab/CR/LF; trims ends. LAST_N/WORDS_N = token count.
+     * Usability: free text / "a b  c" → EACH LINE/GREP/SORT without SPLIT " " glue. */
+    if (kw(&L->cur,"WORDS") || kw(&L->cur,"TOKENIZE") || kw(&L->cur,"TOKENS") ||
+        kw(&L->cur,"FIELDSW") || kw(&L->cur,"WSSPLIT") || kw(&L->cur,"SPLITWS") ||
+        kw(&L->cur,"WORDLIST")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      size_t olen = 0;
+      long ntok = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      p = src;
+      while (*p) {
+        while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+        if (!*p) break;
+        {
+          const char *start = p;
+          size_t flen;
+          while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '\r') p++;
+          flen = (size_t)(p - start);
+          if (ntok > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, start, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          ntok++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "WORDS", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = ntok;
+      var_set_num(vm, "LAST_N", ntok);
+      var_set_num(vm, "WORDS_N", ntok);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CUT|COLUMN|FIELDN hay sep n — peel Nth field by separator → LAST.
+     * CUT/FIELDN: 0-based index. COLUMN/COL/COLN: 1-based (like SYS LINE).
+     * LAST_N = 1 if field exists, 0 if miss/out-of-range. Empty sep → whole as field 0.
+     * Usability: CSV/path/kv columns without SPLIT + NTH glue. */
+    if (kw(&L->cur,"CUT") || kw(&L->cur,"COLUMN") || kw(&L->cur,"COL") ||
+        kw(&L->cur,"COLN") || kw(&L->cur,"FIELDN") || kw(&L->cur,"NTHFIELD") ||
+        kw(&L->cur,"GETFIELD") || kw(&L->cur,"CSVFIELD")){
+      char op[16]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int one_based = (strcmp(op, "COLUMN") == 0 || strcmp(op, "COL") == 0 ||
+                       strcmp(op, "COLN") == 0);
+      char hay[CUBALC_HOST_STR_MAX], sep[64], out[512];
+      long want = 0, idx = 0, found = 0;
+      const char *p, *hit, *start;
+      size_t sepn, flen;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, hay, sizeof hay) != 0)
+        snprintf(hay, sizeof hay, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (one_based) {
+        if (want < 1) want = 1;
+        want = want - 1; /* convert to 0-based walk */
+      } else {
+        if (want < 0) want = 0;
+      }
+      out[0] = 0;
+      sepn = strlen(sep);
+      p = hay;
+      if (!hay[0]) {
+        found = 0;
+      } else if (sepn == 0) {
+        /* empty sep: only field 0 is the whole string */
+        if (want == 0) {
+          snprintf(out, sizeof out, "%s", hay);
+          found = 1;
+        }
+      } else {
+        while (*p) {
+          start = p;
+          hit = strstr(p, sep);
+          if (hit) {
+            flen = (size_t)(hit - p);
+            p = hit + sepn;
+          } else {
+            flen = strlen(p);
+            p = p + flen;
+          }
+          if (idx == want) {
+            if (flen >= sizeof out) flen = sizeof out - 1;
+            memcpy(out, start, flen);
+            out[flen] = 0;
+            found = 1;
+            break;
+          }
+          idx++;
+          if (!hit) break;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "CUT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "CUT_N", found);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SORT [str|LAST] — lexicographic sort of newline fields → LAST.
+     * SYS UNIQ [str|LAST] — drop adjacent duplicate fields (sort first for full unique).
+     * LAST_N/SORT_N = kept count. Cap 512 fields.
+     * Usability: stable LIST walks — order is not guaranteed by SYS LIST. */
+    if (kw(&L->cur,"SORT") || kw(&L->cur,"SORTLINES") || kw(&L->cur,"SORTL") ||
+        kw(&L->cur,"UNIQ") || kw(&L->cur,"UNIQUE") || kw(&L->cur,"DEDUP")){
+      int is_uniq = (kw(&L->cur,"UNIQ") || kw(&L->cur,"UNIQUE") || kw(&L->cur,"DEDUP"));
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      /* field copies for stable strcmp (cap 512 × 256) */
+      enum { SORT_MAX = 256, SORT_FLEN = 192 };
+      char fields[SORT_MAX][SORT_FLEN];
+      int order[SORT_MAX];
+      int n = 0, i;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SORT_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= SORT_FLEN) flen = SORT_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (!is_uniq && n > 1) {
+        /* insertion sort on order[] by fields — small n, pure C, no nested fn needed */
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0 && strcmp(fields[order[j]], fields[key]) > 0) {
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = is_uniq ? i : order[i];
+        if (is_uniq && i > 0 && strcmp(fields[i], fields[i - 1]) == 0)
+          continue;
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UNION|ORLINES|SETUNION a [b…] — merge bags · first-seen unique fields → LAST.
+     * SYS DISTINCT|UNIQUEALL [bag] — order-preserving full unique (unlike adjacent UNIQ).
+     * SYS INTERSECT|ANDLINES|SETAND a b — fields of a also in b (order of a).
+     * SYS DIFF|EXCEPT|SETDIFF|MINUSLINES a b — fields of a not in b (order of a).
+     * LAST_N = kept count. Cap 256 fields × 192 chars.
+     * Usability: work-bag merge/dedup/subtract without EACH+HASLINE rebuild. */
+    if (kw(&L->cur,"UNION") || kw(&L->cur,"ORLINES") || kw(&L->cur,"SETUNION") ||
+        kw(&L->cur,"SETOR") || kw(&L->cur,"DISTINCT") || kw(&L->cur,"UNIQUEALL") ||
+        kw(&L->cur,"UALL") || kw(&L->cur,"DEDUPALL") ||
+        kw(&L->cur,"INTERSECT") || kw(&L->cur,"ANDLINES") || kw(&L->cur,"SETAND") ||
+        kw(&L->cur,"SETINTERSECT") ||
+        kw(&L->cur,"DIFF") || kw(&L->cur,"EXCEPT") || kw(&L->cur,"SETDIFF") ||
+        kw(&L->cur,"MINUSLINES") || kw(&L->cur,"LINEDIFF") || kw(&L->cur,"BAGDIFF")){
+      char op[24];
+      int mode; /* 0=union/distinct 1=intersect 2=diff */
+      enum { SET_MAX = 256, SET_FLEN = 192 };
+      char fields[SET_MAX][SET_FLEN];
+      char bag[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      int n = 0, i;
+      size_t olen = 0;
+      long kept = 0;
+      const char *p, *start;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "INTERSECT") == 0 || strcmp(op, "ANDLINES") == 0 ||
+          strcmp(op, "SETAND") == 0 || strcmp(op, "SETINTERSECT") == 0)
+        mode = 1;
+      else if (strcmp(op, "DIFF") == 0 || strcmp(op, "EXCEPT") == 0 ||
+               strcmp(op, "SETDIFF") == 0 || strcmp(op, "MINUSLINES") == 0 ||
+               strcmp(op, "LINEDIFF") == 0 || strcmp(op, "BAGDIFF") == 0)
+        mode = 2;
+      else
+        mode = 0; /* UNION / DISTINCT */
+      lex_next(L);
+      out[0] = 0;
+      n = 0;
+      if (mode == 0) {
+        /* UNION / DISTINCT: absorb all args; keep first-seen order */
+        int any = 0;
+        while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+               L->cur.kind == TK_NUM) {
+          bag[0] = 0;
+          if (L->cur.kind == TK_NUM) {
+            snprintf(bag, sizeof bag, "%ld", L->cur.num);
+            lex_next(L);
+          } else if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) {
+            break;
+          }
+          any = 1;
+          if (!bag[0]) continue;
+          p = bag;
+          while (*p && n < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              int seen = 0;
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              for (i = 0; i < n; i++) {
+                if (strlen(fields[i]) == flen &&
+                    (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                  seen = 1;
+                  break;
+                }
+              }
+              if (!seen) {
+                memcpy(fields[n], start, flen);
+                fields[n][flen] = 0;
+                n++;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        if (!any) {
+          /* zero args → LAST bag */
+          snprintf(bag, sizeof bag, "%s", vm->last_str);
+          if (bag[0]) {
+            p = bag;
+            while (*p && n < SET_MAX) {
+              start = p;
+              while (*p && *p != '\n') p++;
+              if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+                break;
+              {
+                size_t flen = (size_t)(p - start);
+                int seen = 0;
+                if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+                for (i = 0; i < n; i++) {
+                  if (strlen(fields[i]) == flen &&
+                      (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                    seen = 1;
+                    break;
+                  }
+                }
+                if (!seen) {
+                  memcpy(fields[n], start, flen);
+                  fields[n][flen] = 0;
+                  n++;
+                }
+              }
+              if (*p == '\n') p++;
+            }
+          }
+        }
+        for (i = 0; i < n; i++) {
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t flen = strlen(fields[i]);
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fields[i], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, fields[i], take);
+              olen += take;
+            }
+            out[olen] = 0;
+          }
+          kept++;
+        }
+      } else {
+        /* INTERSECT / DIFF: a then b */
+        char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+        char bfields[SET_MAX][SET_FLEN];
+        int bn = 0;
+        a[0] = 0; b[0] = 0;
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+          b[0] = 0;
+        /* index fields of b */
+        if (b[0]) {
+          p = b;
+          while (*p && bn < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > b && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              memcpy(bfields[bn], start, flen);
+              bfields[bn][flen] = 0;
+              bn++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        /* walk a; keep if (intersect && in b) or (diff && not in b); first-seen only */
+        if (a[0]) {
+          p = a;
+          while (*p && n < SET_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > a && start[-1] == '\n')
+              break;
+            {
+              size_t flen = (size_t)(p - start);
+              int in_b = 0, seen = 0;
+              if (flen >= SET_FLEN) flen = SET_FLEN - 1;
+              for (i = 0; i < bn; i++) {
+                if (strlen(bfields[i]) == flen &&
+                    (flen == 0 || memcmp(bfields[i], start, flen) == 0)) {
+                  in_b = 1;
+                  break;
+                }
+              }
+              for (i = 0; i < n; i++) {
+                if (strlen(fields[i]) == flen &&
+                    (flen == 0 || memcmp(fields[i], start, flen) == 0)) {
+                  seen = 1;
+                  break;
+                }
+              }
+              if (!seen && ((mode == 1 && in_b) || (mode == 2 && !in_b))) {
+                memcpy(fields[n], start, flen);
+                fields[n][flen] = 0;
+                n++;
+              }
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        for (i = 0; i < n; i++) {
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t flen = strlen(fields[i]);
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fields[i], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, fields[i], take);
+              olen += take;
+            }
+            out[olen] = 0;
+          }
+          kept++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "UNION_N", kept);
+      var_set_num(vm, "SET_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ZIP|PAIR|ZIPLINES a b [sep] — pair newline fields by index with sep → LAST.
+     * Default sep ":". Shorter bag pads empty partner. LAST_N = pair count.
+     * SYS KEYS|COL0|LEFTCOL bag [sep] — peel left of first sep each field → bag.
+     * SYS VALS|COL1|RIGHTCOL bag [sep] — peel right of first sep each field → bag.
+     * Usability: roster name+status plates without EACH+CAT glue; peel kv bags. */
+    if (kw(&L->cur,"ZIP") || kw(&L->cur,"PAIR") || kw(&L->cur,"ZIPLINES") ||
+        kw(&L->cur,"ZIPL") || kw(&L->cur,"PAIRS") ||
+        kw(&L->cur,"KEYS") || kw(&L->cur,"COL0") || kw(&L->cur,"LEFTCOL") ||
+        kw(&L->cur,"KEYCOL") || kw(&L->cur,"KVKEYS") ||
+        kw(&L->cur,"VALS") || kw(&L->cur,"COL1") || kw(&L->cur,"RIGHTCOL") ||
+        kw(&L->cur,"VALCOL") || kw(&L->cur,"KVVALS") || kw(&L->cur,"VALUES")){
+      char op[20];
+      int mode; /* 0=zip 1=keys 2=vals */
+      enum { ZIP_MAX = 256, ZIP_FLEN = 192 };
+      char af[ZIP_MAX][ZIP_FLEN], bf[ZIP_MAX][ZIP_FLEN];
+      char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+      char sep[32], out[CUBALC_HOST_STR_MAX];
+      int na = 0, nb = 0, n = 0, i;
+      size_t olen = 0, sepn;
+      const char *p, *start;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "KEYS") == 0 || strcmp(op, "COL0") == 0 ||
+          strcmp(op, "LEFTCOL") == 0 || strcmp(op, "KEYCOL") == 0 ||
+          strcmp(op, "KVKEYS") == 0)
+        mode = 1;
+      else if (strcmp(op, "VALS") == 0 || strcmp(op, "COL1") == 0 ||
+               strcmp(op, "RIGHTCOL") == 0 || strcmp(op, "VALCOL") == 0 ||
+               strcmp(op, "KVVALS") == 0 || strcmp(op, "VALUES") == 0)
+        mode = 2;
+      else
+        mode = 0;
+      lex_next(L);
+      a[0] = 0; b[0] = 0; sep[0] = ':'; sep[1] = 0; out[0] = 0;
+      if (mode == 0) {
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+          b[0] = 0;
+        /* optional sep: string only (avoid eating next form); default ":" */
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+            { sep[0] = ':'; sep[1] = 0; }
+          if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+        }
+        /* split a and b into fields */
+        if (a[0]) {
+          p = a;
+          while (*p && na < ZIP_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > a && start[-1] == '\n') break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= ZIP_FLEN) flen = ZIP_FLEN - 1;
+              memcpy(af[na], start, flen);
+              af[na][flen] = 0;
+              na++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        if (b[0]) {
+          p = b;
+          while (*p && nb < ZIP_MAX) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            if (start == p && *p == 0 && start > b && start[-1] == '\n') break;
+            {
+              size_t flen = (size_t)(p - start);
+              if (flen >= ZIP_FLEN) flen = ZIP_FLEN - 1;
+              memcpy(bf[nb], start, flen);
+              bf[nb][flen] = 0;
+              nb++;
+            }
+            if (*p == '\n') p++;
+          }
+        }
+        n = na > nb ? na : nb;
+        sepn = strlen(sep);
+        for (i = 0; i < n; i++) {
+          const char *la = (i < na) ? af[i] : "";
+          const char *lb = (i < nb) ? bf[i] : "";
+          size_t fla = strlen(la), flb = strlen(lb);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + fla < sizeof out) {
+            memcpy(out + olen, la, fla);
+            olen += fla;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, la, take);
+            olen += take;
+          }
+          if (olen + sepn < sizeof out) {
+            memcpy(out + olen, sep, sepn);
+            olen += sepn;
+          }
+          if (olen + flb < sizeof out) {
+            memcpy(out + olen, lb, flb);
+            olen += flb;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, lb, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          kept++;
+        }
+      } else {
+        /* KEYS / VALS: peel each field at first sep */
+        if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+          snprintf(a, sizeof a, "%s", vm->last_str);
+        if (L->cur.kind == TK_STR) {
+          if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+            { sep[0] = ':'; sep[1] = 0; }
+          if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+        }
+        sepn = strlen(sep);
+        if (a[0]) {
+          p = a;
+          while (*p) {
+            const char *hit = 0;
+            size_t flen, take;
+            start = p;
+            while (*p && *p != '\n') p++;
+            flen = (size_t)(p - start);
+            /* find first sep in field */
+            if (sepn == 0) {
+              hit = start; /* empty sep: all left empty right? treat as no sep */
+              hit = 0;
+            } else if (flen >= sepn) {
+              size_t k;
+              for (k = 0; k + sepn <= flen; k++) {
+                if (memcmp(start + k, sep, sepn) == 0) {
+                  hit = start + k;
+                  break;
+                }
+              }
+            }
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (mode == 1) {
+              /* keys: left of sep, or whole field if no sep */
+              take = hit ? (size_t)(hit - start) : flen;
+              if (olen + take < sizeof out) {
+                memcpy(out + olen, start, take);
+                olen += take;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, start, t);
+                olen += t;
+              }
+            } else {
+              /* vals: right of sep, or empty if no sep */
+              if (hit) {
+                const char *rs = hit + sepn;
+                take = (size_t)((start + flen) - rs);
+                if (olen + take < sizeof out) {
+                  memcpy(out + olen, rs, take);
+                  olen += take;
+                } else if (olen < sizeof out - 1) {
+                  size_t t = sizeof out - 1 - olen;
+                  memcpy(out + olen, rs, t);
+                  olen += t;
+                }
+              }
+              /* else empty field */
+            }
+            out[olen] = 0;
+            kept++;
+            if (*p == '\n') p++;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "ZIP_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PREFIXALL|PREPENDALL|MAPPRE bag prefix — prepend string to every field → LAST.
+     * SYS SUFFIXALL|APPENDALL|MAPSUF bag suffix — append string to every field → LAST.
+     * LAST_N = field count. Empty bag → "" OK=1.
+     * Usability: tag LIST/peer bags (path/, .json) without EACH+CAT rebuild. */
+    if (kw(&L->cur,"PREFIXALL") || kw(&L->cur,"PREPENDALL") || kw(&L->cur,"MAPPRE") ||
+        kw(&L->cur,"PREALL") || kw(&L->cur,"ADDFRONT") || kw(&L->cur,"TAGPRE") ||
+        kw(&L->cur,"SUFFIXALL") || kw(&L->cur,"APPENDALL") || kw(&L->cur,"MAPSUF") ||
+        kw(&L->cur,"SUFALL") || kw(&L->cur,"ADDEND") || kw(&L->cur,"TAGSUF") ||
+        kw(&L->cur,"POSTFIXALL")){
+      char op[20];
+      int is_suf;
+      char bag[CUBALC_HOST_STR_MAX], affix[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, alen, flen;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      is_suf = (strcmp(op, "SUFFIXALL") == 0 || strcmp(op, "APPENDALL") == 0 ||
+                strcmp(op, "MAPSUF") == 0 || strcmp(op, "SUFALL") == 0 ||
+                strcmp(op, "ADDEND") == 0 || strcmp(op, "TAGSUF") == 0 ||
+                strcmp(op, "POSTFIXALL") == 0);
+      lex_next(L);
+      bag[0] = 0; affix[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, affix, sizeof affix) != 0)
+        affix[0] = 0;
+      alen = strlen(affix);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (!is_suf) {
+            /* prefix + field */
+            if (olen + alen < sizeof out) {
+              memcpy(out + olen, affix, alen);
+              olen += alen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, affix, t);
+              olen += t;
+            }
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+          } else {
+            /* field + suffix */
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            if (olen + alen < sizeof out) {
+              memcpy(out + olen, affix, alen);
+              olen += alen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, affix, t);
+              olen += t;
+            }
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "PREFIXALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FILL|REPEATL|REPEATS|BAGFILL n value — bag of n copies of value → LAST.
+     * n capped 0..256; n<=0 → empty. Value may be str/ident/num (num stringified).
+     * Usability: default status columns for ZIP / pad peer bags without EACH. */
+    if (kw(&L->cur,"FILL") || kw(&L->cur,"REPEATL") || kw(&L->cur,"REPEATS") ||
+        kw(&L->cur,"BAGFILL") || kw(&L->cur,"FILLBAG") || kw(&L->cur,"NFILL") ||
+        kw(&L->cur,"TIMESLINE") || kw(&L->cur,"DUPFIELD")){
+      long n = 0;
+      int i;
+      char val[512], out[CUBALC_HOST_STR_MAX], nbuf[40];
+      size_t olen = 0, vlen;
+      long kept = 0;
+      lex_next(L);
+      out[0] = 0; val[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+        n = parse_prim(vm, L);
+      } else {
+        n = vm->last_n;
+      }
+      if (n < 0) n = 0;
+      if (n > 256) n = 256;
+      if (L->cur.kind == TK_NUM) {
+        snprintf(val, sizeof val, "%ld", L->cur.num);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, val, sizeof val) != 0)
+          val[0] = 0;
+      } else if (vm->last_str[0]) {
+        snprintf(val, sizeof val, "%s", vm->last_str);
+      } else {
+        snprintf(val, sizeof val, "%ld", vm->last_n);
+      }
+      vlen = strlen(val);
+      for (i = 0; i < (int)n; i++) {
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + vlen < sizeof out) {
+          memcpy(out + olen, val, vlen);
+          olen += vlen;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, val, t);
+          olen += t;
+        }
+        out[olen] = 0;
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "FILL_N", kept);
+      snprintf(nbuf, sizeof nbuf, "%ld", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ENUMERATE|NUMBER|INDEXLINES|NL|ENUM bag [start] [sep]
+     * — prefix each field with start+i and sep (default start=0, sep=":").
+     * LAST_N = field count. Empty bag → "" OK=1.
+     * Usability: ranked/priority plates without EACH+STR+CAT index glue. */
+    /* Note: SYS ENUM is IOTA alias (RANGE plane) — do not claim ENUM here. */
+    if (kw(&L->cur,"ENUMERATE") || kw(&L->cur,"NUMBER") || kw(&L->cur,"INDEXLINES") ||
+        kw(&L->cur,"NUMBERLINES") || kw(&L->cur,"NLNUM") ||
+        kw(&L->cur,"IDXLINES") || kw(&L->cur,"WITHINDEX") || kw(&L->cur,"RANKLINES")){
+      char bag[CUBALC_HOST_STR_MAX], sep[32], out[CUBALC_HOST_STR_MAX], ibuf[40];
+      const char *p, *start;
+      size_t olen = 0, sepn, flen, ilen;
+      long kept = 0, base = 0, idx;
+      lex_next(L);
+      bag[0] = 0; sep[0] = ':'; sep[1] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional start index (num/ident/paren); then optional sep string */
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS) {
+        /* Ambiguity: IDENT could be next form. Only treat as start if num/minus/paren
+         * or IDENT that resolves as number var. Prefer: num or minus always start;
+         * IDENT only if looks numeric after resolve as number via parse_prim when
+         * next is also present or kind is clearly numeric. */
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS ||
+            L->cur.kind == TK_LPAREN) {
+          base = parse_prim(vm, L);
+        } else if (L->cur.kind == TK_IDENT) {
+          /* peek: if IDENT is a known numeric-ish we still parse_prim (var num) */
+          base = parse_prim(vm, L);
+        }
+      }
+      if (L->cur.kind == TK_STR) {
+        if (resolve_str_arg(vm, L, sep, sizeof sep) != 0)
+          { sep[0] = ':'; sep[1] = 0; }
+        if (!sep[0]) { sep[0] = ':'; sep[1] = 0; }
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          idx = base + kept;
+          snprintf(ibuf, sizeof ibuf, "%ld", idx);
+          ilen = strlen(ibuf);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + ilen < sizeof out) {
+            memcpy(out + olen, ibuf, ilen);
+            olen += ilen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, ibuf, t);
+            olen += t;
+          }
+          if (olen + sepn < sizeof out) {
+            memcpy(out + olen, sep, sepn);
+            olen += sepn;
+          }
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, start, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "ENUM_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SQUEEZE|COMPACT|DROPEMPTY [BLANK|NB] [bag]
+     * — drop empty newline fields (and whitespace-only if BLANK/NB).
+     * LAST_N = kept count. Usability: clean VALS/SPLIT/LIST bags without EACH. */
+    if (kw(&L->cur,"SQUEEZE") || kw(&L->cur,"COMPACT") || kw(&L->cur,"DROPEMPTY") ||
+        kw(&L->cur,"DROPBLANK") || kw(&L->cur,"TRIMLINES") || kw(&L->cur,"STRIPLINES") ||
+        kw(&L->cur,"NOTEMPTYL") || kw(&L->cur,"KEEPEMPTY0")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen;
+      long kept = 0;
+      int drop_blank = 0;
+      char op[20];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "DROPBLANK") == 0 || strcmp(op, "TRIMLINES") == 0 ||
+          strcmp(op, "STRIPLINES") == 0)
+        drop_blank = 1;
+      lex_next(L);
+      if (kw(&L->cur,"BLANK") || kw(&L->cur,"NB") || kw(&L->cur,"WS") ||
+          kw(&L->cur,"WHITESPACE") || kw(&L->cur,"TRIM") || kw(&L->cur,"NONBLANK")) {
+        drop_blank = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int drop = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == 0) {
+            drop = 1;
+          } else if (drop_blank) {
+            size_t i;
+            drop = 1;
+            for (i = 0; i < flen; i++) {
+              char c = start[i];
+              if (c != ' ' && c != '\t' && c != '\r') { drop = 0; break; }
+            }
+          }
+          if (!drop) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SQUEEZE_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS TRIMALL|MAPTRIM|STRIPALL [L|R|BOTH] [bag]
+     * — trim leading/trailing whitespace on every newline field → LAST.
+     * Default BOTH (LTRIM+RTRIM). LAST_N = field count (empty fields kept).
+     * Usability: clean plate lines after READ/SPLIT before SQUEEZE/EQS. */
+    if (kw(&L->cur,"TRIMALL") || kw(&L->cur,"MAPTRIM") || kw(&L->cur,"STRIPALL") ||
+        kw(&L->cur,"WSALL") || kw(&L->cur,"LTRIMALL") || kw(&L->cur,"RTRIMALL")){
+      char op[20];
+      int do_l = 1, do_r = 1;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start, *fe, *fs;
+      size_t olen = 0, flen;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LTRIMALL") == 0) { do_l = 1; do_r = 0; }
+      else if (strcmp(op, "RTRIMALL") == 0) { do_l = 0; do_r = 1; }
+      lex_next(L);
+      if (kw(&L->cur,"L") || kw(&L->cur,"LEFT") || kw(&L->cur,"LTRIM") ||
+          kw(&L->cur,"LEADING")) {
+        do_l = 1; do_r = 0; lex_next(L);
+      } else if (kw(&L->cur,"R") || kw(&L->cur,"RIGHT") || kw(&L->cur,"RTRIM") ||
+                 kw(&L->cur,"TRAILING")) {
+        do_l = 0; do_r = 1; lex_next(L);
+      } else if (kw(&L->cur,"BOTH") || kw(&L->cur,"LR") || kw(&L->cur,"FULL")) {
+        do_l = 1; do_r = 1; lex_next(L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          fs = start;
+          fe = p;
+          if (do_l) {
+            while (fs < fe && (*fs == ' ' || *fs == '\t' || *fs == '\r')) fs++;
+          }
+          if (do_r) {
+            while (fe > fs && (fe[-1] == ' ' || fe[-1] == '\t' || fe[-1] == '\r'))
+              fe--;
+          }
+          flen = (size_t)(fe - fs);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fs, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, fs, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "TRIMALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS UPPERALL|MAPUPPER|UCASEALL [bag] — ASCII upper every newline field → LAST.
+     * SYS LOWERALL|MAPLOWER|LCASEALL [bag] — ASCII lower every field.
+     * LAST_N = field count. Usability: normalize LIST/severity bags before HASLINE/set ops
+     * without EACH LINE + UPPER/LOWER glue. */
+    if (kw(&L->cur,"UPPERALL") || kw(&L->cur,"MAPUPPER") || kw(&L->cur,"UCASEALL") ||
+        kw(&L->cur,"TOUPPERALL") || kw(&L->cur,"UPCASEALL") ||
+        kw(&L->cur,"LOWERALL") || kw(&L->cur,"MAPLOWER") || kw(&L->cur,"LCASEALL") ||
+        kw(&L->cur,"TOLOWERALL") || kw(&L->cur,"DOWNCASEALL")){
+      char op[20];
+      int to_upper = 1;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen, i;
+      long kept = 0;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LOWERALL") == 0 || strcmp(op, "MAPLOWER") == 0 ||
+          strcmp(op, "LCASEALL") == 0 || strcmp(op, "TOLOWERALL") == 0 ||
+          strcmp(op, "DOWNCASEALL") == 0)
+        to_upper = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + flen < sizeof out) {
+            for (i = 0; i < flen; i++) {
+              char c = start[i];
+              if (to_upper) {
+                if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+              } else {
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              }
+              out[olen++] = c;
+            }
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            for (i = 0; i < t; i++) {
+              char c = start[i];
+              if (to_upper) {
+                if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+              } else {
+                if (c >= 'A' && c <= 'Z') c = (char)(c - 'A' + 'a');
+              }
+              out[olen++] = c;
+            }
+          }
+          out[olen] = 0;
+          kept++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "UPPERALL_N", kept);
+      var_set_num(vm, "LOWERALL_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MAPREPLACE|GSUBALL|REPLACEBAG bag old new — REPLACEALL on every field.
+     * Empty old → no-op (bag unchanged). LAST = bag; LAST_N/MAPREPLACE_N = total
+     * replacements; MAPREPLACE_FIELDS = field count.
+     * Usability: rewrite path prefixes / tags on LIST bags without EACH+REPLACEALL. */
+    if (kw(&L->cur,"MAPREPLACE") || kw(&L->cur,"GSUBALL") || kw(&L->cur,"REPLACEBAG") ||
+        kw(&L->cur,"REPLACEALLBAG") || kw(&L->cur,"BAGREPLACE") || kw(&L->cur,"SUBALLBAG") ||
+        kw(&L->cur,"MAPGSUB") || kw(&L->cur,"MAPSUBST")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char olds[256], news[256];
+      const char *p, *start, *src;
+      size_t olen = 0, flen, oldn, newn, pre, rest, take;
+      long fields = 0, did = 0;
+      char field[512], fbuf[768];
+      size_t fo;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; olds[0] = 0; news[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) olds[0] = 0;
+      if (resolve_str_arg(vm, L, news, sizeof news) != 0) news[0] = 0;
+      oldn = strlen(olds);
+      newn = strlen(news);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          /* apply REPLACEALL on this field */
+          fo = 0;
+          fbuf[0] = 0;
+          if (oldn == 0) {
+            if (take < sizeof fbuf) {
+              memcpy(fbuf, field, take);
+              fo = take;
+              fbuf[fo] = 0;
+            }
+          } else {
+            src = field;
+            for (;;) {
+              const char *hit = strstr(src, olds);
+              if (!hit) {
+                rest = strlen(src);
+                if (fo + rest >= sizeof fbuf) rest = sizeof fbuf - 1 - fo;
+                memcpy(fbuf + fo, src, rest);
+                fo += rest;
+                fbuf[fo] = 0;
+                break;
+              }
+              pre = (size_t)(hit - src);
+              if (fo + pre >= sizeof fbuf) pre = sizeof fbuf - 1 - fo;
+              memcpy(fbuf + fo, src, pre);
+              fo += pre;
+              if (fo + newn < sizeof fbuf) {
+                memcpy(fbuf + fo, news, newn);
+                fo += newn;
+              } else if (fo < sizeof fbuf - 1) {
+                size_t nt = sizeof fbuf - 1 - fo;
+                memcpy(fbuf + fo, news, nt);
+                fo += nt;
+              }
+              fbuf[fo] = 0;
+              did++;
+              src = hit + oldn;
+              if (fo >= sizeof fbuf - 1) break;
+            }
+          }
+          if (fields > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = fo;
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, fbuf, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, fbuf, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          fields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = did;
+      var_set_num(vm, "LAST_N", did);
+      var_set_num(vm, "MAPREPLACE_N", did);
+      var_set_num(vm, "MAPREPLACE_FIELDS", fields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FREQ|HIST|COUNTS|TALLY [bag] [sep] — frequency of each exact field.
+     * LAST = "key{sep}count" bag (first-seen order). Default sep ":".
+     * LAST_N/FREQ_N = unique keys; FREQ_TOTAL = input field count (cap 64 uniques).
+     * Usability: status/severity rollups without EACH LINE + COUNTLINE rebuild. */
+    if (kw(&L->cur,"FREQ") || kw(&L->cur,"HIST") || kw(&L->cur,"COUNTS") ||
+        kw(&L->cur,"FREQUENCY") || kw(&L->cur,"HISTOGRAM") ||
+        kw(&L->cur,"COUNTBAG") || kw(&L->cur,"BAGCOUNT") || kw(&L->cur,"FREQBAG")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[16];
+      char keys[64][128];
+      long counts[64];
+      int nk = 0, k;
+      const char *p, *start;
+      size_t flen, olen = 0;
+      long total = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional sep if next is a short string (not a form keyword start) */
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+        lex_next(L);
+      }
+      memset(counts, 0, sizeof counts);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          char field[128];
+          size_t take;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          total++;
+          for (k = 0; k < nk; k++) {
+            if (strcmp(keys[k], field) == 0) {
+              counts[k]++;
+              break;
+            }
+          }
+          if (k == nk && nk < 64) {
+            snprintf(keys[nk], sizeof keys[0], "%s", field);
+            counts[nk] = 1;
+            nk++;
+          } else if (k == nk) {
+            /* overflow uniques: drop further new keys but still count total */
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      for (k = 0; k < nk; k++) {
+        char line[160];
+        int n;
+        n = snprintf(line, sizeof line, "%s%s%ld", keys[k], sep, counts[k]);
+        if (n < 0) n = 0;
+        if ((size_t)n >= sizeof line) n = (int)sizeof line - 1;
+        if (k > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + (size_t)n < sizeof out) {
+          memcpy(out + olen, line, (size_t)n);
+          olen += (size_t)n;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, line, t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "FREQ", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nk;
+      var_set_num(vm, "LAST_N", nk);
+      var_set_num(vm, "FREQ_N", nk);
+      var_set_num(vm, "FREQ_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SORTFREQ|SORTBYCOUNT|FSORT [bag] [sep] [DESC|ASC]
+     * — sort "key{sep}count" FREQ lines by numeric count (default sep ":", DESC).
+     * Count is digits after last sep on each line. Stable for equal counts.
+     * LAST_N = line count. Usability: top severities after FREQ without shell sort -n. */
+    if (kw(&L->cur,"SORTFREQ") || kw(&L->cur,"SORTBYCOUNT") || kw(&L->cur,"FSORT") ||
+        kw(&L->cur,"FREQSORT") || kw(&L->cur,"SORTCOUNTS") || kw(&L->cur,"RANKFREQ") ||
+        kw(&L->cur,"TOPFREQ") || kw(&L->cur,"HEAVYFIRST")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[16];
+      char lines[64][160];
+      long counts[64];
+      int order[64];
+      int n = 0, i, j, desc = 1;
+      const char *p, *start;
+      size_t sepn, olen = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", ":");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      /* optional sep (string) and/or DESC|ASC */
+      for (;;) {
+        if (L->cur.kind == TK_STR) {
+          snprintf(sep, sizeof sep, "%s", L->cur.text);
+          if (!sep[0]) snprintf(sep, sizeof sep, "%s", ":");
+          lex_next(L);
+          continue;
+        }
+        if (kw(&L->cur,"DESC") || kw(&L->cur,"DOWN") || kw(&L->cur,"REV") ||
+            kw(&L->cur,"HEAVY") || kw(&L->cur,"HIGH")) {
+          desc = 1; lex_next(L); continue;
+        }
+        if (kw(&L->cur,"ASC") || kw(&L->cur,"UP") || kw(&L->cur,"LIGHT") ||
+            kw(&L->cur,"LOW") || kw(&L->cur,"ASCENDING")) {
+          desc = 0; lex_next(L); continue;
+        }
+        break;
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < 64) {
+          size_t flen, take;
+          const char *last;
+          char *endc;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof lines[0]) take = sizeof lines[0] - 1;
+          memcpy(lines[n], start, take);
+          lines[n][take] = 0;
+          /* count = number after last sep */
+          counts[n] = 0;
+          if (sepn == 0) {
+            counts[n] = strtol(lines[n], &endc, 10);
+          } else {
+            last = NULL;
+            {
+              const char *q = lines[n];
+              while (*q) {
+                if (strncmp(q, sep, sepn) == 0) last = q;
+                q++;
+              }
+            }
+            if (last) counts[n] = strtol(last + sepn, &endc, 10);
+            else counts[n] = strtol(lines[n], &endc, 10);
+          }
+          order[n] = n;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      /* stable insertion sort by count */
+      for (i = 1; i < n; i++) {
+        int oi = order[i];
+        long ci = counts[oi];
+        j = i - 1;
+        while (j >= 0) {
+          long cj = counts[order[j]];
+          int swap = desc ? (cj < ci) : (cj > ci);
+          if (!swap) break;
+          order[j + 1] = order[j];
+          j--;
+        }
+        order[j + 1] = oi;
+      }
+      for (i = 0; i < n; i++) {
+        size_t ln = strlen(lines[order[i]]);
+        if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + ln < sizeof out) {
+          memcpy(out + olen, lines[order[i]], ln);
+          olen += ln;
+        } else if (olen < sizeof out - 1) {
+          size_t t = sizeof out - 1 - olen;
+          memcpy(out + olen, lines[order[i]], t);
+          olen += t;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "FREQ", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = n;
+      var_set_num(vm, "LAST_N", n);
+      var_set_num(vm, "SORTFREQ_N", n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS BEFOREALL|MAPBEFORE bag needle — BEFORE on every bag field → LAST bag.
+     * SYS AFTERALL|MAPAFTER bag needle — AFTER on every field.
+     * Same miss semantics as BEFORE/AFTER (before→whole field, after→empty).
+     * LAST_N = field count; BEFOREALL_HIT = how many fields contained needle.
+     * Usability: FREQ key/count peel or kv bags without EACH+BEFORE/AFTER. */
+    if (kw(&L->cur,"BEFOREALL") || kw(&L->cur,"MAPBEFORE") || kw(&L->cur,"LEFTALL") ||
+        kw(&L->cur,"PREALL") || kw(&L->cur,"BAGBEFORE") ||
+        kw(&L->cur,"AFTERALL") || kw(&L->cur,"MAPAFTER") || kw(&L->cur,"RIGHTALL") ||
+        kw(&L->cur,"POSTALL") || kw(&L->cur,"BAGAFTER")){
+      char op[20];
+      int want_after = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], needle[256];
+      const char *p, *start;
+      size_t olen = 0, flen, nn, take;
+      long lines = 0, hits = 0;
+      char field[512], cell[512];
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "AFTERALL") == 0 || strcmp(op, "MAPAFTER") == 0 ||
+          strcmp(op, "RIGHTALL") == 0 || strcmp(op, "POSTALL") == 0 ||
+          strcmp(op, "BAGAFTER") == 0)
+        want_after = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          const char *hit;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          take = flen;
+          if (take >= sizeof field) take = sizeof field - 1;
+          memcpy(field, start, take);
+          field[take] = 0;
+          cell[0] = 0;
+          if (nn == 0) {
+            hits++;
+            if (want_after) snprintf(cell, sizeof cell, "%s", field);
+            else cell[0] = 0;
+          } else {
+            hit = strstr(field, needle);
+            if (!hit) {
+              if (want_after) cell[0] = 0;
+              else snprintf(cell, sizeof cell, "%s", field);
+            } else {
+              hits++;
+              if (want_after) {
+                snprintf(cell, sizeof cell, "%s", hit + nn);
+              } else {
+                size_t pre = (size_t)(hit - field);
+                if (pre >= sizeof cell) pre = sizeof cell - 1;
+                memcpy(cell, field, pre);
+                cell[pre] = 0;
+              }
+            }
+          }
+          if (lines > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = strlen(cell);
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, cell, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, cell, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          lines++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = lines;
+      var_set_num(vm, "LAST_N", lines);
+      var_set_num(vm, "BEFOREALL_N", lines);
+      var_set_num(vm, "AFTERALL_N", lines);
+      var_set_num(vm, "BEFOREALL_HIT", hits);
+      var_set_num(vm, "AFTERALL_HIT", hits);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FIRSTMATCH|GREP1|FINDFIELD [I] bag needle — first field containing needle.
+     * SYS FIRSTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
+     * FIRSTMATCH_I = 0-based index of hit (-1 miss). Empty needle → first field.
+     * Usability: pick one log/peer line without GREP+TAKE 1 glue. */
+    if (kw(&L->cur,"FIRSTMATCH") || kw(&L->cur,"GREP1") || kw(&L->cur,"FINDFIELD") ||
+        kw(&L->cur,"FIRSTGREP") || kw(&L->cur,"MATCH1") || kw(&L->cur,"FINDLINE_SUB") ||
+        kw(&L->cur,"FIRSTMATCHI") || kw(&L->cur,"GREP1I") || kw(&L->cur,"FINDFIELDI")){
+      char op[20];
+      int icase = 0;
+      char bag[CUBALC_HOST_STR_MAX], needle[256], out[512];
+      const char *p, *start;
+      size_t flen, nn;
+      long idx = 0, found = 0, found_i = -1;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "FIRSTMATCHI") == 0 || strcmp(op, "GREP1I") == 0 ||
+          strcmp(op, "FINDFIELDI") == 0)
+        icase = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              hit = 1;
+            } else if (!icase) {
+              if (strstr(field, needle) != NULL) hit = 1;
+            } else {
+              size_t fi, j;
+              for (fi = 0; field[fi] && !hit; fi++) {
+                for (j = 0; j < nn; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nn) hit = 1;
+              }
+            }
+            if (hit) {
+              if (flen >= sizeof out) flen = sizeof out - 1;
+              memcpy(out, start, flen);
+              out[flen] = 0;
+              found = 1;
+              found_i = idx;
+              break;
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GREP", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "FIRSTMATCH_N", found);
+      var_set_num(vm, "FIRSTMATCH_I", found_i);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* bag-KV theme → lang_ops_sys_kv.c (mesh vote A2) */
+    {
+      int kr = cubalc_lang_ops_sys_try_kv(vm, L);
+      if (kr != 0) return kr;
+    }
+
+    /* bag-KV math theme → lang_ops_sys_kvmath.c (mesh vote A2) */
+    {
+      int km = cubalc_lang_ops_sys_try_kvmath(vm, L);
+      if (km != 0) return km;
+    }
+
+    /* bag-KV filter theme → lang_ops_sys_kvfilter.c (mesh vote A2) */
+    {
+      int kf = cubalc_lang_ops_sys_try_kvfilter(vm, L);
+      if (kf != 0) return kf;
+    }
+
+    /* SYS LASTMATCH|GREP1L|FINDFIELDL [I] bag needle — last field containing needle.
+     * SYS LASTMATCHI — case-insensitive. LAST = field (empty if miss); LAST_N 0|1.
+     * LASTMATCH_I = 0-based index of hit (-1 miss). Empty needle → last field.
+     * Usability: latest log/error line without REVL+FIRSTMATCH or GREP+TAIL glue. */
+    if (kw(&L->cur,"LASTMATCH") || kw(&L->cur,"GREP1L") || kw(&L->cur,"FINDFIELDL") ||
+        kw(&L->cur,"LASTGREP") || kw(&L->cur,"MATCHLAST") || kw(&L->cur,"GREPLAST") ||
+        kw(&L->cur,"LASTMATCHI") || kw(&L->cur,"GREP1LI") || kw(&L->cur,"FINDFIELDLI")){
+      char op[20];
+      int icase = 0;
+      char bag[CUBALC_HOST_STR_MAX], needle[256], out[512];
+      const char *p, *start;
+      size_t flen, nn;
+      long idx = 0, found = 0, found_i = -1;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "LASTMATCHI") == 0 || strcmp(op, "GREP1LI") == 0 ||
+          strcmp(op, "FINDFIELDLI") == 0)
+        icase = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int hit = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              hit = 1;
+            } else if (!icase) {
+              if (strstr(field, needle) != NULL) hit = 1;
+            } else {
+              size_t fi, j;
+              for (fi = 0; field[fi] && !hit; fi++) {
+                for (j = 0; j < nn; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nn) hit = 1;
+              }
+            }
+            if (hit) {
+              /* keep scanning — last hit wins */
+              if (flen >= sizeof out) flen = sizeof out - 1;
+              memcpy(out, start, flen);
+              out[flen] = 0;
+              found = 1;
+              found_i = idx;
+            }
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "GREP", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "LASTMATCH_N", found);
+      var_set_num(vm, "LASTMATCH_I", found_i);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CHUNK|BATCH|GROUPN n [bag] [join_sep]
+     * — group bag fields into batches of n; join each batch with join_sep
+     * (default space); batches become newline fields → LAST.
+     * n<=0 → empty. LAST_N/CHUNK_N = batch count; CHUNK_TOTAL = input fields.
+     * Usability: peer/work list paging without EACH+CAT index glue. */
+    if (kw(&L->cur,"CHUNK") || kw(&L->cur,"BATCH") || kw(&L->cur,"GROUPN") ||
+        kw(&L->cur,"BUNDLE") || kw(&L->cur,"PARTN") || kw(&L->cur,"SPLITN") ||
+        kw(&L->cur,"NCHUNK") || kw(&L->cur,"BATCHLINES")){
+      long nwant = 0, total = 0, batches = 0, in_batch = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], jsep[32];
+      char batch[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, blen = 0, flen, jsepn;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      bag[0] = 0; out[0] = 0; batch[0] = 0;
+      snprintf(jsep, sizeof jsep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(jsep, sizeof jsep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      jsepn = strlen(jsep);
+      if (nwant > 0 && bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (in_batch > 0) {
+            if (blen + jsepn < sizeof batch) {
+              memcpy(batch + blen, jsep, jsepn);
+              blen += jsepn;
+            }
+          }
+          if (blen + flen < sizeof batch) {
+            memcpy(batch + blen, start, flen);
+            blen += flen;
+          } else if (blen < sizeof batch - 1) {
+            size_t t = sizeof batch - 1 - blen;
+            memcpy(batch + blen, start, t);
+            blen += t;
+          }
+          batch[blen] = 0;
+          in_batch++;
+          total++;
+          if (in_batch >= nwant) {
+            if (batches > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + blen < sizeof out) {
+              memcpy(out + olen, batch, blen);
+              olen += blen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, batch, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            batches++;
+            in_batch = 0;
+            blen = 0;
+            batch[0] = 0;
+          }
+          if (*p == '\n') p++;
+        }
+        /* flush partial last batch */
+        if (in_batch > 0) {
+          if (batches > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          if (olen + blen < sizeof out) {
+            memcpy(out + olen, batch, blen);
+            olen += blen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, batch, t);
+            olen += t;
+          }
+          out[olen] = 0;
+          batches++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = batches;
+      var_set_num(vm, "LAST_N", batches);
+      var_set_num(vm, "CHUNK_N", batches);
+      var_set_num(vm, "CHUNK_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS WINDOW|SLIDE|NGRAM n [bag] [join_sep]
+     * — overlapping windows of n consecutive bag fields; join within each
+     * window with join_sep (default space); windows → newline fields in LAST.
+     * n<=0 or fields < n → empty. LAST_N/WINDOW_N = window count;
+     * WINDOW_TOTAL = input fields; WINDOW_SIZE = n.
+     * Usability: consecutive pairs/ngrams / rolling peer pairs without
+     * EACH+NTH+CAT glue. Complements non-overlapping SYS CHUNK. */
+    if (kw(&L->cur,"WINDOW") || kw(&L->cur,"SLIDE") || kw(&L->cur,"SLIDING") ||
+        kw(&L->cur,"NGRAM") || kw(&L->cur,"WINS") || kw(&L->cur,"ROLLWIN") ||
+        kw(&L->cur,"PAIRWISE") || kw(&L->cur,"OVERLAP") || kw(&L->cur,"SWINDOW")){
+      long nwant = 0, total = 0, windows = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], jsep[32];
+      enum { WIN_MAX = 256 };
+      const char *fstart[WIN_MAX];
+      size_t flens[WIN_MAX];
+      const char *p, *start;
+      size_t olen = 0, jsepn, flen;
+      long i, j;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        nwant = parse_expr(vm, L);
+      else
+        nwant = 0;
+      bag[0] = 0; out[0] = 0;
+      snprintf(jsep, sizeof jsep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(jsep, sizeof jsep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      jsepn = strlen(jsep);
+      if (bag[0]) {
+        p = bag;
+        while (*p && total < WIN_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          fstart[total] = start;
+          flens[total] = flen;
+          total++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (nwant > 0 && total >= nwant) {
+        for (i = 0; i <= total - nwant; i++) {
+          if (windows > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          for (j = 0; j < nwant; j++) {
+            if (j > 0 && jsepn > 0) {
+              if (olen + jsepn < sizeof out) {
+                memcpy(out + olen, jsep, jsepn);
+                olen += jsepn;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, jsep, t);
+                olen += t;
+              }
+            }
+            flen = flens[i + j];
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, fstart[i + j], flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, fstart[i + j], t);
+              olen += t;
+            }
+          }
+          out[olen] = 0;
+          windows++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = windows;
+      var_set_num(vm, "LAST_N", windows);
+      var_set_num(vm, "WINDOW_N", windows);
+      var_set_num(vm, "WINDOW_TOTAL", total);
+      var_set_num(vm, "WINDOW_SIZE", nwant > 0 ? nwant : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS STRIDE|EVERY|STEP step [offset] [bag]
+     * — keep bag fields where index % step == offset (0-based).
+     * offset defaults to 0; optional OFF|OFFSET keyword before offset.
+     * step<=0 → empty. LAST_N/STRIDE_N = kept; STRIDE_TOTAL = input fields;
+     * STRIDE_STEP/STRIDE_OFF = params.
+     * Usability: partition work across workers without EACH+MOD index glue.
+     * Complements CHUNK (batch size) and WINDOW (overlap). */
+    if (kw(&L->cur,"STRIDE") || kw(&L->cur,"EVERY") || kw(&L->cur,"STEP") ||
+        kw(&L->cur,"NTHOF") || kw(&L->cur,"STRIDEBAG") || kw(&L->cur,"TAKESTEP") ||
+        kw(&L->cur,"EVERYN") || kw(&L->cur,"MODPICK") || kw(&L->cur,"PARTNIDX")){
+      long step = 0, offset = 0, total = 0, kept = 0, idx = 0, off_norm = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        step = parse_expr(vm, L);
+      else
+        step = 0;
+      offset = 0;
+      if (kw(&L->cur,"OFF") || kw(&L->cur,"OFFSET") || kw(&L->cur,"FROM") ||
+          kw(&L->cur,"START") || kw(&L->cur,"AT")){
+        lex_next(L);
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+            L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+          offset = parse_expr(vm, L);
+      } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+                 L->cur.kind == TK_MINUS) {
+        /* bare numeric offset (not IDENT — that is bag name) */
+        offset = parse_expr(vm, L);
+      }
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (step > 0) {
+        off_norm = offset % step;
+        if (off_norm < 0) off_norm += step;
+      }
+      if (step > 0 && bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          total++;
+          if ((idx % step) == off_norm) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+          idx++;
+          if (*p == '\n') p++;
+        }
+      } else if (bag[0]) {
+        /* step<=0: count total only, keep none */
+        p = bag;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          total++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "STRIDE_N", kept);
+      var_set_num(vm, "STRIDE_TOTAL", total);
+      var_set_num(vm, "STRIDE_STEP", step > 0 ? step : 0);
+      var_set_num(vm, "STRIDE_OFF", step > 0 ? off_norm : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FLATTEN|UNCHUNK|EXPAND|SPLITALL [bag] [sep]
+     * — split every bag field by sep (default space) and emit all tokens as
+     * a flat newline bag → LAST. Empty sep concatenates nothing extra (each
+     * non-empty field kept as one token). LAST_N/FLATTEN_N = token count;
+     * FLATTEN_LINES = input field count.
+     * Usability: reverse of SYS CHUNK join — re-expand batched peer/work
+     * lists without EACH+SPLIT+PUSH glue. */
+    if (kw(&L->cur,"FLATTEN") || kw(&L->cur,"UNCHUNK") || kw(&L->cur,"EXPAND") ||
+        kw(&L->cur,"SPLITALL") || kw(&L->cur,"MAPSPLIT") || kw(&L->cur,"FLATSPLIT") ||
+        kw(&L->cur,"UNBATCH") || kw(&L->cur,"FLATM") || kw(&L->cur,"BAGFLATTEN")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[64];
+      const char *p, *lstart, *lp, *tstart;
+      size_t olen = 0, sepn, lflen, tlen;
+      long tokens = 0, lines = 0;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      snprintf(sep, sizeof sep, "%s", " ");
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_STR) {
+        snprintf(sep, sizeof sep, "%s", L->cur.text);
+        lex_next(L);
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          lstart = p;
+          while (*p && *p != '\n') p++;
+          lflen = (size_t)(p - lstart);
+          lines++;
+          if (sepn == 0) {
+            /* empty sep: emit whole field as one token (if non-empty) */
+            if (lflen > 0) {
+              if (tokens > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + lflen < sizeof out) {
+                memcpy(out + olen, lstart, lflen);
+                olen += lflen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, lstart, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              tokens++;
+            }
+          } else {
+            const char *lend = lstart + lflen;
+            lp = lstart;
+            for (;;) {
+              tstart = lp;
+              while (lp < lend &&
+                     !(sepn > 0 && (size_t)(lend - lp) >= sepn &&
+                       memcmp(lp, sep, sepn) == 0))
+                lp++;
+              tlen = (size_t)(lp - tstart);
+              if (tokens > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+              if (olen + tlen < sizeof out) {
+                memcpy(out + olen, tstart, tlen);
+                olen += tlen;
+              } else if (olen < sizeof out - 1) {
+                size_t t = sizeof out - 1 - olen;
+                memcpy(out + olen, tstart, t);
+                olen += t;
+              }
+              out[olen] = 0;
+              tokens++;
+              if (lp >= lend) break;
+              /* consume sep; if it was trailing, loop emits empty token */
+              lp += sepn;
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = tokens;
+      var_set_num(vm, "LAST_N", tokens);
+      var_set_num(vm, "FLATTEN_N", tokens);
+      var_set_num(vm, "FLATTEN_LINES", lines);
+      var_set_num(vm, "UNCHUNK_N", tokens);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS CUTALL|MAPCUT|COLALL bag sep n — peel Nth sep-field from every bag line.
+     * CUTALL/MAPCUT/FIELDNALL: 0-based. COLALL/COLUMNALL: 1-based.
+     * LAST = bag of peeled fields (empty token if miss). LAST_N = line count.
+     * CUTALL_HIT = how many lines had the column. Usability: log column → FREQ
+     * without EACH LINE + CUT glue. */
+    if (kw(&L->cur,"CUTALL") || kw(&L->cur,"MAPCUT") || kw(&L->cur,"FIELDNALL") ||
+        kw(&L->cur,"CUTBAG") || kw(&L->cur,"BAGCUT") ||
+        kw(&L->cur,"COLALL") || kw(&L->cur,"COLUMNALL") || kw(&L->cur,"MAPCOLUMN") ||
+        kw(&L->cur,"COLBAG")){
+      char op[20];
+      int one_based = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX], sep[64];
+      long want = 0, lines = 0, hits = 0;
+      const char *lp, *lstart;
+      size_t olen = 0, sepn, lflen;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "COLALL") == 0 || strcmp(op, "COLUMNALL") == 0 ||
+          strcmp(op, "MAPCOLUMN") == 0 || strcmp(op, "COLBAG") == 0)
+        one_based = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0; sep[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0] = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (one_based) {
+        if (want < 1) want = 1;
+        want = want - 1;
+      } else {
+        if (want < 0) want = 0;
+      }
+      sepn = strlen(sep);
+      if (bag[0]) {
+        lp = bag;
+        while (*lp) {
+          char line[512], cell[512];
+          const char *p, *hit, *start;
+          long idx = 0, found = 0;
+          size_t flen, take;
+          lstart = lp;
+          while (*lp && *lp != '\n') lp++;
+          lflen = (size_t)(lp - lstart);
+          take = lflen;
+          if (take >= sizeof line) take = sizeof line - 1;
+          memcpy(line, lstart, take);
+          line[take] = 0;
+          cell[0] = 0;
+          p = line;
+          if (sepn == 0) {
+            if (want == 0) {
+              snprintf(cell, sizeof cell, "%s", line);
+              found = 1;
+            }
+          } else {
+            while (*p) {
+              start = p;
+              hit = strstr(p, sep);
+              if (hit) {
+                flen = (size_t)(hit - p);
+                p = hit + sepn;
+              } else {
+                flen = strlen(p);
+                p = p + flen;
+              }
+              if (idx == want) {
+                if (flen >= sizeof cell) flen = sizeof cell - 1;
+                memcpy(cell, start, flen);
+                cell[flen] = 0;
+                found = 1;
+                break;
+              }
+              idx++;
+              if (!hit) break;
+            }
+          }
+          if (lines > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          {
+            size_t n = strlen(cell);
+            if (olen + n < sizeof out) {
+              memcpy(out + olen, cell, n);
+              olen += n;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, cell, t);
+              olen += t;
+            }
+            out[olen] = 0;
+          }
+          if (found) hits++;
+          lines++;
+          if (*lp == '\n') lp++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "CUT", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = lines;
+      var_set_num(vm, "LAST_N", lines);
+      var_set_num(vm, "CUTALL_N", lines);
+      var_set_num(vm, "CUTALL_HIT", hits);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MIDLINES|SLICEBAG|FIELDSLICE|LINESLICE bag start [end]
+     * — keep newline fields [start..end] inclusive, 0-based.
+     * end omitted → through last field. start/end clamp; start>end → empty.
+     * Usability: middle bag windows without DROP+TAKE two-step glue.
+     * Note: SYS SLICE is string MID — use SLICEBAG/MIDLINES for bags. */
+    if (kw(&L->cur,"MIDLINES") || kw(&L->cur,"SLICEBAG") || kw(&L->cur,"FIELDSLICE") ||
+        kw(&L->cur,"LINESLICE") || kw(&L->cur,"BAGSLICE") || kw(&L->cur,"SLICEFIELDS") ||
+        kw(&L->cur,"SUBLINES") || kw(&L->cur,"WINDOWLINES")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      long start_i = 0, end_i = -1, idx = 0, kept = 0;
+      const char *p, *start;
+      size_t olen = 0, flen;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        start_i = parse_prim(vm, L);
+      else
+        start_i = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_IDENT ||
+          L->cur.kind == TK_LPAREN || L->cur.kind == TK_MINUS)
+        end_i = parse_prim(vm, L);
+      else
+        end_i = -1; /* to end */
+      if (start_i < 0) start_i = 0;
+      if (end_i >= 0 && end_i < start_i) {
+        /* empty window */
+      } else if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > bag && start[-1] == '\n')
+            break;
+          flen = (size_t)(p - start);
+          if (idx >= start_i && (end_i < 0 || idx <= end_i)) {
+            if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+            if (olen + flen < sizeof out) {
+              memcpy(out + olen, start, flen);
+              olen += flen;
+            } else if (olen < sizeof out - 1) {
+              size_t t = sizeof out - 1 - olen;
+              memcpy(out + olen, start, t);
+              olen += t;
+            }
+            out[olen] = 0;
+            kept++;
+          }
+          idx++;
+          if (*p == '\n') p++;
+          /* early stop if past end */
+          if (end_i >= 0 && idx > end_i) break;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "MIDLINES_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SORTN|NSORT|NUMSORT [DESC|R] [str|LAST] — numeric sort of newline fields.
+     * Lex SORT orders "10" before "2"; SORTN orders by integer value.
+     * Non-numeric / blank fields sort as 0; stable on ties. LAST_N/SORT_N = count.
+     * Usability: score bags / sizes after LIST without shell sort -n. */
+    if (kw(&L->cur,"SORTN") || kw(&L->cur,"NSORT") || kw(&L->cur,"NUMSORT") ||
+        kw(&L->cur,"SORTNUM") || kw(&L->cur,"ISORT") || kw(&L->cur,"SORTINT") ||
+        kw(&L->cur,"RSORTN") || kw(&L->cur,"SORTND") || kw(&L->cur,"NSORTR")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { SORTN_MAX = 256, SORTN_FLEN = 192 };
+      char fields[SORTN_MAX][SORTN_FLEN];
+      long nvals[SORTN_MAX];
+      int order[SORTN_MAX];
+      int n = 0, i, desc = 0;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      char op0[16];
+      snprintf(op0, sizeof op0, "%s", L->cur.text);
+      for (char *q = op0; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op0, "RSORTN") == 0 || strcmp(op0, "SORTND") == 0 ||
+          strcmp(op0, "NSORTR") == 0)
+        desc = 1;
+      lex_next(L);
+      /* optional DESC|ASC|R|REV flag */
+      if (kw(&L->cur,"DESC") || kw(&L->cur,"DESCENDING") || kw(&L->cur,"REVERSE") ||
+          kw(&L->cur,"REV") || kw(&L->cur,"R") || kw(&L->cur,"-R") ||
+          kw(&L->cur,"-N") || kw(&L->cur,"DOWN")) {
+        desc = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"ASC") || kw(&L->cur,"ASCENDING") || kw(&L->cur,"UP")) {
+        desc = 0;
+        lex_next(L);
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SORTN_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            char *end = NULL;
+            long v = 0;
+            if (flen >= SORTN_FLEN) flen = SORTN_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            if (fields[n][0]) {
+              v = strtol(fields[n], &end, 10);
+              if (end == fields[n]) v = 0; /* non-numeric → 0 */
+              else {
+                while (end && *end && (*end == ' ' || *end == '\t' || *end == '\r'))
+                  end++;
+                if (end && *end != 0) v = 0; /* trailing junk → 0 */
+              }
+            }
+            nvals[n] = v;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (n > 1) {
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0) {
+            long a = nvals[order[j]], b = nvals[key];
+            int gt = desc ? (a < b) : (a > b);
+            if (!gt && a == b) {
+              /* stable: keep original order on tie */
+              gt = 0;
+            }
+            if (!gt) break;
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = order[i];
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "SORTN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SORTLEN|LENSORT|SORTBYLEN [DESC|ASC] [bag] — sort fields by string length.
+     * Default ASC (shortest first); DESC/R → longest first. Stable on ties.
+     * LAST_N/SORTLEN_N = field count. Cap 256×192 like SORT.
+     * Usability: longest-first logs / shortest labels without LENALL+SORTN+rebuild. */
+    if (kw(&L->cur,"SORTLEN") || kw(&L->cur,"LENSORT") || kw(&L->cur,"SORTBYLEN") ||
+        kw(&L->cur,"LSORT") || kw(&L->cur,"BYLEN") || kw(&L->cur,"SORTBYLENGTH") ||
+        kw(&L->cur,"RSORTLEN") || kw(&L->cur,"SORTLEND") || kw(&L->cur,"LENSORTR")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { SL_MAX = 256, SL_FLEN = 192 };
+      char fields[SL_MAX][SL_FLEN];
+      long lens[SL_MAX];
+      int order[SL_MAX];
+      int n = 0, i, desc = 0;
+      const char *p, *start;
+      size_t olen = 0;
+      long kept = 0;
+      char op0[20];
+      snprintf(op0, sizeof op0, "%s", L->cur.text);
+      for (char *q = op0; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op0, "RSORTLEN") == 0 || strcmp(op0, "SORTLEND") == 0 ||
+          strcmp(op0, "LENSORTR") == 0)
+        desc = 1;
+      lex_next(L);
+      if (kw(&L->cur,"DESC") || kw(&L->cur,"DESCENDING") || kw(&L->cur,"REVERSE") ||
+          kw(&L->cur,"REV") || kw(&L->cur,"R") || kw(&L->cur,"-R") ||
+          kw(&L->cur,"DOWN") || kw(&L->cur,"LONG") || kw(&L->cur,"LONGEST")) {
+        desc = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"ASC") || kw(&L->cur,"ASCENDING") || kw(&L->cur,"UP") ||
+                 kw(&L->cur,"SHORT") || kw(&L->cur,"SHORTEST")) {
+        desc = 0;
+        lex_next(L);
+      }
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < SL_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= SL_FLEN) flen = SL_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            lens[n] = (long)flen;
+            order[n] = n;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      if (n > 1) {
+        for (i = 1; i < n; i++) {
+          int key = order[i], j = i - 1;
+          while (j >= 0) {
+            long a = lens[order[j]], b = lens[key];
+            int gt = desc ? (a < b) : (a > b);
+            if (!gt) break;
+            order[j + 1] = order[j];
+            j--;
+          }
+          order[j + 1] = key;
+        }
+      }
+      for (i = 0; i < n; i++) {
+        int idx = order[i];
+        if (kept > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        {
+          size_t flen = strlen(fields[idx]);
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fields[idx], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, fields[idx], take);
+            olen += take;
+          }
+          out[olen] = 0;
+        }
+        kept++;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = kept;
+      var_set_num(vm, "LAST_N", kept);
+      var_set_num(vm, "SORT_N", kept);
+      var_set_num(vm, "SORTLEN_N", kept);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS REVL|REVLINES|FLIPLINES [str|LAST] — reverse newline field order → LAST.
+     * LAST_N/REVL_N = field count. Cap 256 fields (same as SORT).
+     * Usability: newest-first logs / LIFO work bags with POP without shell tac. */
+    if (kw(&L->cur,"REVL") || kw(&L->cur,"REVLINES") || kw(&L->cur,"FLIPLINES") ||
+        kw(&L->cur,"REVERSELINES") || kw(&L->cur,"LINEREV") || kw(&L->cur,"TAC") ||
+        kw(&L->cur,"REVLINE")){
+      char src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      enum { REVL_MAX = 256, REVL_FLEN = 192 };
+      char fields[REVL_MAX][REVL_FLEN];
+      int n = 0, i;
+      const char *p, *start;
+      size_t olen = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      if (src[0]) {
+        p = src;
+        while (*p && n < REVL_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          {
+            size_t flen = (size_t)(p - start);
+            if (flen >= REVL_FLEN) flen = REVL_FLEN - 1;
+            memcpy(fields[n], start, flen);
+            fields[n][flen] = 0;
+            n++;
+          }
+          if (*p == '\n') p++;
+        }
+      }
+      for (i = n - 1; i >= 0; i--) {
+        size_t flen = strlen(fields[i]);
+        if (olen > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+        if (olen + flen < sizeof out) {
+          memcpy(out + olen, fields[i], flen);
+          olen += flen;
+        } else if (olen < sizeof out - 1) {
+          size_t take = sizeof out - 1 - olen;
+          memcpy(out + olen, fields[i], take);
+          olen += take;
+        }
+        out[olen] = 0;
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)n;
+      var_set_num(vm, "LAST_N", (long)n);
+      var_set_num(vm, "REVL_N", (long)n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS ROTATE|ROTL k [bag] — left-rotate bag fields by k (mod n) → LAST.
+     * SYS ROTR k [bag] — right-rotate. Optional LEFT|RIGHT after ROTATE.
+     * k may be negative (opposite dir). LAST_N/ROTATE_N = field count;
+     * ROTATE_K = normalized left-shift amount [0..n). Empty → "".
+     * Usability: round-robin peer/work queues without EACH+NTH rebuild.
+     * Complements REVL (full reverse) and STRIDE (partition). */
+    if (kw(&L->cur,"ROTATE") || kw(&L->cur,"ROTL") || kw(&L->cur,"ROTR") ||
+        kw(&L->cur,"ROTLEFT") || kw(&L->cur,"ROTRIGHT") || kw(&L->cur,"CYCLE") ||
+        kw(&L->cur,"ROLL") || kw(&L->cur,"SHIFTBAG") || kw(&L->cur,"BAGROT")){
+      char op[20];
+      int right = 0;
+      long k = 0, total = 0, knorm = 0;
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      enum { ROT_MAX = 256 };
+      const char *fstart[ROT_MAX];
+      size_t flens[ROT_MAX];
+      const char *p, *start;
+      size_t olen = 0, flen;
+      long i, src;
+      snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      if (strcmp(op, "ROTR") == 0 || strcmp(op, "ROTRIGHT") == 0)
+        right = 1;
+      lex_next(L);
+      if (kw(&L->cur,"LEFT") || kw(&L->cur,"L") || kw(&L->cur,"CCW")) {
+        right = 0;
+        lex_next(L);
+      } else if (kw(&L->cur,"RIGHT") || kw(&L->cur,"R") || kw(&L->cur,"CW")) {
+        right = 1;
+        lex_next(L);
+      }
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        k = parse_expr(vm, L);
+      else
+        k = 1; /* default rotate by 1 */
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (bag[0]) {
+        p = bag;
+        while (*p && total < ROT_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          fstart[total] = start;
+          flens[total] = flen;
+          total++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (total > 0) {
+        long kk = k;
+        if (right) kk = -kk;
+        knorm = kk % total;
+        if (knorm < 0) knorm += total;
+        for (i = 0; i < total; i++) {
+          src = (i + knorm) % total;
+          if (i > 0 && olen + 1 < sizeof out) out[olen++] = '\n';
+          flen = flens[src];
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, fstart[src], flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t t = sizeof out - 1 - olen;
+            memcpy(out + olen, fstart[src], t);
+            olen += t;
+          }
+          out[olen] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = total;
+      var_set_num(vm, "LAST_N", total);
+      var_set_num(vm, "ROTATE_N", total);
+      var_set_num(vm, "ROTATE_K", knorm);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS JOINLINES|PASTE|MERGE sep [str|LAST] — join newline fields with sep.
+     * Inverse of SYS SPLIT. LAST = joined string; LAST_N/JOIN_N = field count.
+     * Empty sep concatenates with no delimiter.
+     * Usability: LIST/GREP/SORT results → CSV/report line without shell paste. */
+    if (kw(&L->cur,"JOINLINES") || kw(&L->cur,"PASTE") || kw(&L->cur,"MERGE") ||
+        kw(&L->cur,"JOINSEP") || kw(&L->cur,"IMPLADE") || kw(&L->cur,"LINESJOIN")){
+      char sep[64]="", src[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      size_t sepn, olen = 0, flen;
+      long nfields = 0;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, sep, sizeof sep) != 0) sep[0]=0;
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      out[0] = 0;
+      sepn = strlen(sep);
+      if (src[0]) {
+        p = src;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          if (start == p && *p == 0 && start > src && start[-1] == '\n')
+            break;
+          flen = (size_t)(p - start);
+          if (nfields > 0 && sepn > 0) {
+            if (olen + sepn < sizeof out) {
+              memcpy(out + olen, sep, sepn);
+              olen += sepn;
+            } else if (olen < sizeof out - 1) {
+              size_t take = sizeof out - 1 - olen;
+              memcpy(out + olen, sep, take);
+              olen += take;
+            }
+          }
+          if (olen + flen < sizeof out) {
+            memcpy(out + olen, start, flen);
+            olen += flen;
+          } else if (olen < sizeof out - 1) {
+            size_t take = sizeof out - 1 - olen;
+            memcpy(out + olen, start, take);
+            olen += take;
+          }
+          out[olen] = 0;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "JOINED", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "JOIN_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PUSH|ADDLINE|PUSHLINE bag [line|LAST] — append a newline field to bag.
+     * Empty bag → line only; empty line still adds a blank field after bag.
+     * LAST = bag; LAST_N/PUSH_N = field count after push.
+     * Usability: multi-file hit accumulate without CAT + "\\n" glue. */
+    if (kw(&L->cur,"PUSH") || kw(&L->cur,"ADDLINE") || kw(&L->cur,"PUSHLINE") ||
+        kw(&L->cur,"LINEPUSH") || kw(&L->cur,"BAGPUSH") || kw(&L->cur,"ACCUM")){
+      char bag[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      size_t blen, llen, o;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) bag[0] = 0;
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0)
+        snprintf(line, sizeof line, "%s", vm->last_str);
+      blen = strlen(bag);
+      llen = strlen(line);
+      out[0] = 0;
+      o = 0;
+      if (blen == 0) {
+        if (llen < sizeof out) {
+          memcpy(out, line, llen);
+          o = llen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, line, o);
+        }
+        out[o] = 0;
+        /* first fill: count fields inside line (may itself be multi-line) */
+        if (out[0]) {
+          p = out;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            nfields++;
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        long bag_n = 0;
+        p = bag;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          bag_n++;
+          if (*p == '\n') p++;
+        }
+        if (blen < sizeof out) {
+          memcpy(out, bag, blen);
+          o = blen;
+        } else {
+          o = sizeof out - 1;
+          memcpy(out, bag, o);
+        }
+        if (o + 1 < sizeof out) out[o++] = '\n';
+        if (o + llen < sizeof out) {
+          memcpy(out + o, line, llen);
+          o += llen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, line, take);
+          o += take;
+        }
+        out[o] = 0;
+        /* always +1 field even if line is empty (trailing blank field) */
+        nfields = bag_n + 1;
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "PUSH", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "PUSH_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS PREPEND|UNSHIFT|PUSHFRONT bag [line|LAST] — insert field at front of bag.
+     * Dual of PUSH (append). LAST = bag; LAST_N/PREPEND_N = field count.
+     * Usability: priority / FIFO enqueue front without REVL+PUSH glue. */
+    if (kw(&L->cur,"PREPEND") || kw(&L->cur,"UNSHIFT") || kw(&L->cur,"PUSHFRONT") ||
+        kw(&L->cur,"PREPENDLINE") || kw(&L->cur,"LINEPREPEND") || kw(&L->cur,"BAGPREPEND") ||
+        kw(&L->cur,"INSERTFRONT")){
+      char bag[CUBALC_HOST_STR_MAX], line[CUBALC_HOST_STR_MAX];
+      char out[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      size_t blen, llen, o;
+      lex_next(L);
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0) bag[0] = 0;
+      if (resolve_str_arg(vm, L, line, sizeof line) != 0)
+        snprintf(line, sizeof line, "%s", vm->last_str);
+      blen = strlen(bag);
+      llen = strlen(line);
+      out[0] = 0;
+      o = 0;
+      /* front field */
+      if (llen < sizeof out) {
+        memcpy(out, line, llen);
+        o = llen;
+      } else {
+        o = sizeof out - 1;
+        memcpy(out, line, o);
+      }
+      out[o] = 0;
+      if (blen > 0) {
+        if (o + 1 < sizeof out) out[o++] = '\n';
+        if (o + blen < sizeof out) {
+          memcpy(out + o, bag, blen);
+          o += blen;
+        } else if (o < sizeof out - 1) {
+          size_t take = sizeof out - 1 - o;
+          memcpy(out + o, bag, take);
+          o += take;
+        }
+        out[o] = 0;
+        nfields = 1; /* new front */
+        p = bag;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      } else {
+        nfields = 1; /* only the new front field (even if empty) */
+      }
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "PREPEND", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "PREPEND_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS POP|POPLINE|SHIFT [bag|LAST] — remove last newline field from bag.
+     * LAST = popped field; POP_REST/REST = remaining bag; LAST_N = 1 if popped, 0 if empty.
+     * POP_N = remaining field count. Empty bag → LAST "", REST "", LAST_N=0.
+     * Usability: process PUSH bags one field at a time without NTH index glue.
+     * Note: not stack POP (that is bare POP outside SYS). */
+    if (kw(&L->cur,"POP") || kw(&L->cur,"POPLINE") || kw(&L->cur,"LINEPOP") ||
+        kw(&L->cur,"BAGPOP") || kw(&L->cur,"SHIFT") || kw(&L->cur,"UNPUSH")){
+      char bag[CUBALC_HOST_STR_MAX], lastf[512], rest[CUBALC_HOST_STR_MAX];
+      const char *p, *last_nl = NULL;
+      long rest_n = 0, found = 0;
+      size_t flen;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      lastf[0] = 0;
+      rest[0] = 0;
+      if (!bag[0]) {
+        found = 0;
+      } else {
+        /* find last newline; if none, whole bag is the only field */
+        for (p = bag; *p; p++)
+          if (*p == '\n') last_nl = p;
+        if (!last_nl) {
+          snprintf(lastf, sizeof lastf, "%s", bag);
+          rest[0] = 0;
+          found = 1;
+          rest_n = 0;
+        } else {
+          flen = strlen(last_nl + 1);
+          if (flen >= sizeof lastf) flen = sizeof lastf - 1;
+          memcpy(lastf, last_nl + 1, flen);
+          lastf[flen] = 0;
+          {
+            size_t rlen = (size_t)(last_nl - bag);
+            if (rlen >= sizeof rest) rlen = sizeof rest - 1;
+            memcpy(rest, bag, rlen);
+            rest[rlen] = 0;
+          }
+          found = 1;
+          if (rest[0]) {
+            p = rest;
+            while (*p) {
+              while (*p && *p != '\n') p++;
+              rest_n++;
+              if (*p == '\n') p++;
+            }
+          }
+        }
+      }
+      var_set_str(vm, "LAST", lastf);
+      var_set_str(vm, "POP", lastf);
+      var_set_str(vm, "POP_REST", rest);
+      var_set_str(vm, "REST", rest);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", lastf);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POP_N", rest_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS POPHEAD|HEADPOP|SHIFTF [bag|LAST] — peel first newline field (FIFO).
+     * LAST = first field; POP_REST/REST = remaining; LAST_N = 1 if peeled, 0 empty.
+     * Complements POP (last/LIFO). Note: SYS SHIFT remains POP alias (compat).
+     * Usability: FIFO work queue without NTH 0 + DROP 1 glue. */
+    if (kw(&L->cur,"POPHEAD") || kw(&L->cur,"HEADPOP") || kw(&L->cur,"SHIFTF") ||
+        kw(&L->cur,"SHIFTFRONT") || kw(&L->cur,"DEQUEUE") || kw(&L->cur,"POPFIRST") ||
+        kw(&L->cur,"FIRSTPOP") || kw(&L->cur,"UNSHIFT_POP")){
+      char bag[CUBALC_HOST_STR_MAX], first[512], rest[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long rest_n = 0, found = 0;
+      size_t flen;
+      lex_next(L);
+      bag[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      first[0] = 0;
+      rest[0] = 0;
+      if (!bag[0]) {
+        found = 0;
+      } else {
+        p = bag;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - bag);
+        if (flen >= sizeof first) flen = sizeof first - 1;
+        memcpy(first, bag, flen);
+        first[flen] = 0;
+        found = 1;
+        if (*p == '\n') {
+          snprintf(rest, sizeof rest, "%s", p + 1);
+          if (rest[0]) {
+            const char *q = rest;
+            while (*q) {
+              while (*q && *q != '\n') q++;
+              rest_n++;
+              if (*q == '\n') q++;
+            }
+          }
+        } else {
+          rest[0] = 0;
+          rest_n = 0;
+        }
+      }
+      var_set_str(vm, "LAST", first);
+      var_set_str(vm, "POPHEAD", first);
+      var_set_str(vm, "POP_REST", rest);
+      var_set_str(vm, "REST", rest);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", first);
+      vm->last_n = found;
+      var_set_num(vm, "LAST_N", found);
+      var_set_num(vm, "POPHEAD_N", rest_n);
+      var_set_num(vm, "POP_N", rest_n);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS LINES|NLINES|WC|COUNTLINES [str|LAST] — count newline fields → LAST_N.
+     * LAST kept as source text; LINES_N/WC_N = count. Empty → 0.
+     * Usability: bag/LIST size after other ops overwrite LAST_N. */
+    if (kw(&L->cur,"LINES") || kw(&L->cur,"NLINES") || kw(&L->cur,"WC") ||
+        kw(&L->cur,"COUNTLINES") || kw(&L->cur,"LINECOUNT") ||
+        kw(&L->cur,"NF") || kw(&L->cur,"NFIELDS")){
+      char src[CUBALC_HOST_STR_MAX];
+      const char *p;
+      long nfields = 0;
+      lex_next(L);
+      src[0] = 0;
+      if (resolve_str_arg(vm, L, src, sizeof src) != 0)
+        snprintf(src, sizeof src, "%s", vm->last_str);
+      if (src[0]) {
+        p = src;
+        while (*p) {
+          while (*p && *p != '\n') p++;
+          nfields++;
+          if (*p == '\n') p++;
+        }
+      }
+      var_set_str(vm, "LAST", src);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", src);
+      vm->last_n = nfields;
+      var_set_num(vm, "LAST_N", nfields);
+      var_set_num(vm, "LINES_N", nfields);
+      var_set_num(vm, "WC_N", nfields);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS HASLINE|HASFIELD bag needle — exact newline-field membership → LAST_N 0|1.
+     * SYS HASLINEI|ILINEIN — case-insensitive exact field (not substring GREP).
+     * Usability: work-bag membership after LIST/PUSH without EACH LINE + EQS glue. */
+    if (kw(&L->cur,"HASLINE") || kw(&L->cur,"HASFIELD") || kw(&L->cur,"CONTAINSLINE") ||
+        kw(&L->cur,"INLINES") || kw(&L->cur,"LINEIN") || kw(&L->cur,"MEMBER") ||
+        kw(&L->cur,"HASLINEI") || kw(&L->cur,"HASFIELDI") || kw(&L->cur,"ILINEIN") ||
+        kw(&L->cur,"LINEINI") || kw(&L->cur,"MEMBERI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "HASLINEI") == 0 || strcmp(op, "HASFIELDI") == 0 ||
+                   strcmp(op, "ILINEIN") == 0 || strcmp(op, "LINEINI") == 0 ||
+                   strcmp(op, "MEMBERI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              if (nn == 0 || memcmp(start, needle, nn) == 0) { hit = 1; break; }
+            } else {
+              size_t i; int ok = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { ok = 0; break; }
+              }
+              if (ok) { hit = 1; break; }
+            }
+          }
+          if (*p == '\n') p++;
+        }
+      } else if (nn == 0) {
+        /* empty bag: empty needle is not a field unless bag has empty field */
+        hit = 0;
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "HASLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS COUNTLINE|COUNTFIELD bag needle — count exact field matches → LAST_N.
+     * SYS COUNTLINEI — case-insensitive exact field. Distinct from SYS LINES/COUNTLINES
+     * (total fields) and HASLINE (0|1). Usability: how many idle peers / ERROR lines. */
+    if (kw(&L->cur,"COUNTLINE") || kw(&L->cur,"COUNTFIELD") || kw(&L->cur,"NMATCH") ||
+        kw(&L->cur,"OCCUR") || kw(&L->cur,"OCCURS") || kw(&L->cur,"TALLY") ||
+        kw(&L->cur,"COUNTLINEI") || kw(&L->cur,"COUNTFIELDI") || kw(&L->cur,"NMATCHI") ||
+        kw(&L->cur,"TALLYI") || kw(&L->cur,"OCCURI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "COUNTLINEI") == 0 || strcmp(op, "COUNTFIELDI") == 0 ||
+                   strcmp(op, "NMATCHI") == 0 || strcmp(op, "TALLYI") == 0 ||
+                   strcmp(op, "OCCURI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+            } else {
+              size_t i; match = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { match = 0; break; }
+              }
+            }
+          }
+          if (match) hit++;
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "COUNTLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS COUNTMATCH|GREPCOUNT bag needle — count fields containing needle (substring).
+     * SYS COUNTMATCHI|GREPCOUNTI — case-insensitive. Empty needle counts all fields.
+     * LAST_N/COUNTMATCH_N = hits; does not replace LAST with filtered bag (unlike GREP).
+     * Distinct from COUNTLINE (exact field) and LINES (total). Usability: log severity
+     * tallies without GREP clobber or EACH+HAS glue. */
+    if (kw(&L->cur,"COUNTMATCH") || kw(&L->cur,"GREPCOUNT") || kw(&L->cur,"COUNTGREP") ||
+        kw(&L->cur,"MATCHCOUNT") || kw(&L->cur,"SUBCOUNT") || kw(&L->cur,"CONTAINSCOUNT") ||
+        kw(&L->cur,"COUNTMATCHI") || kw(&L->cur,"GREPCOUNTI") || kw(&L->cur,"COUNTGREPI") ||
+        kw(&L->cur,"MATCHCOUNTI") || kw(&L->cur,"SUBCOUNTI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "COUNTMATCHI") == 0 || strcmp(op, "GREPCOUNTI") == 0 ||
+                   strcmp(op, "COUNTGREPI") == 0 || strcmp(op, "MATCHCOUNTI") == 0 ||
+                   strcmp(op, "SUBCOUNTI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long hit = 0, total = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          total++;
+          {
+            char field[512];
+            size_t take = flen;
+            if (take >= sizeof field) take = sizeof field - 1;
+            memcpy(field, start, take);
+            field[take] = 0;
+            if (nn == 0) {
+              match = 1;
+            } else if (!icase) {
+              if (strstr(field, needle) != NULL) match = 1;
+            } else {
+              size_t fi, j;
+              for (fi = 0; field[fi] && !match; fi++) {
+                for (j = 0; j < nn; j++) {
+                  char a = field[fi + j], b = needle[j];
+                  if (!a) break;
+                  if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                  if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                  if (a != b) break;
+                }
+                if (j == nn) match = 1;
+              }
+            }
+          }
+          if (match) hit++;
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "COUNTMATCH_N", hit);
+      var_set_num(vm, "GREPCOUNT_N", hit);
+      var_set_num(vm, "COUNTMATCH_TOTAL", total);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS FINDLINE|LINEINDEX bag needle — 0-based index of first exact field → LAST_N.
+     * Miss → LAST_N=-1, OK=0. SYS FINDLINEI — case-insensitive exact field.
+     * Completes HASLINE/REMOVELINE for locate-then-NTH without EACH glue. */
+    if (kw(&L->cur,"FINDLINE") || kw(&L->cur,"LINEINDEX") || kw(&L->cur,"INDEXLINE") ||
+        kw(&L->cur,"FIELDINDEX") || kw(&L->cur,"WHICHLINE") || kw(&L->cur,"LINEOF") ||
+        kw(&L->cur,"FINDLINEI") || kw(&L->cur,"LINEINDEXI") || kw(&L->cur,"INDEXLINEI") ||
+        kw(&L->cur,"FIELDINDEXI") || kw(&L->cur,"WHICHLINEI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "FINDLINEI") == 0 || strcmp(op, "LINEINDEXI") == 0 ||
+                   strcmp(op, "INDEXLINEI") == 0 || strcmp(op, "FIELDINDEXI") == 0 ||
+                   strcmp(op, "WHICHLINEI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512];
+      const char *p, *start;
+      long idx = -1, cur = 0;
+      size_t nn, flen;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      if (bag[0]) {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen == nn) {
+            if (!icase) {
+              match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+            } else {
+              size_t i; match = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = needle[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { match = 0; break; }
+              }
+            }
+          }
+          if (match) { idx = cur; break; }
+          cur++;
+          if (*p == '\n') p++;
+        }
+      }
+      vm->last_n = idx;
+      var_set_num(vm, "LAST_N", idx);
+      var_set_num(vm, "FINDLINE_N", idx);
+      var_set_num(vm, "OK", idx >= 0 ? 1 : 0);
+      bump(vm); return 1;
+    }
+    /* SYS SETLINE|REPLACELINE bag n value — set 0-based field → LAST bag.
+     * LAST_N = 1 if index in range, 0 soft miss (bag unchanged).
+     * Usability: FINDLINE then update status in place without EACH rebuild. */
+    if (kw(&L->cur,"SETLINE") || kw(&L->cur,"REPLACELINE") || kw(&L->cur,"PUTLINE") ||
+        kw(&L->cur,"SETFIELD") || kw(&L->cur,"PUTFIELD") || kw(&L->cur,"REPLACEFIELD") ||
+        kw(&L->cur,"LINESET") || kw(&L->cur,"FIELDSET")){
+      char bag[CUBALC_HOST_STR_MAX], val[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long want = 0, cur = 0, hit = 0;
+      size_t flen, vlen, o = 0;
+      int first = 1;
+      lex_next(L);
+      bag[0] = 0; val[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vlen = strlen(val);
+      if (want < 0 || !bag[0]) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (cur == want) {
+            hit = 1;
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, val, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take);
+              o += take;
+            }
+          } else {
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+          }
+          out[o] = 0;
+          cur++;
+          if (*p == '\n') p++;
+        }
+        if (!hit) {
+          /* out-of-range: restore original */
+          snprintf(out, sizeof out, "%s", bag);
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "SETLINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS SETMATCH|REPLACEMATCH bag old new — replace first exact field value → LAST bag.
+     * LAST_N = 1 if replaced, 0 soft miss (bag unchanged). SYS SETMATCHI — icase on old.
+     * Distinct from SETLINE (by index) and REPLACE (substring). Usability: status by name. */
+    if (kw(&L->cur,"SETMATCH") || kw(&L->cur,"REPLACEMATCH") || kw(&L->cur,"CHANGEFIELD") ||
+        kw(&L->cur,"UPDATEFIELD") || kw(&L->cur,"SUBFIELD") || kw(&L->cur,"MAPFIELD") ||
+        kw(&L->cur,"REWRITEFIELD") || kw(&L->cur,"SETMATCHI") || kw(&L->cur,"REPLACEMATCHI") ||
+        kw(&L->cur,"CHANGEFIELDI") || kw(&L->cur,"UPDATEFIELDI") || kw(&L->cur,"MAPFIELDI")){
+      char op[24]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "SETMATCHI") == 0 || strcmp(op, "REPLACEMATCHI") == 0 ||
+                   strcmp(op, "CHANGEFIELDI") == 0 || strcmp(op, "UPDATEFIELDI") == 0 ||
+                   strcmp(op, "MAPFIELDI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], oldv[512], newv[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long hit = 0;
+      size_t nn, flen, vlen, o = 0;
+      int first = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; oldv[0] = 0; newv[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, oldv, sizeof oldv) != 0) oldv[0] = 0;
+      if (resolve_str_arg(vm, L, newv, sizeof newv) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(newv, sizeof newv, "%ld", n);
+        } else {
+          newv[0] = 0;
+        }
+      }
+      nn = strlen(oldv);
+      vlen = strlen(newv);
+      if (!bag[0]) {
+        hit = 0;
+      } else {
+        p = bag;
+        while (*p) {
+          int match = 0;
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (!hit && flen == nn) {
+            if (!icase) {
+              match = (nn == 0 || memcmp(start, oldv, nn) == 0) ? 1 : 0;
+            } else {
+              size_t i; match = 1;
+              for (i = 0; i < nn; i++) {
+                char a = start[i], b = oldv[i];
+                if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+                if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+                if (a != b) { match = 0; break; }
+              }
+            }
+          }
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (match) {
+            hit = 1;
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, newv, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, newv, take);
+              o += take;
+            }
+          } else {
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+          }
+          out[o] = 0;
+          if (*p == '\n') p++;
+        }
+        if (!hit) {
+          snprintf(out, sizeof out, "%s", bag);
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "SETMATCH_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS INSERTLINE|INSLINE bag n value — insert field before 0-based index → LAST bag.
+     * n < 0 soft miss (bag unchanged, LAST_N=0). n >= field count → append (like PUSH).
+     * n == 0 → front (like PREPEND). LAST_N = field count after insert.
+     * Usability: priority/ordered work bags without PREPEND+TAKE+DROP glue. */
+    if (kw(&L->cur,"INSERTLINE") || kw(&L->cur,"INSLINE") || kw(&L->cur,"INSERTFIELD") ||
+        kw(&L->cur,"LINEINSERT") || kw(&L->cur,"ADDAT") || kw(&L->cur,"INSERTAT") ||
+        kw(&L->cur,"PUTAT") || kw(&L->cur,"SPLICEIN")){
+      char bag[CUBALC_HOST_STR_MAX], val[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long want = 0, cur = 0, nfields = 0, ok_ins = 0;
+      size_t flen, vlen, o = 0;
+      int first = 1, inserted = 0;
+      lex_next(L);
+      bag[0] = 0; val[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (resolve_str_arg(vm, L, val, sizeof val) != 0) {
+        if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+          long n = parse_expr(vm, L);
+          snprintf(val, sizeof val, "%ld", n);
+        } else {
+          val[0] = 0;
+        }
+      }
+      vlen = strlen(val);
+      if (want < 0) {
+        snprintf(out, sizeof out, "%s", bag);
+        ok_ins = 0;
+        if (bag[0]) {
+          p = bag;
+          while (*p) {
+            while (*p && *p != '\n') p++;
+            nfields++;
+            if (*p == '\n') p++;
+          }
+        }
+      } else {
+        ok_ins = 1;
+        p = bag;
+        /* empty bag: just the value */
+        if (!bag[0]) {
+          if (vlen < sizeof out) {
+            memcpy(out, val, vlen);
+            o = vlen;
+          } else {
+            size_t take = sizeof out - 1;
+            memcpy(out, val, take);
+            o = take;
+          }
+          out[o] = 0;
+          inserted = 1;
+          nfields = 1;
+        } else {
+          while (*p) {
+            start = p;
+            while (*p && *p != '\n') p++;
+            flen = (size_t)(p - start);
+            if (cur == want && !inserted) {
+              if (!first && o + 1 < sizeof out) out[o++] = '\n';
+              first = 0;
+              if (o + vlen < sizeof out) {
+                memcpy(out + o, val, vlen);
+                o += vlen;
+              } else if (o < sizeof out - 1) {
+                size_t take = sizeof out - 1 - o;
+                memcpy(out + o, val, take);
+                o += take;
+              }
+              out[o] = 0;
+              inserted = 1;
+              nfields++;
+            }
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            first = 0;
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+            out[o] = 0;
+            nfields++;
+            cur++;
+            if (*p == '\n') p++;
+          }
+          if (!inserted) {
+            /* n past end → append */
+            if (!first && o + 1 < sizeof out) out[o++] = '\n';
+            if (o + vlen < sizeof out) {
+              memcpy(out + o, val, vlen);
+              o += vlen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, val, take);
+              o += take;
+            }
+            out[o] = 0;
+            inserted = 1;
+            nfields++;
+          }
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = ok_ins ? nfields : 0;
+      var_set_num(vm, "LAST_N", ok_ins ? nfields : 0);
+      var_set_num(vm, "INSERTLINE_N", ok_ins ? nfields : 0);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS DROPNTH|DROPAT bag n — drop 0-based field by index → LAST bag.
+     * LAST_N = 1 if dropped, 0 soft miss (OOR/empty/neg; bag unchanged).
+     * Distinct from SYS DROP n (drop first-n window) and REMOVELINE (by value).
+     * Usability: FINDLINE then delete without needing exact needle after mutate. */
+    if (kw(&L->cur,"DROPNTH") || kw(&L->cur,"DROPAT") || kw(&L->cur,"REMOVEAT") ||
+        kw(&L->cur,"DELETEAT") || kw(&L->cur,"DELAT") || kw(&L->cur,"DROPINDEX") ||
+        kw(&L->cur,"REMOVEINDEX") || kw(&L->cur,"DELETEINDEX") || kw(&L->cur,"ERASEN") ||
+        kw(&L->cur,"LINEDEL") || kw(&L->cur,"DELLINEAT") || kw(&L->cur,"OMITN")){
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long want = 0, cur = 0, hit = 0;
+      size_t flen, o = 0;
+      int first_kept = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        want = parse_expr(vm, L);
+      else
+        want = 0;
+      if (want < 0 || !bag[0]) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        p = bag;
+        while (*p) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (cur == want) {
+            hit = 1;
+            /* skip this field */
+          } else {
+            if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+            first_kept = 0;
+            if (o + flen < sizeof out) {
+              memcpy(out + o, start, flen);
+              o += flen;
+            } else if (o < sizeof out - 1) {
+              size_t take = sizeof out - 1 - o;
+              memcpy(out + o, start, take);
+              o += take;
+            }
+            out[o] = 0;
+          }
+          cur++;
+          if (*p == '\n') p++;
+        }
+        if (!hit) {
+          snprintf(out, sizeof out, "%s", bag);
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "DROPNTH_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS MOVELINE|MOVEAT bag from to — move 0-based field to final index → LAST bag.
+     * LAST_N = 1 success, 0 soft miss (from OOR / to<0 / empty). to >= n → end.
+     * Usability: promote/demote priority work without EACH rebuild (FINDLINE then MOVE). */
+    if (kw(&L->cur,"MOVELINE") || kw(&L->cur,"MOVEAT") || kw(&L->cur,"MOVEFIELD") ||
+        kw(&L->cur,"LINEMOVE") || kw(&L->cur,"REORDER") || kw(&L->cur,"SHIFTTO") ||
+        kw(&L->cur,"MOVEN") || kw(&L->cur,"RELOCATE")){
+      enum { MV_MAX = 256, MV_FLEN = 192 };
+      char bag[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+      char fields[MV_MAX][MV_FLEN];
+      char held[MV_FLEN];
+      const char *p, *start;
+      long from_i = 0, to_i = 0, n = 0, hit = 0;
+      size_t flen, o = 0;
+      int i, first = 1;
+      lex_next(L);
+      bag[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        from_i = parse_expr(vm, L);
+      else
+        from_i = 0;
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_LPAREN ||
+          L->cur.kind == TK_MINUS || L->cur.kind == TK_IDENT)
+        to_i = parse_expr(vm, L);
+      else
+        to_i = 0;
+      if (bag[0]) {
+        p = bag;
+        while (*p && n < MV_MAX) {
+          start = p;
+          while (*p && *p != '\n') p++;
+          flen = (size_t)(p - start);
+          if (flen >= MV_FLEN) flen = MV_FLEN - 1;
+          memcpy(fields[n], start, flen);
+          fields[n][flen] = 0;
+          n++;
+          if (*p == '\n') p++;
+        }
+      }
+      if (n <= 0 || from_i < 0 || from_i >= n || to_i < 0) {
+        snprintf(out, sizeof out, "%s", bag);
+        hit = 0;
+      } else {
+        hit = 1;
+        if (to_i >= n) to_i = n - 1;
+        if (from_i != to_i) {
+          snprintf(held, sizeof held, "%s", fields[from_i]);
+          if (from_i < to_i) {
+            for (i = (int)from_i; i < (int)to_i; i++)
+              memcpy(fields[i], fields[i + 1], MV_FLEN);
+            memcpy(fields[to_i], held, MV_FLEN);
+          } else {
+            for (i = (int)from_i; i > (int)to_i; i--)
+              memcpy(fields[i], fields[i - 1], MV_FLEN);
+            memcpy(fields[to_i], held, MV_FLEN);
+          }
+        }
+        o = 0; first = 1;
+        for (i = 0; i < (int)n; i++) {
+          flen = strlen(fields[i]);
+          if (!first && o + 1 < sizeof out) out[o++] = '\n';
+          first = 0;
+          if (o + flen < sizeof out) {
+            memcpy(out + o, fields[i], flen);
+            o += flen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, fields[i], take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = hit;
+      var_set_num(vm, "LAST_N", hit);
+      var_set_num(vm, "MOVELINE_N", hit);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* SYS REMOVELINE|DROPLINE bag needle — drop first exact field match → LAST bag.
+     * LAST_N = 1 if removed, 0 if miss (bag unchanged). REST not used.
+     * SYS REMOVELINEI — case-insensitive exact field.
+     * Usability: dequeue/ack work items after HASLINE without EACH rebuild. */
+    if (kw(&L->cur,"REMOVELINE") || kw(&L->cur,"DROPLINE") || kw(&L->cur,"DELETELINE") ||
+        kw(&L->cur,"REMOVEFIELD") || kw(&L->cur,"DROPFIELD") || kw(&L->cur,"UNLINE") ||
+        kw(&L->cur,"REMOVELINEI") || kw(&L->cur,"DROPLINEI") || kw(&L->cur,"DELETELINEI") ||
+        kw(&L->cur,"DROPFIELDI")){
+      char op[20]; snprintf(op, sizeof op, "%s", L->cur.text);
+      for (char *q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+      int icase = (strcmp(op, "REMOVELINEI") == 0 || strcmp(op, "DROPLINEI") == 0 ||
+                   strcmp(op, "DELETELINEI") == 0 || strcmp(op, "DROPFIELDI") == 0);
+      char bag[CUBALC_HOST_STR_MAX], needle[512], out[CUBALC_HOST_STR_MAX];
+      const char *p, *start;
+      long removed = 0;
+      size_t nn, flen, o = 0;
+      int first_kept = 1;
+      lex_next(L);
+      if (!icase && (kw(&L->cur,"I") || kw(&L->cur,"ICASE") ||
+                     kw(&L->cur,"IGNORECASE") || kw(&L->cur,"-I") ||
+                     kw(&L->cur,"CI"))){
+        icase = 1;
+        lex_next(L);
+      }
+      bag[0] = 0; needle[0] = 0; out[0] = 0;
+      if (resolve_str_arg(vm, L, bag, sizeof bag) != 0)
+        snprintf(bag, sizeof bag, "%s", vm->last_str);
+      if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) needle[0] = 0;
+      nn = strlen(needle);
+      p = bag;
+      while (*p) {
+        int match = 0;
+        start = p;
+        while (*p && *p != '\n') p++;
+        flen = (size_t)(p - start);
+        if (!removed && flen == nn) {
+          if (!icase) {
+            match = (nn == 0 || memcmp(start, needle, nn) == 0) ? 1 : 0;
+          } else {
+            size_t i; match = 1;
+            for (i = 0; i < nn; i++) {
+              char a = start[i], b = needle[i];
+              if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+              if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+              if (a != b) { match = 0; break; }
+            }
+          }
+        }
+        if (match) {
+          removed = 1;
+        } else {
+          if (!first_kept && o + 1 < sizeof out) out[o++] = '\n';
+          first_kept = 0;
+          if (o + flen < sizeof out) {
+            memcpy(out + o, start, flen);
+            o += flen;
+          } else if (o < sizeof out - 1) {
+            size_t take = sizeof out - 1 - o;
+            memcpy(out + o, start, take);
+            o += take;
+          }
+          out[o] = 0;
+        }
+        if (*p == '\n') p++;
+      }
+      if (!removed) {
+        /* keep original bag */
+        snprintf(out, sizeof out, "%s", bag);
+      }
+      var_set_str(vm, "LAST", out);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = removed;
+      var_set_num(vm, "LAST_N", removed);
+      var_set_num(vm, "REMOVE_N", removed);
+      var_set_num(vm, "OK", 1);
+      bump(vm); return 1;
+    }
+    /* string eq/transform residual → lang_ops_sys_streq.c (A2) */
+    {
+      int xr = cubalc_lang_ops_sys_try_streq(vm, L);
+      if (xr != 0) return xr;
+    }
+
+    {
+      char sug[48], ebuf[192], typo[64];
+      if (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR)
+        snprintf(typo, sizeof typo, "%s", L->cur.text);
+      else
+        typo[0] = 0;
+      sys_suggest_op(typo, sug, sizeof sug);
+      if (sug[0] && typo[0])
+        snprintf(ebuf, sizeof ebuf,
+                 "SYS unknown '%s' — did you mean %s? (cubalc forms SYS / HELP)",
+                 typo, sug);
+      else if (typo[0])
+        snprintf(ebuf, sizeof ebuf,
+                 "SYS unknown '%s' — try cubalc forms SYS or HELP SYS <name>",
+                 typo);
+      else
+        snprintf(ebuf, sizeof ebuf,
+                 "SYS needs op — try cubalc forms SYS or HELP SYS ENV");
+      fail(vm, ebuf);
+    }
+    return -1;
+  }
+
+  return 0;
+}

@@ -33,26 +33,119 @@ CUBEVIZ ?= ../cubebrain/modules/viz
 LDFLAGS ?= $(LDFLAGS_SYS)
 
 CORE_SRC = \
-	src/cubalc_main.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
+	src/cubalc_main.c src/cubalc_cmd_usability.c src/cubalc_cmd_forms.c src/cubalc_cmd_init.c src/cubalc_cmd_which.c src/cubalc_cmd_search.c src/cubalc_cmd_plate.c src/cubalc_cmd_smx_exchange.c src/cubalc_cmd_smx_bus.c src/cubalc_cmd_smx_selftest.c src/cubalc_cmd_protect.c src/cubalc_cmd_showcase.c src/cubalc_cmd_genesis.c src/cubalc_cmd_sync.c src/cubalc_run_util.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
 	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c \
-	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_async.c \
-	src/cubalc_isa.c src/cubalc_jit.c
+	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_hostops_chat.c src/cubalc_hostops_json_delta.c src/cubalc_async.c \
+	src/cubalc_isa.c src/cubalc_jit.c \
+	src/cubalc_quantum.c src/cubalc_dim5.c src/cubalc_relativity.c src/cubalc_chaos.c src/cubalc_science_loop.c
 
 LANG_SRC = \
 	src/lang/lang_core.c \
-	src/lang/lang_ops_core.c \
-	src/lang/lang_ops_smx.c \
-	src/lang/lang_ops_toc.c \
-	src/lang/lang_ops_stack.c \
-	src/lang/lang_ops_dual.c \
-	src/lang/lang_ops_math.c \
 	src/lang/lang_ops_bit.c \
 	src/lang/lang_ops_cell.c \
+	src/lang/lang_ops_cell_nibble4.c \
+	src/lang/lang_ops_cell_width8.c \
+	src/lang/lang_ops_cell_bitwise_w.c \
+	src/lang/lang_ops_core.c \
+	src/lang/lang_ops_core_agent.c \
+	src/lang/lang_ops_core_assert.c \
+	src/lang/lang_ops_core_async.c \
+	src/lang/lang_ops_core_clearerr.c \
+	src/lang/lang_ops_core_cop.c \
+	src/lang/lang_ops_core_ctrl.c \
+	src/lang/lang_ops_core_discover.c \
+	src/lang/lang_ops_core_flat.c \
+	src/lang/lang_ops_core_flat_bag.c \
+	src/lang/lang_ops_core_flat_get.c \
+	src/lang/lang_ops_core_flat_has.c \
+	src/lang/lang_ops_core_flat_mut.c \
+	src/lang/lang_ops_core_flat_nest_agg.c \
+	src/lang/lang_ops_core_flat_nest_kv.c \
+	src/lang/lang_ops_core_flat_nest_merge.c \
+	src/lang/lang_ops_core_flat_nest_pick.c \
+	src/lang/lang_ops_core_flat_nest_sort.c \
+	src/lang/lang_ops_core_flat_nest_sortobj.c \
+	src/lang/lang_ops_core_flat_nest_sum.c \
+	src/lang/lang_ops_core_flat_nest_thr.c \
+	src/lang/lang_ops_core_flat_nest_top.c \
+	src/lang/lang_ops_core_flat_nestq.c \
+	src/lang/lang_ops_core_flat_path.c \
+	src/lang/lang_ops_core_flat_query.c \
+	src/lang/lang_ops_core_flat_stats.c \
+	src/lang/lang_ops_core_forms.c \
+	src/lang/lang_ops_core_help.c \
+	src/lang/lang_ops_core_let.c \
+	src/lang/lang_ops_core_plate.c \
+	src/lang/lang_ops_core_plate_ext.c \
+	src/lang/lang_ops_core_plate_nest.c \
+	src/lang/lang_ops_core_print.c \
+	src/lang/lang_ops_core_sys.c \
+	src/lang/lang_ops_dual.c \
+	src/lang/lang_ops_dual_pack.c \
+	src/lang/lang_ops_dual_clip.c \
+	src/lang/lang_ops_dual_field32.c \
+	src/lang/lang_ops_dual_unary32.c \
+	src/lang/lang_ops_dual_unary16.c \
+	src/lang/lang_ops_dual_unary8.c \
 	src/lang/lang_ops_flow.c \
+	src/lang/lang_ops_flow_case.c \
+	src/lang/lang_ops_flow_class.c \
+	src/lang/lang_ops_flow_ctrl.c \
+	src/lang/lang_ops_flow_fget.c \
+	src/lang/lang_ops_flow_field.c \
+	src/lang/lang_ops_flow_fn.c \
+	src/lang/lang_ops_flow_for.c \
+	src/lang/lang_ops_flow_fstr.c \
+	src/lang/lang_ops_flow_fstr_a.c \
+	src/lang/lang_ops_flow_fstr_b.c \
+	src/lang/lang_ops_flow_ifcmp.c \
+	src/lang/lang_ops_flow_ifbag.c \
+	src/lang/lang_ops_flow_ifvar.c \
+	src/lang/lang_ops_flow_oop.c \
+	src/lang/lang_ops_flow_scene.c \
+	src/lang/lang_ops_flow_send.c \
+	src/lang/lang_ops_math.c \
 	src/lang/lang_ops_sched.c \
+	src/lang/lang_ops_smx.c \
+	src/lang/lang_ops_smx_cascade.c \
+	src/lang/lang_ops_smx_core.c \
+	src/lang/lang_ops_smx_cosmos.c \
+	src/lang/lang_ops_smx_galaxy.c \
+	src/lang/lang_ops_smx_land.c \
+	src/lang/lang_ops_smx_pneuma.c \
+	src/lang/lang_ops_smx_pneuma_a.c \
+	src/lang/lang_ops_smx_pneuma_b.c \
+	src/lang/lang_ops_smx_water.c \
+	src/lang/lang_ops_smx_zodiac.c \
+	src/lang/lang_ops_stack.c \
+	src/lang/lang_ops_sys_bulk.c \
+	src/lang/lang_ops_sys_bulk_mut.c \
+	src/lang/lang_ops_sys_cli.c \
+	src/lang/lang_ops_sys_codec.c \
+	src/lang/lang_ops_sys_env.c \
+	src/lang/lang_ops_sys_files.c \
+	src/lang/lang_ops_sys_grep.c \
+	src/lang/lang_ops_sys_hostmeta.c \
+	src/lang/lang_ops_sys_identity.c \
+	src/lang/lang_ops_sys_json.c \
+	src/lang/lang_ops_sys_kv.c \
+	src/lang/lang_ops_sys_kvfilter.c \
+	src/lang/lang_ops_sys_kvmath.c \
+	src/lang/lang_ops_sys_net.c \
+	src/lang/lang_ops_sys_path_fs.c \
+	src/lang/lang_ops_sys_plate.c \
+	src/lang/lang_ops_sys_plate_expand.c \
+	src/lang/lang_ops_sys_stat.c \
+	src/lang/lang_ops_sys_streq.c \
+	src/lang/lang_ops_sys_string.c \
+	src/lang/lang_ops_sys_time_walk.c \
+	src/lang/lang_ops_sys_wait.c \
+	src/lang/lang_ops_toc.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
+
+
 
 SRC = $(CORE_SRC) $(LANG_SRC)
 ifneq ($(wildcard $(CUBEVIZ)/cube_viz_path.c),)
@@ -61,7 +154,22 @@ ifneq ($(wildcard $(CUBEVIZ)/cube_viz_path.c),)
 endif
 
 HDR = \
-	include/cubalc.h include/cubalc_law.h include/cubalc_platform.h \
+	include/cubalc.h \
+	include/cubalc_cmd_plate.h \
+	include/cubalc_cmd_search.h \
+	include/cubalc_cmd_which.h \
+	include/cubalc_cmd_init.h \
+	include/cubalc_cmd_forms.h \
+	include/cubalc_cmd_usability.h \
+	include/cubalc_cmd_smx_exchange.h \
+	include/cubalc_cmd_smx_bus.h \
+	include/cubalc_cmd_smx_selftest.h \
+	include/cubalc_cmd_protect.h \
+	include/cubalc_cmd_showcase.h \
+	include/cubalc_cmd_genesis.h \
+	include/cubalc_cmd_sync.h \
+	include/cubalc_run_util.h \
+	include/cubalc_cmd_law.h \
 	include/cubalc_algocube.h include/cubalc_evolve.h include/cubalc_smx.h \
 	include/cubalc_cubechain.h include/cubalc_hw.h include/cubalc_eeg.h include/cubalc_sot.h \
 	include/cubalc_viz_matrix.h include/cubalc_lang.h \
@@ -127,8 +235,57 @@ clean:
 
 modular-check:
 	@test -f src/lang/lang_parse.c && test -f include/lang/cubalc_lang_internal.h
-	@echo modular-ok
+	@test -f src/lang/lang_ops_core.c && test -f src/lang/lang_ops_core_sys.c
+	@test -f src/lang/lang_ops_smx_core.c && test -f src/lang/lang_ops_smx_cascade.c
+	@test -f src/lang/DO_NOT_AMALGAMATE_CORE
+	@test -f src/cubalc_dim5.c && test -f include/cubalc_dim5.h
+	@test -f src/cubalc_quantum.c && test -f include/cubalc_quantum.h
+	@test -f src/cubalc_relativity.c && test -f include/cubalc_relativity.h
+	@test -f src/cubalc_chaos.c && test -f include/cubalc_chaos.h
+	@test -f src/cubalc_science_loop.c && test -f include/cubalc_science_loop.h
+	@cl=$$(wc -l < src/lang/lang_ops_core.c); test $$cl -le 200 || (echo "HERESY: lang_ops_core.c=$$cl lines (thin dispatcher max 200)" >&2; exit 1)
+	@sl=$$(wc -l < src/lang/lang_ops_smx.c); test $$sl -le 50 || (echo "HERESY: lang_ops_smx.c=$$sl lines (thin dispatcher max 50)" >&2; exit 1)
+	@grep -q 'lang_ops_core_sys.c' Makefile
+	@grep -q 'lang_ops_smx_core.c' Makefile
+	@grep -q 'lang_ops_flow_ifvar.c' Makefile || true
+	@if [ -x out/cubalc ]; then ./out/cubalc science prove >/dev/null; fi
+	@if [ -x out/cubalc ]; then ./out/cubalc run programs/proof/2501_sys_planes_modular_smoke.cubalc >/dev/null; fi
+	@if [ -x out/cubalc ] && [ -f programs/proof/2502_quantum_qasm_depth.sh ]; then bash programs/proof/2502_quantum_qasm_depth.sh >/dev/null; fi
+	@if [ -x out/cubalc ] && [ -f programs/proof/2503_dim5_seed_mesh.sh ]; then bash programs/proof/2503_dim5_seed_mesh.sh >/dev/null; fi
+	@if [ -x out/cubalc ] && [ -f programs/proof/2504_relativity_viz.sh ]; then bash programs/proof/2504_relativity_viz.sh >/dev/null; fi
+	@if [ -x out/cubalc ] && [ -f programs/proof/2505_chaos_attractor.sh ]; then bash programs/proof/2505_chaos_attractor.sh >/dev/null; fi
+	@if [ -x out/cubalc ] && [ -f programs/proof/2506_science_pack_quartet.sh ]; then bash programs/proof/2506_science_pack_quartet.sh >/dev/null; fi
+	@$(MAKE) --no-print-directory science-guard
+	@echo modular-ok thin-core thin-smx science-planes sys-smoke quantum-qasm dim5-mesh rel-viz chaos-attr pack-quartet science-guard
 
+thin-guard:
+	@cl=$$(wc -l < src/lang/lang_ops_core.c); sl=$$(wc -l < src/lang/lang_ops_smx.c); \
+	  echo "thin-guard core=$$cl smx=$$sl"; \
+	  test $$cl -le 200 && test $$sl -le 50 && test -f src/lang/DO_NOT_AMALGAMATE_CORE
+
+# hold_ceilings: science modular planes stay lean (anti bloat after B/E/C/D streak)
+science-guard:
+	@q=$$(wc -l < src/cubalc_quantum.c); d=$$(wc -l < src/cubalc_dim5.c); \
+	 r=$$(wc -l < src/cubalc_relativity.c); c=$$(wc -l < src/cubalc_chaos.c); \
+	 l=$$(wc -l < src/cubalc_science_loop.c); \
+	 echo "science-guard q=$$q dim5=$$d rel=$$r chaos=$$c loop=$$l"; \
+	 test $$q -le 500 || (echo "HERESY: cubalc_quantum.c=$$q (max 500)" >&2; exit 1); \
+	 test $$d -le 300 || (echo "HERESY: cubalc_dim5.c=$$d (max 300)" >&2; exit 1); \
+	 test $$r -le 300 || (echo "HERESY: cubalc_relativity.c=$$r (max 300)" >&2; exit 1); \
+	 test $$c -le 300 || (echo "HERESY: cubalc_chaos.c=$$c (max 300)" >&2; exit 1); \
+	 test $$l -le 600 || (echo "HERESY: cubalc_science_loop.c=$$l (max 600)" >&2; exit 1)
+
+	@cl=$$(wc -l < src/lang/lang_ops_core.c); sl=$$(wc -l < src/lang/lang_ops_smx.c); \
+	 f=$$(wc -l < src/lang/lang_ops_flow.c); m=$$(wc -l < src/cubalc_main.c); \
+	 du=$$(wc -l < src/lang/lang_ops_dual.c); ce=$$(wc -l < src/lang/lang_ops_cell.c); \
+	 ho=$$(wc -l < src/cubalc_hostops.c); \
+	 echo "G-ceilings flow=$$f main=$$m dual=$$du cell=$$ce hostops=$$ho core=$$cl smx=$$sl"; \
+	 test $$f -le 7000 || (echo "WARN: flow=$$f >7000 prefer A3" >&2; exit 1); \
+	 test $$m -le 10000 || (echo "WARN: main=$$m >10000 prefer F_main" >&2; exit 1); \
+	 test $$du -le 10000 && test $$ce -le 10000 && test $$ho -le 10000 || \
+	   (echo "WARN: dual/cell/hostops >10k prefer G peel" >&2; exit 1)
+
+.PHONY: test science-guard
 test: all
 	@bash tests/lang_suite.sh
 	./$(BIN) smx-selftest

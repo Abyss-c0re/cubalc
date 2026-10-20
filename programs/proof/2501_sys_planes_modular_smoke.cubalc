@@ -1,0 +1,35 @@
+# proof: extracted SYS + HELP planes still live after A_split
+# modular smoke — codec · time · help catalog · cube is SoT
+HOLD_FLASH 1
+
+# codec plane (lang_ops_sys_codec)
+SYS BASE64 "hello"
+ASSERT OK == 1
+ASSERT BASE64_N == 8
+SYS EQS LAST "aGVsbG8="
+ASSERT LAST_N == 1
+SYS HEX "hi"
+ASSERT OK == 1
+ASSERT HEX_N == 4
+
+# time plane (lang_ops_sys_time_walk)
+SYS PARSEMS "1s"
+ASSERT OK == 1
+ASSERT LAST_N == 1000
+ASSERT PARSEMS_N == 1000
+
+# uuid via codec
+SYS UUID
+ASSERT OK == 1
+ASSERT UUID_N == 36
+
+# help catalog plane (lang_ops_core_help)
+HASFORM HOLD_FLASH
+ASSERT HASFORM_N == 1
+HASFORM HASFORM
+ASSERT HASFORM_N == 1
+HASFORM NO_SUCH_FORM_XYZ_MESH_VOTE
+ASSERT HASFORM_N == 0
+CLEAR_ERR
+
+PRINT "sys_planes_modular_ok"
