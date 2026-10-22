@@ -259,42 +259,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DRAND·DSATADD·DSATSUB·DSATMUL·DSATDIV → dual_clip peel (G_dual_margin) */
   /* DWRAP·DWRAPN·DHYPOT → dual_clip peel (G_dual_margin) */
   /* DPCT·DLERP → dual_clip peel (G_dual_margin) */
-  /* digit-6 dual-stack energy scale/clip: DSCALE · DCLIP100 */
-  if (kw(&L->cur,"DSCALE")||kw(&L->cur,"2SCALE")||kw(&L->cur,"S2SCALE")||
-      kw(&L->cur,"STACK2SCALE")||kw(&L->cur,"PAIRSCALE")||kw(&L->cur,"DSCL")||
-      kw(&L->cur,"2SCL")){
-    /* a b sa sb → a*sa/100  b*sb/100  (percent scale; 100=identity) */
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long sb = vm->stack[--vm->sp];
-    long sa = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long x = a * sa / 100;
-    long y = b * sb / 100;
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DCLIP100")||kw(&L->cur,"2CLIP100")||kw(&L->cur,"S2CLIP100")||
-      kw(&L->cur,"STACK2CLIP100")||kw(&L->cur,"PAIRCLIP100")||kw(&L->cur,"DCLIPPCT")||
-      kw(&L->cur,"2CLIPPCT")||kw(&L->cur,"DENCLIP")||kw(&L->cur,"2ENCLIP")||
-      kw(&L->cur,"PAIRCLIPPCT")){
-    /* a b → clamp(a,0,100) clamp(b,0,100) energy-plane percent bound */
-    lex_next(L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    if (a < 0) a = 0;
-    if (a > 100) a = 100;
-    if (b < 0) b = 0;
-    if (b > 100) b = 100;
-    vm->stack[vm->sp - 2] = a;
-    vm->stack[vm->sp - 1] = b;
-    var_set_num(vm,"LAST_N",b); vm->last_n=b;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSCALE·DCLIP100 → dual_clip peel (G_dual_margin) */
   /* digit-6 dual-stack energy unit/complement: DCLIP01 · DCOMP100 */
   if (kw(&L->cur,"DCLIP01")||kw(&L->cur,"2CLIP01")||kw(&L->cur,"S2CLIP01")||
       kw(&L->cur,"STACK2CLIP01")||kw(&L->cur,"PAIRCLIP01")||kw(&L->cur,"DUNIT")||
