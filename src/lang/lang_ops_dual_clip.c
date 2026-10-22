@@ -3448,5 +3448,63 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-6 dual-stack energy soft activations: DLEAKY · DSOFTSIGN */
+  if (kw(&L->cur,"DLEAKY")||kw(&L->cur,"2LEAKY")||kw(&L->cur,"S2LEAKY")||
+      kw(&L->cur,"STACK2LEAKY")||kw(&L->cur,"PAIRLEAKY")||kw(&L->cur,"DLEAKYRELU")||
+      kw(&L->cur,"2LEAKYRELU")||kw(&L->cur,"S2LEAKYRELU")||kw(&L->cur,"PAIRLEAKYRELU")||
+      kw(&L->cur,"STACK2LEAKYRELU")){
+    /* a b → leaky(a) leaky(b); leaky(x)= x>=0 ? x : x/4  (fixed 1/4 leak, trunc toward 0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a >= 0) ? a : (a / 4);
+    long y = (b >= 0) ? b : (b / 4);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSOFTSIGN")||kw(&L->cur,"2SOFTSIGN")||kw(&L->cur,"S2SOFTSIGN")||
+      kw(&L->cur,"STACK2SOFTSIGN")||kw(&L->cur,"PAIRSOFTSIGN")||kw(&L->cur,"DSOFTSGN")||
+      kw(&L->cur,"2SOFTSGN")||kw(&L->cur,"S2SOFTSGN")||kw(&L->cur,"PAIRSOFTSGN")||
+      kw(&L->cur,"STACK2SOFTSGN")){
+    /* a b → softsign100(a) softsign100(b)
+     * softsign100(v) = sign(v) * floor(100*|v| / (100+|v|))  → energy plane (-100,100) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x, y;
+    {
+      if (a == 0) x = 0;
+      else if (a == LONG_MIN) x = -100;
+      else if (a > 0){
+        if (a > LONG_MAX / 100) x = 100;
+        else x = (100 * a) / (100 + a);
+      } else {
+        long aa = -a;
+        if (aa > LONG_MAX / 100) x = -100;
+        else x = -((100 * aa) / (100 + aa));
+      }
+    }
+    {
+      if (b == 0) y = 0;
+      else if (b == LONG_MIN) y = -100;
+      else if (b > 0){
+        if (b > LONG_MAX / 100) y = 100;
+        else y = (100 * b) / (100 + b);
+      } else {
+        long bb = -b;
+        if (bb > LONG_MAX / 100) y = -100;
+        else y = -((100 * bb) / (100 + bb));
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
