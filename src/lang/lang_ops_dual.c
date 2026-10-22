@@ -233,45 +233,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DGCD·DLCM·DPOW → dual_clip peel (G_dual_margin) */
   /* DGCDN·DLCMN → dual_clip peel (G_dual_margin) */
   /* DCOPRIMEN·DPOWN → dual_clip peel (G_dual_margin) */
-  /* digit-8 dual-stack pair shifts: DSHL · DSHR · DSAR (a b c d → a≪c b≪d etc) */
-  if (kw(&L->cur,"DSHL")||kw(&L->cur,"2SHL")||kw(&L->cur,"S2SHL")||
-      kw(&L->cur,"STACK2SHL")||kw(&L->cur,"PAIRSHL")||
-      kw(&L->cur,"DSHR")||kw(&L->cur,"2SHR")||kw(&L->cur,"S2SHR")||
-      kw(&L->cur,"STACK2SHR")||kw(&L->cur,"PAIRSHR")||
-      kw(&L->cur,"DSAR")||kw(&L->cur,"2SAR")||kw(&L->cur,"S2SAR")||
-      kw(&L->cur,"STACK2SAR")||kw(&L->cur,"PAIRSAR")){
-    /* a b c d → shift(a,c) shift(b,d); amounts clamped 0..63 */
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long kc = c < 0 ? 0 : (c > 63 ? 63 : c);
-    long kd = d < 0 ? 0 : (d > 63 ? 63 : d);
-    int is_shl = (strcmp(op,"DSHL")==0 || strcmp(op,"2SHL")==0 || strcmp(op,"S2SHL")==0 ||
-                  strcmp(op,"STACK2SHL")==0 || strcmp(op,"PAIRSHL")==0);
-    int is_shr = (strcmp(op,"DSHR")==0 || strcmp(op,"2SHR")==0 || strcmp(op,"S2SHR")==0 ||
-                  strcmp(op,"STACK2SHR")==0 || strcmp(op,"PAIRSHR")==0);
-    long x, y;
-    if (is_shl){
-      x = (long)((unsigned long)a << (unsigned)kc);
-      y = (long)((unsigned long)b << (unsigned)kd);
-    } else if (is_shr){
-      x = (long)((unsigned long)a >> (unsigned)kc);
-      y = (long)((unsigned long)b >> (unsigned)kd);
-    } else {
-      /* arithmetic right */
-      x = a >> kc;
-      y = b >> kd;
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSHL·DSHR·DSAR → dual_clip peel (G_dual_margin) */
   /* dual-stack fixed-width shift: DSHL4/8/16 · DSHR4/8/16 · DSAR4/8/16 (digit-3/5 nibble+byte) */
   if (kw(&L->cur,"DSHL4")||kw(&L->cur,"2SHL4")||kw(&L->cur,"S2SHL4")||
       kw(&L->cur,"STACK2SHL4")||kw(&L->cur,"PAIRSHL4")||
