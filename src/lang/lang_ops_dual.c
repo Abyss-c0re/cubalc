@@ -231,54 +231,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DEQ·DNE·DLT·DLE·DGT·DGE → dual_clip peel (G_dual_margin) */
   /* DLAND·DLOR·DLXOR·DIMP → dual_clip peel (G_dual_margin) */
   /* DGCD·DLCM·DPOW → dual_clip peel (G_dual_margin) */
-  /* digit-2 dual-stack imm numthy: DGCDN · DLCMN (shared-n dual of SGCDN/SLCMN) */
-  if (kw(&L->cur,"DGCDN")||kw(&L->cur,"2GCDN")||kw(&L->cur,"S2GCDN")||
-      kw(&L->cur,"STACK2GCDN")||kw(&L->cur,"PAIRGCDN")||kw(&L->cur,"DGCDIMM")||
-      kw(&L->cur,"2GCDIMM")||kw(&L->cur,"PAIRGCDIMM")){
-    /* a b + n → gcd(a,n) gcd(b,n) */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long nn = n < 0 ? -n : n;
-    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
-    long gx = ax, hy = nn;
-    while (hy){ long t = gx % hy; gx = hy; hy = t; }
-    long gy = bx, hz = nn;
-    while (hz){ long t = gy % hz; gy = hz; hz = t; }
-    vm->stack[vm->sp - 2] = gx;
-    vm->stack[vm->sp - 1] = gy;
-    var_set_num(vm,"LAST_N",gy); vm->last_n=gy;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DLCMN")||kw(&L->cur,"2LCMN")||kw(&L->cur,"S2LCMN")||
-      kw(&L->cur,"STACK2LCMN")||kw(&L->cur,"PAIRLCMN")||kw(&L->cur,"DLCMIMM")||
-      kw(&L->cur,"2LCMIMM")||kw(&L->cur,"PAIRLCMIMM")){
-    /* a b + n → lcm(a,n) lcm(b,n); 0 if either side 0 */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long nn = n < 0 ? -n : n;
-    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
-    long x = 0, y = 0;
-    if (ax && nn){
-      long g = ax, h = nn;
-      while (h){ long t = g % h; g = h; h = t; }
-      x = (ax / g) * nn;
-    }
-    if (bx && nn){
-      long g = bx, h = nn;
-      while (h){ long t = g % h; g = h; h = t; }
-      y = (bx / g) * nn;
-    }
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DGCDN·DLCMN → dual_clip peel (G_dual_margin) */
   /* digit-2 dual-stack imm numthy ext: DCOPRIMEN · DPOWN (dual of SCOPRIMEN/SPOWN) */
   if (kw(&L->cur,"DCOPRIMEN")||kw(&L->cur,"2COPRIMEN")||kw(&L->cur,"S2COPRIMEN")||
       kw(&L->cur,"STACK2COPRIMEN")||kw(&L->cur,"PAIRCOPRIMEN")||kw(&L->cur,"DISCOPRIMEN")||
