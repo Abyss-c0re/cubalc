@@ -19,6 +19,74 @@ static void ensure_dir(const char *d) { mkdir(d, 0755); }
 
 int cubalc_cmd_forms(int argc, char **argv) {
   const char *cmd = (argc > 1) ? argv[1] : "forms";
+  if (strcmp(cmd, "listforms") == 0 || strcmp(cmd, "formlist") == 0 ||
+      strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0) {
+    /* Usability: CLI dual of LISTFORMS/COUNTFORMS — form catalog bag/count without .cubalc. */
+    const char *pref = (argc > 2) ? argv[2] : "";
+    int count_only = (strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0);
+    char src[480];
+    cubalc_run_result rr;
+    long n = 0;
+    int ok;
+    if (pref && pref[0])
+      snprintf(src, sizeof src, "COUNTFORMS %s\nPRINT LAST_N\nPASS\n", pref);
+    else
+      snprintf(src, sizeof src, "COUNTFORMS\nPRINT LAST_N\nPASS\n");
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<listforms>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    if (rr.last_print[0])
+      n = strtol(rr.last_print, NULL, 10);
+    printf("{\"schema\":\"cubalc.formlist.v1\",\"ok\":%s,\"cmd\":\"%s\","
+           "\"prefix\":\"%s\",\"n\":%ld,\"count_only\":%s,"
+           "\"version\":\"%s\","
+           "\"note\":\"CLI dual of LISTFORMS/COUNTFORMS · cubalc forms for table\","
+           "\"hint\":\"in-lang LISTFORMS %s · HASFORM name · run -C forms\"}\n",
+           ok ? "true" : "false", cmd, pref ? pref : "", n,
+           count_only ? "true" : "false", CUBALC_LANG_VERSION,
+           (pref && pref[0]) ? pref : "");
+    return ok ? 0 : 1;
+  }
+  if (strcmp(cmd, "formhint") == 0 || strcmp(cmd, "describeform") == 0 ||
+      strcmp(cmd, "formdoc") == 0 || strcmp(cmd, "formhelp") == 0) {
+    /* Usability: CLI dual of FORMHINT — one-line HELP peel without .cubalc. */
+    const char *name = (argc > 2) ? argv[2] : "";
+    char src[320];
+    cubalc_run_result rr;
+    if (!name || !name[0]) {
+      fprintf(stderr, "usage: cubalc formhint|describeform <FormName>\n");
+      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":false,\"cmd\":\"%s\","
+             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
+             cmd, CUBALC_LANG_VERSION);
+      return 2;
+    }
+    if (strchr(name, ' ') || strchr(name, '"'))
+      snprintf(src, sizeof src, "FORMHINT \"%s\"\nPRINT LAST\nPASS\n", name);
+    else
+      snprintf(src, sizeof src, "FORMHINT %s\nPRINT LAST\nPASS\n", name);
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, strlen(src), "<formhint>", &rr, NULL);
+    {
+      int ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0] && rr.last_print[0]) ? 1 : 0;
+      /* escape hint for JSON */
+      char hintj[400];
+      size_t i, o = 0;
+      const char *h = rr.last_print;
+      for (i = 0; h[i] && o + 2 < sizeof hintj; i++) {
+        char c = h[i];
+        if (c == '"' || c == '\\') { hintj[o++] = '\\'; hintj[o++] = c; }
+        else if ((unsigned char)c < 32) hintj[o++] = ' ';
+        else hintj[o++] = c;
+      }
+      hintj[o] = 0;
+      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":%s,\"cmd\":\"%s\","
+             "\"form\":\"%s\",\"hint\":\"%s\",\"version\":\"%s\","
+             "\"note\":\"CLI dual of FORMHINT · HELP one-line · cubalc forms\"}\n",
+             ok ? "true" : "false", cmd, name, hintj, CUBALC_LANG_VERSION);
+      return ok ? 0 : 1;
+    }
+  }
+
   if (strcmp(cmd, "forms") == 0 || strcmp(cmd, "ops") == 0 ||
       strcmp(cmd, "forms-list") == 0) {
     /* Usability: live human/agent catalog of play forms (not opcode soup).

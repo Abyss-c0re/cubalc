@@ -32,6 +32,7 @@
 #include "cubalc_cmd_whyguide.h"
 #include "cubalc_cmd_cliinfo.h"
 #include "cubalc_cmd_argmap.h"
+#include "cubalc_cmd_formhints.h"
 #include "cubalc_hostops.h"
 #include <stdio.h>
 #include <string.h>
@@ -719,7 +720,12 @@ int main(int argc, char **argv) {
     return cubalc_cmd_selftest(argc, argv);
   }
   if (strcmp(cmd, "forms") == 0 || strcmp(cmd, "ops") == 0 ||
-      strcmp(cmd, "forms-list") == 0) {
+      strcmp(cmd, "forms-list") == 0 ||
+      strcmp(cmd, "listforms") == 0 || strcmp(cmd, "formlist") == 0 ||
+      strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0 ||
+      strcmp(cmd, "formhint") == 0 || strcmp(cmd, "describeform") == 0 ||
+      strcmp(cmd, "formdoc") == 0 || strcmp(cmd, "formhelp") == 0) {
+    /* forms/listforms/formhint → cubalc_cmd_forms peel (F_main_carve) */
     return cubalc_cmd_forms(argc, argv);
   }
   if (strcmp(cmd, "onboard") == 0 || strcmp(cmd, "welcome") == 0 ||
@@ -2700,127 +2706,8 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "errtips") == 0 || strcmp(cmd, "fixtips") == 0 ||
       strcmp(cmd, "recovertips") == 0 || strcmp(cmd, "err-tips") == 0 ||
       strcmp(cmd, "fixhints") == 0 || strcmp(cmd, "whytips") == 0) {
-    /* Usability: classify error text → recovery tip bag + topic (dual of ERRTIPS).
-     *   cubalc errtips "INCLUDE missing foo"
-     * Schema cubalc.errtips.v1 · pure C (no nested PRINT flakiness). */
-    static const struct { const char *topic; const char *tip; } tips[] = {
-      {"general", "cubalc doctor — install readiness plate"},
-      {"general", "STATUS · VARS · CLEAR_ERR after fix"},
-      {"general", "cubalc topics · TOPIC name for tips+forms+snip triad"},
-      {"general", "cubalc search KEYWORD — forms/libs/examples"},
-      {"cap", "HASFORM name · NEEDFORMS a b · FORMHINT name"},
-      {"cap", "LISTFORMS prefix · cubalc forms · cubalc run -C FORMS"},
-      {"cap", "INCLUDE cap_boot · cubalc init --cap"},
-      {"cap", "RELATED HASFORM · FORMSFOR cap · RUNSNIP cap"},
-      {"fat", "VARROOM · HASVARROOM n · NEEDVARROOM n"},
-      {"fat", "REMAIN_MS · HAS_TIME · NEEDTIME · cubalc run -T ms"},
-      {"fat", "INCLUDE fat_session · DEFAULT NEED_VARROOM"},
-      {"plate", "NEEDP/DEFAULTP seed · GETP OR fallback"},
-      {"plate", "cubalc plate has|need path.json keys"},
-      {"plate", "PRETTYP · SAVEPLATE · INCLUDE plate_session"},
-      {"p2p", "export CUBALC_SMX_KEY hex64 before mesh"},
-      {"p2p", "CUBALC_P2P_SOFT=1 · CUBALC_P2P_TIMEOUT ms"},
-      {"p2p", "cubalc smx-bus prove-tcp · docs/P2P_SMX.md"},
-      {"run", "ASSERT_GOT/ASSERT_EXPECTED · EXPECT soft · CLEAR_ERR"},
-      {"run", "WHY · cubalc run -s / CUBALC_STRICT"},
-      {"run", "ERRTIPS after FAIL · TIPS run playbook"},
-      {"lib", "cubalc libs [filter] · REQUIRE LIB · INCLUDE SOFT"},
-      {"lib", "MATCHLIBS · CHECKDEPS · cubalc recipe name"},
-      {"lib", "cubalc which name · HASLIB · LISTLIBS"},
-      {"protect", "cubalc protect status · HOLD_FLASH device/mesh-join only"},
-      {"protect", "docs/CORE_PROTECT.md · cubalc protect all"},
-    };
-    char msg[400], topic[32], tipsj[2400], errj[480];
-    size_t o = 0, e, j, to = 0;
-    int i, n = 0, nall = (int)(sizeof tips / sizeof tips[0]);
-    int first = 1;
-    msg[0] = 0;
-    for (i = 2; i < argc; i++) {
-      size_t ln;
-      if (!argv[i]) continue;
-      ln = strlen(argv[i]);
-      if (o && o + 1 < sizeof msg) msg[o++] = ' ';
-      if (o + ln < sizeof msg) { memcpy(msg + o, argv[i], ln); o += ln; }
-      msg[o] = 0;
-    }
-    if (!msg[0]) snprintf(msg, sizeof msg, "%s", "ok");
-    snprintf(topic, sizeof topic, "%s", "general");
-    if (!strcmp(msg, "ok"))
-      snprintf(topic, sizeof topic, "%s", "general");
-    else if (strstr(msg, "NEEDFORM") || strstr(msg, "HASFORM") ||
-             strstr(msg, "FORMMISS") || strstr(msg, "unknown form") ||
-             strstr(msg, "did you mean") || strstr(msg, "REQUIRE FORM") ||
-             strstr(msg, "LISTFORMS") || strstr(msg, "FORMHINT") ||
-             strstr(msg, "NEEDFORMS") || strstr(msg, "HASFORMS"))
-      snprintf(topic, sizeof topic, "%s", "cap");
-    else if (strstr(msg, "NEEDMATCHLIBS") || strstr(msg, "HASMATCHLIBS") ||
-             strstr(msg, "PICKLIB") || strstr(msg, "SORTLIBS") ||
-             strstr(msg, "INCLUDE") || strstr(msg, "include") ||
-             strstr(msg, "REQUIRE LIB") || strstr(msg, "lib missing") ||
-             strstr(msg, "NEEDDEPS") || strstr(msg, "CHECKDEPS") ||
-             strstr(msg, "HASLIB") || strstr(msg, "LISTLIBS"))
-      snprintf(topic, sizeof topic, "%s", "lib");
-    else if (strstr(msg, "VARROOM") || strstr(msg, "NEEDVARROOM") ||
-             strstr(msg, "HASVARROOM") || strstr(msg, "REMAIN_MS") ||
-             strstr(msg, "NEEDTIME") || strstr(msg, "HAS_TIME"))
-      snprintf(topic, sizeof topic, "%s", "fat");
-    else if (strstr(msg, "NEEDP") || strstr(msg, "NEEDFLAT") ||
-             strstr(msg, "UNIFORM") || strstr(msg, "plate") ||
-             strstr(msg, "PLATE") || strstr(msg, "SETP") || strstr(msg, "GETP"))
-      snprintf(topic, sizeof topic, "%s", "plate");
-    else if (strstr(msg, "DIAL") || strstr(msg, "SERVE") || strstr(msg, "SMX") ||
-             strstr(msg, "TALK") || strstr(msg, "P2P") || strstr(msg, "timeout"))
-      snprintf(topic, sizeof topic, "%s", "p2p");
-    else if (strstr(msg, "HOLD_FLASH") || strstr(msg, "protect") ||
-             strstr(msg, "CORE_PROTECT"))
-      snprintf(topic, sizeof topic, "%s", "protect");
-    else if (strstr(msg, "ASSERT") || strstr(msg, "EXPECT") ||
-             strstr(msg, "is false") || strstr(msg, "FAIL") ||
-             strstr(msg, "VERSION") || strstr(msg, "too old"))
-      snprintf(topic, sizeof topic, "%s", "run");
-    tipsj[0] = 0; to = 0; n = 0; first = 1;
-    if (!strcmp(msg, "ok")) {
-      const char *oktip = "ok — no sticky LAST_ERR · STATUS · CLEAR_ERR idle";
-      size_t ln = strlen(oktip);
-      tipsj[to++] = '"';
-      memcpy(tipsj + to, oktip, ln); to += ln;
-      tipsj[to++] = '"'; tipsj[to] = 0;
-      n = 1;
-    } else {
-      for (i = 0; i < nall; i++) {
-        size_t ln, v = 0;
-        char one[320];
-        if (strcmp(tips[i].topic, topic) != 0) continue;
-        ln = strlen(tips[i].tip);
-        for (j = 0; j < ln && v + 2 < sizeof one; j++) {
-          char c = tips[i].tip[j];
-          if (c == '"' || c == '\\') { one[v++] = '\\'; one[v++] = c; }
-          else one[v++] = c;
-        }
-        one[v] = 0;
-        if (to + v + 4 < sizeof tipsj) {
-          if (!first) tipsj[to++] = ',';
-          tipsj[to++] = '"';
-          memcpy(tipsj + to, one, v); to += v;
-          tipsj[to++] = '"'; tipsj[to] = 0;
-          first = 0; n++;
-        }
-      }
-    }
-    e = 0;
-    for (j = 0; msg[j] && e + 2 < sizeof errj; j++) {
-      char c = msg[j];
-      if (c == '"' || c == '\\') { errj[e++] = '\\'; errj[e++] = c; }
-      else if ((unsigned char)c < 32) errj[e++] = ' ';
-      else errj[e++] = c;
-    }
-    errj[e] = 0;
-    printf("{\"schema\":\"cubalc.errtips.v1\",\"ok\":true,\"cmd\":\"errtips\","
-           "\"topic\":\"%s\",\"n\":%d,\"version\":\"%s\","
-           "\"note\":\"recovery tip bag from err text · dual of ERRTIPS · chain cubalc topic\","
-           "\"err\":\"%s\",\"tips\":[%s]}\n",
-           topic, n, CUBALC_LANG_VERSION, errj, tipsj);
-    return n > 0 ? 0 : 1;
+    /* errtips/formhints → cubalc_cmd_formhints peel (F_main_carve) */
+    return cubalc_cmd_formhints(argc, argv);
   }
   if (strcmp(cmd, "errrun") == 0 || strcmp(cmd, "recoversnip") == 0 ||
       strcmp(cmd, "fixrun") == 0 || strcmp(cmd, "err-run") == 0 ||
@@ -5144,73 +5031,6 @@ int main(int argc, char **argv) {
     if (hard)
       return hit ? 0 : 1;
     return 0;
-  }
-  if (strcmp(cmd, "listforms") == 0 || strcmp(cmd, "formlist") == 0 ||
-      strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0) {
-    /* Usability: CLI dual of LISTFORMS/COUNTFORMS — form catalog bag/count without .cubalc. */
-    const char *pref = (argc > 2) ? argv[2] : "";
-    int count_only = (strcmp(cmd, "countforms") == 0 || strcmp(cmd, "nforms") == 0);
-    char src[480];
-    cubalc_run_result rr;
-    long n = 0;
-    int ok;
-    if (pref && pref[0])
-      snprintf(src, sizeof src, "COUNTFORMS %s\nPRINT LAST_N\nPASS\n", pref);
-    else
-      snprintf(src, sizeof src, "COUNTFORMS\nPRINT LAST_N\nPASS\n");
-    memset(&rr, 0, sizeof rr);
-    (void)cubalc_run_source(src, strlen(src), "<listforms>", &rr, NULL);
-    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
-    if (rr.last_print[0])
-      n = strtol(rr.last_print, NULL, 10);
-    printf("{\"schema\":\"cubalc.formlist.v1\",\"ok\":%s,\"cmd\":\"%s\","
-           "\"prefix\":\"%s\",\"n\":%ld,\"count_only\":%s,"
-           "\"version\":\"%s\","
-           "\"note\":\"CLI dual of LISTFORMS/COUNTFORMS · cubalc forms for table\","
-           "\"hint\":\"in-lang LISTFORMS %s · HASFORM name · run -C forms\"}\n",
-           ok ? "true" : "false", cmd, pref ? pref : "", n,
-           count_only ? "true" : "false", CUBALC_LANG_VERSION,
-           (pref && pref[0]) ? pref : "");
-    return ok ? 0 : 1;
-  }
-  if (strcmp(cmd, "formhint") == 0 || strcmp(cmd, "describeform") == 0 ||
-      strcmp(cmd, "formdoc") == 0 || strcmp(cmd, "formhelp") == 0) {
-    /* Usability: CLI dual of FORMHINT — one-line HELP peel without .cubalc. */
-    const char *name = (argc > 2) ? argv[2] : "";
-    char src[320];
-    cubalc_run_result rr;
-    if (!name || !name[0]) {
-      fprintf(stderr, "usage: cubalc formhint|describeform <FormName>\n");
-      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":false,\"cmd\":\"%s\","
-             "\"err\":\"need form name\",\"version\":\"%s\"}\n",
-             cmd, CUBALC_LANG_VERSION);
-      return 2;
-    }
-    if (strchr(name, ' ') || strchr(name, '"'))
-      snprintf(src, sizeof src, "FORMHINT \"%s\"\nPRINT LAST\nPASS\n", name);
-    else
-      snprintf(src, sizeof src, "FORMHINT %s\nPRINT LAST\nPASS\n", name);
-    memset(&rr, 0, sizeof rr);
-    (void)cubalc_run_source(src, strlen(src), "<formhint>", &rr, NULL);
-    {
-      int ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0] && rr.last_print[0]) ? 1 : 0;
-      /* escape hint for JSON */
-      char hintj[400];
-      size_t i, o = 0;
-      const char *h = rr.last_print;
-      for (i = 0; h[i] && o + 2 < sizeof hintj; i++) {
-        char c = h[i];
-        if (c == '"' || c == '\\') { hintj[o++] = '\\'; hintj[o++] = c; }
-        else if ((unsigned char)c < 32) hintj[o++] = ' ';
-        else hintj[o++] = c;
-      }
-      hintj[o] = 0;
-      printf("{\"schema\":\"cubalc.formhint.v1\",\"ok\":%s,\"cmd\":\"%s\","
-             "\"form\":\"%s\",\"hint\":\"%s\",\"version\":\"%s\","
-             "\"note\":\"CLI dual of FORMHINT · HELP one-line · cubalc forms\"}\n",
-             ok ? "true" : "false", cmd, name, hintj, CUBALC_LANG_VERSION);
-      return ok ? 0 : 1;
-    }
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
       strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
