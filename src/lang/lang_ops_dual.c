@@ -292,76 +292,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DBDEPN·DORMN·DLOWORN·DMASKOR (+aliases) → dual_clip peel (G_dual_margin) */
   /* DNANDMN·DNORMN·DXNORMN·DLOWNANDN (+aliases) → dual_clip peel (G_dual_margin) */
   /* DHMASKN·DHIGHANDN·DCLEARLN (+aliases) → dual_clip peel (G_dual_margin) */
-  /* digit-5 dual-stack high-plane or/xor/clear (complete DHMASKN/DANDHN after low DORMN/DXORMN) */
-  if (kw(&L->cur,"DORHN")||kw(&L->cur,"2ORHN")||kw(&L->cur,"S2ORHN")||
-      kw(&L->cur,"STACK2ORHN")||kw(&L->cur,"PAIRORHN")||kw(&L->cur,"DSETHN")||
-      kw(&L->cur,"2SETHN")||kw(&L->cur,"DHIGHORN")||kw(&L->cur,"2HIGHORN")||
-      kw(&L->cur,"DMASKORH")||kw(&L->cur,"2MASKORH")){
-    /* a b + n → (a|hm) (b|hm) set high n bits; n clamped 0..64 */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 64) n = 64;
-    unsigned long m = 0;
-    if (n == 0) m = 0;
-    else if (n >= 64) m = ~0ul;
-    else m = ~0ul << (unsigned)(64 - n);
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = (long)((unsigned long)a | m);
-    long y = (long)((unsigned long)b | m);
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DXORHN")||kw(&L->cur,"2XORHN")||kw(&L->cur,"S2XORHN")||
-      kw(&L->cur,"STACK2XORHN")||kw(&L->cur,"PAIRXORHN")||kw(&L->cur,"DFLIPHN")||
-      kw(&L->cur,"2FLIPHN")||kw(&L->cur,"DHIGHXORN")||kw(&L->cur,"2HIGHXORN")||
-      kw(&L->cur,"DMASKXORH")||kw(&L->cur,"2MASKXORH")){
-    /* a b + n → (a^hm) (b^hm) toggle high n bits; n clamped 0..64 */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 64) n = 64;
-    unsigned long m = 0;
-    if (n == 0) m = 0;
-    else if (n >= 64) m = ~0ul;
-    else m = ~0ul << (unsigned)(64 - n);
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = (long)((unsigned long)a ^ m);
-    long y = (long)((unsigned long)b ^ m);
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DCLRHN")||kw(&L->cur,"2CLRHN")||kw(&L->cur,"S2CLRHN")||
-      kw(&L->cur,"STACK2CLRHN")||kw(&L->cur,"PAIRCLRHN")||kw(&L->cur,"DCLEARHN")||
-      kw(&L->cur,"2CLEARHN")||kw(&L->cur,"DZAPHN")||kw(&L->cur,"2ZAPHN")||
-      kw(&L->cur,"DHIGHCLRN")||kw(&L->cur,"2HIGHCLRN")){
-    /* a b + n → clear high n bits: x &= ~himask; n clamped 0..64 */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 64) n = 64;
-    unsigned long m = 0;
-    if (n == 0) m = 0;
-    else if (n >= 64) m = ~0ul;
-    else m = ~0ul << (unsigned)(64 - n);
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = (long)((unsigned long)a & ~m);
-    long y = (long)((unsigned long)b & ~m);
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DORHN·DXORHN·DCLEARHN·DFLIPHN (+aliases) → dual_clip peel (G_dual_margin) */
   /* digit-0 dual-stack inverted high-n mask: DNANDHN · DNORHN · DXNORHN (complete high plane after DNANDMN) */
   if (kw(&L->cur,"DNANDHN")||kw(&L->cur,"2NANDHN")||kw(&L->cur,"S2NANDHN")||
       kw(&L->cur,"STACK2NANDHN")||kw(&L->cur,"PAIRNANDHN")||kw(&L->cur,"DHIGHNANDN")||
