@@ -1849,5 +1849,115 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-2 dual-stack arithmetic numthy: DMOBIUS · DRAD · DSQFREE */
+  if (kw(&L->cur,"DMOBIUS")||kw(&L->cur,"2MOBIUS")||kw(&L->cur,"S2MOBIUS")||
+      kw(&L->cur,"STACK2MOBIUS")||kw(&L->cur,"PAIRMOBIUS")||kw(&L->cur,"DMU")||
+      kw(&L->cur,"2MU")||
+      kw(&L->cur,"DRAD")||kw(&L->cur,"2RAD")||kw(&L->cur,"S2RAD")||
+      kw(&L->cur,"STACK2RAD")||kw(&L->cur,"PAIRRAD")||kw(&L->cur,"DRADICAL")||
+      kw(&L->cur,"2RADICAL")||
+      kw(&L->cur,"DSQFREE")||kw(&L->cur,"2SQFREE")||kw(&L->cur,"S2SQFREE")||
+      kw(&L->cur,"STACK2SQFREE")||kw(&L->cur,"PAIRSQFREE")||kw(&L->cur,"DISSQFREE")||
+      kw(&L->cur,"2ISSQFREE")||kw(&L->cur,"DISSQUAREFREE")||kw(&L->cur,"2ISSQUAREFREE")){
+    /* a b → f(a) f(b)
+     * MOBIUS/MU: μ(n); n<=0 → 0; square factor → 0; else (−1)^ω
+     * RAD/RADICAL: product of distinct primes; n<=0 → 0
+     * SQFREE: 1 if square-free (and n>0), else 0 */
+    char op[24]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    int is_mu = (strcmp(op,"DMOBIUS")==0 || strcmp(op,"2MOBIUS")==0 || strcmp(op,"S2MOBIUS")==0 ||
+                 strcmp(op,"STACK2MOBIUS")==0 || strcmp(op,"PAIRMOBIUS")==0 ||
+                 strcmp(op,"DMU")==0 || strcmp(op,"2MU")==0);
+    int is_rad = (strcmp(op,"DRAD")==0 || strcmp(op,"2RAD")==0 || strcmp(op,"S2RAD")==0 ||
+                  strcmp(op,"STACK2RAD")==0 || strcmp(op,"PAIRRAD")==0 ||
+                  strcmp(op,"DRADICAL")==0 || strcmp(op,"2RADICAL")==0);
+    long x = 0, y = 0;
+    if (is_mu){
+      if (a > 0){
+        if (a == 1) x = 1;
+        else {
+          long n = a; int k = 0; x = 1;
+          if ((n % 2) == 0){ n /= 2; k++; if ((n % 2) == 0) x = 0; }
+          if (x){
+            for (long p = 3; p * p <= n; p += 2){
+              if ((n % p) == 0){ n /= p; k++; if ((n % p) == 0){ x = 0; break; } }
+            }
+            if (x){ if (n > 1) k++; x = (k & 1) ? -1 : 1; }
+          }
+        }
+      }
+      if (b > 0){
+        if (b == 1) y = 1;
+        else {
+          long n = b; int k = 0; y = 1;
+          if ((n % 2) == 0){ n /= 2; k++; if ((n % 2) == 0) y = 0; }
+          if (y){
+            for (long p = 3; p * p <= n; p += 2){
+              if ((n % p) == 0){ n /= p; k++; if ((n % p) == 0){ y = 0; break; } }
+            }
+            if (y){ if (n > 1) k++; y = (k & 1) ? -1 : 1; }
+          }
+        }
+      }
+    } else if (is_rad){
+      if (a > 0){
+        if (a == 1) x = 1;
+        else {
+          long n = a; x = 1;
+          if ((n % 2) == 0){ x *= 2; while ((n % 2) == 0) n /= 2; }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ x *= p; while ((n % p) == 0) n /= p; }
+          }
+          if (n > 1) x *= n;
+        }
+      }
+      if (b > 0){
+        if (b == 1) y = 1;
+        else {
+          long n = b; y = 1;
+          if ((n % 2) == 0){ y *= 2; while ((n % 2) == 0) n /= 2; }
+          for (long p = 3; p * p <= n; p += 2){
+            if ((n % p) == 0){ y *= p; while ((n % p) == 0) n /= p; }
+          }
+          if (n > 1) y *= n;
+        }
+      }
+    } else {
+      /* SQFREE / ISSQFREE */
+      if (a > 0){
+        if (a == 1) x = 1;
+        else {
+          long n = a; x = 1;
+          if ((n % 2) == 0){ n /= 2; if ((n % 2) == 0) x = 0; }
+          if (x){
+            for (long p = 3; p * p <= n; p += 2){
+              if ((n % p) == 0){ n /= p; if ((n % p) == 0){ x = 0; break; } }
+            }
+          }
+        }
+      }
+      if (b > 0){
+        if (b == 1) y = 1;
+        else {
+          long n = b; y = 1;
+          if ((n % 2) == 0){ n /= 2; if ((n % 2) == 0) y = 0; }
+          if (y){
+            for (long p = 3; p * p <= n; p += 2){
+              if ((n % p) == 0){ n /= p; if ((n % p) == 0){ y = 0; break; } }
+            }
+          }
+        }
+      }
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
