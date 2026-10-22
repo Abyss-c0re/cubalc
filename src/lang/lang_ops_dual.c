@@ -222,51 +222,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DADDC·DSUBB → dual_clip peel (G_dual_margin) */
   /* DADDCN·DSUBBN → dual_clip peel (G_dual_margin) */
   /* DADDC2·DSUBB2 → dual_clip peel (G_dual_margin) */
-  /* digit-7 dual-stack multiword shift-through-carry: DSHLC · DSHRC */
-  if (kw(&L->cur,"DSHLC")||kw(&L->cur,"2SHLC")||kw(&L->cur,"S2SHLC")||
-      kw(&L->cur,"STACK2SHLC")||kw(&L->cur,"PAIRSHLC")||kw(&L->cur,"DSHLCY")||
-      kw(&L->cur,"2SHLCY")||
-      kw(&L->cur,"DSHRC")||kw(&L->cur,"2SHRC")||kw(&L->cur,"S2SHRC")||
-      kw(&L->cur,"STACK2SHRC")||kw(&L->cur,"PAIRSHRC")||kw(&L->cur,"DSHRCY")||
-      kw(&L->cur,"2SHRCY")){
-    /* a b ca cb → shift-1 with per-lane cin bit; CARRY = any cout
-     * DSHLC: x=(a<<1)|cin_lsb; cout=old MSB
-     * DSHRC: x=(a>>1)|(cin_msb<<MSB); cout=old LSB */
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    int is_left = (strcmp(op,"DSHLC")==0 || strcmp(op,"2SHLC")==0 ||
-                   strcmp(op,"S2SHLC")==0 || strcmp(op,"STACK2SHLC")==0 ||
-                   strcmp(op,"PAIRSHLC")==0 || strcmp(op,"DSHLCY")==0 ||
-                   strcmp(op,"2SHLCY")==0);
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long cb = vm->stack[--vm->sp];
-    long ca = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
-    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
-    long x, y;
-    int flag = 0;
-    if (is_left){
-      int c0 = (ua & msb) ? 1 : 0;
-      int c1 = (ub & msb) ? 1 : 0;
-      flag = c0 | c1;
-      x = (long)((ua << 1) | (ca ? 1ul : 0ul));
-      y = (long)((ub << 1) | (cb ? 1ul : 0ul));
-    } else {
-      int c0 = (ua & 1ul) ? 1 : 0;
-      int c1 = (ub & 1ul) ? 1 : 0;
-      flag = c0 | c1;
-      x = (long)((ua >> 1) | (ca ? msb : 0ul));
-      y = (long)((ub >> 1) | (cb ? msb : 0ul));
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSHLC·DSHRC → dual_clip peel (G_dual_margin) */
   /* digit-5 dual-stack shift-through-CARRY flag: DSHLCC · DSHRCC (cin from CARRY; dual of SSHLC) */
   if (kw(&L->cur,"DSHLCC")||kw(&L->cur,"2SHLCC")||kw(&L->cur,"S2SHLCC")||
       kw(&L->cur,"STACK2SHLCC")||kw(&L->cur,"PAIRSHLCC")||kw(&L->cur,"DSHLCF")||
