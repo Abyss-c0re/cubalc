@@ -1098,5 +1098,64 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-0 dual-stack imm unsigned min/max: DUMINN · DUMAXN (dual of SUMINN/SUMAXN; imm of DUMIN/DUMAX) */
+  if (kw(&L->cur,"DUMINN")||kw(&L->cur,"2UMINN")||kw(&L->cur,"S2UMINN")||
+      kw(&L->cur,"STACK2UMINN")||kw(&L->cur,"PAIRUMINN")||kw(&L->cur,"DUMINIMM")||
+      kw(&L->cur,"2UMINIMM")||kw(&L->cur,"PAIRUMINIMM")){
+    /* a b + n → unsigned min(a,n) min(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua < un ? ua : un);
+    long y = (long)(ub < un ? ub : un);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DUMAXN")||kw(&L->cur,"2UMAXN")||kw(&L->cur,"S2UMAXN")||
+      kw(&L->cur,"STACK2UMAXN")||kw(&L->cur,"PAIRUMAXN")||kw(&L->cur,"DUMAXIMM")||
+      kw(&L->cur,"2UMAXIMM")||kw(&L->cur,"PAIRUMAXIMM")){
+    /* a b + n → unsigned max(a,n) max(b,n) */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    unsigned long un = (unsigned long)n;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    long x = (long)(ua > un ? ua : un);
+    long y = (long)(ub > un ? ub : un);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+
+  /* digit-7 dual-stack imm cin negate: DNEGCN n (shared cin from n 0/1) */
+  if (kw(&L->cur,"DNEGCN")||kw(&L->cur,"2NEGCN")||kw(&L->cur,"S2NEGCN")||
+      kw(&L->cur,"STACK2NEGCN")||kw(&L->cur,"PAIRNEGCN")||kw(&L->cur,"DCOMADCN")||
+      kw(&L->cur,"2COMADCN")||kw(&L->cur,"DNEGCIMM")||kw(&L->cur,"PAIRNEGCIMM")){
+    /* a b + n → (~a)+(n?1:0) (~b)+(n?1:0); CARRY = OR cout */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    unsigned long uin = n ? 1ul : 0ul;
+    unsigned long ta = ~(unsigned long)a, tb = ~(unsigned long)b;
+    unsigned long sa = ta + uin, sb = tb + uin;
+    int c0 = (uin && sa < ta) ? 1 : 0;
+    int c1 = (uin && sb < tb) ? 1 : 0;
+    int flag = c0 | c1;
+    vm->stack[vm->sp - 2] = (long)sa;
+    vm->stack[vm->sp - 1] = (long)sb;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",(long)sb); vm->last_n=(long)sb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
