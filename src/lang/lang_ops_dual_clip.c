@@ -6,6 +6,7 @@
 #include "lang/cubalc_lang_internal.h"
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
   /* Returns 1 handled, 0 not this plane. */
@@ -2997,6 +2998,139 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
       unsigned long ua = (unsigned long)(a ^ c), ub = (unsigned long)(b ^ d);
       while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
       while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* energy power/means peel: DSUMSQ·DDIFFSQ·DGEOM·DHARM·DRMS (G_dual_margin) */
+  /* digit-6 dual-stack energy power: DSUMSQ · DDIFFSQ (building blocks for DRMS/error) */
+  if (kw(&L->cur,"DSUMSQ")||kw(&L->cur,"2SUMSQ")||kw(&L->cur,"S2SUMSQ")||
+      kw(&L->cur,"STACK2SUMSQ")||kw(&L->cur,"PAIRSUMSQ")||kw(&L->cur,"DSSQ")||
+      kw(&L->cur,"2SSQ")||kw(&L->cur,"DPOW2SUM")||kw(&L->cur,"2POW2SUM")){
+    /* a b c d → a*a+c*c  b*b+d*d  (energy sum-of-squares / power metric) */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = a * a + c * c;
+    long y = b * b + d * d;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDIFFSQ")||kw(&L->cur,"2DIFFSQ")||kw(&L->cur,"S2DIFFSQ")||
+      kw(&L->cur,"STACK2DIFFSQ")||kw(&L->cur,"PAIRDIFFSQ")||kw(&L->cur,"DSQDIFF")||
+      kw(&L->cur,"2SQDIFF")||kw(&L->cur,"DERRSQ")||kw(&L->cur,"2ERRSQ")){
+    /* a b c d → (a-c)² (b-d)²  energy residual / squared error */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long dx = a - c;
+    long dy = b - d;
+    long x = dx * dx;
+    long y = dy * dy;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack energy means: DGEOM · DHARM · DRMS (complete after DAVG) */
+  if (kw(&L->cur,"DGEOM")||kw(&L->cur,"2GEOM")||kw(&L->cur,"S2GEOM")||
+      kw(&L->cur,"STACK2GEOM")||kw(&L->cur,"PAIRGEOM")||kw(&L->cur,"DGEOMEAN")||
+      kw(&L->cur,"2GEOMEAN")||
+      kw(&L->cur,"DHARM")||kw(&L->cur,"2HARM")||kw(&L->cur,"S2HARM")||
+      kw(&L->cur,"STACK2HARM")||kw(&L->cur,"PAIRHARM")||kw(&L->cur,"DHARMMEAN")||
+      kw(&L->cur,"2HARMMEAN")||
+      kw(&L->cur,"DRMS")||kw(&L->cur,"2RMS")||kw(&L->cur,"S2RMS")||
+      kw(&L->cur,"STACK2RMS")||kw(&L->cur,"PAIRRMS")||kw(&L->cur,"DROOTMS")||
+      kw(&L->cur,"2ROOTMS")){
+    /* a b c d → f(a,c) f(b,d)
+     * GEOM: floor(sqrt(a*c)) for a,c>=0 else 0 (geometric mean)
+     * HARM: 2*a*c/(a+c) if a+c!=0 else 0 (harmonic mean)
+     * RMS:  floor(sqrt((a*a+c*c)/2)) root-mean-square */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_geom = (strcmp(op,"DGEOM")==0 || strcmp(op,"2GEOM")==0 || strcmp(op,"S2GEOM")==0 ||
+                   strcmp(op,"STACK2GEOM")==0 || strcmp(op,"PAIRGEOM")==0 ||
+                   strcmp(op,"DGEOMEAN")==0 || strcmp(op,"2GEOMEAN")==0);
+    int is_harm = (strcmp(op,"DHARM")==0 || strcmp(op,"2HARM")==0 || strcmp(op,"S2HARM")==0 ||
+                   strcmp(op,"STACK2HARM")==0 || strcmp(op,"PAIRHARM")==0 ||
+                   strcmp(op,"DHARMMEAN")==0 || strcmp(op,"2HARMMEAN")==0);
+    long x = 0, y = 0;
+    if (is_geom){
+      if (a >= 0 && c >= 0){
+        unsigned long long p = (unsigned long long)a * (unsigned long long)c;
+        unsigned long long t = 0, s = p + 1;
+        if (s == 0){ /* p == ULLONG_MAX */
+          t = 1ull << 32; /* isqrt ceiling bound for max */
+          while (t * t > p) t--;
+          while ((t + 1) * (t + 1) <= p) t++;
+        } else {
+          while (t + 1 <= p / (t + 1)) t++;
+        }
+        x = (long)t;
+      }
+      if (b >= 0 && d >= 0){
+        unsigned long long p = (unsigned long long)b * (unsigned long long)d;
+        unsigned long long t = 0;
+        if (p == ~0ull){
+          t = 1ull << 32;
+          while (t * t > p) t--;
+          while ((t + 1) * (t + 1) <= p) t++;
+        } else {
+          while (t + 1 <= p / (t + 1)) t++;
+        }
+        y = (long)t;
+      }
+    } else if (is_harm){
+      long s1 = a + c;
+      long s2 = b + d;
+      if (s1 != 0) x = (2 * a * c) / s1;
+      if (s2 != 0) y = (2 * b * d) / s2;
+    } else {
+      /* RMS */
+      {
+        long long aa = (long long)a * (long long)a;
+        long long cc = (long long)c * (long long)c;
+        unsigned long long sum = (unsigned long long)(aa + cc) / 2ull;
+        unsigned long long t = 0;
+        if (sum == ~0ull){
+          t = 1ull << 32;
+          while (t * t > sum) t--;
+          while ((t + 1) * (t + 1) <= sum) t++;
+        } else {
+          while (t + 1 <= sum / (t + 1)) t++;
+        }
+        x = (long)t;
+      }
+      {
+        long long bb = (long long)b * (long long)b;
+        long long dd = (long long)d * (long long)d;
+        unsigned long long sum = (unsigned long long)(bb + dd) / 2ull;
+        unsigned long long t = 0;
+        if (sum == ~0ull){
+          t = 1ull << 32;
+          while (t * t > sum) t--;
+          while ((t + 1) * (t + 1) <= sum) t++;
+        } else {
+          while (t + 1 <= sum / (t + 1)) t++;
+        }
+        y = (long)t;
+      }
     }
     vm->stack[vm->sp++] = x;
     vm->stack[vm->sp++] = y;
