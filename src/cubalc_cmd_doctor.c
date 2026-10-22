@@ -17,7 +17,68 @@ static void state_dir(char *buf, size_t n) {
 }
 
 int cubalc_cmd_doctor(int argc, char **argv) {
-  (void)argc; (void)argv;
+  const char *cmd = (argc > 1 && argv[1]) ? argv[1] : "doctor";
+  /* needdoctor/needready hard gates (F_main peel into doctor) */
+  if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
+      strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
+    /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src_nd[] = "NEEDDOCTOR\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src_nd, sizeof src_nd - 1, "<cli-needdoctor>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
+      char esc[240];
+      size_t e = 0, k;
+      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
+        char c = em[k];
+        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+        else if ((unsigned char)c < 32) esc[e++] = ' ';
+        else esc[e++] = c;
+      }
+      esc[e] = 0;
+      printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,\"cmd\":\"needdoctor\","
+             "\"version\":\"%s\","
+             "\"note\":\"hard install gate · dual of NEEDDOCTOR · exit 1 if not ready\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
+    }
+    return ok ? 0 : 1;
+  }
+    if (strcmp(cmd, "needready") == 0 || strcmp(cmd, "need-ready") == 0 ||
+      strcmp(cmd, "require-ready") == 0 || strcmp(cmd, "requireready") == 0 ||
+      strcmp(cmd, "mustready") == 0) {
+    /* Usability: hard install prove gate (dual of NEEDREADY). exit 1 if checklist fails.
+     * Completes ready triad: cubalc ready (soft) · cubalc needready (hard) · run -Y. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src_nr[] = "NEEDREADY\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src_nr, sizeof src_nr - 1, "<cli-needready>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    {
+      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
+      char esc[240];
+      size_t e = 0, k;
+      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
+        char c = em[k];
+        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
+        else if ((unsigned char)c < 32) esc[e++] = ' ';
+        else esc[e++] = c;
+      }
+      esc[e] = 0;
+      printf("{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"cmd\":\"needready\","
+             "\"version\":\"%s\","
+             "\"note\":\"hard install prove gate · dual of NEEDREADY · exit 1 if checklist fails\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
+    }
+    return ok ? 0 : 1;
+  }
+
+  (void)argc;
     /* Usability: one JSON plate for agents/humans — is this install ready?
      * Also surfaces INCLUDE lib layout + nest-check readiness (plate_uniform). */
     char dir[512], protect_path[640], key_preview[16];

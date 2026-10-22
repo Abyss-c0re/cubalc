@@ -811,65 +811,12 @@ int main(int argc, char **argv) {
     return ok ? 0 : 1;
   }
   if (strcmp(cmd, "needdoctor") == 0 || strcmp(cmd, "need-doctor") == 0 ||
-      strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0) {
-    /* Usability: hard install gate (dual of NEEDDOCTOR). exit 1 if not ready. */
-    cubalc_run_result rr;
-    int ok;
-    static const char src_nd[] = "NEEDDOCTOR\nPASS\n";
-    memset(&rr, 0, sizeof rr);
-    (void)cubalc_run_source(src_nd, sizeof src_nd - 1, "<cli-needdoctor>", &rr, NULL);
-    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
-    {
-      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
-      char esc[240];
-      size_t e = 0, k;
-      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
-        char c = em[k];
-        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
-        else if ((unsigned char)c < 32) esc[e++] = ' ';
-        else esc[e++] = c;
-      }
-      esc[e] = 0;
-      printf("{\"schema\":\"cubalc.doctor.v1\",\"ok\":%s,\"cmd\":\"needdoctor\","
-             "\"version\":\"%s\","
-             "\"note\":\"hard install gate · dual of NEEDDOCTOR · exit 1 if not ready\","
-             "\"err\":\"%s\"}\n",
-             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
-    }
-    return ok ? 0 : 1;
-  }
-    if (strcmp(cmd, "needready") == 0 || strcmp(cmd, "need-ready") == 0 ||
+      strcmp(cmd, "require-doctor") == 0 || strcmp(cmd, "requiredoctor") == 0 ||
+      strcmp(cmd, "needready") == 0 || strcmp(cmd, "need-ready") == 0 ||
       strcmp(cmd, "require-ready") == 0 || strcmp(cmd, "requireready") == 0 ||
-      strcmp(cmd, "mustready") == 0) {
-    /* Usability: hard install prove gate (dual of NEEDREADY). exit 1 if checklist fails.
-     * Completes ready triad: cubalc ready (soft) · cubalc needready (hard) · run -Y. */
-    cubalc_run_result rr;
-    int ok;
-    static const char src_nr[] = "NEEDREADY\nPASS\n";
-    memset(&rr, 0, sizeof rr);
-    (void)cubalc_run_source(src_nr, sizeof src_nr - 1, "<cli-needready>", &rr, NULL);
-    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
-    {
-      const char *em = ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready"));
-      char esc[240];
-      size_t e = 0, k;
-      for (k = 0; em[k] && e + 2 < sizeof esc; k++) {
-        char c = em[k];
-        if (c == '"' || c == '\\') { esc[e++] = '\\'; esc[e++] = c; }
-        else if ((unsigned char)c < 32) esc[e++] = ' ';
-        else esc[e++] = c;
-      }
-      esc[e] = 0;
-      printf("{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"cmd\":\"needready\","
-             "\"version\":\"%s\","
-             "\"note\":\"hard install prove gate · dual of NEEDREADY · exit 1 if checklist fails\","
-             "\"err\":\"%s\"}\n",
-             ok ? "true" : "false", CUBALC_LANG_VERSION, esc);
-    }
-    return ok ? 0 : 1;
-  }
-  if (strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
-    /* doctor/health → cubalc_cmd_doctor peel (F_main_carve) */
+      strcmp(cmd, "mustready") == 0 ||
+      strcmp(cmd, "doctor") == 0 || strcmp(cmd, "health") == 0) {
+    /* doctor/needdoctor/needready → cubalc_cmd_doctor peel (F_main_carve) */
     return cubalc_cmd_doctor(argc, argv);
   }
   if (strcmp(cmd, "selftest") == 0 || strcmp(cmd, "smoke") == 0 ||
