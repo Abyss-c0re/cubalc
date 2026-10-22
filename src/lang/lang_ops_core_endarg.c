@@ -1,5 +1,5 @@
 /* CubalC — argv/flag peels rescued post-thin (endarg plane)
- * FIRSTARG/LASTARG/NTHARG · NTHPOS/ARGMAP/FINDARG/AFTERARG · FLAGMAP/LISTFLAGS/RESTARGS
+ * FIRSTARG…AFTERARG · FLAGMAP/LISTFLAGS/RESTARGS · HASFLAG/GETFLAG
  * CLI dual: cubalc firstarg|lastarg. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_core_endarg.h"
@@ -496,6 +496,229 @@ int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L) {
       fprintf(vm->trace, "# restargs n=%ld\n", n);
     bump(vm);
     return 1;
+  }
+
+  /* HASFLAG name — soft 0|1 if --name / -name / --name=… in CUBALC_ARGn. */
+  if (kw(&L->cur, "HASFLAG") || kw(&L->cur, "HASOPT") || kw(&L->cur, "FLAG?") ||
+      kw(&L->cur, "HAS_FLAG") || kw(&L->cur, "OPTHAS") || kw(&L->cur, "DEFINEDFLAG")) {
+    char name[96], val[CUBALC_HOST_STR_MAX], buf[8];
+    int hit;
+    lex_next(L);
+    name[0] = 0;
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "HASFLAG needs name — HASFLAG verbose");
+      return -1;
+    }
+    while (name[0] == '-')
+      memmove(name, name + 1, strlen(name));
+    if (!name[0]) {
+      fail_at(vm, L, "HASFLAG empty name");
+      return -1;
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "HASFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "HASFLAG", name);
+    if (hit && val[0]) {
+      var_set_str(vm, "FLAG", val);
+      var_set_str(vm, "FLAG_VAL", val);
+    }
+    snprintf(buf, sizeof buf, "%ld", hit ? 1L : 0L);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflag %s → %d\n", name, hit ? 1 : 0);
+    bump(vm);
+    return 1;
+  }
+
+  /* GETFLAG name [OR fallback] — LAST = value ("1" for bare bool flag). */
+  if (kw(&L->cur, "GETFLAG") || kw(&L->cur, "GETOPT") || kw(&L->cur, "FLAGVAL") ||
+      kw(&L->cur, "OPTARG") || kw(&L->cur, "OPT_GET") || kw(&L->cur, "FLAGGET")) {
+    char name[96], val[CUBALC_HOST_STR_MAX], fb[512];
+    int hit, have_fb = 0;
+    lex_next(L);
+    name[0] = 0;
+    val[0] = 0;
+    fb[0] = 0;
+    while (L->cur.kind == TK_MINUS) lex_next(L);
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "GETFLAG needs name — GETFLAG out OR \"a.txt\"");
+      return -1;
+    }
+    while (name[0] == '-')
+      memmove(name, name + 1, strlen(name));
+    if (!name[0]) {
+      fail_at(vm, L, "GETFLAG empty name");
+      return -1;
+    }
+    if (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+        kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "GETFLAG name OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    hit = cubalc_scan_cli_flag(name, val, sizeof val);
+    if (!hit) {
+      if (have_fb)
+        snprintf(val, sizeof val, "%s", fb);
+      else
+        val[0] = 0;
+    }
+    var_set_str(vm, "LAST", val);
+    var_set_str(vm, "FLAG", val);
+    var_set_str(vm, "GETFLAG", name);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflag %s hit=%d → %s\n", name, hit, val);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASFLAG/GETFLAG — finish 986/981 CLI surface */
+  if (kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASOPT") || kw(&L->cur,"FLAG?") ||
+      kw(&L->cur,"HAS_FLAG") || kw(&L->cur,"OPTHAS") || kw(&L->cur,"DEFINEDFLAG")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX];
+    int hit, nac;
+    char buf[8];
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "HASFLAG needs name — HASFLAG verbose|v");
+      return -1;
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "HASFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "HASFLAG", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    if (hit && val[0]) {
+      var_set_str(vm, "FLAG", val);
+      var_set_str(vm, "FLAG_VAL", val);
+    }
+    snprintf(buf, sizeof buf, "%ld", hit ? 1L : 0L);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflag %s hit=%s → %d\n", name, hitnm, hit ? 1 : 0);
+    bump(vm); return 1;
+  }
+
+  if (kw(&L->cur,"GETFLAG") || kw(&L->cur,"GETOPT") || kw(&L->cur,"FLAG") ||
+      kw(&L->cur,"OPTARG") || kw(&L->cur,"OPT_GET") || kw(&L->cur,"FLAGVAL")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], fb[512];
+    char env_used[96], src_tag[16];
+    int hit, have_fb = 0, nac, from_env = 0;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    fb[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAG needs name — GETFLAG out|o OR ENV OUT OR \"a.txt\"");
+      return -1;
+    }
+    while (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+           kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (kw(&L->cur,"ENV") || kw(&L->cur,"FROMENV") || kw(&L->cur,"ENVOR") ||
+          kw(&L->cur,"GETENV") || kw(&L->cur,"ENV_GET")){
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAG OR ENV NAME — GETFLAG out OR ENV OUT OR \"-\"");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
+      }
+      {
+        char lit[512];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAG name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      if (have_fb)
+        snprintf(val, sizeof val, "%s", fb);
+      else
+        val[0] = 0;
+    }
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    var_set_str(vm, "LAST", val);
+    var_set_str(vm, "FLAG", val);
+    var_set_str(vm, "GETFLAG", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    var_set_str(vm, "GETFLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAG_N", hit ? 1L : 0L);
+    var_set_num(vm, "OK", (hit || (have_fb && val[0])) ? 1 : (have_fb ? 1 : 0));
+    if (vm->trace)
+      fprintf(vm->trace, "# getflag %s hit=%s → %s src=%s\n", name, hitnm, val, src_tag);
+    bump(vm); return 1;
   }
   return 0;
 }
