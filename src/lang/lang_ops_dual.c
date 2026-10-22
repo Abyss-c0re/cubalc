@@ -253,52 +253,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DOVERIF·DTUCKIF → dual_clip peel (G_dual_margin) */
   /* DROTIF·DRROTIF → dual_clip peel (G_dual_margin) */
   /* DSHGATE·DZEROIF → dual_clip peel (G_dual_margin) */
-  /* digit-6 dual-stack flow metrics: DAVG · DDIST · DHAMM (energy-style distance) */
-  if (kw(&L->cur,"DAVG")||kw(&L->cur,"2AVG")||kw(&L->cur,"S2AVG")||
-      kw(&L->cur,"STACK2AVG")||kw(&L->cur,"PAIRAVG")||kw(&L->cur,"DMEAN")||
-      kw(&L->cur,"2MEAN")||
-      kw(&L->cur,"DDIST")||kw(&L->cur,"2DIST")||kw(&L->cur,"S2DIST")||
-      kw(&L->cur,"STACK2DIST")||kw(&L->cur,"PAIRDIST")||kw(&L->cur,"DABSDIFF")||
-      kw(&L->cur,"2ABSDIFF")||
-      kw(&L->cur,"DHAMM")||kw(&L->cur,"2HAMM")||kw(&L->cur,"S2HAMM")||
-      kw(&L->cur,"STACK2HAMM")||kw(&L->cur,"PAIRHAMM")||kw(&L->cur,"DHAMMING")||
-      kw(&L->cur,"2HAMMING")||kw(&L->cur,"DPOPDIFF")||kw(&L->cur,"2POPDIFF")){
-    /* a b c d → f(a,c) f(b,d)
-     * AVG: truncated mean (a+c)/2
-     * DIST: |a-c|
-     * HAMM: popcount(a^c) bit distance */
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    int is_avg = (strcmp(op,"DAVG")==0 || strcmp(op,"2AVG")==0 || strcmp(op,"S2AVG")==0 ||
-                  strcmp(op,"STACK2AVG")==0 || strcmp(op,"PAIRAVG")==0 ||
-                  strcmp(op,"DMEAN")==0 || strcmp(op,"2MEAN")==0);
-    int is_dist = (strcmp(op,"DDIST")==0 || strcmp(op,"2DIST")==0 || strcmp(op,"S2DIST")==0 ||
-                   strcmp(op,"STACK2DIST")==0 || strcmp(op,"PAIRDIST")==0 ||
-                   strcmp(op,"DABSDIFF")==0 || strcmp(op,"2ABSDIFF")==0);
-    long x = 0, y = 0;
-    if (is_avg){
-      x = (a + c) / 2;
-      y = (b + d) / 2;
-    } else if (is_dist){
-      long dx = a - c; if (dx < 0) dx = -dx;
-      long dy = b - d; if (dy < 0) dy = -dy;
-      x = dx; y = dy;
-    } else {
-      unsigned long ua = (unsigned long)(a ^ c), ub = (unsigned long)(b ^ d);
-      while (ua){ x += (long)(ua & 1ul); ua >>= 1; }
-      while (ub){ y += (long)(ub & 1ul); ub >>= 1; }
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DAVG·DDIST·DHAMM → dual_clip peel (G_dual_margin) */
   /* digit-6 dual-stack energy power: DSUMSQ · DDIFFSQ (building blocks for DRMS/error) */
   if (kw(&L->cur,"DSUMSQ")||kw(&L->cur,"2SUMSQ")||kw(&L->cur,"S2SUMSQ")||
       kw(&L->cur,"STACK2SUMSQ")||kw(&L->cur,"PAIRSUMSQ")||kw(&L->cur,"DSSQ")||
