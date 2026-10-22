@@ -252,43 +252,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DSWAPIF·DDROPIF·DDUPIF → dual_clip peel (G_dual_margin) */
   /* DOVERIF·DTUCKIF → dual_clip peel (G_dual_margin) */
   /* DROTIF·DRROTIF → dual_clip peel (G_dual_margin) */
-  /* digit-1 dual-stack shared-flag gates: DSHGATE · DZEROIF (complete after per-lane DGATE) */
-  if (kw(&L->cur,"DSHGATE")||kw(&L->cur,"2SHGATE")||kw(&L->cur,"S2SHGATE")||
-      kw(&L->cur,"STACK2SHGATE")||kw(&L->cur,"PAIRSHGATE")||kw(&L->cur,"DGATES")||
-      kw(&L->cur,"2GATES")||kw(&L->cur,"S2GATES")||kw(&L->cur,"PAIRGATES")||
-      kw(&L->cur,"DZEROUNLESS")||kw(&L->cur,"2ZEROUNLESS")||kw(&L->cur,"S2ZEROUNLESS")||
-      kw(&L->cur,"PAIRZEROUNLESS")){
-    /* a b f → (f?a:0) (f?b:0)  shared-flag dual of DGATE (one mask for both lanes) */
-    lex_next(L);
-    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long f = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long x = f ? a : 0;
-    long y = f ? b : 0;
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DZEROIF")||kw(&L->cur,"2ZEROIF")||kw(&L->cur,"S2ZEROIF")||
-      kw(&L->cur,"STACK2ZEROIF")||kw(&L->cur,"PAIRZEROIF")||kw(&L->cur,"DZAPIF")||
-      kw(&L->cur,"2ZAPIF")||kw(&L->cur,"S2ZAPIF")||kw(&L->cur,"PAIRZAPIF")||
-      kw(&L->cur,"DQZERO")||kw(&L->cur,"2QZERO")||kw(&L->cur,"DZEROWHEN")||
-      kw(&L->cur,"2ZEROWHEN")){
-    /* a b f → (f?0:a) (f?0:b)  shared-flag soft-kill / zero-if (inverse of DSHGATE) */
-    lex_next(L);
-    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long f = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long x = f ? 0 : a;
-    long y = f ? 0 : b;
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSHGATE·DZEROIF → dual_clip peel (G_dual_margin) */
   /* digit-6 dual-stack flow metrics: DAVG · DDIST · DHAMM (energy-style distance) */
   if (kw(&L->cur,"DAVG")||kw(&L->cur,"2AVG")||kw(&L->cur,"S2AVG")||
       kw(&L->cur,"STACK2AVG")||kw(&L->cur,"PAIRAVG")||kw(&L->cur,"DMEAN")||
