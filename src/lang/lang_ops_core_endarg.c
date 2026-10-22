@@ -1,5 +1,6 @@
-/* CubalC — FIRSTARG/LASTARG/NTHARG + NTHPOS/ARGMAP/FINDARG/AFTERARG (rescued post-thin)
- * CLI dual: cubalc firstarg|lastarg (cubalc_cmd_endarg). Cube is SoT.
+/* CubalC — argv/flag peels rescued post-thin (endarg plane)
+ * FIRSTARG/LASTARG/NTHARG · NTHPOS/ARGMAP/FINDARG/AFTERARG · FLAGMAP/LISTFLAGS/RESTARGS
+ * CLI dual: cubalc firstarg|lastarg. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_core_endarg.h"
 #include "lang/cubalc_lang_ops_sys_cli.h"
@@ -429,6 +430,70 @@ int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L) {
     if (vm->trace)
       fprintf(vm->trace, "# afterarg from=%ld next=%ld hit=%ld token=%s\n",
               from, next_i, hit, needle);
+    bump(vm);
+    return 1;
+  }
+
+  /* FLAGMAP/LISTFLAGS/RESTARGS — CLI surface twins of ARGMAP/NTHPOS */
+  if (kw(&L->cur,"FLAGMAP") || kw(&L->cur,"FLAGKV") || kw(&L->cur,"FLAGPAIRS") ||
+      kw(&L->cur,"OPTMAP") || kw(&L->cur,"CLI_FLAGMAP") || kw(&L->cur,"FLAGS_KV") ||
+      kw(&L->cur,"KVFLAGS")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_flagmap(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAGMAP", bag);
+    var_set_str(vm, "FLAGKV", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "FLAGMAP_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# flagmap n=%ld\n", n);
+    bump(vm); return 1;
+  }
+
+  if (kw(&L->cur,"LISTFLAGS") || kw(&L->cur,"FLAGS") || kw(&L->cur,"FLAGNAMES") ||
+      kw(&L->cur,"OPTFLAGS") || kw(&L->cur,"CLI_FLAGS") || kw(&L->cur,"ALLFLAGS") ||
+      kw(&L->cur,"FLAGLIST")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_listflags(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "LISTFLAGS", bag);
+    var_set_str(vm, "FLAGS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "LISTFLAGS_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# listflags n=%ld\n", n);
+    bump(vm); return 1;
+  }
+
+  /* RESTARGS|POSITIONALS — newline bag of non-flag CUBALC_ARGn (positionals).
+   * Soft peel; REQUIRE RESTARGS hard gate lives under REQUIRE plane. */
+  if (kw(&L->cur, "RESTARGS") || kw(&L->cur, "POSITIONALS") || kw(&L->cur, "POSARGS") ||
+      kw(&L->cur, "NONFLAGS") || kw(&L->cur, "ARGSREST") || kw(&L->cur, "POSARG") ||
+      kw(&L->cur, "REST_ARGS")) {
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_restargs(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "RESTARGS", bag);
+    var_set_str(vm, "POSITIONALS", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RESTARGS_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# restargs n=%ld\n", n);
     bump(vm);
     return 1;
   }
