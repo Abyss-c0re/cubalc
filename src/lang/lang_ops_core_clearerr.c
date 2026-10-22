@@ -1,6 +1,8 @@
 /* CubalC — CLEAR_ERR · VERSION · NEEDOK (rescued from residual monolit)
+ * Dispatches endarg peels (FIRSTARG/LASTARG/NTHARG) without touching thin core.
  */
 #include "lang/cubalc_lang_ops_core_clearerr.h"
+#include "lang/cubalc_lang_ops_core_endarg.h"
 #include "cubalc_law.h"
 #include <stdio.h>
 #include <string.h>
@@ -91,6 +93,10 @@ int cubalc_lang_ops_core_try_clearerr(VM *vm, Lex *L) {
     snprintf(vm->last_str, sizeof vm->last_str, "%s", "ok");
     if (vm->res) vm->res->asserts_ok++;
     bump(vm); return 1;
+  }
+  {
+    int r = cubalc_lang_ops_core_try_endarg(vm, L);
+    if (r) return r;
   }
   return 0;
 }
