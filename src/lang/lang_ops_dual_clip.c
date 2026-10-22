@@ -1412,5 +1412,53 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-2 dual-stack imm numthy ext: DCOPRIMEN · DPOWN (dual of SCOPRIMEN/SPOWN) */
+  if (kw(&L->cur,"DCOPRIMEN")||kw(&L->cur,"2COPRIMEN")||kw(&L->cur,"S2COPRIMEN")||
+      kw(&L->cur,"STACK2COPRIMEN")||kw(&L->cur,"PAIRCOPRIMEN")||kw(&L->cur,"DISCOPRIMEN")||
+      kw(&L->cur,"2ISCOPRIMEN")||kw(&L->cur,"DCOPRIMEIMM")||kw(&L->cur,"PAIRCOPRIMEIMM")){
+    /* a b + n → (gcd(a,n)==1) (gcd(b,n)==1) as 0/1 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long nn = n < 0 ? -n : n;
+    long ax = a < 0 ? -a : a, bx = b < 0 ? -b : b;
+    long gx = ax, hy = nn;
+    long x = 0, y = 0;
+    if (!(ax == 0 && nn == 0)){
+      while (hy){ long t = gx % hy; gx = hy; hy = t; }
+      x = (gx == 1) ? 1 : 0;
+    }
+    long gy = bx, hz = nn;
+    if (!(bx == 0 && nn == 0)){
+      while (hz){ long t = gy % hz; gy = hz; hz = t; }
+      y = (gy == 1) ? 1 : 0;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DPOWN")||kw(&L->cur,"2POWN")||kw(&L->cur,"S2POWN")||
+      kw(&L->cur,"STACK2POWN")||kw(&L->cur,"PAIRPOWN")||kw(&L->cur,"DPOWIMM")||
+      kw(&L->cur,"2POWIMM")||kw(&L->cur,"PAIRPOWIMM")||kw(&L->cur,"DPOWERN")){
+    /* a b + n → a^n b^n; n<0 → 0,0 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 0, y = 0;
+    if (n >= 0){
+      x = 1; long e = n; while (e-- > 0) x *= a;
+      y = 1; e = n; while (e-- > 0) y *= b;
+    }
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
