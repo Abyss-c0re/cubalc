@@ -3945,5 +3945,52 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 dual-stack fixed-width rotate: DROL4 · DROR4 · DROL8 · DROR8 · DROL16 · DROR16 */
+  if (kw(&L->cur,"DROL4")||kw(&L->cur,"2ROL4")||kw(&L->cur,"S2ROL4")||
+      kw(&L->cur,"STACK2ROL4")||kw(&L->cur,"PAIRROL4")||kw(&L->cur,"DROTL4")||
+      kw(&L->cur,"DROR4")||kw(&L->cur,"2ROR4")||kw(&L->cur,"S2ROR4")||
+      kw(&L->cur,"STACK2ROR4")||kw(&L->cur,"PAIRROR4")||kw(&L->cur,"DROTR4")||
+      kw(&L->cur,"DROL8")||kw(&L->cur,"2ROL8")||kw(&L->cur,"S2ROL8")||
+      kw(&L->cur,"STACK2ROL8")||kw(&L->cur,"PAIRROL8")||kw(&L->cur,"DROTL8")||
+      kw(&L->cur,"DROR8")||kw(&L->cur,"2ROR8")||kw(&L->cur,"S2ROR8")||
+      kw(&L->cur,"STACK2ROR8")||kw(&L->cur,"PAIRROR8")||kw(&L->cur,"DROTR8")||
+      kw(&L->cur,"DROL16")||kw(&L->cur,"2ROL16")||kw(&L->cur,"S2ROL16")||
+      kw(&L->cur,"STACK2ROL16")||kw(&L->cur,"PAIRROL16")||kw(&L->cur,"DROTL16")||
+      kw(&L->cur,"DROR16")||kw(&L->cur,"2ROR16")||kw(&L->cur,"S2ROR16")||
+      kw(&L->cur,"STACK2ROR16")||kw(&L->cur,"PAIRROR16")||kw(&L->cur,"DROTR16")){
+    /* a b c d → rot_w(a,c) rot_w(b,d); w∈{4,8,16}; amount mod w, neg→0; result masked */
+    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (c < 0) c = 0;
+    if (d < 0) d = 0;
+    int is_rol = (strstr(op,"ROL") != NULL || strstr(op,"ROTL") != NULL);
+    /* width: prefer 16, then 8, else 4 (check longest digit suffix first) */
+    int is_w16 = (strstr(op,"16") != NULL);
+    int is_w8 = (!is_w16 && strstr(op,"8") != NULL);
+    unsigned bits = is_w16 ? 16u : (is_w8 ? 8u : 4u);
+    unsigned mask = is_w16 ? 0xFFFFu : (is_w8 ? 0xFFu : 0xFu);
+    unsigned uc = (unsigned)c & (bits - 1u);
+    unsigned ud = (unsigned)d & (bits - 1u);
+    unsigned wa = (unsigned)a & mask, wb = (unsigned)b & mask;
+    long x, y;
+    if (is_rol){
+      x = (uc == 0) ? (long)wa : (long)(((wa << uc) | (wa >> (bits - uc))) & mask);
+      y = (ud == 0) ? (long)wb : (long)(((wb << ud) | (wb >> (bits - ud))) & mask);
+    } else {
+      x = (uc == 0) ? (long)wa : (long)(((wa >> uc) | (wa << (bits - uc))) & mask);
+      y = (ud == 0) ? (long)wb : (long)(((wb >> ud) | (wb << (bits - ud))) & mask);
+    }
+    (void)is_rol; /* used above */
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
