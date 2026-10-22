@@ -4233,5 +4233,67 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-3 dual-stack bitfield pos: DBTEST · DSETB · DCLRB · DFLIPB */
+  if (kw(&L->cur,"DBTEST")||kw(&L->cur,"2BTEST")||kw(&L->cur,"S2BTEST")||
+      kw(&L->cur,"STACK2BTEST")||kw(&L->cur,"PAIRBTEST")||kw(&L->cur,"2BITT")||
+      kw(&L->cur,"DBITT")||
+      kw(&L->cur,"DSETB")||kw(&L->cur,"2SETB")||kw(&L->cur,"S2SETB")||
+      kw(&L->cur,"STACK2SETB")||kw(&L->cur,"PAIRSETB")||kw(&L->cur,"2SETBIT")||
+      kw(&L->cur,"DSETBIT")||
+      kw(&L->cur,"DCLRB")||kw(&L->cur,"2CLRB")||kw(&L->cur,"S2CLRB")||
+      kw(&L->cur,"STACK2CLRB")||kw(&L->cur,"PAIRCLRB")||kw(&L->cur,"2CLRBIT")||
+      kw(&L->cur,"DCLRBIT")||
+      kw(&L->cur,"DFLIPB")||kw(&L->cur,"2FLIPB")||kw(&L->cur,"S2FLIPB")||
+      kw(&L->cur,"STACK2FLIPB")||kw(&L->cur,"PAIRFLIPB")||kw(&L->cur,"2FLIPBIT")||
+      kw(&L->cur,"DFLIPBIT")){
+    /* a b na nb → f(a,na) f(b,nb); indices clamped 0..63
+     * BTEST: bit → 0/1
+     * SETB:  set bit
+     * CLRB:  clear bit
+     * FLIPB: toggle bit */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long nb = vm->stack[--vm->sp];
+    long na = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (na < 0) na = 0;
+    if (nb < 0) nb = 0;
+    if (na > 63) na = 63;
+    if (nb > 63) nb = 63;
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long ba = 1UL << (unsigned)na;
+    unsigned long bb = 1UL << (unsigned)nb;
+    int is_test = (strcmp(op,"DBTEST")==0 || strcmp(op,"2BTEST")==0 || strcmp(op,"S2BTEST")==0 ||
+                   strcmp(op,"STACK2BTEST")==0 || strcmp(op,"PAIRBTEST")==0 ||
+                   strcmp(op,"2BITT")==0 || strcmp(op,"DBITT")==0);
+    int is_set = (strcmp(op,"DSETB")==0 || strcmp(op,"2SETB")==0 || strcmp(op,"S2SETB")==0 ||
+                  strcmp(op,"STACK2SETB")==0 || strcmp(op,"PAIRSETB")==0 ||
+                  strcmp(op,"2SETBIT")==0 || strcmp(op,"DSETBIT")==0);
+    int is_clr = (strcmp(op,"DCLRB")==0 || strcmp(op,"2CLRB")==0 || strcmp(op,"S2CLRB")==0 ||
+                  strcmp(op,"STACK2CLRB")==0 || strcmp(op,"PAIRCLRB")==0 ||
+                  strcmp(op,"2CLRBIT")==0 || strcmp(op,"DCLRBIT")==0);
+    long x, y;
+    if (is_test){
+      x = (ua & ba) ? 1 : 0;
+      y = (ub & bb) ? 1 : 0;
+    } else if (is_set){
+      x = (long)(ua | ba);
+      y = (long)(ub | bb);
+    } else if (is_clr){
+      x = (long)(ua & ~ba);
+      y = (long)(ub & ~bb);
+    } else {
+      /* FLIPB */
+      x = (long)(ua ^ ba);
+      y = (long)(ub ^ bb);
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
