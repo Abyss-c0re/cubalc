@@ -99,6 +99,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_ctrl.c \
 	src/lang/lang_ops_flow_fget.c \
 	src/lang/lang_ops_flow_field.c \
+	src/lang/lang_ops_flow_field_b.c \
 	src/lang/lang_ops_flow_fn.c \
 	src/lang/lang_ops_flow_for.c \
 	src/lang/lang_ops_flow_fstr.c \
