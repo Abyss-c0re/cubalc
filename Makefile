@@ -51,6 +51,7 @@ LANG_SRC = \
 	src/lang/lang_ops_cell_shift32.c \
 	src/lang/lang_ops_cell_rot32.c \
 	src/lang/lang_ops_cell_metrics.c \
+	src/lang/lang_ops_cell_rng.c \
 	src/lang/lang_ops_core.c \
 	src/lang/lang_ops_core_agent.c \
 	src/lang/lang_ops_core_assert.c \
