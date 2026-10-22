@@ -8077,64 +8077,7 @@ int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_resu
 /* Usability: SYS JSONPICK plate keys — keep only listed top-level keys.
  * keys_nl = newline bag (order preserved). Missing keys skipped. Raw values kept.
  * r->n = number of keys kept. Empty bag / no hits → {}. */
-int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_result *r) {
-  char cur[CUBALC_HOST_STR_MAX];
-  const char *p, *line;
-  long kept = 0;
-  cubalc_host_result gr, hr;
-  r_clear(r);
-  snprintf(cur, sizeof cur, "%s", "{}");
-  if (!keys_nl || !keys_nl[0]) {
-    snprintf(r->str, sizeof r->str, "%s", "{}");
-    r->n = 0;
-    r->ok = 1;
-    return 0;
-  }
-  p = keys_nl;
-  while (*p) {
-    char key[256];
-    size_t kn = 0;
-    /* skip empty lines */
-    while (*p == '\n' || *p == '\r') p++;
-    if (!*p) break;
-    line = p;
-    while (*p && *p != '\n' && *p != '\r') p++;
-    kn = (size_t)(p - line);
-    if (kn >= sizeof key) kn = sizeof key - 1;
-    memcpy(key, line, kn);
-    key[kn] = 0;
-    /* trim trailing spaces */
-    while (kn > 0 && (key[kn - 1] == ' ' || key[kn - 1] == '\t')) {
-      key[--kn] = 0;
-    }
-    /* trim leading spaces */
-    {
-      char *s = key;
-      while (*s == ' ' || *s == '\t') s++;
-      if (s != key) {
-        size_t n = strlen(s);
-        memmove(key, s, n + 1);
-        kn = n;
-      }
-    }
-    if (!key[0]) continue;
-    memset(&gr, 0, sizeof gr);
-    if (cubalc_host_json_get_raw(json, key, &gr) != 0)
-      continue; /* missing soft skip */
-    memset(&hr, 0, sizeof hr);
-    if (cubalc_host_json_set(cur, key, gr.str, 1, &hr) != 0) {
-      snprintf(r->err, sizeof r->err, "%s",
-               hr.err[0] ? hr.err : "jsonpick: set fail");
-      return -1;
-    }
-    snprintf(cur, sizeof cur, "%s", hr.str);
-    kept++;
-  }
-  snprintf(r->str, sizeof r->str, "%s", cur);
-  r->n = kept;
-  r->ok = 1;
-  return 0;
-}
+/* cubalc_host_json_pick → cubalc_hostops_json_delta peel (G_hostops_margin) */
 
 /* Usability: SYS JSONRENAME plate old new — rename top-level key, keep raw value.
  * Soft miss (old absent) → copy plate, r->n=0. Dest key overwritten if present. */
@@ -8191,51 +8134,7 @@ int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk
   return 0;
 }
 
-/* Usability: copy key src→dst (paths ok) — dual of rename keep-src.
- * Soft miss src → plate unchanged n=0. Dest overwrites. Same path no-op n=1. */
-int cubalc_host_json_copy_key(const char *json, const char *src, const char *dst,
-                              cubalc_host_result *r) {
-  char base[CUBALC_HOST_STR_MAX];
-  char raw[CUBALC_HOST_STR_MAX];
-  cubalc_host_result gr, hr;
-  const char *j;
-  r_clear(r);
-  if (!src || !src[0] || !dst || !dst[0]) {
-    snprintf(r->err, sizeof r->err, "jsoncopy: empty key");
-    return -1;
-  }
-  j = json ? json : "";
-  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
-  if (!*j || *j != '{')
-    snprintf(base, sizeof base, "%s", "{}");
-  else
-    snprintf(base, sizeof base, "%s", j);
-
-  memset(&gr, 0, sizeof gr);
-  if (cubalc_host_json_path_get_raw(base, src, &gr) != 0) {
-    snprintf(r->str, sizeof r->str, "%s", base);
-    r->n = 0;
-    r->ok = 1;
-    return 0;
-  }
-  snprintf(raw, sizeof raw, "%s", gr.str);
-  if (strcmp(src, dst) == 0) {
-    snprintf(r->str, sizeof r->str, "%s", base);
-    r->n = 1;
-    r->ok = 1;
-    return 0;
-  }
-  memset(&hr, 0, sizeof hr);
-  if (cubalc_host_json_path_set(base, dst, raw, 1, &hr) != 0) {
-    snprintf(r->err, sizeof r->err, "%s",
-             hr.err[0] ? hr.err : "jsoncopy: set fail");
-    return -1;
-  }
-  snprintf(r->str, sizeof r->str, "%s", hr.str);
-  r->n = 1;
-  r->ok = 1;
-  return 0;
-}
+/* cubalc_host_json_copy_key → cubalc_hostops_json_delta peel (G_hostops_margin) */
 
 /* cubalc_host_json_swap_keys → cubalc_hostops_json_delta peel (G_hostops_margin) */
 
