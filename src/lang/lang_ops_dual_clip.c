@@ -3395,5 +3395,41 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-6 dual-stack energy unit/complement: DCLIP01 · DCOMP100 */
+  if (kw(&L->cur,"DCLIP01")||kw(&L->cur,"2CLIP01")||kw(&L->cur,"S2CLIP01")||
+      kw(&L->cur,"STACK2CLIP01")||kw(&L->cur,"PAIRCLIP01")||kw(&L->cur,"DUNIT")||
+      kw(&L->cur,"2UNIT")||kw(&L->cur,"DCLAMP01")||kw(&L->cur,"2CLAMP01")||
+      kw(&L->cur,"PAIRCLAMP01")){
+    /* a b → clamp(a,0,1) clamp(b,0,1) unit-interval energy gate */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (a > 1) a = 1;
+    if (b < 0) b = 0;
+    if (b > 1) b = 1;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCOMP100")||kw(&L->cur,"2COMP100")||kw(&L->cur,"S2COMP100")||
+      kw(&L->cur,"STACK2COMP100")||kw(&L->cur,"PAIRCOMP100")||kw(&L->cur,"DENCOMP")||
+      kw(&L->cur,"2ENCOMP")||kw(&L->cur,"DINV100")||kw(&L->cur,"2INV100")||
+      kw(&L->cur,"PAIRINV100")){
+    /* a b → 100-a  100-b  energy-plane complement (remaining capacity) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = 100 - a;
+    long y = 100 - b;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
