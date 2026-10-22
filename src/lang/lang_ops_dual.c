@@ -235,58 +235,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DCOPRIMEN·DPOWN → dual_clip peel (G_dual_margin) */
   /* DSHL·DSHR·DSAR → dual_clip peel (G_dual_margin) */
   /* DSHL4/8/16·DSHR4/8/16·DSAR4/8/16 → dual_clip peel (G_dual_margin) */
-  /* digit-5 dual-stack fixed-width shift32: DSHL32 · DSHR32 · DSAR32
-   * (complete dual-stack fixed shift 4/8/16/32 plane after DROL32/DROR32) */
-  if (kw(&L->cur,"DSHL32")||kw(&L->cur,"2SHL32")||kw(&L->cur,"S2SHL32")||
-      kw(&L->cur,"STACK2SHL32")||kw(&L->cur,"PAIRSHL32")||
-      kw(&L->cur,"DSHR32")||kw(&L->cur,"2SHR32")||kw(&L->cur,"S2SHR32")||
-      kw(&L->cur,"STACK2SHR32")||kw(&L->cur,"PAIRSHR32")||
-      kw(&L->cur,"DSAR32")||kw(&L->cur,"2SAR32")||kw(&L->cur,"S2SAR32")||
-      kw(&L->cur,"STACK2SAR32")||kw(&L->cur,"PAIRSAR32")||kw(&L->cur,"DASHR32")||
-      kw(&L->cur,"2ASHR32")){
-    /* a b c d → shift32(a,c) shift32(b,d); result low 32; SAR sign-extends bit31 */
-    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *q=op;*q;q++) if (*q>='a'&&*q<='z') *q=(char)(*q-'a'+'A');
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    int is_shl = (strstr(op,"SHL") != NULL);
-    int is_sar = (!is_shl && (strstr(op,"SAR") != NULL || strstr(op,"ASHR") != NULL));
-    int bits = 32;
-    unsigned long mask = 0xFFFFFFFFul;
-    long signb = 0x80000000L;
-    long kc = c < 0 ? 0 : c;
-    long kd = d < 0 ? 0 : d;
-    long x, y;
-    if (is_shl){
-      if (kc >= bits) x = 0;
-      else x = (long)((((unsigned long)a & mask) << (unsigned)kc) & mask);
-      if (kd >= bits) y = 0;
-      else y = (long)((((unsigned long)b & mask) << (unsigned)kd) & mask);
-    } else if (!is_sar){
-      /* logical SHR */
-      if (kc >= bits) x = 0;
-      else x = (long)(((unsigned long)a & mask) >> (unsigned)kc);
-      if (kd >= bits) y = 0;
-      else y = (long)(((unsigned long)b & mask) >> (unsigned)kd);
-    } else {
-      long va = (long)((unsigned long)a & mask);
-      long vb = (long)((unsigned long)b & mask);
-      if (va & signb) va |= (long)~mask;
-      if (vb & signb) vb |= (long)~mask;
-      if (kc >= bits) x = (va < 0) ? -1L : 0L;
-      else x = va >> kc;
-      if (kd >= bits) y = (vb < 0) ? -1L : 0L;
-      else y = vb >> kd;
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSHL32·DSHR32·DSAR32 → dual_clip peel (G_dual_margin) */
   /* digit-2 dual-stack numthy ext: DSQR · DISQRT (unary pair) · DCOPRIME (pairwise) */
   if (kw(&L->cur,"DSQR")||kw(&L->cur,"2SQR")||kw(&L->cur,"S2SQR")||
       kw(&L->cur,"STACK2SQR")||kw(&L->cur,"PAIRSQR")||kw(&L->cur,"DSQUARE")||
