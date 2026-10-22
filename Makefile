@@ -33,7 +33,7 @@ CUBEVIZ ?= ../cubebrain/modules/viz
 LDFLAGS ?= $(LDFLAGS_SYS)
 
 CORE_SRC = \
-	src/cubalc_main.c src/cubalc_cmd_doctor.c src/cubalc_cmd_selftest.c src/cubalc_cmd_run.c src/cubalc_cmd_stdlib.c src/cubalc_cmd_vars.c src/cubalc_cmd_formrel.c src/cubalc_cmd_contracts.c src/cubalc_cmd_whyguide.c src/cubalc_cmd_cliinfo.c src/cubalc_cmd_argmap.c src/cubalc_cmd_formhints.c src/cubalc_cmd_usability.c src/cubalc_cmd_forms.c src/cubalc_cmd_init.c src/cubalc_cmd_which.c src/cubalc_cmd_search.c src/cubalc_cmd_plate.c src/cubalc_cmd_smx_exchange.c src/cubalc_cmd_smx_bus.c src/cubalc_cmd_smx_selftest.c src/cubalc_cmd_protect.c src/cubalc_cmd_showcase.c src/cubalc_cmd_genesis.c src/cubalc_cmd_sync.c src/cubalc_run_util.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
+	src/cubalc_main.c src/cubalc_cmd_doctor.c src/cubalc_cmd_selftest.c src/cubalc_cmd_run.c src/cubalc_cmd_stdlib.c src/cubalc_cmd_vars.c src/cubalc_cmd_formrel.c src/cubalc_cmd_contracts.c src/cubalc_cmd_whyguide.c src/cubalc_cmd_cliinfo.c src/cubalc_cmd_argmap.c src/cubalc_cmd_endarg.c src/cubalc_cmd_formhints.c src/cubalc_cmd_usability.c src/cubalc_cmd_forms.c src/cubalc_cmd_init.c src/cubalc_cmd_which.c src/cubalc_cmd_search.c src/cubalc_cmd_plate.c src/cubalc_cmd_smx_exchange.c src/cubalc_cmd_smx_bus.c src/cubalc_cmd_smx_selftest.c src/cubalc_cmd_protect.c src/cubalc_cmd_showcase.c src/cubalc_cmd_genesis.c src/cubalc_cmd_sync.c src/cubalc_run_util.c src/cubalc_core.c src/cubalc_algocube.c src/cubalc_evolve.c \
 	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c \
 	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_hostops_chat.c src/cubalc_hostops_json_delta.c src/cubalc_async.c \
@@ -69,6 +69,7 @@ LANG_SRC = \
 	src/lang/lang_ops_cell_energyflow.c \
 	src/lang/lang_ops_cell_runtime.c \
 	src/lang/lang_ops_cell_include_query.c \
+	src/lang/lang_ops_cell_include.c \
 	src/lang/lang_ops_cell_preload.c \
 	src/lang/lang_ops_cell_matlogic.c \
 	src/lang/lang_ops_core.c \
