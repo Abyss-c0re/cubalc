@@ -563,6 +563,38 @@ int cubalc_host_json_topkey(const char *json, int want_min, cubalc_host_result *
   r->ok = 1;
   return 0;
 }
+/* --- dotted path helpers (GETP "freq.error" / SETP "a.b" …) --- */
+#define CUBALC_JSON_PATH_MAXSEG 8
+
+static int cubalc_json_path_is_deep(const char *path) {
+  if (!path) return 0;
+  for (; *path; path++)
+    if (*path == '.' || *path == '/') return 1;
+  return 0;
+}
+
+static int cubalc_json_path_split(const char *path, char segs[][96], int maxsegs) {
+  const char *p;
+  int n = 0;
+  size_t i;
+  if (!path || !path[0] || maxsegs < 1) return -1;
+  p = path;
+  while (*p && n < maxsegs) {
+    while (*p == '.' || *p == '/') p++;
+    if (!*p) break;
+    i = 0;
+    while (*p && *p != '.' && *p != '/' && i + 1 < 96)
+      segs[n][i++] = *p++;
+    segs[n][i] = 0;
+    if (!segs[n][0]) return -1;
+    n++;
+    if (*p == '.' || *p == '/') p++;
+  }
+  if (*p) return -1; /* too many segments */
+  return n;
+}
+
+
 
 /* Usability: SYS JSONTOKV plate — object → key:val bag (dual of JSONFROMKV).
  * Uses ':' so default LOOKUP/FREQ work without sep glue. r->n = pairs. */
@@ -2858,3 +2890,153 @@ int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_resu
   return -1;
 }
 
+
+/* Set leaf along path; create missing intermediate objects as {}.
+ * r->str = new root plate · r->n from leaf set · r->code = path depth. */
+int cubalc_host_json_path_set(const char *json, const char *path, const char *val,
+                              int val_kind, cubalc_host_result *r) {
+  char segs[CUBALC_JSON_PATH_MAXSEG][96];
+  char objs[CUBALC_JSON_PATH_MAXSEG][CUBALC_HOST_STR_MAX];
+  cubalc_host_result gr, wr;
+  int n, i;
+  const char *v;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "jsonpath: empty path");
+    return -1;
+  }
+  if (!cubalc_json_path_is_deep(path))
+    return cubalc_host_json_set(json, path, val, val_kind, r);
+  n = cubalc_json_path_split(path, segs, CUBALC_JSON_PATH_MAXSEG);
+  if (n < 1) {
+    snprintf(r->err, sizeof r->err, "jsonpath: bad path");
+    return -1;
+  }
+  /* objs[0] = root; objs[i+1] = object under segs[i] */
+  snprintf(objs[0], sizeof objs[0], "%s", json && json[0] ? json : "{}");
+  {
+    const char *b = objs[0];
+    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+    if (*b != '{')
+      snprintf(objs[0], sizeof objs[0], "%s", "{}");
+  }
+  for (i = 0; i < n - 1; i++) {
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(objs[i], segs[i], &gr) == 0) {
+      v = gr.str;
+      while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+      if (*v == '{') {
+        if (v != gr.str) {
+          size_t m = strlen(v);
+          memmove(gr.str, v, m + 1);
+        }
+        snprintf(objs[i + 1], sizeof objs[i + 1], "%s", gr.str);
+      } else {
+        /* non-object intermediate: replace with {} */
+        snprintf(objs[i + 1], sizeof objs[i + 1], "%s", "{}");
+      }
+    } else {
+      snprintf(objs[i + 1], sizeof objs[i + 1], "%s", "{}");
+    }
+  }
+  /* set leaf on deepest object */
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_json_set(objs[n - 1], segs[n - 1], val ? val : "", val_kind, &wr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s", wr.err[0] ? wr.err : "jsonpath: leaf set fail");
+    return -1;
+  }
+  snprintf(objs[n - 1], sizeof objs[n - 1], "%s", wr.str);
+  r->n = wr.n;
+  /* bubble raw objects up to root */
+  for (i = n - 2; i >= 0; i--) {
+    memset(&wr, 0, sizeof wr);
+    if (cubalc_host_json_set(objs[i], segs[i], objs[i + 1], 1, &wr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s", wr.err[0] ? wr.err : "jsonpath: nest set fail");
+      return -1;
+    }
+    snprintf(objs[i], sizeof objs[i], "%s", wr.str);
+  }
+  snprintf(r->str, sizeof r->str, "%s", objs[0]);
+  r->code = n;
+  r->ok = 1;
+  return 0;
+}
+
+/* Delete leaf along path; soft miss (r->n=0, root copy). Intermediate miss → n=0. */
+int cubalc_host_json_path_del(const char *json, const char *path, cubalc_host_result *r) {
+  char segs[CUBALC_JSON_PATH_MAXSEG][96];
+  char objs[CUBALC_JSON_PATH_MAXSEG][CUBALC_HOST_STR_MAX];
+  cubalc_host_result gr, wr;
+  int n, i;
+  const char *v;
+  r_clear(r);
+  if (!path || !path[0]) {
+    snprintf(r->err, sizeof r->err, "jsonpath: empty path");
+    return -1;
+  }
+  if (!cubalc_json_path_is_deep(path))
+    return cubalc_host_json_del(json, path, r);
+  n = cubalc_json_path_split(path, segs, CUBALC_JSON_PATH_MAXSEG);
+  if (n < 1) {
+    snprintf(r->err, sizeof r->err, "jsonpath: bad path");
+    return -1;
+  }
+  snprintf(objs[0], sizeof objs[0], "%s", json && json[0] ? json : "{}");
+  {
+    const char *b = objs[0];
+    while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+    if (*b != '{') {
+      snprintf(r->str, sizeof r->str, "%s", "{}");
+      r->n = 0;
+      r->ok = 1;
+      return 0;
+    }
+  }
+  for (i = 0; i < n - 1; i++) {
+    memset(&gr, 0, sizeof gr);
+    if (cubalc_host_json_get_raw(objs[i], segs[i], &gr) != 0) {
+      snprintf(r->str, sizeof r->str, "%s", objs[0]);
+      r->n = 0;
+      r->ok = 1;
+      return 0;
+    }
+    v = gr.str;
+    while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+    if (*v != '{') {
+      snprintf(r->str, sizeof r->str, "%s", objs[0]);
+      r->n = 0;
+      r->ok = 1;
+      return 0;
+    }
+    if (v != gr.str) {
+      size_t m = strlen(v);
+      memmove(gr.str, v, m + 1);
+    }
+    snprintf(objs[i + 1], sizeof objs[i + 1], "%s", gr.str);
+  }
+  memset(&wr, 0, sizeof wr);
+  if (cubalc_host_json_del(objs[n - 1], segs[n - 1], &wr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s", wr.err[0] ? wr.err : "jsonpath: leaf del fail");
+    return -1;
+  }
+  if (wr.n == 0) {
+    snprintf(r->str, sizeof r->str, "%s", objs[0]);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  snprintf(objs[n - 1], sizeof objs[n - 1], "%s", wr.str);
+  r->n = 1;
+  for (i = n - 2; i >= 0; i--) {
+    memset(&wr, 0, sizeof wr);
+    if (cubalc_host_json_set(objs[i], segs[i], objs[i + 1], 1, &wr) != 0) {
+      snprintf(r->err, sizeof r->err, "%s", wr.err[0] ? wr.err : "jsonpath: nest set fail");
+      return -1;
+    }
+    snprintf(objs[i], sizeof objs[i], "%s", wr.str);
+  }
+  snprintf(r->str, sizeof r->str, "%s", objs[0]);
+  r->code = n;
+  r->ok = 1;
+  return 0;
+}
