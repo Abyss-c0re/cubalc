@@ -3992,5 +3992,56 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-8 dual-stack nibble swap: DNIBSWAP (low-byte nibble exchange) */
+  if (kw(&L->cur,"DNIBSWAP")||kw(&L->cur,"2NIBSWAP")||kw(&L->cur,"S2NIBSWAP")||
+      kw(&L->cur,"STACK2NIBSWAP")||kw(&L->cur,"PAIRNIBSWAP")||kw(&L->cur,"DSWAPNIB")||
+      kw(&L->cur,"2SWAPNIB")||kw(&L->cur,"DNIBXCHG")||kw(&L->cur,"2NIBXCHG")){
+    /* a b → swap_lo_nibbles(a) swap_lo_nibbles(b); result low byte only
+     * ((x&0xF)<<4)|((x>>4)&0xF) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    unsigned ua = (unsigned)a & 0xFFu;
+    unsigned ub = (unsigned)b & 0xFFu;
+    long x = (long)(((ua & 0x0Fu) << 4) | ((ua >> 4) & 0x0Fu));
+    long y = (long)(((ub & 0x0Fu) << 4) | ((ub >> 4) & 0x0Fu));
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DWITHIN")||kw(&L->cur,"2WITHIN")||kw(&L->cur,"S2WITHIN")||
+      kw(&L->cur,"STACK2WITHIN")||kw(&L->cur,"PAIRWITHIN")||
+      kw(&L->cur,"DBETWEEN")||kw(&L->cur,"2BETWEEN")||kw(&L->cur,"S2BETWEEN")||
+      kw(&L->cur,"STACK2BETWEEN")||kw(&L->cur,"PAIRBETWEEN")||kw(&L->cur,"DINRANGE")){
+    /* a b lo hi → inrange(a) inrange(b); WITHIN half-open [lo,hi), BETWEEN closed [lo,hi] */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_within = (strcmp(op,"DWITHIN")==0 || strcmp(op,"2WITHIN")==0 ||
+                     strcmp(op,"S2WITHIN")==0 || strcmp(op,"STACK2WITHIN")==0 ||
+                     strcmp(op,"PAIRWITHIN")==0);
+    long x, y;
+    if (is_within){
+      /* Forth WITHIN: lo <= n < hi (no swap) */
+      x = (a >= lo && a < hi) ? 1 : 0;
+      y = (b >= lo && b < hi) ? 1 : 0;
+    } else {
+      long lo2 = lo, hi2 = hi;
+      if (lo2 > hi2){ long t = lo2; lo2 = hi2; hi2 = t; }
+      x = (a >= lo2 && a <= hi2) ? 1 : 0;
+      y = (b >= lo2 && b <= hi2) ? 1 : 0;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
