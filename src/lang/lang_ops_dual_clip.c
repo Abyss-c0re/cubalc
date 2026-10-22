@@ -971,5 +971,75 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-5 dual-stack imm rotate-through-CARRY: DSHLCCN · DSHRCCN (dual of SSHLCN/SSHRCN) */
+  if (kw(&L->cur,"DSHLCCN")||kw(&L->cur,"2SHLCCN")||kw(&L->cur,"S2SHLCCN")||
+      kw(&L->cur,"STACK2SHLCCN")||kw(&L->cur,"PAIRSHLCCN")||kw(&L->cur,"DSHLCFN")||
+      kw(&L->cur,"2SHLCFN")||kw(&L->cur,"PAIRSHLCFN")||kw(&L->cur,"DRCLN")||
+      kw(&L->cur,"2RCLN")||kw(&L->cur,"PAIRRCLN")){
+    /* a b + n → RCL(a,n) RCL(b,n); shared cin, CARRY = OR of final couts */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    long cina = cin, cinb = cin;
+    for (long i = 0; i < n; i++){
+      int ca = (ua & msb) ? 1 : 0;
+      int cb = (ub & msb) ? 1 : 0;
+      ua = (ua << 1) | (cina ? 1ul : 0ul);
+      ub = (ub << 1) | (cinb ? 1ul : 0ul);
+      cina = ca; cinb = cb;
+    }
+    int flag = (cina ? 1 : 0) | (cinb ? 1 : 0);
+    long x = (long)ua, y = (long)ub;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSHRCCN")||kw(&L->cur,"2SHRCCN")||kw(&L->cur,"S2SHRCCN")||
+      kw(&L->cur,"STACK2SHRCCN")||kw(&L->cur,"PAIRSHRCCN")||kw(&L->cur,"DSHRCFN")||
+      kw(&L->cur,"2SHRCFN")||kw(&L->cur,"PAIRSHRCFN")||kw(&L->cur,"DRCRN")||
+      kw(&L->cur,"2RCRN")||kw(&L->cur,"PAIRRCRN")){
+    /* a b + n → RCR(a,n) RCR(b,n); shared cin, CARRY = OR of final couts */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long ua = (unsigned long)vm->stack[vm->sp - 2];
+    unsigned long ub = (unsigned long)vm->stack[vm->sp - 1];
+    unsigned long msb = 1ul << (sizeof(unsigned long) * 8 - 1);
+    long cin = 0;
+    {
+      Var *vc = var_get(vm, "CARRY", 0);
+      if (vc && vc->val) cin = 1;
+    }
+    long cina = cin, cinb = cin;
+    for (long i = 0; i < n; i++){
+      int ca = (ua & 1ul) ? 1 : 0;
+      int cb = (ub & 1ul) ? 1 : 0;
+      ua = (ua >> 1) | (cina ? msb : 0ul);
+      ub = (ub >> 1) | (cinb ? msb : 0ul);
+      cina = ca; cinb = cb;
+    }
+    int flag = (cina ? 1 : 0) | (cinb ? 1 : 0);
+    long x = (long)ua, y = (long)ub;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"CARRY",flag); var_set_num(vm,"CY",flag);
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
