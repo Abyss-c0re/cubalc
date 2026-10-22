@@ -3776,5 +3776,40 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 dual-stack control gates: DTHRESH · DGATE */
+  if (kw(&L->cur,"DTHRESH")||kw(&L->cur,"2THRESH")||kw(&L->cur,"S2THRESH")||
+      kw(&L->cur,"STACK2THRESH")||kw(&L->cur,"PAIRTHRESH")||kw(&L->cur,"DTH")||
+      kw(&L->cur,"2TH")){
+    /* a b ta tb → (a>=ta?1:0) (b>=tb?1:0)  dual threshold predicates */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = (a >= ta) ? 1 : 0;
+    long y = (b >= tb) ? 1 : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DGATE")||kw(&L->cur,"2GATE")||kw(&L->cur,"S2GATE")||
+      kw(&L->cur,"STACK2GATE")||kw(&L->cur,"PAIRGATE")||kw(&L->cur,"DANDIF")||
+      kw(&L->cur,"2ANDIF")||kw(&L->cur,"S2ANDIF")||kw(&L->cur,"PAIRANDIF")){
+    /* a b ga gb → (ga!=0?a:0) (gb!=0?b:0)  dual boolean gate / mask pass */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long gb = vm->stack[--vm->sp];
+    long ga = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = ga ? a : 0;
+    long y = gb ? b : 0;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
