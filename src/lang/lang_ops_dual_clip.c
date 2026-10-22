@@ -1269,5 +1269,52 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-1 dual-stack boolean control: DLAND · DLOR · DLXOR · DIMP (dual of SLAND/SLOR/SLXOR/SIMP) */
+  if (kw(&L->cur,"DLAND")||kw(&L->cur,"2LAND")||kw(&L->cur,"S2LAND")||
+      kw(&L->cur,"STACK2LAND")||kw(&L->cur,"PAIRLAND")||
+      kw(&L->cur,"DLOR")||kw(&L->cur,"2LOR")||kw(&L->cur,"S2LOR")||
+      kw(&L->cur,"STACK2LOR")||kw(&L->cur,"PAIRLOR")||
+      kw(&L->cur,"DLXOR")||kw(&L->cur,"2LXOR")||kw(&L->cur,"S2LXOR")||
+      kw(&L->cur,"STACK2LXOR")||kw(&L->cur,"PAIRLXOR")||
+      kw(&L->cur,"DIMP")||kw(&L->cur,"2IMP")||kw(&L->cur,"S2IMP")||
+      kw(&L->cur,"STACK2IMP")||kw(&L->cur,"PAIRIMP")||kw(&L->cur,"DIMPLY")||
+      kw(&L->cur,"2IMPLY")||kw(&L->cur,"PAIRIMPLY")||kw(&L->cur,"DIMPLIES")||
+      kw(&L->cur,"2IMPLIES")){
+    /* a b c d → land/lor/lxor/imp(a,c) land/lor/lxor/imp(b,d) as 0/1 */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    int is_and = (strcmp(op,"DLAND")==0 || strcmp(op,"2LAND")==0 || strcmp(op,"S2LAND")==0 ||
+                  strcmp(op,"STACK2LAND")==0 || strcmp(op,"PAIRLAND")==0);
+    int is_or = (strcmp(op,"DLOR")==0 || strcmp(op,"2LOR")==0 || strcmp(op,"S2LOR")==0 ||
+                 strcmp(op,"STACK2LOR")==0 || strcmp(op,"PAIRLOR")==0);
+    int is_xor = (strcmp(op,"DLXOR")==0 || strcmp(op,"2LXOR")==0 || strcmp(op,"S2LXOR")==0 ||
+                  strcmp(op,"STACK2LXOR")==0 || strcmp(op,"PAIRLXOR")==0);
+    /* else DIMP / imply */
+    long x, y;
+    if (is_and){
+      x = (a && c) ? 1 : 0;
+      y = (b && d) ? 1 : 0;
+    } else if (is_or){
+      x = (a || c) ? 1 : 0;
+      y = (b || d) ? 1 : 0;
+    } else if (is_xor){
+      x = ((a != 0) ^ (c != 0)) ? 1 : 0;
+      y = ((b != 0) ^ (d != 0)) ? 1 : 0;
+    } else {
+      x = (!a || c) ? 1 : 0;
+      y = (!b || d) ? 1 : 0;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
