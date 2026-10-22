@@ -58,6 +58,7 @@ LANG_SRC = \
 	src/lang/lang_ops_cell_matmetric.c \
 	src/lang/lang_ops_cell_matruns.c \
 	src/lang/lang_ops_cell_matfind.c \
+	src/lang/lang_ops_cell_matrange.c \
 	src/lang/lang_ops_core.c \
 	src/lang/lang_ops_core_agent.c \
 	src/lang/lang_ops_core_assert.c \
