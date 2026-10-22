@@ -3659,5 +3659,41 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-1 dual-stack 3-way compare: DCMP · DUCMP (−1/0/+1) */
+  if (kw(&L->cur,"DCMP")||kw(&L->cur,"2CMP")||kw(&L->cur,"S2CMP")||
+      kw(&L->cur,"STACK2CMP")||kw(&L->cur,"PAIRCMP")||kw(&L->cur,"DICMP")||
+      kw(&L->cur,"2ICMP")||kw(&L->cur,"DCMP3")||kw(&L->cur,"2CMP3")||
+      kw(&L->cur,"DUCMP")||kw(&L->cur,"2UCMP")||kw(&L->cur,"S2UCMP")||
+      kw(&L->cur,"STACK2UCMP")||kw(&L->cur,"PAIRUCMP")||kw(&L->cur,"DUCMP3")||
+      kw(&L->cur,"2UCMP3")){
+    /* a b c d → cmp(a,c) cmp(b,d) as −1 / 0 / +1
+     * DCMP signed; DUCMP unsigned */
+    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
+    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
+    int is_u = (strcmp(op,"DUCMP")==0 || strcmp(op,"2UCMP")==0 ||
+                strcmp(op,"S2UCMP")==0 || strcmp(op,"STACK2UCMP")==0 ||
+                strcmp(op,"PAIRUCMP")==0 || strcmp(op,"DUCMP3")==0 ||
+                strcmp(op,"2UCMP3")==0);
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = 0, y = 0;
+    if (is_u){
+      unsigned long ua = (unsigned long)a, uc = (unsigned long)c;
+      unsigned long ub = (unsigned long)b, ud = (unsigned long)d;
+      if (ua < uc) x = -1; else if (ua > uc) x = 1; else x = 0;
+      if (ub < ud) y = -1; else if (ub > ud) y = 1; else y = 0;
+    } else {
+      if (a < c) x = -1; else if (a > c) x = 1; else x = 0;
+      if (b < d) y = -1; else if (b > d) y = 1; else y = 0;
+    }
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
