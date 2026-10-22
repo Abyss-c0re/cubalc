@@ -2563,5 +2563,215 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 bound/select peel: DSIGN·D0*·DCLAMP·DSEL·DSEL2 (G_dual_margin) */
+  /* digit-6 dual-stack bound/select: DSIGN · DCLAMP · DSEL/DMUX (energy-style bounds) */
+  if (kw(&L->cur,"DSIGN")||kw(&L->cur,"2SIGN")||kw(&L->cur,"S2SIGN")||
+      kw(&L->cur,"STACK2SIGN")||kw(&L->cur,"PAIRSIGN")||kw(&L->cur,"DSGN")){
+    /* a b → sgn(a) sgn(b)  as -1/0/1 */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a > 0) ? 1 : ((a < 0) ? -1 : 0);
+    long y = (b > 0) ? 1 : ((b < 0) ? -1 : 0);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-4 dual-stack zero/sign predicates: D0EQ · D0NE · D0LT · D0GT (dual of SZ/SNZ/S0LT/S0GT) */
+  if (kw(&L->cur,"D0EQ")||kw(&L->cur,"2_0EQ")||kw(&L->cur,"S20EQ")||
+      kw(&L->cur,"STACK20EQ")||kw(&L->cur,"PAIR0EQ")||kw(&L->cur,"DZ")||
+      kw(&L->cur,"2Z")||kw(&L->cur,"S2Z")||kw(&L->cur,"PAIRZ")||
+      kw(&L->cur,"DZEROEQ")||kw(&L->cur,"2ZEROEQ")){
+    /* a b → (a==0?1:0) (b==0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a == 0) ? 1 : 0;
+    long y = (b == 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0NE")||kw(&L->cur,"2_0NE")||kw(&L->cur,"S20NE")||
+      kw(&L->cur,"STACK20NE")||kw(&L->cur,"PAIR0NE")||kw(&L->cur,"DNZ")||
+      kw(&L->cur,"2NZ")||kw(&L->cur,"S2NZ")||kw(&L->cur,"PAIRNZ")||
+      kw(&L->cur,"DZERONE")||kw(&L->cur,"2ZERONE")||kw(&L->cur,"D0NEQ")){
+    /* a b → (a!=0?1:0) (b!=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a != 0) ? 1 : 0;
+    long y = (b != 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0LT")||kw(&L->cur,"2_0LT")||kw(&L->cur,"S20LT")||
+      kw(&L->cur,"STACK20LT")||kw(&L->cur,"PAIR0LT")||kw(&L->cur,"DNEGSGN")||
+      kw(&L->cur,"2NEGSGN")||kw(&L->cur,"D0NEG")||kw(&L->cur,"PAIR0NEG")){
+    /* a b → (a<0?1:0) (b<0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a < 0) ? 1 : 0;
+    long y = (b < 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0GT")||kw(&L->cur,"2_0GT")||kw(&L->cur,"S20GT")||
+      kw(&L->cur,"STACK20GT")||kw(&L->cur,"PAIR0GT")||kw(&L->cur,"DPOS")||
+      kw(&L->cur,"2POS")||kw(&L->cur,"S2POS")||kw(&L->cur,"PAIRPOS")||
+      kw(&L->cur,"D0POS")||kw(&L->cur,"PAIR0POS")){
+    /* a b → (a>0?1:0) (b>0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a > 0) ? 1 : 0;
+    long y = (b > 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-6 dual-stack zero-bound preds: D0LE · D0GE (complete D0* after D0LT/D0GT; energy-sign plane) */
+  if (kw(&L->cur,"D0LE")||kw(&L->cur,"2_0LE")||kw(&L->cur,"S20LE")||
+      kw(&L->cur,"STACK20LE")||kw(&L->cur,"PAIR0LE")||kw(&L->cur,"DNONPOS")||
+      kw(&L->cur,"2NONPOS")||kw(&L->cur,"D0LEQ")||kw(&L->cur,"PAIR0LEQ")){
+    /* a b → (a<=0?1:0) (b<=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a <= 0) ? 1 : 0;
+    long y = (b <= 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"D0GE")||kw(&L->cur,"2_0GE")||kw(&L->cur,"S20GE")||
+      kw(&L->cur,"STACK20GE")||kw(&L->cur,"PAIR0GE")||kw(&L->cur,"DNONNEG")||
+      kw(&L->cur,"2NONNEG")||kw(&L->cur,"D0GEQ")||kw(&L->cur,"PAIR0GEQ")){
+    /* a b → (a>=0?1:0) (b>=0?1:0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (a >= 0) ? 1 : 0;
+    long y = (b >= 0) ? 1 : 0;
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DCLAMP")||kw(&L->cur,"2CLAMP")||kw(&L->cur,"S2CLAMP")||
+      kw(&L->cur,"STACK2CLAMP")||kw(&L->cur,"PAIRCLAMP")||kw(&L->cur,"DCLMP")){
+    /* a b lo hi → clamp(a,[lo,hi]) clamp(b,[lo,hi]); lo/hi swapped if inverted */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long hi = vm->stack[--vm->sp];
+    long lo = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (lo > hi){ long t = lo; lo = hi; hi = t; }
+    long x = a, y = b;
+    if (x < lo) x = lo;
+    if (x > hi) x = hi;
+    if (y < lo) y = lo;
+    if (y > hi) y = hi;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DSEL")||kw(&L->cur,"2SEL")||kw(&L->cur,"S2SEL")||
+      kw(&L->cur,"STACK2SEL")||kw(&L->cur,"PAIRSEL")||
+      kw(&L->cur,"DMUX")||kw(&L->cur,"2MUX")||kw(&L->cur,"S2MUX")||
+      kw(&L->cur,"STACK2MUX")||kw(&L->cur,"PAIRMUX")){
+    /* fa fb ta tb c → (c?ta:fa) (c?tb:fb) — shared cond on TOS */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long c = vm->stack[--vm->sp];
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long fb = vm->stack[--vm->sp];
+    long fa = vm->stack[--vm->sp];
+    long x = c ? ta : fa;
+    long y = c ? tb : fb;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  /* digit-1 dual-stack control: DSEL2 · DMUX2 (per-lane cond mux) */
+  if (kw(&L->cur,"DSEL2")||kw(&L->cur,"2SEL2")||kw(&L->cur,"S2SEL2")||
+      kw(&L->cur,"STACK2SEL2")||kw(&L->cur,"PAIRSEL2")||
+      kw(&L->cur,"DMUX2")||kw(&L->cur,"2MUX2")||kw(&L->cur,"S2MUX2")||
+      kw(&L->cur,"STACK2MUX2")||kw(&L->cur,"PAIRMUX2")){
+    /* fa fb ta tb ca cb → (ca?ta:fa) (cb?tb:fb) — independent lane conds */
+    lex_next(L);
+    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long cb = vm->stack[--vm->sp];
+    long ca = vm->stack[--vm->sp];
+    long tb = vm->stack[--vm->sp];
+    long ta = vm->stack[--vm->sp];
+    long fb = vm->stack[--vm->sp];
+    long fa = vm->stack[--vm->sp];
+    long x = ca ? ta : fa;
+    long y = cb ? tb : fb;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+
+  /* digit-1 dual-stack conditionals: DNIPIF · DKEEPIF (pair forms of SNIPIF/SKEEPIF) */
+  if (kw(&L->cur,"DNIPIF")||kw(&L->cur,"2NIPIF")||kw(&L->cur,"S2NIPIF")||
+      kw(&L->cur,"STACK2NIPIF")||kw(&L->cur,"PAIRNIPIF")||kw(&L->cur,"DCNIP")||
+      kw(&L->cur,"2CNIP")){
+    /* a b c d f → (f?b:a) (f?d:c) — shared flag choose-per-lane */
+    lex_next(L);
+    if (vm->sp < 5){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long x = f ? b : a;
+    long y = f ? d : c;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DKEEPIF")||kw(&L->cur,"2KEEPIF")||kw(&L->cur,"S2KEEPIF")||
+      kw(&L->cur,"STACK2KEEPIF")||kw(&L->cur,"PAIRKEEPIF")||kw(&L->cur,"DQKEEP")||
+      kw(&L->cur,"2QKEEP")||kw(&L->cur,"DKEEPWHEN")||kw(&L->cur,"2KEEPWHEN")){
+    /* a b f → if f leave a b else drop both */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    } else {
+      long last = (vm->sp > 0) ? vm->stack[vm->sp - 1] : 0;
+      var_set_num(vm,"LAST_N",last); vm->last_n=last;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
