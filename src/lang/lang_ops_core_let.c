@@ -1,5 +1,6 @@
-/* CubalC lang — LET · INC/DEC · SWAP (core var plane; rescued from nest_sortp residual) */
+/* CubalC lang — LET · INC/DEC · SWAP · REQUIRE RESTARGS (core var plane) */
 #include "lang/cubalc_lang_ops_core_let.h"
+#include "lang/cubalc_lang_ops_sys_cli.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -258,15 +259,56 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
     bump(vm); return 1;
   }
 
-  /* REQUIRE VERSION floor — agent_boot / lib gate (minimal restore; full REQUIRE plane later). */
+  /* REQUIRE VERSION floor + REQUIRE RESTARGS hard gate (mesh vote B_E). */
   if (kw(&L->cur, "REQUIRE") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRES")) {
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE RESTARGS|POS [min] — fail if non-flag count < min (default 1). */
+    if (kw(&L->cur, "RESTARGS") || kw(&L->cur, "POSITIONALS") || kw(&L->cur, "POSARGS") ||
+        kw(&L->cur, "POS") || kw(&L->cur, "NFILES") || kw(&L->cur, "FILES") ||
+        kw(&L->cur, "REST_ARGS") || kw(&L->cur, "NONFLAGS")) {
+      long need = 1, have;
+      char bag[CUBALC_HOST_STR_MAX], msg[180];
+      lex_next(L);
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+          (L->cur.kind == TK_IDENT && !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+           !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") && !kw(&L->cur, "END") &&
+           !kw(&L->cur, "REQUIRE") && !kw(&L->cur, "NEED") && !kw(&L->cur, "PATH") &&
+           !kw(&L->cur, "FLAG") && !kw(&L->cur, "ARG") && !kw(&L->cur, "ARGC"))) {
+        need = parse_expr(vm, L);
+      }
+      if (need < 0) need = 0;
+      if (need > 32) need = 32;
+      have = cubalc_collect_restargs(bag, sizeof bag);
+      if (have < need) {
+        snprintf(msg, sizeof msg,
+                 "REQUIRE RESTARGS %ld got %ld line %d — pass files after --flags (RESTARGS)",
+                 need, have, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", bag);
+      var_set_str(vm, "RESTARGS", bag);
+      var_set_str(vm, "POSITIONALS", bag);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+      vm->last_n = have;
+      var_set_num(vm, "LAST_N", have);
+      var_set_num(vm, "RESTARGS_N", have);
+      var_set_num(vm, "REQUIRE_RESTARGS", need);
+      var_set_num(vm, "OK", 1);
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace)
+        fprintf(vm->trace, "# require restargs >= %ld (have %ld)\n", need, have);
+      bump(vm);
+      return 1;
+    }
     if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
         kw(&L->cur, "CUBALC"))
       lex_next(L);
     if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT && L->cur.kind != TK_NUM) {
-      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB|ENV|… (use NEED* duals)");
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE RESTARGS|LIB|ENV|… (use NEED* duals)");
       return -1;
     }
     {

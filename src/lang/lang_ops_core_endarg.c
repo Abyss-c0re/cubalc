@@ -720,5 +720,69 @@ int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L) {
       fprintf(vm->trace, "# getflag %s hit=%s → %s src=%s\n", name, hitnm, val, src_tag);
     bump(vm); return 1;
   }
+
+  /* HASRESTARGS [min] — soft 0|1 if non-flag positional count >= min (default 1). */
+  if (kw(&L->cur, "HASRESTARGS") || kw(&L->cur, "HASPOS") || kw(&L->cur, "HASPOSITIONALS") ||
+      kw(&L->cur, "RESTARGS?") || kw(&L->cur, "HAS_RESTARGS") || kw(&L->cur, "ENOUGHPOS") ||
+      kw(&L->cur, "HASFILES") || kw(&L->cur, "HAS_POS")) {
+    long need = 1, have, hit;
+    char bag[CUBALC_HOST_STR_MAX], buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+         !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") && !kw(&L->cur, "END") &&
+         !kw(&L->cur, "IF") && !kw(&L->cur, "HASARG") && !kw(&L->cur, "HASFLAG") &&
+         !kw(&L->cur, "REQUIRE") && !kw(&L->cur, "RESTARGS") && !kw(&L->cur, "USAGE"))) {
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASRESTARGS_N", hit);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (have > 0)
+      var_set_str(vm, "RESTARGS", bag);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasrestargs >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASARGC [min] — soft 0|1 if CUBALC_ARGC >= min (default 1). */
+  if (kw(&L->cur, "HASARGC") || kw(&L->cur, "HASARGS") || kw(&L->cur, "ARGC?") ||
+      kw(&L->cur, "HAS_ARGC") || kw(&L->cur, "ENOUGHARGS")) {
+    long need = 1, have = 0, hit;
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur, "ASSERT") && !kw(&L->cur, "LET") &&
+         !kw(&L->cur, "PRINT") && !kw(&L->cur, "SYS") && !kw(&L->cur, "END") &&
+         !kw(&L->cur, "IF") && !kw(&L->cur, "HASARG") && !kw(&L->cur, "REQUIRE"))) {
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = (long)endarg_argc();
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASARGC_N", hit);
+    var_set_num(vm, "ARGC", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasargc >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm);
+    return 1;
+  }
   return 0;
 }
