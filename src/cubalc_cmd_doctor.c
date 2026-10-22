@@ -78,6 +78,31 @@ int cubalc_cmd_doctor(int argc, char **argv) {
     return ok ? 0 : 1;
   }
 
+  if (strcmp(cmd, "ready") == 0 || strcmp(cmd, "proveready") == 0 ||
+      strcmp(cmd, "install-ready") == 0 || strcmp(cmd, "check-ready") == 0) {
+    /* Usability: install prove checklist (dual of READY). Soft by default.
+     *   cubalc ready · cubalc proveready
+     * Schema cubalc.ready.v1 · agents skip multi HASFORM+HASLIB glue. */
+    cubalc_run_result rr;
+    int ok;
+    static const char src[] = "READY\nPASS\n";
+    memset(&rr, 0, sizeof rr);
+    (void)cubalc_run_source(src, sizeof src - 1, "<cli-ready>", &rr, NULL);
+    ok = (rr.ok && rr.asserts_fail == 0 && !rr.err[0]) ? 1 : 0;
+    /* Prefer nested LAST if it is ready plate; else synthesize. */
+    if (rr.last_print[0] && strstr(rr.last_print, "cubalc.ready.v1")) {
+      printf("%s\n", rr.last_print);
+    } else {
+      printf("{\"schema\":\"cubalc.ready.v1\",\"ok\":%s,\"cmd\":\"ready\","
+             "\"version\":\"%s\","
+             "\"note\":\"install prove checklist · dual of READY\","
+             "\"err\":\"%s\"}\n",
+             ok ? "true" : "false", CUBALC_LANG_VERSION,
+             ok ? "" : (rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "not ready")));
+    }
+    return ok ? 0 : 1;
+  }
+
   (void)argc;
     /* Usability: one JSON plate for agents/humans — is this install ready?
      * Also surfaces INCLUDE lib layout + nest-check readiness (plate_uniform). */
