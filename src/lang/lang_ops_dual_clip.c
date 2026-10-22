@@ -2827,5 +2827,47 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",b); vm->last_n=b;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-1 dual-stack conditionals ext2: DOVERIF · DTUCKIF (combinator forms) */
+  if (kw(&L->cur,"DOVERIF")||kw(&L->cur,"2OVERIF")||kw(&L->cur,"S2OVERIF")||
+      kw(&L->cur,"STACK2OVERIF")||kw(&L->cur,"PAIROVERIF")||kw(&L->cur,"DQOVER")||
+      kw(&L->cur,"2QOVER")||kw(&L->cur,"DOVERWHEN")||kw(&L->cur,"2OVERWHEN")){
+    /* a b f → if f then a b a else a b  (conditional OVER; copy a under TOS) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[vm->sp - 1];
+    long a = vm->stack[vm->sp - 2];
+    if (f){
+      if (vm->sp + 1 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = a;
+      var_set_num(vm,"LAST_N",a); vm->last_n=a;
+    } else {
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DTUCKIF")||kw(&L->cur,"2TUCKIF")||kw(&L->cur,"S2TUCKIF")||
+      kw(&L->cur,"STACK2TUCKIF")||kw(&L->cur,"PAIRTUCKIF")||kw(&L->cur,"DQTUCK")||
+      kw(&L->cur,"2QTUCK")||kw(&L->cur,"DTUCKWHEN")||kw(&L->cur,"2TUCKWHEN")){
+    /* a b f → if f then b a b else a b  (conditional TUCK) */
+    lex_next(L);
+    if (vm->sp < 3){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long f = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (f){
+      if (vm->sp + 3 > CUBALC_STACK_N){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+      vm->stack[vm->sp++] = b;
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    } else {
+      vm->stack[vm->sp++] = a;
+      vm->stack[vm->sp++] = b;
+      var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    }
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
