@@ -66,6 +66,7 @@ LANG_SRC = \
 	src/lang/lang_ops_cell_matrel.c \
 	src/lang/lang_ops_cell_matmux.c \
 	src/lang/lang_ops_cell_matbrain.c \
+	src/lang/lang_ops_cell_energyflow.c \
 	src/lang/lang_ops_cell_matlogic.c \
 	src/lang/lang_ops_core.c \
 	src/lang/lang_ops_core_agent.c \
