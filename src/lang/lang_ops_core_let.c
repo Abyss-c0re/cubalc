@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "cubalc_law.h"
 
 int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
   if (kw(&L->cur,"LET")){
@@ -195,6 +196,135 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       fprintf(vm->trace, "# SWAP %s <-> %s\n", a, b);
     bump(vm);
     return 1;
+  }
+  /* DEFAULT name = expr|str — assign only if name is not yet defined.
+   * Usability: INCLUDE libs set knobs without clobbering caller LET.
+   * LAST_N/DEFAULT_SET = 1 if applied, 0 if skipped; OK always 1. */
+  if (kw(&L->cur,"DEFAULT")||kw(&L->cur,"SETDEFAULT")||kw(&L->cur,"DEFAULT_LET")||
+      kw(&L->cur,"LET_DEFAULT")||kw(&L->cur,"ORLET")){
+    int applied = 0;
+    int exists;
+    char name[48];
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"DEFAULT name = value"); return -1; }
+    snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    if (L->cur.kind!=TK_EQ){ fail(vm,"DEFAULT name = value"); return -1; }
+    lex_next(L);
+    exists = (var_get(vm, name, 0) != NULL);
+    if (L->cur.kind==TK_STR || (L->cur.kind==TK_IDENT && (
+          strcmp(L->cur.text,"LAST")==0 ||
+          (var_get(vm,L->cur.text,0) && var_get(vm,L->cur.text,0)->is_str)))){
+      char buf[CUBALC_HOST_STR_MAX]; buf[0]=0;
+      for(;;){
+        if (L->cur.kind==TK_STR){
+          size_t bl=strlen(buf), al=strlen(L->cur.text);
+          if (bl+al+1 < sizeof buf) memcpy(buf+bl, L->cur.text, al+1);
+          lex_next(L);
+        } else if (L->cur.kind==TK_IDENT){
+          if (strcmp(L->cur.text,"LAST")==0){
+            size_t bl=strlen(buf), al=strlen(vm->last_str);
+            if (bl+al+1 < sizeof buf) memcpy(buf+bl, vm->last_str, al+1);
+            lex_next(L);
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str){
+              size_t bl=strlen(buf), al=strlen(v->sval);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, v->sval, al+1);
+            } else if (v){
+              char nb[32]; snprintf(nb,sizeof nb,"%ld", v->val);
+              size_t bl=strlen(buf), al=strlen(nb);
+              if (bl+al+1 < sizeof buf) memcpy(buf+bl, nb, al+1);
+            } else break;
+            lex_next(L);
+          }
+        } else break;
+        if (L->cur.kind==TK_PLUS){ lex_next(L); continue; }
+        break;
+      }
+      if (!exists){ var_set_str(vm, name, buf); applied = 1; }
+    } else {
+      long v=parse_expr(vm,L);
+      if (!exists){ var_set_num(vm, name, v); applied = 1; }
+    }
+    var_set_num(vm, "DEFAULT_SET", (long)applied);
+    var_set_num(vm, "LAST_N", (long)applied);
+    var_set_num(vm, "OK", 1);
+    vm->last_n = (long)applied;
+    { char nb[8]; snprintf(nb, sizeof nb, "%d", applied);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb); }
+    if (vm->trace)
+      fprintf(vm->trace, "# default %s %s\n", name, applied ? "set" : "skip");
+    bump(vm); return 1;
+  }
+
+  /* REQUIRE VERSION floor — agent_boot / lib gate (minimal restore; full REQUIRE plane later). */
+  if (kw(&L->cur, "REQUIRE") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRES")) {
+    int aln = L->cur.line;
+    lex_next(L);
+    if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
+        kw(&L->cur, "CUBALC"))
+      lex_next(L);
+    if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT && L->cur.kind != TK_NUM) {
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE LIB|ENV|… (use NEED* duals)");
+      return -1;
+    }
+    {
+      char need[64];
+      const char *have = CUBALC_LANG_VERSION;
+      long hn[3] = {0,0,0}, nn[3] = {0,0,0};
+      int hi = 0, ni = 0;
+      char *p;
+      char hbuf[64], nbuf[64];
+      if (L->cur.kind == TK_NUM)
+        snprintf(need, sizeof need, "%ld", L->cur.num);
+      else
+        snprintf(need, sizeof need, "%s", L->cur.text);
+      lex_next(L);
+      snprintf(hbuf, sizeof hbuf, "%s", have);
+      snprintf(nbuf, sizeof nbuf, "%s", need);
+      for (p = hbuf; *p && hi < 3; ) {
+        if (*p >= '0' && *p <= '9') {
+          long v = 0;
+          while (*p >= '0' && *p <= '9') { v = v * 10 + (*p - '0'); p++; }
+          hn[hi++] = v;
+          if (*p == '.' || *p == '-') p++;
+          else break;
+        } else p++;
+      }
+      for (p = nbuf; *p && ni < 3; ) {
+        if (*p >= '0' && *p <= '9') {
+          long v = 0;
+          while (*p >= '0' && *p <= '9') { v = v * 10 + (*p - '0'); p++; }
+          nn[ni++] = v;
+          if (*p == '.' || *p == '-') p++;
+          else break;
+        } else p++;
+      }
+      {
+        int okv = 1, i;
+        for (i = 0; i < 3; i++) {
+          if (hn[i] > nn[i]) break;
+          if (hn[i] < nn[i]) { okv = 0; break; }
+        }
+        if (!okv) {
+          char msg[200];
+          snprintf(msg, sizeof msg,
+                   "REQUIRE VERSION %s failed: have %s — upgrade runtime · cubalc version",
+                   need, have);
+          fail(vm, msg);
+          return -1;
+        }
+      }
+      var_set_str(vm, "LAST", have);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", have);
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "OK", 1);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm);
+      return 1;
+    }
   }
   return 0;
 }

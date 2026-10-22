@@ -52,8 +52,33 @@ int cubalc_lang_ops_core(VM *vm, Lex *L) {
   }
   if (kw(&L->cur, "SHARE") || kw(&L->cur, "SHARE_LEVEL")) {
     lex_next(L);
+    /* optional tail (SHARE state_matrix_only) */
+    while (L->cur.kind == TK_IDENT || L->cur.kind == TK_STR || L->cur.kind == TK_NUM)
+      lex_next(L);
     snprintf(vm->last_str, sizeof vm->last_str, "%s", CUBALC_SHARE);
     var_set_str(vm, "LAST", vm->last_str);
+    var_set_num(vm, "OK", 1);
+    bump(vm);
+    return 1;
+  }
+  /* BUDGET n — mesh/session energy budget knob (law surface; hold_seed). */
+  if (kw(&L->cur, "BUDGET")) {
+    long v = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      v = L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && !vv->is_str) v = vv->val;
+      lex_next(L);
+    } else {
+      fail(vm, "BUDGET needs number");
+      return -1;
+    }
+    var_set_num(vm, "BUDGET", v);
+    var_set_num(vm, "LAST_N", v);
+    vm->last_n = v;
     var_set_num(vm, "OK", 1);
     bump(vm);
     return 1;
@@ -83,5 +108,7 @@ int cubalc_lang_ops_core(VM *vm, Lex *L) {
   r = cubalc_lang_ops_core_try_plate_ext(vm, L); if (r) return r;
   r = cubalc_lang_ops_core_try_plate_nest(vm, L); if (r) return r;
   r = cubalc_lang_ops_core_try_flat(vm, L); if (r) return r;
+
+
   return 0;
 }
