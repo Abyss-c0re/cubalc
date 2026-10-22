@@ -267,44 +267,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DRELU6·DDEADZ → dual_clip peel (G_dual_margin) */
   /* DRANDBITS·DRANDRANGE → dual_clip peel (G_dual_margin) */
   /* DCMP·DUCMP → dual_clip peel (G_dual_margin) */
-  /* digit-1 dual-stack unary control: DINC · DDEC · DNOT · DEQZ · DNEZ */
-  if (kw(&L->cur,"DINC")||kw(&L->cur,"2INC")||kw(&L->cur,"S2INC")||
-      kw(&L->cur,"STACK2INC")||kw(&L->cur,"PAIRINC")||
-      kw(&L->cur,"DDEC")||kw(&L->cur,"2DEC")||kw(&L->cur,"S2DEC")||
-      kw(&L->cur,"STACK2DEC")||kw(&L->cur,"PAIRDEC")||
-      kw(&L->cur,"DNOT")||kw(&L->cur,"2NOT")||kw(&L->cur,"S2NOT")||
-      kw(&L->cur,"STACK2NOT")||kw(&L->cur,"PAIRNOT")||
-      kw(&L->cur,"DEQZ")||kw(&L->cur,"2EQZ")||kw(&L->cur,"S2EQZ")||
-      kw(&L->cur,"STACK2EQZ")||kw(&L->cur,"PAIREQZ")||
-      kw(&L->cur,"DNEZ")||kw(&L->cur,"2NEZ")||kw(&L->cur,"S2NEZ")||
-      kw(&L->cur,"STACK2NEZ")||kw(&L->cur,"PAIRNEZ")){
-    /* a b → f(a) f(b) */
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    lex_next(L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x, y;
-    int is_inc = (strcmp(op,"DINC")==0 || strcmp(op,"2INC")==0 || strcmp(op,"S2INC")==0 ||
-                  strcmp(op,"STACK2INC")==0 || strcmp(op,"PAIRINC")==0);
-    int is_dec = (strcmp(op,"DDEC")==0 || strcmp(op,"2DEC")==0 || strcmp(op,"S2DEC")==0 ||
-                  strcmp(op,"STACK2DEC")==0 || strcmp(op,"PAIRDEC")==0);
-    int is_not = (strcmp(op,"DNOT")==0 || strcmp(op,"2NOT")==0 || strcmp(op,"S2NOT")==0 ||
-                  strcmp(op,"STACK2NOT")==0 || strcmp(op,"PAIRNOT")==0);
-    int is_eqz = (strcmp(op,"DEQZ")==0 || strcmp(op,"2EQZ")==0 || strcmp(op,"S2EQZ")==0 ||
-                  strcmp(op,"STACK2EQZ")==0 || strcmp(op,"PAIREQZ")==0);
-    /* else DNEZ */
-    if (is_inc){ x = a + 1; y = b + 1; }
-    else if (is_dec){ x = a - 1; y = b - 1; }
-    else if (is_not){ x = ~a; y = ~b; }
-    else if (is_eqz){ x = (a == 0) ? 1 : 0; y = (b == 0) ? 1 : 0; }
-    else { x = (a != 0) ? 1 : 0; y = (b != 0) ? 1 : 0; }
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DINC·DDEC·DNOT·DEQZ·DNEZ → dual_clip peel (G_dual_margin) */
   /* digit-1 dual-stack unary predicates: DODD · DEVEN · DLTZ · DGTZ · DLEZ · DGEZ */
   if (kw(&L->cur,"DODD")||kw(&L->cur,"2ODD")||kw(&L->cur,"S2ODD")||
       kw(&L->cur,"STACK2ODD")||kw(&L->cur,"PAIRODD")||
