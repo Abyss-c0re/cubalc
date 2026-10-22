@@ -271,69 +271,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DODD·DEVEN·DLTZ·DGTZ·DLEZ·DGEZ → dual_clip peel (G_dual_margin) */
   /* DTHRESH·DGATE → dual_clip peel (G_dual_margin) */
   /* DRELU·DCOPYSIGN → dual_clip peel (G_dual_margin) */
-  /* digit-1 dual-stack select: DMEDIAN · DMAXABS · DMINABS */
-  if (kw(&L->cur,"DMEDIAN")||kw(&L->cur,"2MEDIAN")||kw(&L->cur,"S2MEDIAN")||
-      kw(&L->cur,"STACK2MEDIAN")||kw(&L->cur,"PAIRMEDIAN")||kw(&L->cur,"DMID3")||
-      kw(&L->cur,"2MID3")||kw(&L->cur,"DMED")||kw(&L->cur,"2MED")||
-      kw(&L->cur,"S2MED")||kw(&L->cur,"PAIRMED")){
-    /* a b c d e f → med(a,c,e) med(b,d,f) */
-    lex_next(L);
-    if (vm->sp < 6){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long f = vm->stack[--vm->sp];
-    long e = vm->stack[--vm->sp];
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long x1 = a, y1 = c, z1 = e;
-    if (x1 > y1){ long t=x1; x1=y1; y1=t; }
-    if (y1 > z1){ long t=y1; y1=z1; z1=t; }
-    if (x1 > y1){ long t=x1; x1=y1; y1=t; }
-    long x2 = b, y2 = d, z2 = f;
-    if (x2 > y2){ long t=x2; x2=y2; y2=t; }
-    if (y2 > z2){ long t=y2; y2=z2; z2=t; }
-    if (x2 > y2){ long t=x2; x2=y2; y2=t; }
-    vm->stack[vm->sp++] = y1;
-    vm->stack[vm->sp++] = y2;
-    var_set_num(vm,"LAST_N",y2); vm->last_n=y2;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DMAXABS")||kw(&L->cur,"2MAXABS")||kw(&L->cur,"S2MAXABS")||
-      kw(&L->cur,"STACK2MAXABS")||kw(&L->cur,"PAIRMAXABS")||kw(&L->cur,"DABSMAX")||
-      kw(&L->cur,"2ABSMAX")||
-      kw(&L->cur,"DMINABS")||kw(&L->cur,"2MINABS")||kw(&L->cur,"S2MINABS")||
-      kw(&L->cur,"STACK2MINABS")||kw(&L->cur,"PAIRMINABS")||kw(&L->cur,"DABSMIN")||
-      kw(&L->cur,"2ABSMIN")){
-    /* a b c d → max/min(|a|,|c|) max/min(|b|,|d|) */
-    char op[20]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    int is_max = (strcmp(op,"DMAXABS")==0 || strcmp(op,"2MAXABS")==0 ||
-                  strcmp(op,"S2MAXABS")==0 || strcmp(op,"STACK2MAXABS")==0 ||
-                  strcmp(op,"PAIRMAXABS")==0 || strcmp(op,"DABSMAX")==0 ||
-                  strcmp(op,"2ABSMAX")==0);
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    long aa = a < 0 ? -a : a;
-    long cc = c < 0 ? -c : c;
-    long bb = b < 0 ? -b : b;
-    long dd = d < 0 ? -d : d;
-    long x, y;
-    if (is_max){
-      x = aa > cc ? aa : cc;
-      y = bb > dd ? bb : dd;
-    } else {
-      x = aa < cc ? aa : cc;
-      y = bb < dd ? bb : dd;
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DMEDIAN·DMAXABS·DMINABS → dual_clip peel (G_dual_margin) */
   /* digit-4 dual-stack rotate + range predicates: DROL · DROR · DWITHIN · DBETWEEN */
   if (kw(&L->cur,"DROL")||kw(&L->cur,"2ROL")||kw(&L->cur,"S2ROL")||
       kw(&L->cur,"STACK2ROL")||kw(&L->cur,"PAIRROL")||kw(&L->cur,"DROTL")||
