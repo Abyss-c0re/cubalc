@@ -2438,3 +2438,58 @@ int cubalc_host_json_pick(const char *json, const char *keys_nl, cubalc_host_res
   r->ok = 1;
   return 0;
 }
+
+/* Usability: SYS JSONRENAME plate old new — rename top-level key, keep raw value.
+ * Soft miss (old absent) → copy plate, r->n=0. Dest key overwritten if present. */
+int cubalc_host_json_rename(const char *json, const char *oldk, const char *newk,
+                            cubalc_host_result *r) {
+  char base[CUBALC_HOST_STR_MAX];
+  char raw[CUBALC_HOST_STR_MAX];
+  cubalc_host_result gr, hr, dr;
+  const char *j;
+  r_clear(r);
+  if (!oldk || !oldk[0] || !newk || !newk[0]) {
+    snprintf(r->err, sizeof r->err, "jsonrename: empty key");
+    return -1;
+  }
+  j = json ? json : "";
+  while (*j == ' ' || *j == '\t' || *j == '\n' || *j == '\r') j++;
+  if (!*j || *j != '{')
+    snprintf(base, sizeof base, "%s", "{}");
+  else
+    snprintf(base, sizeof base, "%s", j);
+
+  /* path-aware: dotted/slash keys use path_get/del/set (shallow falls through). */
+  memset(&gr, 0, sizeof gr);
+  if (cubalc_host_json_path_get_raw(base, oldk, &gr) != 0) {
+    /* missing — soft copy */
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = 0;
+    r->ok = 1;
+    return 0;
+  }
+  snprintf(raw, sizeof raw, "%s", gr.str);
+  if (strcmp(oldk, newk) == 0) {
+    snprintf(r->str, sizeof r->str, "%s", base);
+    r->n = 1;
+    r->ok = 1;
+    return 0;
+  }
+  /* drop old, then write new with raw value (overwrites dest if any) */
+  memset(&dr, 0, sizeof dr);
+  if (cubalc_host_json_path_del(base, oldk, &dr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             dr.err[0] ? dr.err : "jsonrename: del fail");
+    return -1;
+  }
+  memset(&hr, 0, sizeof hr);
+  if (cubalc_host_json_path_set(dr.str, newk, raw, 1, &hr) != 0) {
+    snprintf(r->err, sizeof r->err, "%s",
+             hr.err[0] ? hr.err : "jsonrename: set fail");
+    return -1;
+  }
+  snprintf(r->str, sizeof r->str, "%s", hr.str);
+  r->n = 1;
+  r->ok = 1;
+  return 0;
+}
