@@ -1,7 +1,8 @@
-/* CubalC — FIRSTARG/LASTARG/NTHARG raw argv peels (rescued post-thin SoT)
+/* CubalC — FIRSTARG/LASTARG/NTHARG + NTHPOS/ARGMAP/FINDARG/AFTERARG (rescued post-thin)
  * CLI dual: cubalc firstarg|lastarg (cubalc_cmd_endarg). Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_core_endarg.h"
+#include "lang/cubalc_lang_ops_sys_cli.h"
 #include "cubalc_law.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,6 +182,253 @@ int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L) {
     var_set_num(vm, "OK", 1);
     if (vm->trace)
       fprintf(vm->trace, "# ntharg %ld hit=%d\n", idx, hit ? 1 : 0);
+    bump(vm);
+    return 1;
+  }
+
+  /* NTHPOS/ARGMAP/FINDARG/AFTERARG — mesh vote B_E_science follow-on */
+  if (kw(&L->cur,"NTHPOS") || kw(&L->cur,"POSN") || kw(&L->cur,"POSAT") ||
+      kw(&L->cur,"ARGPOS") || kw(&L->cur,"NTHREST") || kw(&L->cur,"POSITH") ||
+      kw(&L->cur,"GETPOS")){
+    long idx = 0, have, at = 0, hit = 0;
+    char bag[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], fb[512];
+    const char *p, *start;
+    int have_fb = 0;
+    lex_next(L);
+    field[0] = 0;
+    fb[0] = 0;
+    /* do NOT use parse_expr — it swallows OR as boolean */
+    if (L->cur.kind == TK_NUM) {
+      idx = L->cur.num;
+      lex_next(L);
+    } else if (L->cur.kind == TK_MINUS) {
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = -L->cur.num;
+        lex_next(L);
+      } else {
+        fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+        return -1;
+      }
+    } else if (L->cur.kind == TK_IDENT && !kw(&L->cur,"OR") && !kw(&L->cur,"DEFAULT") &&
+               !kw(&L->cur,"ELSE") && !kw(&L->cur,"FALLBACK")) {
+      if (strcmp(L->cur.text, "LAST_N") == 0)
+        idx = vm->last_n;
+      else {
+        Var *vv = var_get(vm, L->cur.text, 0);
+        if (vv && !vv->is_str) idx = vv->val;
+        else if (vv && vv->is_str) idx = strtol(vv->sval, NULL, 10);
+        else {
+          fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+          return -1;
+        }
+      }
+      lex_next(L);
+    } else if (L->cur.kind == TK_LPAREN) {
+      idx = parse_expr(vm, L);
+    } else {
+      fail_at(vm, L, "NTHPOS needs index — NTHPOS 0 [OR \"fallback\"]");
+      return -1;
+    }
+    if (idx < 0) idx = 0;
+    if (idx > 31) idx = 31;
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "NTHPOS n OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    have = cubalc_collect_restargs(bag, sizeof bag);
+    p = bag;
+    while (*p) {
+      start = p;
+      while (*p && *p != '\n') p++;
+      if (at == idx) {
+        size_t fl = (size_t)(p - start);
+        if (fl >= sizeof field) fl = sizeof field - 1;
+        memcpy(field, start, fl);
+        field[fl] = 0;
+        hit = 1;
+        break;
+      }
+      at++;
+      if (*p == '\n') p++;
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "NTHPOS", field);
+    var_set_str(vm, "POS", field);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "NTHPOS_N", idx);
+    var_set_num(vm, "RESTARGS_N", have);
+    var_set_num(vm, "OK", (hit || have_fb) ? 1 : 0);
+    if (vm->trace)
+      fprintf(vm->trace, "# nthpos %ld hit=%ld → %s\n", idx, hit, field);
+    bump(vm); return 1;
+  }
+
+  if (kw(&L->cur,"ARGMAP") || kw(&L->cur,"ARGKV") || kw(&L->cur,"ARGV_KV") ||
+      kw(&L->cur,"ARGVMAP") || kw(&L->cur,"CLI_ARGMAP") || kw(&L->cur,"ARGS_KV") ||
+      kw(&L->cur,"KVARGS")){
+    char bag[CUBALC_HOST_STR_MAX];
+    long n;
+    lex_next(L);
+    n = cubalc_collect_argmap(bag, sizeof bag);
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "ARGMAP", bag);
+    var_set_str(vm, "ARGKV", bag);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "ARGMAP_N", n);
+    var_set_num(vm, "ARGC", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# argmap n=%ld\n", n);
+    bump(vm); return 1;
+  }
+
+  if (kw(&L->cur,"FINDARG") || kw(&L->cur,"ARGINDEX") || kw(&L->cur,"INDEXARG") ||
+      kw(&L->cur,"WHICHARG") || kw(&L->cur,"ARGVINDEX") || kw(&L->cur,"ARGOF") ||
+      kw(&L->cur,"FINDARGV") || kw(&L->cur,"LOCATEARG")){
+    char needle[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], envn[32];
+    const char *ac, *a;
+    int argc = 32, k;
+    long idx = -1, hit = 0;
+    lex_next(L);
+    needle[0] = 0;
+    field[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail_at(vm, L, "FINDARG needs token — FINDARG \"--verbose\" | FINDARG seal");
+      return -1;
+    }
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = (int)strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      argc = 0;
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    for (k = 0; k < argc; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      a = getenv(envn);
+      if (!a) a = "";
+      if (strcmp(a, needle) == 0) {
+        idx = (long)k;
+        hit = 1;
+        snprintf(field, sizeof field, "%s", a);
+        break;
+      }
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "FINDARG", field);
+    var_set_str(vm, "ARGINDEX", field);
+    var_set_str(vm, "FINDARG_TOKEN", needle);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? idx : -1L;
+    var_set_num(vm, "LAST_N", hit ? idx : -1L);
+    var_set_num(vm, "FINDARG_N", hit ? idx : -1L);
+    var_set_num(vm, "ARGINDEX_N", hit ? idx : -1L);
+    var_set_num(vm, "FINDARG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", hit ? 1L : 0L);
+    if (vm->trace)
+      fprintf(vm->trace, "# findarg hit=%ld idx=%ld token=%s\n", hit, idx, needle);
+    bump(vm);
+    return 1;
+  }
+
+  if (kw(&L->cur,"AFTERARG") || kw(&L->cur,"NEXTARG") || kw(&L->cur,"ARGAFTER") ||
+      kw(&L->cur,"FOLLOWARG") || kw(&L->cur,"PEELAFTER") || kw(&L->cur,"VALUEAFTER") ||
+      kw(&L->cur,"ARGNEXT") || kw(&L->cur,"GETAFTER")){
+    char needle[CUBALC_HOST_STR_MAX], field[CUBALC_HOST_STR_MAX], fb[512], envn[32];
+    const char *ac, *a, *val;
+    int argc = 32, k, have_fb = 0;
+    long from = -1, next_i = -1, hit = 0;
+    lex_next(L);
+    needle[0] = 0;
+    field[0] = 0;
+    fb[0] = 0;
+    if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+      fail_at(vm, L, "AFTERARG needs token — AFTERARG \"--out\" [OR \"default\"]");
+      return -1;
+    }
+    if (kw(&L->cur,"OR") || kw(&L->cur,"DEFAULT") || kw(&L->cur,"ELSE") ||
+        kw(&L->cur,"FALLBACK")){
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "AFTERARG token OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    ac = getenv("CUBALC_ARGC");
+    if (ac && ac[0]) {
+      argc = (int)strtol(ac, NULL, 10);
+      if (argc < 0) argc = 0;
+      if (argc > 32) argc = 32;
+    } else {
+      argc = 0;
+      for (k = 0; k < 32; k++) {
+        snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+        if (!getenv(envn)) break;
+        argc++;
+      }
+    }
+    for (k = 0; k < argc; k++) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%d", k);
+      a = getenv(envn);
+      if (!a) a = "";
+      if (strcmp(a, needle) == 0) {
+        from = (long)k;
+        break;
+      }
+    }
+    if (from >= 0 && from + 1 < (long)argc) {
+      next_i = from + 1;
+      snprintf(envn, sizeof envn, "CUBALC_ARG%ld", next_i);
+      val = getenv(envn);
+      if (val) {
+        snprintf(field, sizeof field, "%s", val);
+        hit = 1;
+      }
+    }
+    if (!hit) {
+      if (have_fb)
+        snprintf(field, sizeof field, "%s", fb);
+      else
+        field[0] = 0;
+    }
+    var_set_str(vm, "LAST", field);
+    var_set_str(vm, "AFTERARG", field);
+    var_set_str(vm, "NEXTARG", field);
+    var_set_str(vm, "ARG", field);
+    var_set_str(vm, "AFTERARG_TOKEN", needle);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", field);
+    vm->last_n = hit ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit ? 1L : 0L);
+    var_set_num(vm, "AFTERARG_FROM", from);
+    var_set_num(vm, "AFTERARG_N", hit ? next_i : -1L);
+    var_set_num(vm, "AFTERARG_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# afterarg from=%ld next=%ld hit=%ld token=%s\n",
+              from, next_i, hit, needle);
     bump(vm);
     return 1;
   }

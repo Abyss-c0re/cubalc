@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* FIRSTARG/LASTARG/NTHARG — raw CUBALC_ARGi peels (rescued post-thin). */
+/* FIRSTARG/LASTARG/NTHARG/NTHPOS/ARGMAP/FINDARG/AFTERARG — argv peels. */
 int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L);
 #ifdef __cplusplus
 }
