@@ -4530,5 +4530,74 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+
+  /* digit-0 dual-stack inverted low-n mask: DNANDMN · DNORMN · DXNORMN (dual of DANDMN/DORMN/DXORMN inverted) */
+  if (kw(&L->cur,"DNANDMN")||kw(&L->cur,"2NANDMN")||kw(&L->cur,"S2NANDMN")||
+      kw(&L->cur,"STACK2NANDMN")||kw(&L->cur,"PAIRNANDMN")||kw(&L->cur,"DLOWNANDN")||
+      kw(&L->cur,"2LOWNANDN")||kw(&L->cur,"DMASKNAND")||kw(&L->cur,"2MASKNAND")){
+    /* a b + n → ~(a&m) ~(b&m) with m = low-n mask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a & m);
+    long y = (long)~((unsigned long)b & m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DNORMN")||kw(&L->cur,"2NORMN")||kw(&L->cur,"S2NORMN")||
+      kw(&L->cur,"STACK2NORMN")||kw(&L->cur,"PAIRNORMN")||kw(&L->cur,"DLOWNORN")||
+      kw(&L->cur,"2LOWNORN")||kw(&L->cur,"DMASKNOR")||kw(&L->cur,"2MASKNOR")){
+    /* a b + n → ~(a|m) ~(b|m) with m = low-n mask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a | m);
+    long y = (long)~((unsigned long)b | m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DXNORMN")||kw(&L->cur,"2XNORMN")||kw(&L->cur,"S2XNORMN")||
+      kw(&L->cur,"STACK2XNORMN")||kw(&L->cur,"PAIRXNORMN")||kw(&L->cur,"DLOWXNORN")||
+      kw(&L->cur,"2LOWXNORN")||kw(&L->cur,"DMASKXNOR")||kw(&L->cur,"2MASKXNOR")||
+      kw(&L->cur,"DEQUIVMN")||kw(&L->cur,"2EQUIVMN")){
+    /* a b + n → ~(a^m) ~(b^m) with m = low-n mask; n clamped 0..64 */
+    lex_next(L);
+    long n = parse_expr(vm,L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    if (n < 0) n = 0;
+    if (n > 64) n = 64;
+    unsigned long m = 0;
+    if (n == 0) m = 0;
+    else if (n >= 64) m = ~0ul;
+    else m = (1ul << (unsigned)n) - 1ul;
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    long x = (long)~((unsigned long)a ^ m);
+    long y = (long)~((unsigned long)b ^ m);
+    vm->stack[vm->sp - 2] = x;
+    vm->stack[vm->sp - 1] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
