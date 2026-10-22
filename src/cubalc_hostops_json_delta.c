@@ -20,6 +20,79 @@ static void r_clear(cubalc_host_result *r) {
   memset(r, 0, sizeof *r);
 }
 
+static int cubalc_json_skip_value(const char **pp) {
+  const char *p;
+  int depth;
+  if (!pp || !*pp) return -1;
+  p = *pp;
+  while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+  if (*p == '"') {
+    p++;
+    while (*p) {
+      if (*p == '\\' && p[1]) {
+        p += 2;
+        continue;
+      }
+      if (*p == '"') {
+        p++;
+        break;
+      }
+      p++;
+    }
+    *pp = p;
+    return 0;
+  }
+  if (*p == '{' || *p == '[') {
+    char open = *p, close = (*p == '{') ? '}' : ']';
+    depth = 1;
+    p++;
+    while (*p && depth > 0) {
+      if (*p == '"') {
+        p++;
+        while (*p) {
+          if (*p == '\\' && p[1]) {
+            p += 2;
+            continue;
+          }
+          if (*p == '"') {
+            p++;
+            break;
+          }
+          p++;
+        }
+        continue;
+      }
+      if (*p == open) depth++;
+      else if (*p == close) depth--;
+      p++;
+    }
+    *pp = p;
+    return 0;
+  }
+  if (strncmp(p, "true", 4) == 0) {
+    *pp = p + 4;
+    return 0;
+  }
+  if (strncmp(p, "false", 5) == 0) {
+    *pp = p + 5;
+    return 0;
+  }
+  if (strncmp(p, "null", 4) == 0) {
+    *pp = p + 4;
+    return 0;
+  }
+  if (*p == '-' || (*p >= '0' && *p <= '9')) {
+    if (*p == '-') p++;
+    while (*p && ((*p >= '0' && *p <= '9') || *p == '.' || *p == 'e' || *p == 'E' ||
+                  *p == '+' || *p == '-'))
+      p++;
+    *pp = p;
+    return 0;
+  }
+  return -1;
+}
+
+
 static void cubalc_bag_push(char *out, size_t outsz, size_t *olen, long *kept,
                             const char *path) {
   size_t pl;
@@ -2688,3 +2761,100 @@ int cubalc_host_json_merge(const char *base, const char *overlay, cubalc_host_re
   r->ok = 1;
   return 0;
 }
+
+/* Usability: raw top-level value for key (preserves quotes/nested/true/null).
+ * Soft miss → -1. Used by JSONPICK / agents that must not re-encode peels. */
+int cubalc_host_json_get_raw(const char *json, const char *key, cubalc_host_result *r) {
+  char keypat[320];
+  const char *base, *p;
+  int depth = 0, in_str = 0, esc = 0;
+  r_clear(r);
+  if (!key || !key[0]) {
+    snprintf(r->err, sizeof r->err, "jsonraw: empty key");
+    return -1;
+  }
+  if (strlen(key) + 3 >= sizeof keypat) {
+    snprintf(r->err, sizeof r->err, "jsonraw: key too long");
+    return -1;
+  }
+  snprintf(keypat, sizeof keypat, "\"%s\"", key);
+  base = json ? json : "";
+  while (*base == ' ' || *base == '\t' || *base == '\n' || *base == '\r') base++;
+  if (!*base || *base != '{') {
+    snprintf(r->err, sizeof r->err, "jsonraw: not an object");
+    return -1;
+  }
+  p = base;
+  for (; *p; p++) {
+    unsigned char c = (unsigned char)*p;
+    if (in_str) {
+      if (esc) {
+        esc = 0;
+        continue;
+      }
+      if (c == '\\') {
+        esc = 1;
+        continue;
+      }
+      if (c == '"') in_str = 0;
+      continue;
+    }
+    if (c == '"') {
+      if (depth == 1) {
+        size_t plen = strlen(keypat);
+        if (strncmp(p, keypat, plen) == 0) {
+          const char *after = p + plen;
+          const char *vstart, *vend;
+          size_t vn;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          if (*after != ':') {
+            in_str = 1;
+            continue;
+          }
+          after++;
+          while (*after == ' ' || *after == '\t' || *after == '\n' || *after == '\r')
+            after++;
+          vstart = after;
+          vend = vstart;
+          if (cubalc_json_skip_value(&vend) != 0) {
+            snprintf(r->err, sizeof r->err, "jsonraw: bad value");
+            return -1;
+          }
+          vn = (size_t)(vend - vstart);
+          if (vn + 1 >= sizeof r->str) {
+            snprintf(r->err, sizeof r->err, "jsonraw: overflow");
+            return -1;
+          }
+          memcpy(r->str, vstart, vn);
+          r->str[vn] = 0;
+          r->n = (long)vn;
+          r->ok = 1;
+          return 0;
+        }
+      }
+      in_str = 1;
+      continue;
+    }
+    if (c == '{') {
+      depth++;
+      continue;
+    }
+    if (c == '}') {
+      if (depth > 0) depth--;
+      if (depth == 0) break;
+      continue;
+    }
+    if (c == '[') {
+      depth++;
+      continue;
+    }
+    if (c == ']') {
+      if (depth > 0) depth--;
+      continue;
+    }
+  }
+  snprintf(r->err, sizeof r->err, "jsonraw: no field %s", key);
+  return -1;
+}
+
