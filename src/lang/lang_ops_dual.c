@@ -272,41 +272,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DTHRESH·DGATE → dual_clip peel (G_dual_margin) */
   /* DRELU·DCOPYSIGN → dual_clip peel (G_dual_margin) */
   /* DMEDIAN·DMAXABS·DMINABS → dual_clip peel (G_dual_margin) */
-  /* digit-4 dual-stack rotate + range predicates: DROL · DROR · DWITHIN · DBETWEEN */
-  if (kw(&L->cur,"DROL")||kw(&L->cur,"2ROL")||kw(&L->cur,"S2ROL")||
-      kw(&L->cur,"STACK2ROL")||kw(&L->cur,"PAIRROL")||kw(&L->cur,"DROTL")||
-      kw(&L->cur,"DROR")||kw(&L->cur,"2ROR")||kw(&L->cur,"S2ROR")||
-      kw(&L->cur,"STACK2ROR")||kw(&L->cur,"PAIRROR")||kw(&L->cur,"DROTR")){
-    /* a b c d → rot(a,c) rot(b,d); amounts mod 64, neg→0 */
-    char op[16]; snprintf(op,sizeof op,"%s",L->cur.text);
-    for (char *p=op;*p;p++) if (*p>='a'&&*p<='z') *p=(char)(*p-'a'+'A');
-    lex_next(L);
-    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long d = vm->stack[--vm->sp];
-    long c = vm->stack[--vm->sp];
-    long b = vm->stack[--vm->sp];
-    long a = vm->stack[--vm->sp];
-    if (c < 0) c = 0;
-    if (d < 0) d = 0;
-    unsigned uc = (unsigned)(c & 63);
-    unsigned ud = (unsigned)(d & 63);
-    int is_rol = (strcmp(op,"DROL")==0 || strcmp(op,"2ROL")==0 || strcmp(op,"S2ROL")==0 ||
-                  strcmp(op,"STACK2ROL")==0 || strcmp(op,"PAIRROL")==0 ||
-                  strcmp(op,"DROTL")==0);
-    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
-    long x, y;
-    if (is_rol){
-      x = (uc == 0) ? a : (long)((ua << uc) | (ua >> (64u - uc)));
-      y = (ud == 0) ? b : (long)((ub << ud) | (ub >> (64u - ud)));
-    } else {
-      x = (uc == 0) ? a : (long)((ua >> uc) | (ua << (64u - uc)));
-      y = (ud == 0) ? b : (long)((ub >> ud) | (ub << (64u - ud)));
-    }
-    vm->stack[vm->sp++] = x;
-    vm->stack[vm->sp++] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DROL·DROR → dual_clip peel (G_dual_margin) */
   /* digit-8 dual-stack fixed-width rotate: DROL4 · DROR4 · DROL8 · DROR8 · DROL16 · DROR16 */
   if (kw(&L->cur,"DROL4")||kw(&L->cur,"2ROL4")||kw(&L->cur,"S2ROL4")||
       kw(&L->cur,"STACK2ROL4")||kw(&L->cur,"PAIRROL4")||kw(&L->cur,"DROTL4")||
