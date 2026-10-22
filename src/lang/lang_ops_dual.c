@@ -261,23 +261,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* DPCT·DLERP → dual_clip peel (G_dual_margin) */
   /* DSCALE·DCLIP100 → dual_clip peel (G_dual_margin) */
   /* DCLIP01·DCOMP100 → dual_clip peel (G_dual_margin) */
-  /* digit-6 dual-stack energy step activation: DSTEP · DHEAVI */
-  if (kw(&L->cur,"DSTEP")||kw(&L->cur,"2STEP")||kw(&L->cur,"S2STEP")||
-      kw(&L->cur,"STACK2STEP")||kw(&L->cur,"PAIRSTEP")||kw(&L->cur,"DHEAVI")||
-      kw(&L->cur,"2HEAVI")||kw(&L->cur,"DHEAVISIDE")||kw(&L->cur,"2HEAVISIDE")||
-      kw(&L->cur,"DUNITSTEP")||kw(&L->cur,"2UNITSTEP")){
-    /* a b → (a>0?1:0) (b>0?1:0)  unit-step / Heaviside energy gate (0 at zero) */
-    lex_next(L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = (a > 0) ? 1 : 0;
-    long y = (b > 0) ? 1 : 0;
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DSTEP·DHEAVI → dual_clip peel (G_dual_margin) */
   /* digit-6 dual-stack energy soft activations: DLEAKY · DSOFTSIGN */
   if (kw(&L->cur,"DLEAKY")||kw(&L->cur,"2LEAKY")||kw(&L->cur,"S2LEAKY")||
       kw(&L->cur,"STACK2LEAKY")||kw(&L->cur,"PAIRLEAKY")||kw(&L->cur,"DLEAKYRELU")||
