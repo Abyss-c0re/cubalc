@@ -3546,5 +3546,118 @@ int cubalc_lang_ops_dual_try_clip(VM *vm, Lex *L) {
     var_set_num(vm,"LAST_N",y); vm->last_n=y;
     var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
   }
+  /* digit-6 dual-stack energy activations: DRELU6 · DDEADZ (gate/noise) */
+  if (kw(&L->cur,"DRELU6")||kw(&L->cur,"2RELU6")||kw(&L->cur,"S2RELU6")||
+      kw(&L->cur,"STACK2RELU6")||kw(&L->cur,"PAIRRELU6")||kw(&L->cur,"DCLAMP6")||
+      kw(&L->cur,"2CLAMP6")||kw(&L->cur,"S2CLAMP6")||kw(&L->cur,"PAIRCLAMP6")){
+    /* a b → clamp(a,0,6) clamp(b,0,6) — classic ReLU6 energy activation */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long a = vm->stack[vm->sp - 2];
+    long b = vm->stack[vm->sp - 1];
+    if (a < 0) a = 0;
+    if (a > 6) a = 6;
+    if (b < 0) b = 0;
+    if (b > 6) b = 6;
+    vm->stack[vm->sp - 2] = a;
+    vm->stack[vm->sp - 1] = b;
+    var_set_num(vm,"LAST_N",b); vm->last_n=b;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DDEADZ")||kw(&L->cur,"2DEADZ")||kw(&L->cur,"S2DEADZ")||
+      kw(&L->cur,"STACK2DEADZ")||kw(&L->cur,"PAIRDEADZ")||kw(&L->cur,"DDEADZONE")||
+      kw(&L->cur,"2DEADZONE")||kw(&L->cur,"S2DEADZONE")||kw(&L->cur,"PAIRDEADZONE")||
+      kw(&L->cur,"DDEAD")||kw(&L->cur,"2DEAD")){
+    /* a b za zb → (|a|<=za?0:a) (|b|<=zb?0:b); z<0 treated as 0
+     * energy-style deadzone / noise gate on dual channel */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long zb = vm->stack[--vm->sp];
+    long za = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    if (za < 0) za = 0;
+    if (zb < 0) zb = 0;
+    long aa = a < 0 ? -a : a;
+    long bb = b < 0 ? -b : b;
+    long x = (aa <= za) ? 0 : a;
+    long y = (bb <= zb) ? 0 : b;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+
+  if (kw(&L->cur,"DRANDBITS")||kw(&L->cur,"2RANDBITS")||kw(&L->cur,"S2RANDBITS")||
+      kw(&L->cur,"STACK2RANDBITS")||kw(&L->cur,"PAIRRANDBITS")||kw(&L->cur,"2RBITS")||
+      kw(&L->cur,"DRBITS")){
+    /* a b → U[0, 2^a) U[0, 2^b); widths clamped 0..62 (0 → 0) */
+    lex_next(L);
+    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long nb = vm->stack[vm->sp - 1];
+    long na = vm->stack[vm->sp - 2];
+    if (na < 0) na = 0;
+    if (nb < 0) nb = 0;
+    if (na > 62) na = 62;
+    if (nb > 62) nb = 62;
+    uint32_t xg = vm->rng;
+    long ra = 0, rb = 0;
+    if (na > 0){
+      unsigned long span = 1UL << (unsigned)na;
+      xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+      if (!xg) xg = 1;
+      /* mix two xorshift draws for wider spans */
+      uint32_t lo = xg;
+      xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+      if (!xg) xg = 1;
+      unsigned long long u = ((unsigned long long)xg << 32) | (unsigned long long)lo;
+      ra = (long)(u % span);
+    }
+    if (nb > 0){
+      unsigned long span = 1UL << (unsigned)nb;
+      xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+      if (!xg) xg = 1;
+      uint32_t lo = xg;
+      xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+      if (!xg) xg = 1;
+      unsigned long long u = ((unsigned long long)xg << 32) | (unsigned long long)lo;
+      rb = (long)(u % span);
+    }
+    vm->rng = xg;
+    vm->stack[vm->sp - 2] = ra;
+    vm->stack[vm->sp - 1] = rb;
+    var_set_num(vm,"LAST_N",rb); vm->last_n=rb;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
+  if (kw(&L->cur,"DRANDRANGE")||kw(&L->cur,"2RANDRANGE")||kw(&L->cur,"S2RANDRANGE")||
+      kw(&L->cur,"STACK2RANDRANGE")||kw(&L->cur,"PAIRRANDRANGE")||kw(&L->cur,"2RANDIN")||
+      kw(&L->cur,"DRANDIN")||kw(&L->cur,"2RANDBETWEEN")){
+    /* a b c d → uniform[a,c] uniform[b,d] inclusive; swap ends if inverted */
+    lex_next(L);
+    if (vm->sp < 4){ var_set_num(vm,"OK",0); bump(vm); return 1; }
+    long d = vm->stack[--vm->sp];
+    long c = vm->stack[--vm->sp];
+    long b = vm->stack[--vm->sp];
+    long a = vm->stack[--vm->sp];
+    long lo1 = a, hi1 = c, lo2 = b, hi2 = d;
+    if (lo1 > hi1){ long t = lo1; lo1 = hi1; hi1 = t; }
+    if (lo2 > hi2){ long t = lo2; lo2 = hi2; hi2 = t; }
+    uint32_t xg = vm->rng;
+    long span1 = hi1 - lo1 + 1;
+    if (span1 < 1) span1 = 1;
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long x = lo1 + (long)(xg % (uint32_t)span1);
+    long span2 = hi2 - lo2 + 1;
+    if (span2 < 1) span2 = 1;
+    xg ^= xg << 13; xg ^= xg >> 17; xg ^= xg << 5;
+    if (!xg) xg = 1;
+    long y = lo2 + (long)(xg % (uint32_t)span2);
+    vm->rng = xg;
+    vm->stack[vm->sp++] = x;
+    vm->stack[vm->sp++] = y;
+    var_set_num(vm,"LAST_N",y); vm->last_n=y;
+    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  }
   return 0;
 }
