@@ -134,6 +134,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_ifflag.c \
 	src/lang/lang_ops_flow_ifsize.c \
 	src/lang/lang_ops_flow_ifmtime.c \
+	src/lang/lang_ops_flow_iffresh.c \
 	src/lang/lang_ops_flow_ifvar.c \
 	src/lang/lang_ops_flow_oop.c \
 	src/lang/lang_ops_flow_scene.c \
