@@ -138,6 +138,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_fstr_slice.c \
 	src/lang/lang_ops_flow_fstr_fieldbag.c \
 	src/lang/lang_ops_flow_fstr_b.c \
+	src/lang/lang_ops_flow_fstr_kinship.c \
 	src/lang/lang_ops_flow_ifcmp.c \
 	src/lang/lang_ops_flow_ifbag.c \
 	src/lang/lang_ops_flow_ifjson.c \
