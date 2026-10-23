@@ -4,6 +4,10 @@
 HOLD_FLASH 1
 
 SYS MKDIR "state/meaningful_iter/mi_ifnewer"
+SYS RM "state/meaningful_iter/mi_ifnewer/out.cache"
+SYS RM "state/meaningful_iter/mi_ifnewer/nope.a"
+SYS RM "state/meaningful_iter/mi_ifnewer/nope.b"
+SYS RM "state/meaningful_iter/mi_ifnewer/nope.ref"
 SYS WRITE "state/meaningful_iter/mi_ifnewer/src.json" "{\"v\":1}"
 SYS SLEEP 1100
 SYS WRITE "state/meaningful_iter/mi_ifnewer/dst.json" "{\"v\":1}"
