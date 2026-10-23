@@ -119,7 +119,7 @@ LANG_SRC = \
 	src/lang/lang_ops_dual_unary32.c \
 	src/lang/lang_ops_dual_unary16.c \
 	src/lang/lang_ops_dual_unary8.c \
-	src/lang/lang_ops_dual_unary4.c \
+	src/lang/lang_ops_dual_unary4.c src/lang/lang_ops_dual_pair.c \
 	src/lang/lang_ops_flow.c \
 	src/lang/lang_ops_flow_case.c \
 	src/lang/lang_ops_flow_class.c \
