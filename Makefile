@@ -212,6 +212,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_codec.c \
 	src/lang/lang_ops_sys_env.c \
 	src/lang/lang_ops_sys_files.c \
+	src/lang/lang_ops_sys_files_bulk.c \
 	src/lang/lang_ops_sys_grep.c \
 	src/lang/lang_ops_sys_hostmeta.c \
 	src/lang/lang_ops_sys_identity.c \
