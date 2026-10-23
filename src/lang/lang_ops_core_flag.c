@@ -719,5 +719,105 @@ int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
     bump(vm);
     return 1;
   }
+
+  /* GETFLAGCSV|FLAGCSV — multi --name + comma-split → flat newline bag. */
+  if (kw(&L->cur, "GETFLAGCSV") || kw(&L->cur, "FLAGCSV") || kw(&L->cur, "CSVFLAG") ||
+      kw(&L->cur, "GETFLAG_CSV") || kw(&L->cur, "SPLITFLAG") || kw(&L->cur, "FLAGSPLIT") ||
+      kw(&L->cur, "TAGSFLAG")) {
+    char name[96], aliases[384], hitnm[96], raw[CUBALC_HOST_STR_MAX];
+    char bag[CUBALC_HOST_STR_MAX], fb[CUBALC_HOST_STR_MAX];
+    char env_used[96], src_tag[16];
+    int cli_n, count, have_fb = 0, nac, from_env = 0;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    raw[0] = 0;
+    bag[0] = 0;
+    fb[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGCSV needs name — GETFLAGCSV tags|t OR ENV TAGS OR \"\"");
+      return -1;
+    }
+    while (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+           kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (kw(&L->cur, "ENV") || kw(&L->cur, "FROMENV") || kw(&L->cur, "ENVOR") ||
+          kw(&L->cur, "GETENV") || kw(&L->cur, "ENV_GET")) {
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAGCSV OR ENV NAME");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            snprintf(fb, sizeof fb, "%s", ev);
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+          }
+        }
+        continue;
+      }
+      {
+        char lit[CUBALC_HOST_STR_MAX];
+        lit[0] = 0;
+        if (resolve_str_arg(vm, L, lit, sizeof lit) != 0) {
+          fail_at(vm, L, "GETFLAGCSV name OR \"fallback\"");
+          return -1;
+        }
+        if (!have_fb) {
+          snprintf(fb, sizeof fb, "%s", lit);
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    cli_n = cubalc_scan_cli_flag_all(aliases, raw, sizeof raw, hitnm, sizeof hitnm);
+    if (cli_n > 0) {
+      count = cubalc_csv_expand_bag(raw, bag, sizeof bag);
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    } else if (have_fb) {
+      count = cubalc_csv_expand_bag(fb, bag, sizeof bag);
+      snprintf(src_tag, sizeof src_tag, "%s", from_env ? "env" : "default");
+    } else {
+      bag[0] = 0;
+      count = 0;
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAG", bag);
+    var_set_str(vm, "GETFLAGCSV", name);
+    var_set_str(vm, "FLAGCSV", bag);
+    var_set_str(vm, "FLAG_HIT_NAME", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "GETFLAGCSV_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (cli_n <= 0 && from_env) ? env_used : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = (long)count;
+    var_set_num(vm, "LAST_N", (long)count);
+    var_set_num(vm, "GETFLAGCSV_N", (long)count);
+    var_set_num(vm, "FLAGCSV_N", (long)count);
+    var_set_num(vm, "GETFLAGCSV_HIT", cli_n > 0 ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagcsv %s cli=%d count=%d src=%s\n", name, cli_n, count,
+              src_tag);
+    bump(vm);
+    return 1;
+  }
   return 0;
 }
