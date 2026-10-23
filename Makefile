@@ -208,6 +208,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_bagshape.c \
 	src/lang/lang_ops_sys_bagmap.c \
 	src/lang/lang_ops_sys_bagwin.c \
+	src/lang/lang_ops_sys_baglen.c \
 	src/lang/lang_ops_sys_wait.c \
 	src/lang/lang_ops_toc.c \
 	src/lang/lang_parse.c \
