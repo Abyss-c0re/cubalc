@@ -197,6 +197,7 @@ LANG_SRC = \
 	src/lang/lang_ops_smx_pneuma_sphere1.c \
 	src/lang/lang_ops_smx_pneuma_sphere2.c \
 	src/lang/lang_ops_smx_pneuma_neural.c \
+	src/lang/lang_ops_smx_pneuma_ward.c \
 	src/lang/lang_ops_smx_pneuma_b.c \
 	src/lang/lang_ops_smx_water.c \
 	src/lang/lang_ops_smx_zodiac.c \
