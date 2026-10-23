@@ -145,6 +145,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_ifcanread.c \
 	src/lang/lang_ops_flow_ifjsoneq.c \
 	src/lang/lang_ops_flow_ifobj.c \
+	src/lang/lang_ops_flow_iffield.c \
 	src/lang/lang_ops_flow_ifvar.c \
 	src/lang/lang_ops_flow_oop.c \
 	src/lang/lang_ops_flow_scene.c \
