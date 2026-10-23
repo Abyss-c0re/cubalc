@@ -199,6 +199,7 @@ LANG_SRC = \
 	src/lang/lang_ops_smx_pneuma_neural.c \
 	src/lang/lang_ops_smx_pneuma_ward.c \
 	src/lang/lang_ops_smx_pneuma_glia.c \
+	src/lang/lang_ops_smx_pneuma_gliax.c \
 	src/lang/lang_ops_smx_pneuma_b.c \
 	src/lang/lang_ops_smx_water.c \
 	src/lang/lang_ops_smx_zodiac.c \
