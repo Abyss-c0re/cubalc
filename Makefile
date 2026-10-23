@@ -131,6 +131,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_fstr_a.c \
 	src/lang/lang_ops_flow_fstr_bagf.c \
 	src/lang/lang_ops_flow_fstr_catfall.c \
+	src/lang/lang_ops_flow_fstr_core.c \
 	src/lang/lang_ops_flow_fstr_b.c \
 	src/lang/lang_ops_flow_ifcmp.c \
 	src/lang/lang_ops_flow_ifbag.c \
