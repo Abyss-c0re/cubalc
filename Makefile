@@ -225,6 +225,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_path_tree.c \
 	src/lang/lang_ops_sys_path_sync.c \
 	src/lang/lang_ops_sys_path_link.c \
+	src/lang/lang_ops_sys_path_util.c \
 	src/lang/lang_ops_sys_plate.c \
 	src/lang/lang_ops_sys_plate_expand.c \
 	src/lang/lang_ops_sys_stat.c \
