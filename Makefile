@@ -243,6 +243,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_wait.c \
 	src/lang/lang_ops_toc.c \
 	src/lang/lang_ops_toc_cell.c \
+	src/lang/lang_ops_toc_imm.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
 
