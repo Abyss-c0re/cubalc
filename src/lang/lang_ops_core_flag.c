@@ -257,6 +257,55 @@ int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* HASARG n|name — soft 0|1 if CUBALC_ARGn / named env non-empty. */
+  if (kw(&L->cur, "HASARG") || kw(&L->cur, "HASARGV") || kw(&L->cur, "ARG?") ||
+      kw(&L->cur, "ARG_EXISTS") || kw(&L->cur, "DEFINEDARG")) {
+    char key[96], envn[96], buf[8];
+    const char *val;
+    long hit = 0;
+    lex_next(L);
+    if (L->cur.kind == TK_NUM) {
+      snprintf(envn, sizeof envn, "CUBALC_ARG%ld", L->cur.num);
+      snprintf(key, sizeof key, "%ld", L->cur.num);
+      lex_next(L);
+    } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+      int all_digit = 1, pi;
+      snprintf(key, sizeof key, "%s", L->cur.text);
+      for (pi = 0; key[pi]; pi++) {
+        if (key[pi] < '0' || key[pi] > '9') {
+          all_digit = 0;
+          break;
+        }
+      }
+      if (all_digit && key[0])
+        snprintf(envn, sizeof envn, "CUBALC_ARG%s", key);
+      else if (strncmp(key, "CUBALC_ARG", 10) == 0)
+        snprintf(envn, sizeof envn, "%s", key);
+      else
+        snprintf(envn, sizeof envn, "%s", key);
+      lex_next(L);
+    } else {
+      fail_at(vm, L, "HASARG needs n|name — HASARG 0");
+      return -1;
+    }
+    val = getenv(envn);
+    hit = (val && val[0]) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASARG_N", hit);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    var_set_str(vm, "HASARG", key);
+    if (hit && val)
+      var_set_str(vm, "ARG", val);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasarg %s → %ld\n", key, hit);
+    bump(vm);
+    return 1;
+  }
+
   /* HASARGC [min] — soft 0|1 if CUBALC_ARGC >= min (default 1). */
   if (kw(&L->cur, "HASARGC") || kw(&L->cur, "HASARGS") || kw(&L->cur, "ARGC?") ||
       kw(&L->cur, "HAS_ARGC") || kw(&L->cur, "ENOUGHARGS")) {

@@ -263,6 +263,76 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
   if (kw(&L->cur, "REQUIRE") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRES")) {
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE ARG n|name — CUBALC_ARGn / named env must be non-empty. */
+    if (kw(&L->cur, "ARG") || kw(&L->cur, "ARGV") || kw(&L->cur, "ARGN")) {
+      char key[96], envn[96], out[CUBALC_HOST_STR_MAX];
+      const char *val = NULL;
+      int is_num = 0;
+      long idx = -1;
+      size_t vl;
+      lex_next(L);
+      if (L->cur.kind == TK_NUM) {
+        idx = L->cur.num;
+        is_num = 1;
+        snprintf(envn, sizeof envn, "CUBALC_ARG%ld", idx);
+        snprintf(key, sizeof key, "%ld", idx);
+        lex_next(L);
+      } else if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        int all_digit = 1, pi;
+        snprintf(key, sizeof key, "%s", L->cur.text);
+        for (pi = 0; key[pi]; pi++) {
+          if (key[pi] < '0' || key[pi] > '9') {
+            all_digit = 0;
+            break;
+          }
+        }
+        if (all_digit && key[0]) {
+          snprintf(envn, sizeof envn, "CUBALC_ARG%s", key);
+          is_num = 1;
+          idx = strtol(key, NULL, 10);
+        } else if (strncmp(key, "CUBALC_ARG", 10) == 0) {
+          snprintf(envn, sizeof envn, "%s", key);
+        } else {
+          snprintf(envn, sizeof envn, "%s", key);
+        }
+        lex_next(L);
+      } else {
+        fail(vm, "REQUIRE ARG n|name");
+        return -1;
+      }
+      val = getenv(envn);
+      if (!val || !val[0]) {
+        char msg[180];
+        if (is_num)
+          snprintf(msg, sizeof msg,
+                   "REQUIRE ARG %ld missing line %d — cubalc run … -- arg (SYS ARG %ld)",
+                   idx, aln, idx);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE ARG '%s' missing line %d — set env or pass run arg", key, aln);
+        cubalc_append_usage_tip(vm, msg, sizeof msg);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      vl = strlen(val);
+      if (vl >= sizeof out) vl = sizeof out - 1;
+      memcpy(out, val, vl);
+      out[vl] = 0;
+      var_set_str(vm, "LAST", out);
+      var_set_str(vm, "ARG", out);
+      var_set_str(vm, "REQUIRE_ARG", key);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+      vm->last_n = (long)vl;
+      var_set_num(vm, "LAST_N", (long)vl);
+      var_set_num(vm, "OK", 1);
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace)
+        fprintf(vm->trace, "# require arg %s ok\n", key);
+      bump(vm);
+      return 1;
+    }
+
     /* REQUIRE RESTARGS|POS [min] — fail if non-flag count < min (default 1). */
     if (kw(&L->cur, "RESTARGS") || kw(&L->cur, "POSITIONALS") || kw(&L->cur, "POSARGS") ||
         kw(&L->cur, "POS") || kw(&L->cur, "NFILES") || kw(&L->cur, "FILES") ||
