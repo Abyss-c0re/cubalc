@@ -37,7 +37,8 @@ CORE_SRC = \
 	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c \
 	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_hostops_chat.c src/cubalc_hostops_json_delta.c \
-	src/cubalc_hostops_json_leaf.c src/cubalc_hostops_json_agg.c src/cubalc_async.c \
+	src/cubalc_hostops_json_leaf.c src/cubalc_hostops_json_agg.c \
+	src/cubalc_hostops_json_mut.c src/cubalc_async.c \
 	src/cubalc_isa.c src/cubalc_jit.c \
 	src/cubalc_quantum.c src/cubalc_dim5.c src/cubalc_relativity.c src/cubalc_chaos.c src/cubalc_science_loop.c
 
