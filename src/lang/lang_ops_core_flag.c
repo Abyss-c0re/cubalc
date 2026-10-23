@@ -94,6 +94,73 @@ int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* RESTPATHS|POSPATHS — RESTARGS with each field ABSPATH-resolved → abs bag. */
+  if (kw(&L->cur, "RESTPATHS") || kw(&L->cur, "POSPATHS") || kw(&L->cur, "ABSPOS") ||
+      kw(&L->cur, "RESTABSPATH") || kw(&L->cur, "FILEPATHS") || kw(&L->cur, "POSPATHBAG") ||
+      kw(&L->cur, "ABSREST") || kw(&L->cur, "REST_PATHS") || kw(&L->cur, "PATHARGS")) {
+    char raw[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char field[CUBALC_HOST_STR_MAX], absbuf[CUBALC_HOST_STR_MAX];
+    const char *p, *start;
+    long n = 0, exist_n = 0;
+    size_t o = 0;
+    cubalc_host_result hr;
+    lex_next(L);
+    n = cubalc_collect_restargs(raw, sizeof raw);
+    out[0] = 0;
+    p = raw;
+    while (*p) {
+      size_t fl, room;
+      start = p;
+      while (*p && *p != '\n') p++;
+      fl = (size_t)(p - start);
+      if (fl >= sizeof field) fl = sizeof field - 1;
+      memcpy(field, start, fl);
+      field[fl] = 0;
+      absbuf[0] = 0;
+      if (field[0]) {
+        memset(&hr, 0, sizeof hr);
+        if (cubalc_host_abspath(field, &hr) == 0 && hr.str[0])
+          snprintf(absbuf, sizeof absbuf, "%s", hr.str);
+        else
+          snprintf(absbuf, sizeof absbuf, "%s", field);
+        if (cubalc_host_exists(absbuf) || cubalc_host_exists(field))
+          exist_n++;
+      }
+      if (absbuf[0] && o + 1 < sizeof out) {
+        if (o > 0)
+          out[o++] = '\n';
+        room = sizeof out - o - 1;
+        fl = strlen(absbuf);
+        if (fl > room) fl = room;
+        if (fl > 0) {
+          memcpy(out + o, absbuf, fl);
+          o += fl;
+        }
+        out[o] = 0;
+      }
+      if (*p == '\n') p++;
+    }
+    var_set_str(vm, "LAST", out);
+    var_set_str(vm, "RESTPATHS", out);
+    var_set_str(vm, "POSPATHS", out);
+    var_set_str(vm, "FILEPATHS", out);
+    var_set_str(vm, "RESTARGS", raw);
+    var_set_str(vm, "POSITIONALS", raw);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_num(vm, "RESTPATHS_N", n);
+    var_set_num(vm, "POSPATHS_N", n);
+    var_set_num(vm, "RESTARGS_N", n);
+    var_set_num(vm, "RESTPATHS_EXIST_N", exist_n);
+    var_set_num(vm, "PATH_EXIST_N", exist_n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# restpaths n=%ld exist=%ld\n", n, exist_n);
+    bump(vm);
+    return 1;
+  }
+
   /* HASFLAG/GETFLAG — finish 986/981 CLI surface */
   if (kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASOPT") || kw(&L->cur,"FLAG?") ||
       kw(&L->cur,"HAS_FLAG") || kw(&L->cur,"OPTHAS") || kw(&L->cur,"DEFINEDFLAG")){
