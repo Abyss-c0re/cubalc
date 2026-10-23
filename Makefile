@@ -216,6 +216,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_files_line.c \
 	src/lang/lang_ops_sys_files_match.c \
 	src/lang/lang_ops_sys_files_cwd.c \
+	src/lang/lang_ops_sys_files_net.c \
 	src/lang/lang_ops_sys_grep.c \
 	src/lang/lang_ops_sys_hostmeta.c \
 	src/lang/lang_ops_sys_identity.c \
