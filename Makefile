@@ -205,6 +205,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_human.c \
 	src/lang/lang_ops_sys_rand.c \
 	src/lang/lang_ops_sys_numagg.c \
+	src/lang/lang_ops_sys_bagshape.c \
 	src/lang/lang_ops_sys_wait.c \
 	src/lang/lang_ops_toc.c \
 	src/lang/lang_parse.c \
