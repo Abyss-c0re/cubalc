@@ -141,6 +141,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_fstr_kinship.c \
 	src/lang/lang_ops_flow_fstr_cousin.c \
 	src/lang/lang_ops_flow_fstr_dumpobj.c \
+	src/lang/lang_ops_flow_fstr_info.c \
 	src/lang/lang_ops_flow_fstr_hasexist.c \
 	src/lang/lang_ops_flow_fstr_hasmeth.c \
 	src/lang/lang_ops_flow_fstr_hasfield.c \
