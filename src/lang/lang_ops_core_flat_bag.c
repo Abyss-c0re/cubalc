@@ -1,5 +1,6 @@
 /* CubalC flat bag-in plane */
 #include "lang/cubalc_lang_ops_core_flat_bag.h"
+#include "lang/cubalc_lang_ops_core_bag_push.h"
 #include "lang/cubalc_lang_ops_core_help.h"
 #include "lang/cubalc_lang_ops_sys_cli.h"
 #include "lang/cubalc_lang_ops_sys_codec.h"
@@ -19,6 +20,11 @@
 #endif
 
 int cubalc_lang_ops_core_try_flat_bag(VM *vm, Lex *L) {
+  /* PUSHTO/POPFROM/… work-bag queue → bag_push plane */
+  {
+    int bp = cubalc_lang_ops_core_try_bag_push(vm, L);
+    if (bp != 0) return bp;
+  }
   /* ENSUREIN name line — append exact bag field if missing (idempotent work set).
    * DROPLINEIN name line — drop first exact bag field (ack without substring GREPVIN).
    * ENSUREIN_HIT 1=added 0=already present; DROPLINEIN_HIT 1=dropped 0=miss.
