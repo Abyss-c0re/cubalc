@@ -155,6 +155,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_scene.c \
 	src/lang/lang_ops_flow_send.c \
 	src/lang/lang_ops_math.c \
+	src/lang/lang_ops_math_nbit.c \
 	src/lang/lang_ops_sched.c \
 	src/lang/lang_ops_smx.c \
 	src/lang/lang_ops_smx_cascade.c \
