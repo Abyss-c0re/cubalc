@@ -129,6 +129,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_fstr_b.c \
 	src/lang/lang_ops_flow_ifcmp.c \
 	src/lang/lang_ops_flow_ifbag.c \
+	src/lang/lang_ops_flow_ifjson.c \
 	src/lang/lang_ops_flow_ifvar.c \
 	src/lang/lang_ops_flow_oop.c \
 	src/lang/lang_ops_flow_scene.c \

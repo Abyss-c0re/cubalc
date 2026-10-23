@@ -1,0 +1,2187 @@
+/* CubalC lang — lang_ops_flow_ifjson.c
+ * FLOW IFJSONHAS·WHENJSONHAS peel (A3_flow at 7k soft ceiling).
+ * Mesh vote A3 · zero bloat · cube is SoT.
+ */
+#include "lang/cubalc_lang_ops_flow_ifjson.h"
+#include "lang/cubalc_lang_internal.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int cubalc_lang_ops_flow_try_ifjson(VM *vm, Lex *L) {
+  /* Returns 1 handled, -1 fail, 0 not this plane. */
+  /* IFJSONHAS|IFHASJSON plate key â¦ [ELSE â¦] END â body if JSON key present.
+   * IFJSONMISS plate key â¦ â body if key missing (or plate empty/non-object).
+   * IFJSONHASALL|IFJSONNEED plate keyâ¦ â body if ALL keys present (soft SYS JSONHASALL).
+   * IFJSONHASANY plate keyâ¦ â body if ANY key present (soft SYS JSONHASANY).
+   * IFONLYP|IFNOEXTRAP plate keyâ¦ â body if plate has no extras beyond allow-list.
+   * IFEXACTP|IFSCHEMAP plate keyâ¦ â body if HASALL + no extras (exact schema).
+   * IFMISSP|IFABSENTP plate keyâ¦ â body if any required keys missing (soft MISSP).
+   * IFEXTRAP|IFUNKNOWNKEYSP plate allowâ¦ â body if plate has unknown keys (soft EXTRAP).
+   * IFEMPTYP|IFISEMPTYP plate â body if plate has zero keys (soft EMPTYP).
+   * IFNONEMPTYP|IFHASKEYSP plate â body if plate has any keys (soft NONEMPTYP).
+   * IFONEP|IFSINGLEP plate â body if plate has exactly one key (soft ONEP).
+   * IFMULTP|IFMANYKEYSP plate â body if plate has two or more keys (soft MULTP).
+   * IFPAIRP|IFTWOP plate â body if plate has exactly two keys (soft PAIRP).
+   * IFTRIPLEP|IFTHREEP plate â body if plate has exactly three keys (soft TRIPLEP).
+   * IFQUADP|IFFOURP plate â body if plate has exactly four keys (soft QUADP).
+   * IFQUINTP|IFFIVEP plate â body if plate has exactly five keys (soft QUINTP).
+   * IFSIXP|IFHEXAP plate â body if plate has exactly six keys (soft SIXP).
+   * IFSEVENP|IFSEPTP plate â body if plate has exactly seven keys (soft SEVENP).
+   * IFEIGHTP|IFOCTP plate â body if plate has exactly eight keys (soft EIGHTP).
+   * IFNINEP|IFNONAP plate â body if plate has exactly nine keys (soft NINEP).
+   * IFTENP|IFDECAP plate â body if plate has exactly ten keys (soft TENP).
+   * IFELEVENP|IFUNDECAP plate â body if plate has exactly eleven keys (soft ELEVENP).
+   * IFTWELVEP|IFDODECAP plate â body if plate has exactly twelve keys (soft TWELVEP).
+   * IFTHIRTEENP|IFTRIDECAP plate â body if plate has exactly thirteen keys (soft THIRTEENP).
+   * IFFOURTEENP|IFTETRADECAP plate â body if plate has exactly fourteen keys (soft FOURTEENP).
+   * IFFIFTEENP|IFPENTEDECAP plate â body if plate has exactly fifteen keys (soft FIFTEENP).
+   * IFSIXTEENP|IFHEXADECAP plate â body if plate has exactly sixteen keys (soft SIXTEENP).
+   * IFSEVENTEENP|IFHEPTADECAP plate â body if plate has exactly seventeen keys (soft SEVENTEENP).
+   * IFEIGHTEENP|IFOCTODECAP plate â body if plate has exactly eighteen keys (soft EIGHTEENP).
+   * IFEIGHTYFIVEP|IFPENTEOCTACONTAP|IFEIGHTYFIVEKEYP plate — exactly 85 keys.
+   * IFEIGHTYSIXP|IFHEXEOCTACONTAP|IFEIGHTYSIXKEYP plate — exactly 86 keys.
+   * IFEIGHTYSEVENP|IFHEPTEOCTACONTAP|IFEIGHTYSEVENKEYP plate — exactly 87 keys.
+   * IFEIGHTYEIGHTP|IFOCTOOCTACONTAP|IFEIGHTYEIGHTKEYP plate — exactly 88 keys.
+   * IFEIGHTYNINEP|IFENNEAOCTACONTAP|IFEIGHTYNINEKEYP plate — exactly 89 keys.
+   * IFHUNDREDONEP|IFHENHECTOP|IFHUNDREDONEKEYP plate — body if plate has exactly 101 keys (soft HUNDREDONEP).
+   * IFHUNDREDTWOP|IFDOHECTOP|IFHUNDREDTWOKEYP plate — body if plate has exactly 102 keys (soft HUNDREDTWOP).
+   * IFHUNDREDTHREEP|IFTRIHECTOP|IFHUNDREDTHREEKEYP plate — body if plate has exactly 103 keys (soft HUNDREDTHREEP).
+   * IFHUNDREDFOURP|IFTETRAHECTOP|IFHUNDREDFOURKEYP plate — body if plate has exactly 104 keys (soft HUNDREDFOURP).
+   * IFNINETEENP|IFENNEADECAP|IFNINETEENKEYP plate â body if plate has exactly nineteen keys (soft NINETEENP). (sealed MI-1016)
+   * IFTWENTYP|IFICOSAP plate â body if plate has exactly twenty keys (soft TWENTYP).
+   * IFTWENTYONEP|IFHENICOSAP plate â body if plate has exactly twenty-one keys (soft TWENTYONEP).
+   * IFTWENTYTWOP|IFDOICOSAP plate â body if plate has exactly twenty-two keys (soft TWENTYTWOP).
+   * IFTWENTYTHREEP|IFTRICOSAP plate â body if plate has exactly twenty-three keys (soft TWENTYTHREEP).
+   * IFTWENTYFOURP|IFTETRAICOSAP plate â body if plate has exactly twenty-four keys (soft TWENTYFOURP).
+   * IFTWENTYFIVEP|IFPENTEICOSAP plate â body if plate has exactly twenty-five keys (soft TWENTYFIVEP).
+   * IFTWENTYSIXP|IFHEXEICOSAP plate â body if plate has exactly twenty-six keys (soft TWENTYSIXP).
+   * IFTWENTYSEVENP|IFHEPTEICOSAP plate â body if plate has exactly twenty-seven keys (soft TWENTYSEVENP).
+   * IFTHIRTYNINEP|IFENNEATRIACONTAP|IFTHIRTYNINEKEYP plate â body if plate has exactly thirty-nine keys (soft THIRTYNINEP).
+   * IFFORTYP|IFTETRACONTAP|IFFORTYKEYP plate â body if plate has exactly forty keys (soft FORTYP).
+   * IFFORTYONEP|IFHENTETRACONTAP|IFFORTYONEKEYP plate â body if plate has exactly forty-one keys (soft FORTYONEP).
+   * IFFORTYTWOP|IFDOTETRACONTAP|IFFORTYTWOKEYP plate â body if plate has exactly forty-two keys (soft FORTYTWOP).
+   * IFFORTYTHREEP|IFTRITETRACONTAP|IFFORTYTHREEKEYP plate â body if plate has exactly forty-three keys (soft FORTYTHREEP).
+   * IFFORTYFOURP|IFTETRATETRACONTAP|IFFORTYFOURKEYP plate â body if plate has exactly forty-four keys (soft FORTYFOURP).
+   * IFFORTYFIVEP|IFPENTETETRACONTAP|IFFORTYFIVEKEYP plate â body if plate has exactly forty-five keys (soft FORTYFIVEP).
+   * IFFORTYSIXP|IFHEXETETRACONTAP|IFFORTYSIXKEYP plate â body if plate has exactly forty-six keys (soft FORTYSIXP).
+   * IFFORTYSEVENP|IFHEPTETETRACONTAP|IFFORTYSEVENKEYP plate â body if plate has exactly forty-seven keys (soft FORTYSEVENP).
+   * IFFORTYEIGHTP|IFOCTOTETRACONTAP|IFFORTYEIGHTKEYP plate â body if plate has exactly forty-eight keys (soft FORTYEIGHTP).
+   * IFFORTYNINEP|IFENNEATETRACONTAP|IFFORTYNINEKEYP plate â body if plate has exactly forty-nine keys (soft FORTYNINEP).
+ * IFFIFTYP|IFPENTECONTAP|IFFIFTYKEYP plate â body if plate has exactly fifty keys (soft FIFTYP).
+ * IFFIFTYONEP|IFHENPENTECONTAP|IFFIFTYONEKEYP plate â body if plate has exactly fifty-one keys (soft FIFTYONEP).
+ * IFFIFTYTWOP|IFDOPENTECONTAP|IFFIFTYTWOKEYP plate â body if plate has exactly fifty-two keys (soft FIFTYTWOP).
+ * IFFIFTYTHREEP|IFTRIPENTECONTAP|IFFIFTYTHREEKEYP plate â body if plate has exactly fifty-three keys (soft FIFTYTHREEP).
+ * IFFIFTYFOURP|IFTETRAPENTECONTAP|IFFIFTYFOURKEYP plate â body if plate has exactly fifty-four keys (soft FIFTYFOURP).
+ * IFFIFTYFIVEP|IFPENTEPENTECONTAP|IFFIFTYFIVEKEYP plate â body if plate has exactly fifty-five keys (soft FIFTYFIVEP).
+ * IFFIFTYSIXP|IFHEXEPENTECONTAP|IFFIFTYSIXKEYP plate â body if plate has exactly fifty-six keys (soft FIFTYSIXP).
+ * IFFIFTYSEVENP|IFHEPTEPENTECONTAP|IFFIFTYSEVENKEYP plate â body if plate has exactly fifty-seven keys (soft FIFTYSEVENP).
+ * IFFIFTYEIGHTP|IFOCTOPENTECONTAP|IFFIFTYEIGHTKEYP plate â body if plate has exactly fifty-eight keys (soft FIFTYEIGHTP).
+ * IFFIFTYNINEP|IFENNEAPENTECONTAP|IFFIFTYNINEKEYP plate â body if plate has exactly fifty-nine keys (soft FIFTYNINEP).
+ * IFSIXTYP|IFHEXECONTAP|IFSIXTYKEYP plate â body if plate has exactly sixty keys (soft SIXTYP).
+ * IFSIXTYONEP|IFHENHEXECONTAP|IFSIXTYONEKEYP plate â body if plate has exactly sixty-one keys (soft SIXTYONEP).
+ * IFSIXTYTWOP|IFDOHEXECONTAP|IFSIXTYTWOKEYP plate â body if plate has exactly sixty-two keys (soft SIXTYTWOP).
+   * IFSIXTYTHREEP|IFTRIHEXECONTAP|IFSIXTYTHREEKEYP plate â body if plate has exactly sixty-three keys (soft SIXTYTHREEP).
+   * IFSIXTYFOURP|IFTETRAHEXECONTAP|IFSIXTYFOURKEYP plate â body if plate has exactly sixty-four keys (soft SIXTYFOURP).
+   * IFSIXTYFIVEP|IFPENTEHEXECONTAP|IFSIXTYFIVEKEYP plate â body if plate has exactly sixty-five keys (soft SIXTYFIVEP).
+   * IFSIXTYSIXP|IFHEXEHEXECONTAP|IFSIXTYSIXKEYP plate â body if plate has exactly sixty-six keys (soft SIXTYSIXP).
+   * IFSIXTYSEVENP|IFHEPTEHEXECONTAP|IFSIXTYSEVENKEYP plate â body if plate has exactly sixty-seven keys (soft SIXTYSEVENP).
+   * IFSIXTYEIGHTP|IFOCTOHEXECONTAP|IFSIXTYEIGHTKEYP plate â body if plate has exactly sixty-eight keys (soft SIXTYEIGHTP).
+   * IFSIXTYNINEP|IFENNEAHEXECONTAP|IFSIXTYNINEKEYP plate â body if plate has exactly sixty-nine keys (soft SIXTYNINEP).
+   * IFSEVENTYP|IFHEBDOMECONTAP|IFSEVENTYKEYP plate â body if plate has exactly seventy keys (soft SEVENTYP).
+   * IFSEVENTYONEP|IFHENHEBDOMECONTAP|IFSEVENTYONEKEYP plate â body if plate has exactly seventy-one keys (soft SEVENTYONEP).
+   * IFSEVENTYTWOP|IFDOHEBDOMECONTAP|IFSEVENTYTWOKEYP plate â body if plate has exactly seventy-two keys (soft SEVENTYTWOP).
+   * IFSEVENTYTHREEP|IFTRIHEBDOMECONTAP|IFSEVENTYTHREEKEYP plate â body if plate has exactly seventy-three keys (soft SEVENTYTHREEP).
+   * IFSEVENTYFOURP|IFTETRAHEBDOMECONTAP|IFSEVENTYFOURKEYP plate â body if plate has exactly seventy-four keys (soft SEVENTYFOURP).
+   * IFSEVENTYFIVEP|IFPENTEHEBDOMECONTAP|IFSEVENTYFIVEKEYP plate â body if plate has exactly seventy-five keys (soft SEVENTYFIVEP).
+   * IFSEVENTYSIXP|IFHEXEHEBDOMECONTAP|IFSEVENTYSIXKEYP plate â body if plate has exactly seventy-six keys (soft SEVENTYSIXP).
+   * IFSEVENTYSEVENP|IFHEPTEHEBDOMECONTAP|IFSEVENTYSEVENKEYP plate — body if plate has exactly seventy-seven keys (soft SEVENTYSEVENP).
+   * IFSEVENTYEIGHTP|IFOCTOHEBDOMECONTAP|IFSEVENTYEIGHTKEYP plate — body if plate has exactly seventy-eight keys (soft SEVENTYEIGHTP).
+   * IFSEVENTYNINEP|IFENNEAHEBDOMECONTAP|IFSEVENTYNINEKEYP plate — body if plate has exactly seventy-nine keys (soft SEVENTYNINEP).
+   * IFEIGHTYP|IFOCTACONTAP|IFEIGHTYKEYP plate — body if plate has exactly eighty keys (soft EIGHTYP).
+   * IFEIGHTYONEP|IFHENOCTACONTAP|IFEIGHTYONEKEYP plate — body if plate has exactly eighty-one keys (soft EIGHTYONEP).
+   * IFEIGHTYTWOP|IFDOOCTACONTAP|IFEIGHTYTWOKEYP plate — body if plate has exactly eighty-two keys (soft EIGHTYTWOP).
+   * Complements SYS JSONHAS/JSONHASALL + IF LAST_N. Plate is JSON string/var.
+   * Usability: multi-key plate contract branches without probe glue. */
+  if (kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"IFHASJSON")||
+      kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFJSONHASALL")||kw(&L->cur,"IFJSONHASANY")||kw(&L->cur,"IFJSONNEED")||kw(&L->cur,"IFHASJSONALL")||kw(&L->cur,"IFHASJSONANY")||kw(&L->cur,"WHENJSONHASALL")||kw(&L->cur,"WHENJSONHASANY")||kw(&L->cur,"WHENJSONNEED")||kw(&L->cur,"WHENHASJSONALL")||kw(&L->cur,"WHENHASJSONANY")||kw(&L->cur,"IFONLYP")||kw(&L->cur,"IFNOEXTRAP")||kw(&L->cur,"IFJSONONLYP")||kw(&L->cur,"IFSTRICTP")||kw(&L->cur,"WHENONLYP")||kw(&L->cur,"WHENNOEXTRAP")||kw(&L->cur,"IFEXACTP")||kw(&L->cur,"IFSCHEMAP")||kw(&L->cur,"IFJSONEXACTP")||kw(&L->cur,"WHENEXACTP")||kw(&L->cur,"WHENSCHEMAP")||kw(&L->cur,"IFMISSP")||kw(&L->cur,"IFABSENTP")||kw(&L->cur,"IFMISSINGKEYSP")||kw(&L->cur,"WHENMISSP")||kw(&L->cur,"WHENABSENTP")||kw(&L->cur,"WHENMISSINGKEYSP")||kw(&L->cur,"IFEXTRAP")||kw(&L->cur,"IFUNKNOWNKEYSP")||kw(&L->cur,"IFUNKNOWNKEYS")||kw(&L->cur,"WHENEXTRAP")||kw(&L->cur,"WHENUNKNOWNKEYSP")||kw(&L->cur,"WHENUNKNOWNKEYS")||kw(&L->cur,"IFEMPTYP")||kw(&L->cur,"IFISEMPTYP")||kw(&L->cur,"IFEMPTYPLATE")||kw(&L->cur,"IFJSONEMPTY")||kw(&L->cur,"WHENEMPTYP")||kw(&L->cur,"WHENISEMPTYP")||kw(&L->cur,"WHENEMPTYPLATE")||kw(&L->cur,"WHENJSONEMPTY")||kw(&L->cur,"IFNONEMPTYP")||kw(&L->cur,"IFHASKEYSP")||kw(&L->cur,"IFNONEMPTYPLATE")||kw(&L->cur,"IFJSONNONEMPTY")||kw(&L->cur,"WHENNONEMPTYP")||kw(&L->cur,"WHENHASKEYSP")||kw(&L->cur,"WHENNONEMPTYPLATE")||kw(&L->cur,"WHENJSONNONEMPTY")||kw(&L->cur,"IFONEP")||kw(&L->cur,"IFSINGLEP")||kw(&L->cur,"IFONEKEYP")||kw(&L->cur,"WHENONEP")||kw(&L->cur,"WHENSINGLEP")||kw(&L->cur,"WHENONEKEYP")||kw(&L->cur,"IFMULTP")||kw(&L->cur,"IFMANYKEYSP")||kw(&L->cur,"IFMULTIKEYP")||kw(&L->cur,"WHENMULTP")||kw(&L->cur,"WHENMANYKEYSP")||kw(&L->cur,"WHENMULTIKEYP")||kw(&L->cur,"IFPAIRP")||kw(&L->cur,"IFTWOP")||kw(&L->cur,"IFTWOKEYP")||kw(&L->cur,"WHENPAIRP")||kw(&L->cur,"WHENTWOP")||kw(&L->cur,"WHENTWOKEYP")||kw(&L->cur,"IFTRIPLEP")||kw(&L->cur,"IFTHREEP")||kw(&L->cur,"IFTHREEKEYP")||kw(&L->cur,"WHENTRIPLEP")||kw(&L->cur,"WHENTHREEP")||kw(&L->cur,"WHENTHREEKEYP")||kw(&L->cur,"IFQUADP")||kw(&L->cur,"IFFOURP")||kw(&L->cur,"IFFOURKEYP")||kw(&L->cur,"WHENQUADP")||kw(&L->cur,"WHENFOURP")||kw(&L->cur,"WHENFOURKEYP")||kw(&L->cur,"IFQUINTP")||kw(&L->cur,"IFFIVEP")||kw(&L->cur,"IFFIVEKEYP")||kw(&L->cur,"WHENQUINTP")||kw(&L->cur,"WHENFIVEP")||kw(&L->cur,"WHENFIVEKEYP")||kw(&L->cur,"IFSIXP")||kw(&L->cur,"IFHEXAP")||kw(&L->cur,"IFSIXKEYP")||kw(&L->cur,"WHENSIXP")||kw(&L->cur,"WHENHEXAP")||kw(&L->cur,"WHENSIXKEYP")||kw(&L->cur,"IFSEVENP")||kw(&L->cur,"IFSEPTP")||kw(&L->cur,"IFSEVENKEYP")||kw(&L->cur,"WHENSEVENP")||kw(&L->cur,"WHENSEPTP")||kw(&L->cur,"WHENSEVENKEYP")||kw(&L->cur,"IFEIGHTP")||kw(&L->cur,"IFOCTP")||kw(&L->cur,"IFEIGHTKEYP")||kw(&L->cur,"WHENEIGHTP")||kw(&L->cur,"WHENOCTP")||kw(&L->cur,"WHENEIGHTKEYP")||kw(&L->cur,"IFNINEP")||kw(&L->cur,"IFNONAP")||kw(&L->cur,"IFNINEKEYP")||kw(&L->cur,"WHENNINEP")||kw(&L->cur,"WHENNONAP")||kw(&L->cur,"WHENNINEKEYP")||kw(&L->cur,"IFTENP")||kw(&L->cur,"IFDECAP")||kw(&L->cur,"IFTENKEYP")||kw(&L->cur,"WHENTENP")||kw(&L->cur,"WHENDECAP")||kw(&L->cur,"WHENTENKEYP")||kw(&L->cur,"IFELEVENP")||kw(&L->cur,"IFUNDECAP")||kw(&L->cur,"IFELEVENKEYP")||kw(&L->cur,"WHENELEVENP")||kw(&L->cur,"WHENUNDECAP")||kw(&L->cur,"WHENELEVENKEYP")||kw(&L->cur,"IFTWELVEP")||kw(&L->cur,"IFDODECAP")||kw(&L->cur,"IFTWELVEKEYP")||kw(&L->cur,"WHENTWELVEP")||kw(&L->cur,"WHENDODECAP")||kw(&L->cur,"WHENTWELVEKEYP")||kw(&L->cur,"IFTHIRTEENP")||kw(&L->cur,"IFTRIDECAP")||kw(&L->cur,"IFTHIRTEENKEYP")||kw(&L->cur,"WHENTHIRTEENP")||kw(&L->cur,"WHENTRIDECAP")||kw(&L->cur,"WHENTHIRTEENKEYP")||kw(&L->cur,"IFFOURTEENP")||kw(&L->cur,"IFTETRADECAP")||kw(&L->cur,"IFFOURTEENKEYP")||kw(&L->cur,"WHENFOURTEENP")||kw(&L->cur,"WHENTETRADECAP")||kw(&L->cur,"WHENFOURTEENKEYP")||kw(&L->cur,"IFFIFTEENP")||kw(&L->cur,"IFPENTEDECAP")||kw(&L->cur,"IFFIFTEENKEYP")||kw(&L->cur,"WHENFIFTEENP")||kw(&L->cur,"WHENPENTEDECAP")||kw(&L->cur,"WHENFIFTEENKEYP")||kw(&L->cur,"IFSIXTEENP")||kw(&L->cur,"IFHEXADECAP")||kw(&L->cur,"IFSIXTEENKEYP")||kw(&L->cur,"WHENSIXTEENP")||kw(&L->cur,"WHENHEXADECAP")||kw(&L->cur,"WHENSIXTEENKEYP")||kw(&L->cur,"IFSEVENTEENP")||kw(&L->cur,"IFHEPTADECAP")||kw(&L->cur,"IFSEVENTEENKEYP")||kw(&L->cur,"WHENSEVENTEENP")||kw(&L->cur,"WHENHEPTADECAP")||kw(&L->cur,"WHENSEVENTEENKEYP")||kw(&L->cur,"IFEIGHTEENP")||kw(&L->cur,"IFOCTODECAP")||kw(&L->cur,"IFEIGHTEENKEYP")||kw(&L->cur,"WHENEIGHTEENP")||kw(&L->cur,"WHENOCTODECAP")||kw(&L->cur,"WHENEIGHTEENKEYP")||kw(&L->cur,"IFNINETEENP")||kw(&L->cur,"IFENNEADECAP")||kw(&L->cur,"IFNINETEENKEYP")||kw(&L->cur,"WHENNINETEENP")||kw(&L->cur,"WHENENNEADECAP")||kw(&L->cur,"WHENNINETEENKEYP")||kw(&L->cur,"IFTWENTYP")||kw(&L->cur,"IFICOSAP")||kw(&L->cur,"IFTWENTYKEYP")||kw(&L->cur,"WHENTWENTYP")||kw(&L->cur,"WHENICOSAP")||kw(&L->cur,"WHENTWENTYKEYP")||kw(&L->cur,"IFTWENTYONEP")||kw(&L->cur,"IFHENICOSAP")||kw(&L->cur,"IFTWENTYONEKEYP")||kw(&L->cur,"WHENTWENTYONEP")||kw(&L->cur,"WHENHENICOSAP")||kw(&L->cur,"WHENTWENTYONEKEYP")||kw(&L->cur,"IFTWENTYTWOP")||kw(&L->cur,"IFDOICOSAP")||kw(&L->cur,"IFTWENTYTWOKEYP")||kw(&L->cur,"WHENTWENTYTWOP")||kw(&L->cur,"WHENDOICOSAP")||kw(&L->cur,"WHENTWENTYTWOKEYP")||kw(&L->cur,"IFTWENTYTHREEP")||kw(&L->cur,"IFTRICOSAP")||kw(&L->cur,"IFTWENTYTHREEKEYP")||kw(&L->cur,"WHENTWENTYTHREEP")||kw(&L->cur,"WHENTRICOSAP")||kw(&L->cur,"WHENTWENTYTHREEKEYP")||kw(&L->cur,"IFTWENTYFOURP")||kw(&L->cur,"IFTETRAICOSAP")||kw(&L->cur,"IFTWENTYFOURKEYP")||kw(&L->cur,"WHENTWENTYFOURP")||kw(&L->cur,"WHENTETRAICOSAP")||kw(&L->cur,"WHENTWENTYFOURKEYP")||kw(&L->cur,"IFTWENTYFIVEP")||kw(&L->cur,"IFPENTEICOSAP")||kw(&L->cur,"IFTWENTYFIVEKEYP")||kw(&L->cur,"WHENTWENTYFIVEP")||kw(&L->cur,"WHENPENTEICOSAP")||kw(&L->cur,"WHENTWENTYFIVEKEYP")||kw(&L->cur,"IFTWENTYSIXP")||kw(&L->cur,"IFHEXEICOSAP")||kw(&L->cur,"IFTWENTYSIXKEYP")||kw(&L->cur,"WHENTWENTYSIXP")||kw(&L->cur,"WHENHEXEICOSAP")||kw(&L->cur,"WHENTWENTYSIXKEYP")||kw(&L->cur,"IFTWENTYSEVENP")||kw(&L->cur,"IFHEPTEICOSAP")||kw(&L->cur,"IFTWENTYSEVENKEYP")||kw(&L->cur,"WHENTWENTYSEVENP")||kw(&L->cur,"WHENHEPTEICOSAP")||kw(&L->cur,"WHENTWENTYSEVENKEYP")||kw(&L->cur,"IFTWENTYEIGHTP")||kw(&L->cur,"IFOCTOICOSAP")||kw(&L->cur,"IFTWENTYEIGHTKEYP")||kw(&L->cur,"WHENTWENTYEIGHTP")||kw(&L->cur,"WHENOCTOICOSAP")||kw(&L->cur,"WHENTWENTYEIGHTKEYP")||kw(&L->cur,"IFTWENTYNINEP")||kw(&L->cur,"IFENNEAICOSAP")||kw(&L->cur,"IFTWENTYNINEKEYP")||kw(&L->cur,"WHENTWENTYNINEP")||kw(&L->cur,"WHENENNEAICOSAP")||kw(&L->cur,"WHENTWENTYNINEKEYP")||kw(&L->cur,"IFTHIRTYP")||kw(&L->cur,"IFTRIACONTAP")||kw(&L->cur,"IFTHIRTYKEYP")||kw(&L->cur,"WHENTHIRTYP")||kw(&L->cur,"WHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYKEYP")||kw(&L->cur,"IFTHIRTYONEP")||kw(&L->cur,"IFHENTRIACONTAP")||kw(&L->cur,"IFTHIRTYONEKEYP")||kw(&L->cur,"WHENTHIRTYONEP")||kw(&L->cur,"WHENHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYONEKEYP")||kw(&L->cur,"IFTHIRTYTWOP")||kw(&L->cur,"IFDOTRIACONTAP")||kw(&L->cur,"IFTHIRTYTWOKEYP")||kw(&L->cur,"WHENTHIRTYTWOP")||kw(&L->cur,"WHENDOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYTWOKEYP")||kw(&L->cur,"IFTHIRTYTHREEP")||kw(&L->cur,"IFTRITRIACONTAP")||kw(&L->cur,"IFTHIRTYTHREEKEYP")||kw(&L->cur,"WHENTHIRTYTHREEP")||kw(&L->cur,"WHENTRITRIACONTAP")||kw(&L->cur,"WHENTHIRTYTHREEKEYP")||kw(&L->cur,"IFTHIRTYFOURP")||kw(&L->cur,"IFTETRATRIACONTAP")||kw(&L->cur,"IFTHIRTYFOURKEYP")||kw(&L->cur,"WHENTHIRTYFOURP")||kw(&L->cur,"WHENTETRATRIACONTAP")||kw(&L->cur,"WHENTHIRTYFOURKEYP")||kw(&L->cur,"IFTHIRTYFIVEP")||kw(&L->cur,"IFPENTETRIACONTAP")||kw(&L->cur,"IFTHIRTYFIVEKEYP")||kw(&L->cur,"WHENTHIRTYFIVEP")||kw(&L->cur,"WHENPENTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYFIVEKEYP")||kw(&L->cur,"IFTHIRTYSIXP")||kw(&L->cur,"IFHEXETRIACONTAP")||kw(&L->cur,"IFTHIRTYSIXKEYP")||kw(&L->cur,"WHENTHIRTYSIXP")||kw(&L->cur,"WHENHEXETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSIXKEYP")||kw(&L->cur,"IFTHIRTYSEVENP")||kw(&L->cur,"IFHEPTETRIACONTAP")||kw(&L->cur,"IFTHIRTYSEVENKEYP")||kw(&L->cur,"WHENTHIRTYSEVENP")||kw(&L->cur,"WHENHEPTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSEVENKEYP")||kw(&L->cur,"IFTHIRTYEIGHTP")||kw(&L->cur,"IFOCTOTRIACONTAP")||kw(&L->cur,"IFTHIRTYEIGHTKEYP")||kw(&L->cur,"WHENTHIRTYEIGHTP")||kw(&L->cur,"WHENOCTOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYEIGHTKEYP")||kw(&L->cur,"IFTHIRTYNINEP")||kw(&L->cur,"IFENNEATRIACONTAP")||kw(&L->cur,"IFTHIRTYNINEKEYP")||kw(&L->cur,"WHENTHIRTYNINEP")||kw(&L->cur,"WHENENNEATRIACONTAP")||kw(&L->cur,"WHENTHIRTYNINEKEYP")||kw(&L->cur,"IFFORTYP")||kw(&L->cur,"IFTETRACONTAP")||kw(&L->cur,"IFFORTYKEYP")||kw(&L->cur,"WHENFORTYP")||kw(&L->cur,"WHENTETRACONTAP")||kw(&L->cur,"WHENFORTYKEYP")||kw(&L->cur,"IFFORTYONEP")||kw(&L->cur,"IFHENTETRACONTAP")||kw(&L->cur,"IFFORTYONEKEYP")||kw(&L->cur,"WHENFORTYONEP")||kw(&L->cur,"WHENHENTETRACONTAP")||kw(&L->cur,"WHENFORTYONEKEYP")||kw(&L->cur,"IFFORTYTWOP")||kw(&L->cur,"IFDOTETRACONTAP")||kw(&L->cur,"IFFORTYTWOKEYP")||kw(&L->cur,"WHENFORTYTWOP")||kw(&L->cur,"WHENDOTETRACONTAP")||kw(&L->cur,"WHENFORTYTWOKEYP")||kw(&L->cur,"IFFORTYTHREEP")||kw(&L->cur,"IFTRITETRACONTAP")||kw(&L->cur,"IFFORTYTHREEKEYP")||kw(&L->cur,"WHENFORTYTHREEP")||kw(&L->cur,"WHENTRITETRACONTAP")||kw(&L->cur,"WHENFORTYTHREEKEYP")||kw(&L->cur,"IFFORTYFOURP")||kw(&L->cur,"IFTETRATETRACONTAP")||kw(&L->cur,"IFFORTYFOURKEYP")||kw(&L->cur,"WHENFORTYFOURP")||kw(&L->cur,"WHENTETRATETRACONTAP")||kw(&L->cur,"WHENFORTYFOURKEYP")||kw(&L->cur,"IFFORTYFIVEP")||kw(&L->cur,"IFPENTETETRACONTAP")||kw(&L->cur,"IFFORTYFIVEKEYP")||kw(&L->cur,"WHENFORTYFIVEP")||kw(&L->cur,"WHENPENTETETRACONTAP")||kw(&L->cur,"WHENFORTYFIVEKEYP")||kw(&L->cur,"IFFORTYSIXP")||kw(&L->cur,"IFHEXETETRACONTAP")||kw(&L->cur,"IFFORTYSIXKEYP")||kw(&L->cur,"WHENFORTYSIXP")||kw(&L->cur,"WHENHEXETETRACONTAP")||kw(&L->cur,"WHENFORTYSIXKEYP")||kw(&L->cur,"IFFORTYSEVENP")||kw(&L->cur,"IFHEPTETETRACONTAP")||kw(&L->cur,"IFFORTYSEVENKEYP")||kw(&L->cur,"WHENFORTYSEVENP")||kw(&L->cur,"WHENHEPTETETRACONTAP")||kw(&L->cur,"WHENFORTYSEVENKEYP")||kw(&L->cur,"IFFORTYEIGHTP")||kw(&L->cur,"IFOCTOTETRACONTAP")||kw(&L->cur,"IFFORTYEIGHTKEYP")||kw(&L->cur,"WHENFORTYEIGHTP")||kw(&L->cur,"WHENOCTOTETRACONTAP")||kw(&L->cur,"WHENFORTYEIGHTKEYP")||kw(&L->cur,"IFFORTYNINEP")||kw(&L->cur,"IFENNEATETRACONTAP")||kw(&L->cur,"IFFORTYNINEKEYP")||kw(&L->cur,"WHENFORTYNINEP")||kw(&L->cur,"WHENENNEATETRACONTAP")||kw(&L->cur,"WHENFORTYNINEKEYP")||kw(&L->cur,"IFFIFTYP")||kw(&L->cur,"IFPENTECONTAP")||kw(&L->cur,"IFFIFTYKEYP")||kw(&L->cur,"WHENFIFTYP")||kw(&L->cur,"WHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYKEYP")||kw(&L->cur,"IFFIFTYONEP")||kw(&L->cur,"IFHENPENTECONTAP")||kw(&L->cur,"IFFIFTYONEKEYP")||kw(&L->cur,"WHENFIFTYONEP")||kw(&L->cur,"WHENHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYONEKEYP")||kw(&L->cur,"IFFIFTYTWOP")||kw(&L->cur,"IFDOPENTECONTAP")||kw(&L->cur,"IFFIFTYTWOKEYP")||kw(&L->cur,"WHENFIFTYTWOP")||kw(&L->cur,"WHENDOPENTECONTAP")||kw(&L->cur,"WHENFIFTYTWOKEYP")||kw(&L->cur,"IFFIFTYTHREEP")||kw(&L->cur,"IFTRIPENTECONTAP")||kw(&L->cur,"IFFIFTYTHREEKEYP")||kw(&L->cur,"WHENFIFTYTHREEP")||kw(&L->cur,"WHENTRIPENTECONTAP")||kw(&L->cur,"WHENFIFTYTHREEKEYP")||kw(&L->cur,"IFFIFTYFOURP")||kw(&L->cur,"IFTETRAPENTECONTAP")||kw(&L->cur,"IFFIFTYFOURKEYP")||kw(&L->cur,"WHENFIFTYFOURP")||kw(&L->cur,"WHENTETRAPENTECONTAP")||kw(&L->cur,"WHENFIFTYFOURKEYP")||kw(&L->cur,"IFFIFTYFIVEP")||kw(&L->cur,"IFPENTEPENTECONTAP")||kw(&L->cur,"IFFIFTYFIVEKEYP")||kw(&L->cur,"WHENFIFTYFIVEP")||kw(&L->cur,"WHENPENTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYFIVEKEYP")||kw(&L->cur,"IFFIFTYSIXP")||kw(&L->cur,"IFHEXEPENTECONTAP")||kw(&L->cur,"IFFIFTYSIXKEYP")||kw(&L->cur,"WHENFIFTYSIXP")||kw(&L->cur,"WHENHEXEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSIXKEYP")||kw(&L->cur,"IFFIFTYSEVENP")||kw(&L->cur,"IFHEPTEPENTECONTAP")||kw(&L->cur,"IFFIFTYSEVENKEYP")||kw(&L->cur,"WHENFIFTYSEVENP")||kw(&L->cur,"WHENHEPTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSEVENKEYP")||kw(&L->cur,"IFFIFTYEIGHTP")||kw(&L->cur,"IFOCTOPENTECONTAP")||kw(&L->cur,"IFFIFTYEIGHTKEYP")||kw(&L->cur,"WHENFIFTYEIGHTP")||kw(&L->cur,"WHENOCTOPENTECONTAP")||kw(&L->cur,"WHENFIFTYEIGHTKEYP")||kw(&L->cur,"IFFIFTYNINEP")||kw(&L->cur,"IFENNEAPENTECONTAP")||kw(&L->cur,"IFFIFTYNINEKEYP")||kw(&L->cur,"WHENFIFTYNINEP")||kw(&L->cur,"WHENENNEAPENTECONTAP")||kw(&L->cur,"WHENFIFTYNINEKEYP")||kw(&L->cur,"IFSIXTYP")||kw(&L->cur,"IFHEXECONTAP")||kw(&L->cur,"IFSIXTYKEYP")||kw(&L->cur,"WHENSIXTYP")||kw(&L->cur,"WHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYKEYP")||kw(&L->cur,"IFSIXTYONEP")||kw(&L->cur,"IFHENHEXECONTAP")||kw(&L->cur,"IFSIXTYONEKEYP")||kw(&L->cur,"WHENSIXTYONEP")||kw(&L->cur,"WHENHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYONEKEYP")||kw(&L->cur,"IFSIXTYTWOP")||kw(&L->cur,"IFDOHEXECONTAP")||kw(&L->cur,"IFSIXTYTWOKEYP")||kw(&L->cur,"WHENSIXTYTWOP")||kw(&L->cur,"WHENDOHEXECONTAP")||kw(&L->cur,"WHENSIXTYTWOKEYP")||kw(&L->cur,"IFSIXTYTHREEP")||kw(&L->cur,"IFTRIHEXECONTAP")||kw(&L->cur,"IFSIXTYTHREEKEYP")||kw(&L->cur,"WHENSIXTYTHREEP")||kw(&L->cur,"WHENTRIHEXECONTAP")||kw(&L->cur,"WHENSIXTYTHREEKEYP")||kw(&L->cur,"IFSIXTYFOURP")||kw(&L->cur,"IFTETRAHEXECONTAP")||kw(&L->cur,"IFSIXTYFOURKEYP")||kw(&L->cur,"WHENSIXTYFOURP")||kw(&L->cur,"WHENTETRAHEXECONTAP")||kw(&L->cur,"WHENSIXTYFOURKEYP")||kw(&L->cur,"IFSIXTYFIVEP")||kw(&L->cur,"IFPENTEHEXECONTAP")||kw(&L->cur,"IFSIXTYFIVEKEYP")||kw(&L->cur,"WHENSIXTYFIVEP")||kw(&L->cur,"WHENPENTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYFIVEKEYP")||kw(&L->cur,"IFSIXTYSIXP")||kw(&L->cur,"IFHEXEHEXECONTAP")||kw(&L->cur,"IFSIXTYSIXKEYP")||kw(&L->cur,"WHENSIXTYSIXP")||kw(&L->cur,"WHENHEXEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSIXKEYP")||kw(&L->cur,"IFSIXTYSEVENP")||kw(&L->cur,"IFHEPTEHEXECONTAP")||kw(&L->cur,"IFSIXTYSEVENKEYP")||kw(&L->cur,"WHENSIXTYSEVENP")||kw(&L->cur,"WHENHEPTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSEVENKEYP")||kw(&L->cur,"IFSIXTYEIGHTP")||kw(&L->cur,"IFOCTOHEXECONTAP")||kw(&L->cur,"IFSIXTYEIGHTKEYP")||kw(&L->cur,"WHENSIXTYEIGHTP")||kw(&L->cur,"WHENOCTOHEXECONTAP")||kw(&L->cur,"WHENSIXTYEIGHTKEYP")||kw(&L->cur,"IFSIXTYNINEP")||kw(&L->cur,"IFENNEAHEXECONTAP")||kw(&L->cur,"IFSIXTYNINEKEYP")||kw(&L->cur,"WHENSIXTYNINEP")||kw(&L->cur,"WHENENNEAHEXECONTAP")||kw(&L->cur,"WHENSIXTYNINEKEYP")||kw(&L->cur,"IFSEVENTYP")||kw(&L->cur,"IFHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYKEYP")||kw(&L->cur,"WHENSEVENTYP")||kw(&L->cur,"WHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYKEYP")||kw(&L->cur,"IFSEVENTYONEP")||kw(&L->cur,"IFHENHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYONEKEYP")||kw(&L->cur,"WHENSEVENTYONEP")||kw(&L->cur,"WHENHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYONEKEYP")||kw(&L->cur,"IFSEVENTYTWOP")||kw(&L->cur,"IFDOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTWOKEYP")||kw(&L->cur,"WHENSEVENTYTWOP")||kw(&L->cur,"WHENDOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTWOKEYP")||kw(&L->cur,"IFSEVENTYTHREEP")||kw(&L->cur,"IFTRIHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTHREEKEYP")||kw(&L->cur,"WHENSEVENTYTHREEP")||kw(&L->cur,"WHENTRIHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTHREEKEYP")||kw(&L->cur,"IFSEVENTYFOURP")||kw(&L->cur,"IFTETRAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFOURKEYP")||kw(&L->cur,"WHENSEVENTYFOURP")||kw(&L->cur,"WHENTETRAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFOURKEYP")||kw(&L->cur,"IFSEVENTYFIVEP")||kw(&L->cur,"IFPENTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFIVEKEYP")||kw(&L->cur,"WHENSEVENTYFIVEP")||kw(&L->cur,"WHENPENTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFIVEKEYP")||kw(&L->cur,"IFSEVENTYSIXP")||kw(&L->cur,"IFHEXEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSIXKEYP")||kw(&L->cur,"WHENSEVENTYSIXP")||kw(&L->cur,"WHENHEXEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSIXKEYP")||kw(&L->cur,"IFSEVENTYSEVENP")||kw(&L->cur,"IFHEPTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSEVENKEYP")||kw(&L->cur,"WHENSEVENTYSEVENP")||kw(&L->cur,"WHENHEPTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSEVENKEYP")||kw(&L->cur,"IFSEVENTYEIGHTP")||kw(&L->cur,"IFOCTOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYEIGHTKEYP")||kw(&L->cur,"WHENSEVENTYEIGHTP")||kw(&L->cur,"WHENOCTOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYEIGHTKEYP")||kw(&L->cur,"IFSEVENTYNINEP")||kw(&L->cur,"IFENNEAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYNINEKEYP")||kw(&L->cur,"WHENSEVENTYNINEP")||kw(&L->cur,"WHENENNEAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYNINEKEYP")||kw(&L->cur,"IFEIGHTYP")||kw(&L->cur,"IFOCTACONTAP")||kw(&L->cur,"IFEIGHTYKEYP")||kw(&L->cur,"WHENEIGHTYP")||kw(&L->cur,"WHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYKEYP")||kw(&L->cur,"IFEIGHTYONEP")||kw(&L->cur,"IFHENOCTACONTAP")||kw(&L->cur,"IFEIGHTYONEKEYP")||kw(&L->cur,"WHENEIGHTYONEP")||kw(&L->cur,"WHENHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYONEKEYP")||kw(&L->cur,"IFEIGHTYTWOP")||kw(&L->cur,"IFDOOCTACONTAP")||kw(&L->cur,"IFEIGHTYTWOKEYP")||kw(&L->cur,"WHENEIGHTYTWOP")||kw(&L->cur,"WHENDOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTWOKEYP")||kw(&L->cur,"IFEIGHTYTHREEP")||kw(&L->cur,"IFTRIOCTACONTAP")||kw(&L->cur,"IFEIGHTYTHREEKEYP")||kw(&L->cur,"WHENEIGHTYTHREEP")||kw(&L->cur,"WHENTRIOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTHREEKEYP")||kw(&L->cur,"IFEIGHTYFOURP")||kw(&L->cur,"IFTETRAOCTACONTAP")||kw(&L->cur,"IFEIGHTYFOURKEYP")||kw(&L->cur,"WHENEIGHTYFOURP")||kw(&L->cur,"WHENTETRAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFOURKEYP")||kw(&L->cur,"IFEIGHTYFIVEP")||kw(&L->cur,"IFPENTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYFIVEKEYP")||kw(&L->cur,"WHENEIGHTYFIVEP")||kw(&L->cur,"WHENPENTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFIVEKEYP")||kw(&L->cur,"IFEIGHTYSIXP")||kw(&L->cur,"IFHEXEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSIXKEYP")||kw(&L->cur,"WHENEIGHTYSIXP")||kw(&L->cur,"WHENHEXEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSIXKEYP")||kw(&L->cur,"IFEIGHTYSEVENP")||kw(&L->cur,"IFHEPTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSEVENKEYP")||kw(&L->cur,"WHENEIGHTYSEVENP")||kw(&L->cur,"WHENHEPTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSEVENKEYP")||kw(&L->cur,"IFEIGHTYEIGHTP")||kw(&L->cur,"IFOCTOOCTACONTAP")||kw(&L->cur,"IFEIGHTYEIGHTKEYP")||kw(&L->cur,"WHENEIGHTYEIGHTP")||kw(&L->cur,"WHENOCTOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYEIGHTKEYP")||kw(&L->cur,"IFEIGHTYNINEP")||kw(&L->cur,"IFENNEAOCTACONTAP")||kw(&L->cur,"IFEIGHTYNINEKEYP")||kw(&L->cur,"WHENEIGHTYNINEP")||kw(&L->cur,"WHENENNEAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYNINEKEYP")||kw(&L->cur,"IFNINETYP")||kw(&L->cur,"IFENNEACONTAP")||kw(&L->cur,"IFNINETYKEYP")||kw(&L->cur,"WHENNINETYP")||kw(&L->cur,"WHENENNEACONTAP")||kw(&L->cur,"WHENNINETYKEYP")||kw(&L->cur,"IFNINETYONEP")||kw(&L->cur,"IFHENENNEACONTAP")||kw(&L->cur,"IFNINETYONEKEYP")||kw(&L->cur,"WHENNINETYONEP")||kw(&L->cur,"WHENHENENNEACONTAP")||kw(&L->cur,"WHENNINETYONEKEYP")||kw(&L->cur,"IFNINETYTWOP")||kw(&L->cur,"IFDOENNEACONTAP")||kw(&L->cur,"IFNINETYTWOKEYP")||kw(&L->cur,"WHENNINETYTWOP")||kw(&L->cur,"WHENDOENNEACONTAP")||kw(&L->cur,"WHENNINETYTWOKEYP")||kw(&L->cur,"IFNINETYTHREEP")||kw(&L->cur,"IFTRIENNEACONTAP")||kw(&L->cur,"IFNINETYTHREEKEYP")||kw(&L->cur,"WHENNINETYTHREEP")||kw(&L->cur,"WHENTRIENNEACONTAP")||kw(&L->cur,"WHENNINETYTHREEKEYP")||kw(&L->cur,"IFNINETYFOURP")||kw(&L->cur,"IFTETRAENNEACONTAP")||kw(&L->cur,"IFNINETYFOURKEYP")||kw(&L->cur,"WHENNINETYFOURP")||kw(&L->cur,"WHENTETRAENNEACONTAP")||kw(&L->cur,"WHENNINETYFOURKEYP")||kw(&L->cur,"IFNINETYFIVEP")||kw(&L->cur,"IFPENTEENNEACONTAP")||kw(&L->cur,"IFNINETYFIVEKEYP")||kw(&L->cur,"WHENNINETYFIVEP")||kw(&L->cur,"WHENPENTEENNEACONTAP")||kw(&L->cur,"WHENNINETYFIVEKEYP")||kw(&L->cur,"IFNINETYSIXP")||kw(&L->cur,"IFHEXEENNEACONTAP")||kw(&L->cur,"IFNINETYSIXKEYP")||kw(&L->cur,"WHENNINETYSIXP")||kw(&L->cur,"WHENHEXEENNEACONTAP")||kw(&L->cur,"WHENNINETYSIXKEYP")||kw(&L->cur,"IFNINETYSEVENP")||kw(&L->cur,"IFHEPTAENNEACONTAP")||kw(&L->cur,"IFNINETYSEVENKEYP")||kw(&L->cur,"WHENNINETYSEVENP")||kw(&L->cur,"WHENHEPTAENNEACONTAP")||kw(&L->cur,"WHENNINETYSEVENKEYP")||kw(&L->cur,"IFNINETYEIGHTP")||kw(&L->cur,"IFOCTOENNEACONTAP")||kw(&L->cur,"IFNINETYEIGHTKEYP")||kw(&L->cur,"WHENNINETYEIGHTP")||kw(&L->cur,"WHENOCTOENNEACONTAP")||kw(&L->cur,"WHENNINETYEIGHTKEYP")||kw(&L->cur,"IFNINETYNINEP")||kw(&L->cur,"IFENNEAENNEACONTAP")||kw(&L->cur,"IFNINETYNINEKEYP")||kw(&L->cur,"WHENNINETYNINEP")||kw(&L->cur,"WHENENNEAENNEACONTAP")||kw(&L->cur,"WHENNINETYNINEKEYP")||kw(&L->cur,"IFHUNDREDP")||kw(&L->cur,"IFHECTOP")||kw(&L->cur,"IFHUNDREDKEYP")||kw(&L->cur,"WHENHUNDREDP")||kw(&L->cur,"WHENHECTOP")||kw(&L->cur,"WHENHUNDREDKEYP")||kw(&L->cur,"IFHUNDREDONEP")||kw(&L->cur,"IFHENHECTOP")||kw(&L->cur,"IFHUNDREDONEKEYP")||kw(&L->cur,"WHENHUNDREDONEP")||kw(&L->cur,"WHENHENHECTOP")||kw(&L->cur,"WHENHUNDREDONEKEYP")||kw(&L->cur,"IFHUNDREDTWOP")||kw(&L->cur,"IFDOHECTOP")||kw(&L->cur,"IFHUNDREDTWOKEYP")||kw(&L->cur,"WHENHUNDREDTWOP")||kw(&L->cur,"WHENDOHECTOP")||kw(&L->cur,"WHENHUNDREDTWOKEYP")||kw(&L->cur,"IFHUNDREDTHREEP")||kw(&L->cur,"IFTRIHECTOP")||kw(&L->cur,"IFHUNDREDTHREEKEYP")||kw(&L->cur,"WHENHUNDREDTHREEP")||kw(&L->cur,"WHENTRIHECTOP")||kw(&L->cur,"WHENHUNDREDTHREEKEYP")||kw(&L->cur,"IFHUNDREDFOURP")||kw(&L->cur,"IFTETRAHECTOP")||kw(&L->cur,"IFHUNDREDFOURKEYP")||kw(&L->cur,"WHENHUNDREDFOURP")||kw(&L->cur,"WHENTETRAHECTOP")||kw(&L->cur,"WHENHUNDREDFOURKEYP")||kw(&L->cur,"IFJHAS")||kw(&L->cur,"WHENJHAS")||
+      kw(&L->cur,"IFPLATEHAS")||kw(&L->cur,"WHENPLATEHAS")||
+      kw(&L->cur,"IFJSONMISS")||kw(&L->cur,"WHENJSONMISS")||kw(&L->cur,"IFNOJSON")||
+      kw(&L->cur,"WHENNOJSON")||kw(&L->cur,"IFJSONLACK")||kw(&L->cur,"WHENJSONLACK")||
+      kw(&L->cur,"IFMISSINGJSON")||kw(&L->cur,"WHENMISSINGJSON")){
+    int aln = L->cur.line;
+    int is_miss = 0;
+    int is_all = 0;
+    int is_any = 0;
+    int is_only = 0;
+    int is_exact = 0;
+    int is_missp = 0;
+    int is_extrap = 0;
+    int is_emptyp = 0;
+    int is_nonemptyp = 0;
+    int is_onep = 0;
+    int is_multp = 0;
+    int is_pairp = 0;
+    int is_triplep = 0;
+    int is_quadp = 0;
+    int is_quintp = 0;
+    int is_sixp = 0;
+    int is_sevenp = 0;
+    int is_eightp = 0;
+    int is_ninep = 0;
+    int is_tenp = 0;
+    int is_elevenp = 0;
+    int is_twelvep = 0;
+    int is_thirteenp = 0;
+    int is_fourteenp = 0;
+    int is_fifteenp = 0;
+    int is_sixteenp = 0;
+    int is_seventeenp = 0;
+    int is_eighteenp = 0;
+    int is_nineteenp = 0;
+    int is_twentyp = 0;
+    int is_twentyonep = 0;
+    int is_twentytwop = 0;
+    int is_twentythreep = 0;
+    int is_twentyfourp = 0;
+    int is_twentyfivep = 0;
+    int is_twentysixp = 0;
+    int is_twentysevenp = 0;
+    int is_twentyeightp = 0;
+    int is_twentyninep = 0;
+    int is_thirtyp = 0;
+    int is_thirtyonep = 0;
+    int is_thirtytwop = 0;
+    int is_thirtythreep = 0;
+    int is_thirtyfourp = 0;
+    int is_thirtyfivep = 0;
+    int is_thirtysixp = 0;
+    int is_thirtysevenp = 0;
+    int is_thirtyeightp = 0;
+    int is_thirtyninep = 0;
+    int is_fortyp = 0;
+    int is_fortyonep = 0;
+    int is_fortytwop = 0;
+    int is_fortythreep = 0;
+    int is_fortyfourp = 0;
+    int is_fortyfivep = 0;
+    int is_fortysixp = 0;
+    int is_fortysevenp = 0;
+    int is_fortyeightp = 0;
+    int is_fortyninep = 0;
+    int is_fiftyp = 0;
+    int is_fiftyonep = 0;
+    int is_fiftytwop = 0;
+    int is_fiftythreep = 0;
+    int is_fiftyfourp = 0;
+    int is_fiftyfivep = 0;
+    int is_fiftysixp = 0;
+    int is_fiftysevenp = 0;
+    int is_fiftyeightp = 0;
+    int is_fiftyninep = 0;
+    int is_sixtyp = 0;
+    int is_sixtyonep = 0;
+    int is_sixtytwop = 0;
+    int is_sixtythreep = 0;
+    int is_sixtyfourp = 0;
+    int is_sixtyfivep = 0;
+    int is_sixtysixp = 0;
+    int is_sixtysevenp = 0;
+    int is_sixtyeightp = 0;
+    int is_sixtyninep = 0;
+    int is_seventyp = 0;
+    int is_seventyonep = 0;
+    int is_seventytwop = 0;
+    int is_seventythreep = 0;
+    int is_seventyfourp = 0;
+    int is_seventyfivep = 0;
+    int is_seventysixp = 0;
+    int is_seventysevenp = 0;
+    int is_seventyeightp = 0;
+    int is_seventyninep = 0;
+    int is_eightyp = 0;
+    int is_eightyonep = 0;
+    int is_eightytwop = 0;
+    int is_eightythreep = 0;
+    int is_eightyfourp = 0;
+    int is_eightyfivep = 0;
+    int is_eightysixp = 0;
+    int is_eightysevenp = 0;
+    int is_eightyeightp = 0;
+    int is_eightyninep = 0;
+    int is_ninetyp = 0;
+    int is_ninetyonep = 0;
+    int is_ninetytwop = 0;
+    int is_ninetythreep = 0;
+    int is_ninetyfourp = 0;
+    int is_ninetyfivep = 0;
+    int is_ninetysixp = 0;
+    int is_ninetysevenp = 0;
+    int is_ninetyeightp = 0;
+    int is_ninetyninep = 0;
+    int is_hundredp = 0;
+    int is_hundredonep = 0;
+    int is_hundredtwop = 0;
+    int is_hundredthreep = 0;
+    int is_hundredfourp = 0;
+    int take = 0;
+    char plate[CUBALC_HOST_STR_MAX], key[192], op[32];
+    char keys_nl[CUBALC_HOST_STR_MAX];
+    size_t olen = 0;
+    long hit = 0;
+    cubalc_host_result hr;
+    Lex body_start;
+    int depth = 1;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "IFJSONMISS") == 0 || strcmp(op, "WHENJSONMISS") == 0 ||
+        strcmp(op, "IFNOJSON") == 0 || strcmp(op, "WHENNOJSON") == 0 ||
+        strcmp(op, "IFJSONLACK") == 0 || strcmp(op, "WHENJSONLACK") == 0 ||
+        strcmp(op, "IFMISSINGJSON") == 0 || strcmp(op, "WHENMISSINGJSON") == 0)
+      is_miss = 1;
+    if (strcmp(op, "IFJSONHASALL") == 0 || strcmp(op, "IFJSONNEED") == 0 ||
+        strcmp(op, "IFHASJSONALL") == 0 || strcmp(op, "WHENJSONHASALL") == 0 ||
+        strcmp(op, "WHENJSONNEED") == 0 || strcmp(op, "WHENHASJSONALL") == 0)
+      is_all = 1;
+    if (strcmp(op, "IFJSONHASANY") == 0 || strcmp(op, "IFHASJSONANY") == 0 ||
+        strcmp(op, "WHENJSONHASANY") == 0 || strcmp(op, "WHENHASJSONANY") == 0)
+      is_any = 1;
+    if (strcmp(op, "IFONLYP") == 0 || strcmp(op, "IFNOEXTRAP") == 0 ||
+        strcmp(op, "IFJSONONLYP") == 0 || strcmp(op, "IFSTRICTP") == 0 ||
+        strcmp(op, "WHENONLYP") == 0 || strcmp(op, "WHENNOEXTRAP") == 0)
+      is_only = 1;
+    if (strcmp(op, "IFEXACTP") == 0 || strcmp(op, "IFSCHEMAP") == 0 ||
+        strcmp(op, "IFJSONEXACTP") == 0 || strcmp(op, "WHENEXACTP") == 0 ||
+        strcmp(op, "WHENSCHEMAP") == 0)
+      is_exact = 1;
+    if (strcmp(op, "IFMISSP") == 0 || strcmp(op, "IFABSENTP") == 0 ||
+        strcmp(op, "IFMISSINGKEYSP") == 0 || strcmp(op, "WHENMISSP") == 0 ||
+        strcmp(op, "WHENABSENTP") == 0 || strcmp(op, "WHENMISSINGKEYSP") == 0)
+      is_missp = 1;
+    if (strcmp(op, "IFEXTRAP") == 0 || strcmp(op, "IFUNKNOWNKEYSP") == 0 ||
+        strcmp(op, "IFUNKNOWNKEYS") == 0 || strcmp(op, "WHENEXTRAP") == 0 ||
+        strcmp(op, "WHENUNKNOWNKEYSP") == 0 || strcmp(op, "WHENUNKNOWNKEYS") == 0)
+      is_extrap = 1;
+    if (strcmp(op, "IFEMPTYP") == 0 || strcmp(op, "IFISEMPTYP") == 0 ||
+        strcmp(op, "IFEMPTYPLATE") == 0 || strcmp(op, "IFJSONEMPTY") == 0 ||
+        strcmp(op, "WHENEMPTYP") == 0 || strcmp(op, "WHENISEMPTYP") == 0 ||
+        strcmp(op, "WHENEMPTYPLATE") == 0 || strcmp(op, "WHENJSONEMPTY") == 0)
+      is_emptyp = 1;
+    if (strcmp(op, "IFNONEMPTYP") == 0 || strcmp(op, "IFHASKEYSP") == 0 ||
+        strcmp(op, "IFNONEMPTYPLATE") == 0 || strcmp(op, "IFJSONNONEMPTY") == 0 ||
+        strcmp(op, "WHENNONEMPTYP") == 0 || strcmp(op, "WHENHASKEYSP") == 0 ||
+        strcmp(op, "WHENNONEMPTYPLATE") == 0 || strcmp(op, "WHENJSONNONEMPTY") == 0)
+      is_nonemptyp = 1;
+    if (strcmp(op, "IFONEP") == 0 || strcmp(op, "IFSINGLEP") == 0 ||
+        strcmp(op, "IFONEKEYP") == 0 || strcmp(op, "WHENONEP") == 0 ||
+        strcmp(op, "WHENSINGLEP") == 0 || strcmp(op, "WHENONEKEYP") == 0)
+      is_onep = 1;
+    if (strcmp(op, "IFMULTP") == 0 || strcmp(op, "IFMANYKEYSP") == 0 ||
+        strcmp(op, "IFMULTIKEYP") == 0 || strcmp(op, "WHENMULTP") == 0 ||
+        strcmp(op, "WHENMANYKEYSP") == 0 || strcmp(op, "WHENMULTIKEYP") == 0)
+      is_multp = 1;
+    if (strcmp(op, "IFPAIRP") == 0 || strcmp(op, "IFTWOP") == 0 ||
+        strcmp(op, "IFTWOKEYP") == 0 || strcmp(op, "WHENPAIRP") == 0 ||
+        strcmp(op, "WHENTWOP") == 0 || strcmp(op, "WHENTWOKEYP") == 0)
+      is_pairp = 1;
+    if (strcmp(op, "IFTRIPLEP") == 0 || strcmp(op, "IFTHREEP") == 0 ||
+        strcmp(op, "IFTHREEKEYP") == 0 || strcmp(op, "WHENTRIPLEP") == 0 ||
+        strcmp(op, "WHENTHREEP") == 0 || strcmp(op, "WHENTHREEKEYP") == 0)
+      is_triplep = 1;
+    if (strcmp(op, "IFQUADP") == 0 || strcmp(op, "IFFOURP") == 0 ||
+        strcmp(op, "IFFOURKEYP") == 0 || strcmp(op, "WHENQUADP") == 0 ||
+        strcmp(op, "WHENFOURP") == 0 || strcmp(op, "WHENFOURKEYP") == 0)
+      is_quadp = 1;
+    if (strcmp(op, "IFQUINTP") == 0 || strcmp(op, "IFFIVEP") == 0 ||
+        strcmp(op, "IFFIVEKEYP") == 0 || strcmp(op, "WHENQUINTP") == 0 ||
+        strcmp(op, "WHENFIVEP") == 0 || strcmp(op, "WHENFIVEKEYP") == 0)
+      is_quintp = 1;
+    if (strcmp(op, "IFSIXP") == 0 || strcmp(op, "IFHEXAP") == 0 ||
+        strcmp(op, "IFSIXKEYP") == 0 || strcmp(op, "WHENSIXP") == 0 ||
+        strcmp(op, "WHENHEXAP") == 0 || strcmp(op, "WHENSIXKEYP") == 0)
+      is_sixp = 1;
+    if (strcmp(op, "IFSEVENP") == 0 || strcmp(op, "IFSEPTP") == 0 ||
+        strcmp(op, "IFSEVENKEYP") == 0 || strcmp(op, "WHENSEVENP") == 0 ||
+        strcmp(op, "WHENSEPTP") == 0 || strcmp(op, "WHENSEVENKEYP") == 0)
+      is_sevenp = 1;
+    if (strcmp(op, "IFEIGHTP") == 0 || strcmp(op, "IFOCTP") == 0 ||
+        strcmp(op, "IFEIGHTKEYP") == 0 || strcmp(op, "WHENEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTP") == 0 || strcmp(op, "WHENEIGHTKEYP") == 0)
+      is_eightp = 1;
+    if (strcmp(op, "IFNINEP") == 0 || strcmp(op, "IFNONAP") == 0 ||
+        strcmp(op, "IFNINEKEYP") == 0 || strcmp(op, "WHENNINEP") == 0 ||
+        strcmp(op, "WHENNONAP") == 0 || strcmp(op, "WHENNINEKEYP") == 0)
+      is_ninep = 1;
+    if (strcmp(op, "IFTENP") == 0 || strcmp(op, "IFDECAP") == 0 ||
+        strcmp(op, "IFTENKEYP") == 0 || strcmp(op, "WHENTENP") == 0 ||
+        strcmp(op, "WHENDECAP") == 0 || strcmp(op, "WHENTENKEYP") == 0)
+      is_tenp = 1;
+    if (strcmp(op, "IFELEVENP") == 0 || strcmp(op, "IFUNDECAP") == 0 ||
+        strcmp(op, "IFELEVENKEYP") == 0 || strcmp(op, "WHENELEVENP") == 0 ||
+        strcmp(op, "WHENUNDECAP") == 0 || strcmp(op, "WHENELEVENKEYP") == 0)
+      is_elevenp = 1;
+    if (strcmp(op, "IFTWELVEP") == 0 || strcmp(op, "IFDODECAP") == 0 ||
+        strcmp(op, "IFTWELVEKEYP") == 0 || strcmp(op, "WHENTWELVEP") == 0 ||
+        strcmp(op, "WHENDODECAP") == 0 || strcmp(op, "WHENTWELVEKEYP") == 0)
+      is_twelvep = 1;
+    if (strcmp(op, "IFTHIRTEENP") == 0 || strcmp(op, "IFTRIDECAP") == 0 ||
+        strcmp(op, "IFTHIRTEENKEYP") == 0 || strcmp(op, "WHENTHIRTEENP") == 0 ||
+        strcmp(op, "WHENTRIDECAP") == 0 || strcmp(op, "WHENTHIRTEENKEYP") == 0)
+      is_thirteenp = 1;
+    if (strcmp(op, "IFFOURTEENP") == 0 || strcmp(op, "IFTETRADECAP") == 0 ||
+        strcmp(op, "IFFOURTEENKEYP") == 0 || strcmp(op, "WHENFOURTEENP") == 0 ||
+        strcmp(op, "WHENTETRADECAP") == 0 || strcmp(op, "WHENFOURTEENKEYP") == 0)
+      is_fourteenp = 1;
+    if (strcmp(op, "IFFIFTEENP") == 0 || strcmp(op, "IFPENTEDECAP") == 0 ||
+        strcmp(op, "IFFIFTEENKEYP") == 0 || strcmp(op, "WHENFIFTEENP") == 0 ||
+        strcmp(op, "WHENPENTEDECAP") == 0 || strcmp(op, "WHENFIFTEENKEYP") == 0)
+      is_fifteenp = 1;
+    if (strcmp(op, "IFSIXTEENP") == 0 || strcmp(op, "IFHEXADECAP") == 0 ||
+        strcmp(op, "IFSIXTEENKEYP") == 0 || strcmp(op, "WHENSIXTEENP") == 0 ||
+        strcmp(op, "WHENHEXADECAP") == 0 || strcmp(op, "WHENSIXTEENKEYP") == 0)
+      is_sixteenp = 1;
+    if (strcmp(op, "IFSEVENTEENP") == 0 || strcmp(op, "IFHEPTADECAP") == 0 ||
+        strcmp(op, "IFSEVENTEENKEYP") == 0 || strcmp(op, "WHENSEVENTEENP") == 0 ||
+        strcmp(op, "WHENHEPTADECAP") == 0 || strcmp(op, "WHENSEVENTEENKEYP") == 0)
+      is_seventeenp = 1;
+    if (strcmp(op, "IFEIGHTEENP") == 0 || strcmp(op, "IFOCTODECAP") == 0 ||
+        strcmp(op, "IFEIGHTEENKEYP") == 0 || strcmp(op, "WHENEIGHTEENP") == 0 ||
+        strcmp(op, "WHENOCTODECAP") == 0 || strcmp(op, "WHENEIGHTEENKEYP") == 0)
+      is_eighteenp = 1;
+    if (strcmp(op, "IFNINETEENP") == 0 || strcmp(op, "IFENNEADECAP") == 0 ||
+        strcmp(op, "IFNINETEENKEYP") == 0 || strcmp(op, "WHENNINETEENP") == 0 ||
+        strcmp(op, "WHENENNEADECAP") == 0 || strcmp(op, "WHENNINETEENKEYP") == 0)
+      is_nineteenp = 1;
+    if (strcmp(op, "IFTWENTYP") == 0 || strcmp(op, "IFICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYKEYP") == 0 || strcmp(op, "WHENTWENTYP") == 0 ||
+        strcmp(op, "WHENICOSAP") == 0 || strcmp(op, "WHENTWENTYKEYP") == 0)
+      is_twentyp = 1;
+    if (strcmp(op, "IFTWENTYONEP") == 0 || strcmp(op, "IFHENICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYONEKEYP") == 0 || strcmp(op, "WHENTWENTYONEP") == 0 ||
+        strcmp(op, "WHENHENICOSAP") == 0 || strcmp(op, "WHENTWENTYONEKEYP") == 0)
+      is_twentyonep = 1;
+    if (strcmp(op, "IFTWENTYTWOP") == 0 || strcmp(op, "IFDOICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYTWOKEYP") == 0 || strcmp(op, "WHENTWENTYTWOP") == 0 ||
+        strcmp(op, "WHENDOICOSAP") == 0 || strcmp(op, "WHENTWENTYTWOKEYP") == 0)
+      is_twentytwop = 1;
+    if (strcmp(op, "IFTWENTYTHREEP") == 0 || strcmp(op, "IFTRICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYTHREEKEYP") == 0 || strcmp(op, "WHENTWENTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRICOSAP") == 0 || strcmp(op, "WHENTWENTYTHREEKEYP") == 0)
+      is_twentythreep = 1;
+    if (strcmp(op, "IFTWENTYFOURP") == 0 || strcmp(op, "IFTETRAICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYFOURKEYP") == 0 || strcmp(op, "WHENTWENTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAICOSAP") == 0 || strcmp(op, "WHENTWENTYFOURKEYP") == 0)
+      is_twentyfourp = 1;
+    if (strcmp(op, "IFTWENTYFIVEP") == 0 || strcmp(op, "IFPENTEICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYFIVEKEYP") == 0 || strcmp(op, "WHENTWENTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEICOSAP") == 0 || strcmp(op, "WHENTWENTYFIVEKEYP") == 0)
+      is_twentyfivep = 1;
+    if (strcmp(op, "IFTWENTYSIXP") == 0 || strcmp(op, "IFHEXEICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYSIXKEYP") == 0 || strcmp(op, "WHENTWENTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEICOSAP") == 0 || strcmp(op, "WHENTWENTYSIXKEYP") == 0)
+      is_twentysixp = 1;
+    if (strcmp(op, "IFTWENTYSEVENP") == 0 || strcmp(op, "IFHEPTEICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYSEVENKEYP") == 0 || strcmp(op, "WHENTWENTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTEICOSAP") == 0 || strcmp(op, "WHENTWENTYSEVENKEYP") == 0)
+      is_twentysevenp = 1;
+    if (strcmp(op, "IFTWENTYEIGHTP") == 0 || strcmp(op, "IFOCTOICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYEIGHTKEYP") == 0 || strcmp(op, "WHENTWENTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOICOSAP") == 0 || strcmp(op, "WHENTWENTYEIGHTKEYP") == 0)
+      is_twentyeightp = 1;
+    if (strcmp(op, "IFTWENTYNINEP") == 0 || strcmp(op, "IFENNEAICOSAP") == 0 ||
+        strcmp(op, "IFTWENTYNINEKEYP") == 0 || strcmp(op, "WHENTWENTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAICOSAP") == 0 || strcmp(op, "WHENTWENTYNINEKEYP") == 0)
+      is_twentyninep = 1;
+    if (strcmp(op, "IFTHIRTYP") == 0 || strcmp(op, "IFTRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYKEYP") == 0 || strcmp(op, "WHENTHIRTYP") == 0 ||
+        strcmp(op, "WHENTRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYKEYP") == 0)
+      is_thirtyp = 1;
+    if (strcmp(op, "IFTHIRTYONEP") == 0 || strcmp(op, "IFHENTRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYONEKEYP") == 0 || strcmp(op, "WHENTHIRTYONEP") == 0 ||
+        strcmp(op, "WHENHENTRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYONEKEYP") == 0)
+      is_thirtyonep = 1;
+    if (strcmp(op, "IFTHIRTYTWOP") == 0 || strcmp(op, "IFDOTRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYTWOKEYP") == 0 || strcmp(op, "WHENTHIRTYTWOP") == 0 ||
+        strcmp(op, "WHENDOTRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYTWOKEYP") == 0)
+      is_thirtytwop = 1;
+    if (strcmp(op, "IFTHIRTYTHREEP") == 0 || strcmp(op, "IFTRITRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYTHREEKEYP") == 0 || strcmp(op, "WHENTHIRTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRITRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYTHREEKEYP") == 0)
+      is_thirtythreep = 1;
+    if (strcmp(op, "IFTHIRTYFOURP") == 0 || strcmp(op, "IFTETRATRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYFOURKEYP") == 0 || strcmp(op, "WHENTHIRTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRATRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYFOURKEYP") == 0)
+      is_thirtyfourp = 1;
+    if (strcmp(op, "IFTHIRTYFIVEP") == 0 || strcmp(op, "IFPENTETRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYFIVEKEYP") == 0 || strcmp(op, "WHENTHIRTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTETRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYFIVEKEYP") == 0)
+      is_thirtyfivep = 1;
+    if (strcmp(op, "IFTHIRTYSIXP") == 0 || strcmp(op, "IFHEXETRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYSIXKEYP") == 0 || strcmp(op, "WHENTHIRTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXETRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYSIXKEYP") == 0)
+      is_thirtysixp = 1;
+    if (strcmp(op, "IFTHIRTYSEVENP") == 0 || strcmp(op, "IFHEPTETRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYSEVENKEYP") == 0 || strcmp(op, "WHENTHIRTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTETRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYSEVENKEYP") == 0)
+      is_thirtysevenp = 1;
+    if (strcmp(op, "IFTHIRTYEIGHTP") == 0 || strcmp(op, "IFOCTOTRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYEIGHTKEYP") == 0 || strcmp(op, "WHENTHIRTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOTRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYEIGHTKEYP") == 0)
+      is_thirtyeightp = 1;
+    if (strcmp(op, "IFTHIRTYNINEP") == 0 || strcmp(op, "IFENNEATRIACONTAP") == 0 ||
+        strcmp(op, "IFTHIRTYNINEKEYP") == 0 || strcmp(op, "WHENTHIRTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEATRIACONTAP") == 0 || strcmp(op, "WHENTHIRTYNINEKEYP") == 0)
+      is_thirtyninep = 1;
+    if (strcmp(op, "IFFORTYP") == 0 || strcmp(op, "IFTETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYKEYP") == 0 || strcmp(op, "WHENFORTYP") == 0 ||
+        strcmp(op, "WHENTETRACONTAP") == 0 || strcmp(op, "WHENFORTYKEYP") == 0)
+      is_fortyp = 1;
+    if (strcmp(op, "IFFORTYONEP") == 0 || strcmp(op, "IFHENTETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYONEKEYP") == 0 || strcmp(op, "WHENFORTYONEP") == 0 ||
+        strcmp(op, "WHENHENTETRACONTAP") == 0 || strcmp(op, "WHENFORTYONEKEYP") == 0)
+      is_fortyonep = 1;
+    if (strcmp(op, "IFFORTYTWOP") == 0 || strcmp(op, "IFDOTETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYTWOKEYP") == 0 || strcmp(op, "WHENFORTYTWOP") == 0 ||
+        strcmp(op, "WHENDOTETRACONTAP") == 0 || strcmp(op, "WHENFORTYTWOKEYP") == 0)
+      is_fortytwop = 1;
+    if (strcmp(op, "IFFORTYTHREEP") == 0 || strcmp(op, "IFTRITETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYTHREEKEYP") == 0 || strcmp(op, "WHENFORTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRITETRACONTAP") == 0 || strcmp(op, "WHENFORTYTHREEKEYP") == 0)
+      is_fortythreep = 1;
+    if (strcmp(op, "IFFORTYFOURP") == 0 || strcmp(op, "IFTETRATETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYFOURKEYP") == 0 || strcmp(op, "WHENFORTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRATETRACONTAP") == 0 || strcmp(op, "WHENFORTYFOURKEYP") == 0)
+      is_fortyfourp = 1;
+    if (strcmp(op, "IFFORTYFIVEP") == 0 || strcmp(op, "IFPENTETETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYFIVEKEYP") == 0 || strcmp(op, "WHENFORTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTETETRACONTAP") == 0 || strcmp(op, "WHENFORTYFIVEKEYP") == 0)
+      is_fortyfivep = 1;
+    if (strcmp(op, "IFFORTYSIXP") == 0 || strcmp(op, "IFHEXETETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYSIXKEYP") == 0 || strcmp(op, "WHENFORTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXETETRACONTAP") == 0 || strcmp(op, "WHENFORTYSIXKEYP") == 0)
+      is_fortysixp = 1;
+    if (strcmp(op, "IFFORTYSEVENP") == 0 || strcmp(op, "IFHEPTETETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYSEVENKEYP") == 0 || strcmp(op, "WHENFORTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTETETRACONTAP") == 0 || strcmp(op, "WHENFORTYSEVENKEYP") == 0)
+      is_fortysevenp = 1;
+    if (strcmp(op, "IFFORTYEIGHTP") == 0 || strcmp(op, "IFOCTOTETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYEIGHTKEYP") == 0 || strcmp(op, "WHENFORTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOTETRACONTAP") == 0 || strcmp(op, "WHENFORTYEIGHTKEYP") == 0)
+      is_fortyeightp = 1;
+    if (strcmp(op, "IFFORTYNINEP") == 0 || strcmp(op, "IFENNEATETRACONTAP") == 0 ||
+        strcmp(op, "IFFORTYNINEKEYP") == 0 || strcmp(op, "WHENFORTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEATETRACONTAP") == 0 || strcmp(op, "WHENFORTYNINEKEYP") == 0)
+      is_fortyninep = 1;
+    if (strcmp(op, "IFFIFTYP") == 0 || strcmp(op, "IFPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYKEYP") == 0 || strcmp(op, "WHENFIFTYP") == 0 ||
+        strcmp(op, "WHENPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYKEYP") == 0)
+      is_fiftyp = 1;
+    if (strcmp(op, "IFFIFTYONEP") == 0 || strcmp(op, "IFHENPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYONEKEYP") == 0 || strcmp(op, "WHENFIFTYONEP") == 0 ||
+        strcmp(op, "WHENHENPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYONEKEYP") == 0)
+      is_fiftyonep = 1;
+    if (strcmp(op, "IFFIFTYTWOP") == 0 || strcmp(op, "IFDOPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYTWOKEYP") == 0 || strcmp(op, "WHENFIFTYTWOP") == 0 ||
+        strcmp(op, "WHENDOPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYTWOKEYP") == 0)
+      is_fiftytwop = 1;
+    if (strcmp(op, "IFFIFTYTHREEP") == 0 || strcmp(op, "IFTRIPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYTHREEKEYP") == 0 || strcmp(op, "WHENFIFTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRIPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYTHREEKEYP") == 0)
+      is_fiftythreep = 1;
+    if (strcmp(op, "IFFIFTYFOURP") == 0 || strcmp(op, "IFTETRAPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYFOURKEYP") == 0 || strcmp(op, "WHENFIFTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYFOURKEYP") == 0)
+      is_fiftyfourp = 1;
+    if (strcmp(op, "IFFIFTYFIVEP") == 0 || strcmp(op, "IFPENTEPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYFIVEKEYP") == 0 || strcmp(op, "WHENFIFTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYFIVEKEYP") == 0)
+      is_fiftyfivep = 1;
+    if (strcmp(op, "IFFIFTYSIXP") == 0 || strcmp(op, "IFHEXEPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYSIXKEYP") == 0 || strcmp(op, "WHENFIFTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYSIXKEYP") == 0)
+      is_fiftysixp = 1;
+    if (strcmp(op, "IFFIFTYSEVENP") == 0 || strcmp(op, "IFHEPTEPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYSEVENKEYP") == 0 || strcmp(op, "WHENFIFTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTEPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYSEVENKEYP") == 0)
+      is_fiftysevenp = 1;
+    if (strcmp(op, "IFFIFTYEIGHTP") == 0 || strcmp(op, "IFOCTOPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYEIGHTKEYP") == 0 || strcmp(op, "WHENFIFTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYEIGHTKEYP") == 0)
+      is_fiftyeightp = 1;
+    if (strcmp(op, "IFFIFTYNINEP") == 0 || strcmp(op, "IFENNEAPENTECONTAP") == 0 ||
+        strcmp(op, "IFFIFTYNINEKEYP") == 0 || strcmp(op, "WHENFIFTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAPENTECONTAP") == 0 || strcmp(op, "WHENFIFTYNINEKEYP") == 0)
+      is_fiftyninep = 1;
+    if (strcmp(op, "IFSIXTYP") == 0 || strcmp(op, "IFHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYKEYP") == 0 || strcmp(op, "WHENSIXTYP") == 0 ||
+        strcmp(op, "WHENHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYKEYP") == 0)
+      is_sixtyp = 1;
+    if (strcmp(op, "IFSIXTYONEP") == 0 || strcmp(op, "IFHENHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYONEKEYP") == 0 || strcmp(op, "WHENSIXTYONEP") == 0 ||
+        strcmp(op, "WHENHENHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYONEKEYP") == 0)
+      is_sixtyonep = 1;
+    if (strcmp(op, "IFSIXTYTWOP") == 0 || strcmp(op, "IFDOHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYTWOKEYP") == 0 || strcmp(op, "WHENSIXTYTWOP") == 0 ||
+        strcmp(op, "WHENDOHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYTWOKEYP") == 0)
+      is_sixtytwop = 1;
+    if (strcmp(op, "IFSIXTYTHREEP") == 0 || strcmp(op, "IFTRIHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYTHREEKEYP") == 0 || strcmp(op, "WHENSIXTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRIHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYTHREEKEYP") == 0)
+      is_sixtythreep = 1;
+    if (strcmp(op, "IFSIXTYFOURP") == 0 || strcmp(op, "IFTETRAHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYFOURKEYP") == 0 || strcmp(op, "WHENSIXTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYFOURKEYP") == 0)
+      is_sixtyfourp = 1;
+    if (strcmp(op, "IFSIXTYFIVEP") == 0 || strcmp(op, "IFPENTEHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYFIVEKEYP") == 0 || strcmp(op, "WHENSIXTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYFIVEKEYP") == 0)
+      is_sixtyfivep = 1;
+    if (strcmp(op, "IFSIXTYSIXP") == 0 || strcmp(op, "IFHEXEHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYSIXKEYP") == 0 || strcmp(op, "WHENSIXTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYSIXKEYP") == 0)
+      is_sixtysixp = 1;
+    if (strcmp(op, "IFSIXTYSEVENP") == 0 || strcmp(op, "IFHEPTEHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYSEVENKEYP") == 0 || strcmp(op, "WHENSIXTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTEHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYSEVENKEYP") == 0)
+      is_sixtysevenp = 1;
+    if (strcmp(op, "IFSIXTYEIGHTP") == 0 || strcmp(op, "IFOCTOHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYEIGHTKEYP") == 0 || strcmp(op, "WHENSIXTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYEIGHTKEYP") == 0)
+      is_sixtyeightp = 1;
+    if (strcmp(op, "IFSIXTYNINEP") == 0 || strcmp(op, "IFENNEAHEXECONTAP") == 0 ||
+        strcmp(op, "IFSIXTYNINEKEYP") == 0 || strcmp(op, "WHENSIXTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAHEXECONTAP") == 0 || strcmp(op, "WHENSIXTYNINEKEYP") == 0)
+      is_sixtyninep = 1;
+    if (strcmp(op, "IFSEVENTYP") == 0 || strcmp(op, "IFHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYKEYP") == 0 || strcmp(op, "WHENSEVENTYP") == 0 ||
+        strcmp(op, "WHENHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYKEYP") == 0)
+      is_seventyp = 1;
+    if (strcmp(op, "IFSEVENTYONEP") == 0 || strcmp(op, "IFHENHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYONEKEYP") == 0 || strcmp(op, "WHENSEVENTYONEP") == 0 ||
+        strcmp(op, "WHENHENHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYONEKEYP") == 0)
+      is_seventyonep = 1;
+    if (strcmp(op, "IFSEVENTYTWOP") == 0 || strcmp(op, "IFDOHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYTWOKEYP") == 0 || strcmp(op, "WHENSEVENTYTWOP") == 0 ||
+        strcmp(op, "WHENDOHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYTWOKEYP") == 0)
+      is_seventytwop = 1;
+    if (strcmp(op, "IFSEVENTYTHREEP") == 0 || strcmp(op, "IFTRIHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYTHREEKEYP") == 0 || strcmp(op, "WHENSEVENTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRIHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYTHREEKEYP") == 0)
+      is_seventythreep = 1;
+    if (strcmp(op, "IFSEVENTYFOURP") == 0 || strcmp(op, "IFTETRAHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYFOURKEYP") == 0 || strcmp(op, "WHENSEVENTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYFOURKEYP") == 0)
+      is_seventyfourp = 1;
+    if (strcmp(op, "IFSEVENTYFIVEP") == 0 || strcmp(op, "IFPENTEHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYFIVEKEYP") == 0 || strcmp(op, "WHENSEVENTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYFIVEKEYP") == 0)
+      is_seventyfivep = 1;
+    if (strcmp(op, "IFSEVENTYSIXP") == 0 || strcmp(op, "IFHEXEHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYSIXKEYP") == 0 || strcmp(op, "WHENSEVENTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYSIXKEYP") == 0)
+      is_seventysixp = 1;
+    if (strcmp(op, "IFSEVENTYSEVENP") == 0 || strcmp(op, "IFHEPTEHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYSEVENKEYP") == 0 || strcmp(op, "WHENSEVENTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTEHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYSEVENKEYP") == 0)
+      is_seventysevenp = 1;
+    if (strcmp(op, "IFSEVENTYEIGHTP") == 0 || strcmp(op, "IFOCTOHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYEIGHTKEYP") == 0 || strcmp(op, "WHENSEVENTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYEIGHTKEYP") == 0)
+      is_seventyeightp = 1;
+    if (strcmp(op, "IFSEVENTYNINEP") == 0 || strcmp(op, "IFENNEAHEBDOMECONTAP") == 0 ||
+        strcmp(op, "IFSEVENTYNINEKEYP") == 0 || strcmp(op, "WHENSEVENTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAHEBDOMECONTAP") == 0 || strcmp(op, "WHENSEVENTYNINEKEYP") == 0)
+      is_seventyninep = 1;
+    if (strcmp(op, "IFEIGHTYP") == 0 || strcmp(op, "IFOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYKEYP") == 0 || strcmp(op, "WHENEIGHTYP") == 0 ||
+        strcmp(op, "WHENOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYKEYP") == 0)
+      is_eightyp = 1;
+    if (strcmp(op, "IFEIGHTYONEP") == 0 || strcmp(op, "IFHENOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYONEKEYP") == 0 || strcmp(op, "WHENEIGHTYONEP") == 0 ||
+        strcmp(op, "WHENHENOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYONEKEYP") == 0)
+      is_eightyonep = 1;
+    if (strcmp(op, "IFEIGHTYTWOP") == 0 || strcmp(op, "IFDOOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYTWOKEYP") == 0 || strcmp(op, "WHENEIGHTYTWOP") == 0 ||
+        strcmp(op, "WHENDOOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYTWOKEYP") == 0)
+      is_eightytwop = 1;
+    if (strcmp(op, "IFEIGHTYTHREEP") == 0 || strcmp(op, "IFTRIOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYTHREEKEYP") == 0 || strcmp(op, "WHENEIGHTYTHREEP") == 0 ||
+        strcmp(op, "WHENTRIOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYTHREEKEYP") == 0)
+      is_eightythreep = 1;
+    if (strcmp(op, "IFEIGHTYFOURP") == 0 || strcmp(op, "IFTETRAOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYFOURKEYP") == 0 || strcmp(op, "WHENEIGHTYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYFOURKEYP") == 0)
+      is_eightyfourp = 1;
+    if (strcmp(op, "IFEIGHTYFIVEP") == 0 || strcmp(op, "IFPENTEOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYFIVEKEYP") == 0 || strcmp(op, "WHENEIGHTYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYFIVEKEYP") == 0)
+      is_eightyfivep = 1;
+    if (strcmp(op, "IFEIGHTYSIXP") == 0 || strcmp(op, "IFHEXEOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYSIXKEYP") == 0 || strcmp(op, "WHENEIGHTYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYSIXKEYP") == 0)
+      is_eightysixp = 1;
+    if (strcmp(op, "IFEIGHTYSEVENP") == 0 || strcmp(op, "IFHEPTEOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYSEVENKEYP") == 0 || strcmp(op, "WHENEIGHTYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTEOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYSEVENKEYP") == 0)
+      is_eightysevenp = 1;
+    if (strcmp(op, "IFEIGHTYEIGHTP") == 0 || strcmp(op, "IFOCTOOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYEIGHTKEYP") == 0 || strcmp(op, "WHENEIGHTYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYEIGHTKEYP") == 0)
+      is_eightyeightp = 1;
+    if (strcmp(op, "IFEIGHTYNINEP") == 0 || strcmp(op, "IFENNEAOCTACONTAP") == 0 ||
+        strcmp(op, "IFEIGHTYNINEKEYP") == 0 || strcmp(op, "WHENEIGHTYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAOCTACONTAP") == 0 || strcmp(op, "WHENEIGHTYNINEKEYP") == 0)
+      is_eightyninep = 1;
+    if (strcmp(op, "IFNINETYP") == 0 || strcmp(op, "IFENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYKEYP") == 0 || strcmp(op, "WHENNINETYP") == 0 ||
+        strcmp(op, "WHENENNEACONTAP") == 0 || strcmp(op, "WHENNINETYKEYP") == 0)
+      is_ninetyp = 1;
+    if (strcmp(op, "IFNINETYONEP") == 0 || strcmp(op, "IFHENENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYONEKEYP") == 0 || strcmp(op, "WHENNINETYONEP") == 0 ||
+        strcmp(op, "WHENHENENNEACONTAP") == 0 || strcmp(op, "WHENNINETYONEKEYP") == 0)
+      is_ninetyonep = 1;
+    if (strcmp(op, "IFNINETYTWOP") == 0 || strcmp(op, "IFDOENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYTWOKEYP") == 0 || strcmp(op, "WHENNINETYTWOP") == 0 ||
+        strcmp(op, "WHENDOENNEACONTAP") == 0 || strcmp(op, "WHENNINETYTWOKEYP") == 0)
+      is_ninetytwop = 1;
+    if (strcmp(op, "IFNINETYTHREEP") == 0 || strcmp(op, "IFTRIENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYTHREEKEYP") == 0 || strcmp(op, "WHENNINETYTHREEP") == 0 ||
+        strcmp(op, "WHENTRIENNEACONTAP") == 0 || strcmp(op, "WHENNINETYTHREEKEYP") == 0)
+      is_ninetythreep = 1;
+    if (strcmp(op, "IFNINETYFOURP") == 0 || strcmp(op, "IFTETRAENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYFOURKEYP") == 0 || strcmp(op, "WHENNINETYFOURP") == 0 ||
+        strcmp(op, "WHENTETRAENNEACONTAP") == 0 || strcmp(op, "WHENNINETYFOURKEYP") == 0)
+      is_ninetyfourp = 1;
+    if (strcmp(op, "IFNINETYFIVEP") == 0 || strcmp(op, "IFPENTEENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYFIVEKEYP") == 0 || strcmp(op, "WHENNINETYFIVEP") == 0 ||
+        strcmp(op, "WHENPENTEENNEACONTAP") == 0 || strcmp(op, "WHENNINETYFIVEKEYP") == 0)
+      is_ninetyfivep = 1;
+    if (strcmp(op, "IFNINETYSIXP") == 0 || strcmp(op, "IFHEXEENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYSIXKEYP") == 0 || strcmp(op, "WHENNINETYSIXP") == 0 ||
+        strcmp(op, "WHENHEXEENNEACONTAP") == 0 || strcmp(op, "WHENNINETYSIXKEYP") == 0)
+      is_ninetysixp = 1;
+    if (strcmp(op, "IFNINETYSEVENP") == 0 || strcmp(op, "IFHEPTAENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYSEVENKEYP") == 0 || strcmp(op, "WHENNINETYSEVENP") == 0 ||
+        strcmp(op, "WHENHEPTAENNEACONTAP") == 0 || strcmp(op, "WHENNINETYSEVENKEYP") == 0)
+      is_ninetysevenp = 1;
+    if (strcmp(op, "IFNINETYEIGHTP") == 0 || strcmp(op, "IFOCTOENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYEIGHTKEYP") == 0 || strcmp(op, "WHENNINETYEIGHTP") == 0 ||
+        strcmp(op, "WHENOCTOENNEACONTAP") == 0 || strcmp(op, "WHENNINETYEIGHTKEYP") == 0)
+      is_ninetyeightp = 1;
+    if (strcmp(op, "IFNINETYNINEP") == 0 || strcmp(op, "IFENNEAENNEACONTAP") == 0 ||
+        strcmp(op, "IFNINETYNINEKEYP") == 0 || strcmp(op, "WHENNINETYNINEP") == 0 ||
+        strcmp(op, "WHENENNEAENNEACONTAP") == 0 || strcmp(op, "WHENNINETYNINEKEYP") == 0)
+      is_ninetyninep = 1;
+    if (strcmp(op, "IFHUNDREDP") == 0 || strcmp(op, "IFHECTOP") == 0 ||
+        strcmp(op, "IFHUNDREDKEYP") == 0 || strcmp(op, "WHENHUNDREDP") == 0 ||
+        strcmp(op, "WHENHECTOP") == 0 || strcmp(op, "WHENHUNDREDKEYP") == 0)
+      is_hundredp = 1;
+    if (strcmp(op, "IFHUNDREDONEP") == 0 || strcmp(op, "IFHENHECTOP") == 0 ||
+        strcmp(op, "IFHUNDREDONEKEYP") == 0 || strcmp(op, "WHENHUNDREDONEP") == 0 ||
+        strcmp(op, "WHENHENHECTOP") == 0 || strcmp(op, "WHENHUNDREDONEKEYP") == 0)
+      is_hundredonep = 1;
+    if (strcmp(op, "IFHUNDREDTWOP") == 0 || strcmp(op, "IFDOHECTOP") == 0 ||
+        strcmp(op, "IFHUNDREDTWOKEYP") == 0 || strcmp(op, "WHENHUNDREDTWOP") == 0 ||
+        strcmp(op, "WHENDOHECTOP") == 0 || strcmp(op, "WHENHUNDREDTWOKEYP") == 0)
+      is_hundredtwop = 1;
+    if (strcmp(op, "IFHUNDREDTHREEP") == 0 || strcmp(op, "IFTRIHECTOP") == 0 ||
+        strcmp(op, "IFHUNDREDTHREEKEYP") == 0 || strcmp(op, "WHENHUNDREDTHREEP") == 0 ||
+        strcmp(op, "WHENTRIHECTOP") == 0 || strcmp(op, "WHENHUNDREDTHREEKEYP") == 0)
+      is_hundredthreep = 1;
+    if (strcmp(op, "IFHUNDREDFOURP") == 0 || strcmp(op, "IFTETRAHECTOP") == 0 ||
+        strcmp(op, "IFHUNDREDFOURKEYP") == 0 || strcmp(op, "WHENHUNDREDFOURP") == 0 ||
+        strcmp(op, "WHENTETRAHECTOP") == 0 || strcmp(op, "WHENHUNDREDFOURKEYP") == 0)
+      is_hundredfourp = 1;
+    lex_next(L);
+    /* No PLATE/JSON glue keywords â agents name vars plate/json often. */
+    plate[0] = 0; key[0] = 0; keys_nl[0] = 0; olen = 0;
+    if (resolve_str_arg(vm, L, plate, sizeof plate) != 0) {
+      fail(vm, is_miss ? "IFJSONMISS needs plate key â IFJSONMISS plate \"ok\" â¦ END"
+                       : "IFJSONHAS needs plate key â IFJSONHAS plate \"ok\" â¦ END");
+      return -1;
+    }
+    if (kw(&L->cur, "KEY") || kw(&L->cur, "FIELD") || kw(&L->cur, "HAS") ||
+        kw(&L->cur, "FOR") || kw(&L->cur, "WITH") || kw(&L->cur, "OF") ||
+        kw(&L->cur, "KEYS") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRE"))
+      lex_next(L);
+    /* first key (or bag for multi forms) */
+    if (L->cur.kind == TK_STR) {
+      snprintf(key, sizeof key, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_IDENT &&
+               !kw(&L->cur, "THEN") && !kw(&L->cur, "END") && !kw(&L->cur, "ELSE") &&
+               !kw(&L->cur, "IF") && !kw(&L->cur, "LET") && !kw(&L->cur, "SYS") &&
+               !kw(&L->cur, "ASSERT") && !kw(&L->cur, "PRINT") && !kw(&L->cur, "PASS")) {
+      Var *vv = var_get(vm, L->cur.text, 0);
+      if (vv && vv->is_str && vv->sval[0])
+        snprintf(key, sizeof key, "%s", vv->sval);
+      else if (vv && !vv->is_str)
+        snprintf(key, sizeof key, "%ld", vv->val);
+      else
+        snprintf(key, sizeof key, "%s", L->cur.text);
+      lex_next(L);
+    } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      long nv = parse_expr(vm, L);
+      snprintf(key, sizeof key, "%ld", nv);
+    }
+    if (!key[0] && !(is_all || is_any || is_only || is_exact || is_missp || is_extrap || is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep || is_eightyp || is_eightyonep || is_eightytwop || is_eightythreep || is_eightyfourp || is_eightyfivep || is_eightysixp || is_eightysevenp || is_eightyeightp || is_eightyninep || is_ninetyp || is_ninetyonep || is_ninetytwop || is_ninetythreep || is_ninetyfourp || is_ninetyfivep || is_ninetysixp || is_ninetysevenp || is_ninetyeightp || is_ninetyninep || is_hundredp || is_hundredonep || is_hundredtwop || is_hundredthreep || is_hundredfourp)) {
+      fail(vm, is_miss ? "IFJSONMISS needs plate key â IFJSONMISS plate \"ok\" â¦ END"
+                       : "IFJSONHAS needs plate key â IFJSONHAS plate \"ok\" â¦ END");
+      return -1;
+    }
+    /* multi-key: seed keys_nl and collect more keys for ALL/ANY/ONLY/EXACT */
+    if (is_all || is_any || is_only || is_exact || is_missp || is_extrap) {
+      if (key[0]) {
+        size_t al = strlen(key);
+        if (al + 1 < sizeof keys_nl) {
+          memcpy(keys_nl, key, al + 1);
+          olen = al;
+        }
+      }
+      while (L->cur.kind == TK_STR ||
+             (L->cur.kind == TK_IDENT &&
+              !kw(&L->cur, "THEN") && !kw(&L->cur, "END") && !kw(&L->cur, "ELSE") &&
+              !kw(&L->cur, "IF") && !kw(&L->cur, "LET") && !kw(&L->cur, "SYS") &&
+              !kw(&L->cur, "ASSERT") && !kw(&L->cur, "PRINT") && !kw(&L->cur, "PASS") &&
+              !kw(&L->cur, "ELIF") && !kw(&L->cur, "FOR") && !kw(&L->cur, "WHILE") &&
+              !kw(&L->cur, "LOOP"))) {
+        char arg[CUBALC_HOST_STR_MAX];
+        if (L->cur.kind == TK_STR) {
+          snprintf(arg, sizeof arg, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          Var *vv = var_get(vm, L->cur.text, 0);
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(arg, sizeof arg, "%s", vv->sval);
+          else if (vv && !vv->is_str)
+            snprintf(arg, sizeof arg, "%ld", vv->val);
+          else
+            snprintf(arg, sizeof arg, "%s", L->cur.text);
+          lex_next(L);
+        }
+        if (!arg[0]) continue;
+        if (olen > 0) {
+          if (olen + 1 >= sizeof keys_nl) break;
+          keys_nl[olen++] = '\n';
+          keys_nl[olen] = 0;
+        }
+        {
+          size_t al = strlen(arg);
+          if (olen + al + 1 >= sizeof keys_nl) break;
+          memcpy(keys_nl + olen, arg, al + 1);
+          olen += al;
+        }
+        if (!key[0])
+          snprintf(key, sizeof key, "%s", arg);
+      }
+    }
+    skip_nl(L);
+    if (kw(&L->cur,"THEN")) { lex_next(L); skip_nl(L); }
+
+    hit = 0;
+    if (is_emptyp || is_nonemptyp || is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep || is_eightyp || is_eightyonep || is_eightytwop || is_eightythreep || is_eightyfourp || is_eightyfivep || is_eightysixp || is_eightysevenp || is_eightyeightp || is_eightyninep || is_ninetyp || is_ninetyonep || is_ninetytwop || is_ninetythreep || is_ninetyfourp || is_ninetyfivep || is_ninetysixp || is_ninetysevenp || is_ninetyeightp || is_ninetyninep || is_hundredp || is_hundredonep || is_hundredtwop || is_hundredthreep || is_hundredfourp) {
+      /* soft EMPTYP/NONEMPTYP/ONEP/.../FORTYP/FORTYONEP/FORTYTWOP: plate key-count */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_len(plate, &hr) != 0) {
+        hr.n = 0;
+        hr.ok = 1;
+      }
+      if (is_emptyp)
+        hit = (hr.n == 0) ? 1 : 0;
+      else if (is_nonemptyp)
+        hit = (hr.n > 0) ? 1 : 0;
+      else if (is_onep)
+        hit = (hr.n == 1) ? 1 : 0;
+      else if (is_pairp)
+        hit = (hr.n == 2) ? 1 : 0;
+      else if (is_triplep)
+        hit = (hr.n == 3) ? 1 : 0;
+      else if (is_quadp)
+        hit = (hr.n == 4) ? 1 : 0;
+      else if (is_quintp)
+        hit = (hr.n == 5) ? 1 : 0;
+      else if (is_sixp)
+        hit = (hr.n == 6) ? 1 : 0;
+      else if (is_sevenp)
+        hit = (hr.n == 7) ? 1 : 0;
+      else if (is_eightp)
+        hit = (hr.n == 8) ? 1 : 0;
+      else if (is_ninep)
+        hit = (hr.n == 9) ? 1 : 0;
+      else if (is_tenp)
+        hit = (hr.n == 10) ? 1 : 0;
+      else if (is_elevenp)
+        hit = (hr.n == 11) ? 1 : 0;
+      else if (is_twelvep)
+        hit = (hr.n == 12) ? 1 : 0;
+      else if (is_thirteenp)
+        hit = (hr.n == 13) ? 1 : 0;
+      else if (is_fourteenp)
+        hit = (hr.n == 14) ? 1 : 0;
+      else if (is_fifteenp)
+        hit = (hr.n == 15) ? 1 : 0;
+      else if (is_sixteenp)
+        hit = (hr.n == 16) ? 1 : 0;
+      else if (is_seventeenp)
+        hit = (hr.n == 17) ? 1 : 0;
+      else if (is_eighteenp)
+        hit = (hr.n == 18) ? 1 : 0;
+      else if (is_nineteenp)
+        hit = (hr.n == 19) ? 1 : 0;
+      else if (is_twentyp)
+        hit = (hr.n == 20) ? 1 : 0;
+      else if (is_twentyonep)
+        hit = (hr.n == 21) ? 1 : 0;
+      else if (is_twentytwop)
+        hit = (hr.n == 22) ? 1 : 0;
+      else if (is_twentythreep)
+        hit = (hr.n == 23) ? 1 : 0;
+      else if (is_twentyfourp)
+        hit = (hr.n == 24) ? 1 : 0;
+      else if (is_twentyfivep)
+        hit = (hr.n == 25) ? 1 : 0;
+      else if (is_twentysixp)
+        hit = (hr.n == 26) ? 1 : 0;
+      else if (is_twentysevenp)
+        hit = (hr.n == 27) ? 1 : 0;
+      else if (is_twentyeightp)
+        hit = (hr.n == 28) ? 1 : 0;
+      else if (is_twentyninep)
+        hit = (hr.n == 29) ? 1 : 0;
+      else if (is_thirtyp)
+        hit = (hr.n == 30) ? 1 : 0;
+      else if (is_thirtyonep)
+        hit = (hr.n == 31) ? 1 : 0;
+      else if (is_thirtytwop)
+        hit = (hr.n == 32) ? 1 : 0;
+      else if (is_thirtythreep)
+        hit = (hr.n == 33) ? 1 : 0;
+      else if (is_thirtyfourp)
+        hit = (hr.n == 34) ? 1 : 0;
+      else if (is_thirtyfivep)
+        hit = (hr.n == 35) ? 1 : 0;
+      else if (is_thirtysixp)
+        hit = (hr.n == 36) ? 1 : 0;
+      else if (is_thirtysevenp)
+        hit = (hr.n == 37) ? 1 : 0;
+      else if (is_thirtyeightp)
+        hit = (hr.n == 38) ? 1 : 0;
+      else if (is_thirtyninep)
+        hit = (hr.n == 39) ? 1 : 0;
+      else if (is_fortyp)
+        hit = (hr.n == 40) ? 1 : 0;
+      else if (is_fortyonep)
+        hit = (hr.n == 41) ? 1 : 0;
+      else if (is_fortytwop)
+        hit = (hr.n == 42) ? 1 : 0;
+      else if (is_fortythreep)
+        hit = (hr.n == 43) ? 1 : 0;
+      else if (is_fortyfourp)
+        hit = (hr.n == 44) ? 1 : 0;
+      else if (is_fortyfivep)
+        hit = (hr.n == 45) ? 1 : 0;
+      else if (is_fortysixp)
+        hit = (hr.n == 46) ? 1 : 0;
+      else if (is_fortysevenp)
+        hit = (hr.n == 47) ? 1 : 0;
+      else if (is_fortyeightp)
+        hit = (hr.n == 48) ? 1 : 0;
+      else if (is_fortyninep)
+        hit = (hr.n == 49) ? 1 : 0;
+      else if (is_fiftyp)
+        hit = (hr.n == 50) ? 1 : 0;
+      else if (is_fiftyonep)
+        hit = (hr.n == 51) ? 1 : 0;
+      else if (is_fiftytwop)
+        hit = (hr.n == 52) ? 1 : 0;
+      else if (is_fiftythreep)
+        hit = (hr.n == 53) ? 1 : 0;
+      else if (is_fiftyfourp)
+        hit = (hr.n == 54) ? 1 : 0;
+      else if (is_fiftyfivep)
+        hit = (hr.n == 55) ? 1 : 0;
+      else if (is_fiftysixp)
+        hit = (hr.n == 56) ? 1 : 0;
+      else if (is_fiftysevenp)
+        hit = (hr.n == 57) ? 1 : 0;
+      else if (is_fiftyeightp)
+        hit = (hr.n == 58) ? 1 : 0;
+      else if (is_fiftyninep)
+        hit = (hr.n == 59) ? 1 : 0;
+      else if (is_sixtyp)
+        hit = (hr.n == 60) ? 1 : 0;
+      else if (is_sixtyonep)
+        hit = (hr.n == 61) ? 1 : 0;
+      else if (is_sixtytwop)
+        hit = (hr.n == 62) ? 1 : 0;
+      else if (is_sixtythreep)
+        hit = (hr.n == 63) ? 1 : 0;
+      else if (is_sixtyfourp)
+        hit = (hr.n == 64) ? 1 : 0;
+      else if (is_sixtyfivep)
+        hit = (hr.n == 65) ? 1 : 0;
+      else if (is_sixtysixp)
+        hit = (hr.n == 66) ? 1 : 0;
+      else if (is_sixtysevenp)
+        hit = (hr.n == 67) ? 1 : 0;
+      else if (is_sixtyeightp)
+        hit = (hr.n == 68) ? 1 : 0;
+      else if (is_sixtyninep)
+        hit = (hr.n == 69) ? 1 : 0;
+      else if (is_seventyp)
+        hit = (hr.n == 70) ? 1 : 0;
+      else if (is_seventyonep)
+        hit = (hr.n == 71) ? 1 : 0;
+      else if (is_seventytwop)
+        hit = (hr.n == 72) ? 1 : 0;
+      else if (is_seventythreep)
+        hit = (hr.n == 73) ? 1 : 0;
+      else if (is_seventyfourp)
+        hit = (hr.n == 74) ? 1 : 0;
+      else if (is_seventyfivep)
+        hit = (hr.n == 75) ? 1 : 0;
+      else if (is_seventysixp)
+        hit = (hr.n == 76) ? 1 : 0;
+      else if (is_seventysevenp)
+        hit = (hr.n == 77) ? 1 : 0;
+      else if (is_seventyeightp)
+        hit = (hr.n == 78) ? 1 : 0;
+      else if (is_seventyninep)
+        hit = (hr.n == 79) ? 1 : 0;
+      else if (is_eightyp)
+        hit = (hr.n == 80) ? 1 : 0;
+      else if (is_eightyonep)
+        hit = (hr.n == 81) ? 1 : 0;
+      else if (is_eightytwop)
+        hit = (hr.n == 82) ? 1 : 0;
+      else if (is_eightythreep)
+        hit = (hr.n == 83) ? 1 : 0;
+      else if (is_eightyfourp)
+        hit = (hr.n == 84) ? 1 : 0;
+      else if (is_eightyfivep)
+        hit = (hr.n == 85) ? 1 : 0;
+      else if (is_eightysixp)
+        hit = (hr.n == 86) ? 1 : 0;
+      else if (is_eightysevenp)
+        hit = (hr.n == 87) ? 1 : 0;
+      else if (is_eightyeightp)
+        hit = (hr.n == 88) ? 1 : 0;
+      else if (is_eightyninep)
+        hit = (hr.n == 89) ? 1 : 0;
+      else if (is_ninetyp)
+        hit = (hr.n == 90) ? 1 : 0;
+      else if (is_ninetyonep)
+        hit = (hr.n == 91) ? 1 : 0;
+      else if (is_ninetytwop)
+        hit = (hr.n == 92) ? 1 : 0;
+      else if (is_ninetythreep)
+        hit = (hr.n == 93) ? 1 : 0;
+      else if (is_ninetyfourp)
+        hit = (hr.n == 94) ? 1 : 0;
+      else if (is_ninetyfivep)
+        hit = (hr.n == 95) ? 1 : 0;
+      else if (is_ninetysixp)
+        hit = (hr.n == 96) ? 1 : 0;
+      else if (is_ninetysevenp)
+        hit = (hr.n == 97) ? 1 : 0;
+      else if (is_ninetyeightp)
+        hit = (hr.n == 98) ? 1 : 0;
+      else if (is_ninetyninep)
+        hit = (hr.n == 99) ? 1 : 0;
+      else if (is_hundredp)
+        hit = (hr.n == 100) ? 1 : 0;
+      else if (is_hundredonep)
+        hit = (hr.n == 101) ? 1 : 0;
+      else if (is_hundredtwop)
+        hit = (hr.n == 102) ? 1 : 0;
+      else if (is_hundredthreep)
+        hit = (hr.n == 103) ? 1 : 0;
+      else if (is_hundredfourp)
+        hit = (hr.n == 104) ? 1 : 0;
+      else
+        hit = (hr.n >= 2) ? 1 : 0;
+    } else if (is_missp) {
+      /* soft MISSP: body if any required keys are missing */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &hr) == 0)
+        hit = (hr.n > 0) ? 1 : 0;
+      else
+        hit = 0;
+      if (!keys_nl[0])
+        hit = 0;
+    } else if (is_extrap) {
+      /* soft EXTRAP: body if plate has keys outside allow-list */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_filter_plate_keys(plate, keys_nl, 1, &hr) == 0)
+        hit = (hr.n > 0) ? 1 : 0;
+      else
+        hit = 0;
+    } else if (is_only) {
+      /* soft ONLYP: all plate keys subseteq allow-list (extras == 0) */
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_json_filter_plate_keys(plate, keys_nl, 1, &hr) == 0)
+        hit = (hr.n == 0) ? 1 : 0;
+      else
+        hit = 0;
+    } else if (is_exact) {
+      /* soft EXACTP: HASALL + no extras */
+      cubalc_host_result ha, ex;
+      long listed = 0;
+      const char *pp;
+      memset(&ha, 0, sizeof ha);
+      memset(&ex, 0, sizeof ex);
+      cubalc_host_json_has_keys(plate, keys_nl, 1, &ha);
+      if (cubalc_host_json_filter_plate_keys(plate, keys_nl, 1, &ex) != 0)
+        hit = 0;
+      else {
+        pp = keys_nl;
+        while (*pp) {
+          while (*pp == '\n' || *pp == '\r') pp++;
+          if (!*pp) break;
+          listed++;
+          while (*pp && *pp != '\n' && *pp != '\r') pp++;
+        }
+        hit = (ha.n && ex.n == 0) ? 1 : 0;
+        if (!keys_nl[0])
+          hit = (ex.n == 0) ? 1 : 0;
+        var_set_num(vm, "IFEXACTP_HIT", (long)ha.code);
+        var_set_num(vm, "IFEXACTP_EXTRA", ex.n);
+        var_set_num(vm, "IFEXACTP_MISS", listed - (long)ha.code);
+        var_set_num(vm, "IFEXACTP_LISTED", listed);
+        var_set_num(vm, "EXACTP_HIT", (long)ha.code);
+        var_set_num(vm, "EXACTP_EXTRA", ex.n);
+        var_set_num(vm, "EXACTP_MISS", listed - (long)ha.code);
+      }
+    } else if (is_all || is_any) {
+      memset(&hr, 0, sizeof hr);
+      if (plate[0] && cubalc_host_json_has_keys(plate, keys_nl, is_all ? 1 : 0, &hr) == 0)
+        hit = hr.n ? 1 : 0;
+      else
+        hit = 0;
+      /* empty key list: ALL true, ANY false (matches SYS JSONHASALL/ANY) */
+      if (!keys_nl[0])
+        hit = is_all ? 1 : 0;
+    } else if (plate[0] && key[0]) {
+      memset(&hr, 0, sizeof hr);
+      hit = (cubalc_host_json_get(plate, key, &hr) == 0) ? 1 : 0;
+    }
+    take = is_miss ? (hit ? 0 : 1) : (hit ? 1 : 0);
+
+    body_start = *L;
+    while (L->cur.kind != TK_EOF && depth > 0) {
+      if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+        lex_next(L);
+        if (kw(&L->cur,"IF")) lex_next(L);
+        continue;
+      }
+      if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+          kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+          kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+          kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+          kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+          kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+          kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+          kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+          kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+          kw(&L->cur,"WHENINBAG")||
+          kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+          kw(&L->cur,"WHENBETWEEN")||
+          kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+          kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+          kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+          kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+          kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+          kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+          kw(&L->cur,"WHENEXIST")||
+          kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+          kw(&L->cur,"WHENHASENV")||
+          kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+          kw(&L->cur,"WHENHASFIELD")||
+          kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+          kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+          kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+          kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+          kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+          kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+          kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+          kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+          kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+          kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFJSONHASALL")||kw(&L->cur,"IFJSONHASANY")||kw(&L->cur,"IFJSONNEED")||kw(&L->cur,"IFHASJSONALL")||kw(&L->cur,"IFHASJSONANY")||kw(&L->cur,"WHENJSONHASALL")||kw(&L->cur,"WHENJSONHASANY")||kw(&L->cur,"WHENJSONNEED")||kw(&L->cur,"WHENHASJSONALL")||kw(&L->cur,"WHENHASJSONANY")||kw(&L->cur,"IFONLYP")||kw(&L->cur,"IFNOEXTRAP")||kw(&L->cur,"IFJSONONLYP")||kw(&L->cur,"IFSTRICTP")||kw(&L->cur,"WHENONLYP")||kw(&L->cur,"WHENNOEXTRAP")||kw(&L->cur,"IFEXACTP")||kw(&L->cur,"IFSCHEMAP")||kw(&L->cur,"IFJSONEXACTP")||kw(&L->cur,"WHENEXACTP")||kw(&L->cur,"WHENSCHEMAP")||kw(&L->cur,"IFMISSP")||kw(&L->cur,"IFABSENTP")||kw(&L->cur,"IFMISSINGKEYSP")||kw(&L->cur,"WHENMISSP")||kw(&L->cur,"WHENABSENTP")||kw(&L->cur,"WHENMISSINGKEYSP")||kw(&L->cur,"IFEXTRAP")||kw(&L->cur,"IFUNKNOWNKEYSP")||kw(&L->cur,"IFUNKNOWNKEYS")||kw(&L->cur,"WHENEXTRAP")||kw(&L->cur,"WHENUNKNOWNKEYSP")||kw(&L->cur,"WHENUNKNOWNKEYS")||kw(&L->cur,"IFEMPTYP")||kw(&L->cur,"IFISEMPTYP")||kw(&L->cur,"IFEMPTYPLATE")||kw(&L->cur,"IFJSONEMPTY")||kw(&L->cur,"WHENEMPTYP")||kw(&L->cur,"WHENISEMPTYP")||kw(&L->cur,"WHENEMPTYPLATE")||kw(&L->cur,"WHENJSONEMPTY")||kw(&L->cur,"IFNONEMPTYP")||kw(&L->cur,"IFHASKEYSP")||kw(&L->cur,"IFNONEMPTYPLATE")||kw(&L->cur,"IFJSONNONEMPTY")||kw(&L->cur,"WHENNONEMPTYP")||kw(&L->cur,"WHENHASKEYSP")||kw(&L->cur,"WHENNONEMPTYPLATE")||kw(&L->cur,"WHENJSONNONEMPTY")||kw(&L->cur,"IFONEP")||kw(&L->cur,"IFSINGLEP")||kw(&L->cur,"IFONEKEYP")||kw(&L->cur,"WHENONEP")||kw(&L->cur,"WHENSINGLEP")||kw(&L->cur,"WHENONEKEYP")||kw(&L->cur,"IFMULTP")||kw(&L->cur,"IFMANYKEYSP")||kw(&L->cur,"IFMULTIKEYP")||kw(&L->cur,"WHENMULTP")||kw(&L->cur,"WHENMANYKEYSP")||kw(&L->cur,"WHENMULTIKEYP")||kw(&L->cur,"IFPAIRP")||kw(&L->cur,"IFTWOP")||kw(&L->cur,"IFTWOKEYP")||kw(&L->cur,"WHENPAIRP")||kw(&L->cur,"WHENTWOP")||kw(&L->cur,"WHENTWOKEYP")||kw(&L->cur,"IFTRIPLEP")||kw(&L->cur,"IFTHREEP")||kw(&L->cur,"IFTHREEKEYP")||kw(&L->cur,"WHENTRIPLEP")||kw(&L->cur,"WHENTHREEP")||kw(&L->cur,"WHENTHREEKEYP")||kw(&L->cur,"IFQUADP")||kw(&L->cur,"IFFOURP")||kw(&L->cur,"IFFOURKEYP")||kw(&L->cur,"WHENQUADP")||kw(&L->cur,"WHENFOURP")||kw(&L->cur,"WHENFOURKEYP")||kw(&L->cur,"IFQUINTP")||kw(&L->cur,"IFFIVEP")||kw(&L->cur,"IFFIVEKEYP")||kw(&L->cur,"WHENQUINTP")||kw(&L->cur,"WHENFIVEP")||kw(&L->cur,"WHENFIVEKEYP")||kw(&L->cur,"IFSIXP")||kw(&L->cur,"IFHEXAP")||kw(&L->cur,"IFSIXKEYP")||kw(&L->cur,"WHENSIXP")||kw(&L->cur,"WHENHEXAP")||kw(&L->cur,"WHENSIXKEYP")||kw(&L->cur,"IFSEVENP")||kw(&L->cur,"IFSEPTP")||kw(&L->cur,"IFSEVENKEYP")||kw(&L->cur,"WHENSEVENP")||kw(&L->cur,"WHENSEPTP")||kw(&L->cur,"WHENSEVENKEYP")||kw(&L->cur,"IFEIGHTP")||kw(&L->cur,"IFOCTP")||kw(&L->cur,"IFEIGHTKEYP")||kw(&L->cur,"WHENEIGHTP")||kw(&L->cur,"WHENOCTP")||kw(&L->cur,"WHENEIGHTKEYP")||kw(&L->cur,"IFNINEP")||kw(&L->cur,"IFNONAP")||kw(&L->cur,"IFNINEKEYP")||kw(&L->cur,"WHENNINEP")||kw(&L->cur,"WHENNONAP")||kw(&L->cur,"WHENNINEKEYP")||kw(&L->cur,"IFTENP")||kw(&L->cur,"IFDECAP")||kw(&L->cur,"IFTENKEYP")||kw(&L->cur,"WHENTENP")||kw(&L->cur,"WHENDECAP")||kw(&L->cur,"WHENTENKEYP")||kw(&L->cur,"IFELEVENP")||kw(&L->cur,"IFUNDECAP")||kw(&L->cur,"IFELEVENKEYP")||kw(&L->cur,"WHENELEVENP")||kw(&L->cur,"WHENUNDECAP")||kw(&L->cur,"WHENELEVENKEYP")||kw(&L->cur,"IFTWELVEP")||kw(&L->cur,"IFDODECAP")||kw(&L->cur,"IFTWELVEKEYP")||kw(&L->cur,"WHENTWELVEP")||kw(&L->cur,"WHENDODECAP")||kw(&L->cur,"WHENTWELVEKEYP")||kw(&L->cur,"IFTHIRTEENP")||kw(&L->cur,"IFTRIDECAP")||kw(&L->cur,"IFTHIRTEENKEYP")||kw(&L->cur,"WHENTHIRTEENP")||kw(&L->cur,"WHENTRIDECAP")||kw(&L->cur,"WHENTHIRTEENKEYP")||kw(&L->cur,"IFFOURTEENP")||kw(&L->cur,"IFTETRADECAP")||kw(&L->cur,"IFFOURTEENKEYP")||kw(&L->cur,"WHENFOURTEENP")||kw(&L->cur,"WHENTETRADECAP")||kw(&L->cur,"WHENFOURTEENKEYP")||kw(&L->cur,"IFFIFTEENP")||kw(&L->cur,"IFPENTEDECAP")||kw(&L->cur,"IFFIFTEENKEYP")||kw(&L->cur,"WHENFIFTEENP")||kw(&L->cur,"WHENPENTEDECAP")||kw(&L->cur,"WHENFIFTEENKEYP")||kw(&L->cur,"IFSIXTEENP")||kw(&L->cur,"IFHEXADECAP")||kw(&L->cur,"IFSIXTEENKEYP")||kw(&L->cur,"WHENSIXTEENP")||kw(&L->cur,"WHENHEXADECAP")||kw(&L->cur,"WHENSIXTEENKEYP")||kw(&L->cur,"IFSEVENTEENP")||kw(&L->cur,"IFHEPTADECAP")||kw(&L->cur,"IFSEVENTEENKEYP")||kw(&L->cur,"WHENSEVENTEENP")||kw(&L->cur,"WHENHEPTADECAP")||kw(&L->cur,"WHENSEVENTEENKEYP")||kw(&L->cur,"IFEIGHTEENP")||kw(&L->cur,"IFOCTODECAP")||kw(&L->cur,"IFEIGHTEENKEYP")||kw(&L->cur,"WHENEIGHTEENP")||kw(&L->cur,"WHENOCTODECAP")||kw(&L->cur,"WHENEIGHTEENKEYP")||kw(&L->cur,"IFNINETEENP")||kw(&L->cur,"IFENNEADECAP")||kw(&L->cur,"IFNINETEENKEYP")||kw(&L->cur,"WHENNINETEENP")||kw(&L->cur,"WHENENNEADECAP")||kw(&L->cur,"WHENNINETEENKEYP")||kw(&L->cur,"IFTWENTYP")||kw(&L->cur,"IFICOSAP")||kw(&L->cur,"IFTWENTYKEYP")||kw(&L->cur,"WHENTWENTYP")||kw(&L->cur,"WHENICOSAP")||kw(&L->cur,"WHENTWENTYKEYP")||kw(&L->cur,"IFTWENTYONEP")||kw(&L->cur,"IFHENICOSAP")||kw(&L->cur,"IFTWENTYONEKEYP")||kw(&L->cur,"WHENTWENTYONEP")||kw(&L->cur,"WHENHENICOSAP")||kw(&L->cur,"WHENTWENTYONEKEYP")||kw(&L->cur,"IFTWENTYTWOP")||kw(&L->cur,"IFDOICOSAP")||kw(&L->cur,"IFTWENTYTWOKEYP")||kw(&L->cur,"WHENTWENTYTWOP")||kw(&L->cur,"WHENDOICOSAP")||kw(&L->cur,"WHENTWENTYTWOKEYP")||kw(&L->cur,"IFTWENTYTHREEP")||kw(&L->cur,"IFTRICOSAP")||kw(&L->cur,"IFTWENTYTHREEKEYP")||kw(&L->cur,"WHENTWENTYTHREEP")||kw(&L->cur,"WHENTRICOSAP")||kw(&L->cur,"WHENTWENTYTHREEKEYP")||kw(&L->cur,"IFTWENTYFOURP")||kw(&L->cur,"IFTETRAICOSAP")||kw(&L->cur,"IFTWENTYFOURKEYP")||kw(&L->cur,"WHENTWENTYFOURP")||kw(&L->cur,"WHENTETRAICOSAP")||kw(&L->cur,"WHENTWENTYFOURKEYP")||kw(&L->cur,"IFTWENTYFIVEP")||kw(&L->cur,"IFPENTEICOSAP")||kw(&L->cur,"IFTWENTYFIVEKEYP")||kw(&L->cur,"WHENTWENTYFIVEP")||kw(&L->cur,"WHENPENTEICOSAP")||kw(&L->cur,"WHENTWENTYFIVEKEYP")||kw(&L->cur,"IFTWENTYSIXP")||kw(&L->cur,"IFHEXEICOSAP")||kw(&L->cur,"IFTWENTYSIXKEYP")||kw(&L->cur,"WHENTWENTYSIXP")||kw(&L->cur,"WHENHEXEICOSAP")||kw(&L->cur,"WHENTWENTYSIXKEYP")||kw(&L->cur,"IFTWENTYSEVENP")||kw(&L->cur,"IFHEPTEICOSAP")||kw(&L->cur,"IFTWENTYSEVENKEYP")||kw(&L->cur,"WHENTWENTYSEVENP")||kw(&L->cur,"WHENHEPTEICOSAP")||kw(&L->cur,"WHENTWENTYSEVENKEYP")||kw(&L->cur,"IFTWENTYEIGHTP")||kw(&L->cur,"IFOCTOICOSAP")||kw(&L->cur,"IFTWENTYEIGHTKEYP")||kw(&L->cur,"WHENTWENTYEIGHTP")||kw(&L->cur,"WHENOCTOICOSAP")||kw(&L->cur,"WHENTWENTYEIGHTKEYP")||kw(&L->cur,"IFTWENTYNINEP")||kw(&L->cur,"IFENNEAICOSAP")||kw(&L->cur,"IFTWENTYNINEKEYP")||kw(&L->cur,"WHENTWENTYNINEP")||kw(&L->cur,"WHENENNEAICOSAP")||kw(&L->cur,"WHENTWENTYNINEKEYP")||kw(&L->cur,"IFTHIRTYP")||kw(&L->cur,"IFTRIACONTAP")||kw(&L->cur,"IFTHIRTYKEYP")||kw(&L->cur,"WHENTHIRTYP")||kw(&L->cur,"WHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYKEYP")||kw(&L->cur,"IFTHIRTYONEP")||kw(&L->cur,"IFHENTRIACONTAP")||kw(&L->cur,"IFTHIRTYONEKEYP")||kw(&L->cur,"WHENTHIRTYONEP")||kw(&L->cur,"WHENHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYONEKEYP")||kw(&L->cur,"IFTHIRTYTWOP")||kw(&L->cur,"IFDOTRIACONTAP")||kw(&L->cur,"IFTHIRTYTWOKEYP")||kw(&L->cur,"WHENTHIRTYTWOP")||kw(&L->cur,"WHENDOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYTWOKEYP")||kw(&L->cur,"IFTHIRTYTHREEP")||kw(&L->cur,"IFTRITRIACONTAP")||kw(&L->cur,"IFTHIRTYTHREEKEYP")||kw(&L->cur,"WHENTHIRTYTHREEP")||kw(&L->cur,"WHENTRITRIACONTAP")||kw(&L->cur,"WHENTHIRTYTHREEKEYP")||kw(&L->cur,"IFTHIRTYFOURP")||kw(&L->cur,"IFTETRATRIACONTAP")||kw(&L->cur,"IFTHIRTYFOURKEYP")||kw(&L->cur,"WHENTHIRTYFOURP")||kw(&L->cur,"WHENTETRATRIACONTAP")||kw(&L->cur,"WHENTHIRTYFOURKEYP")||kw(&L->cur,"IFTHIRTYFIVEP")||kw(&L->cur,"IFPENTETRIACONTAP")||kw(&L->cur,"IFTHIRTYFIVEKEYP")||kw(&L->cur,"WHENTHIRTYFIVEP")||kw(&L->cur,"WHENPENTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYFIVEKEYP")||kw(&L->cur,"IFTHIRTYSIXP")||kw(&L->cur,"IFHEXETRIACONTAP")||kw(&L->cur,"IFTHIRTYSIXKEYP")||kw(&L->cur,"WHENTHIRTYSIXP")||kw(&L->cur,"WHENHEXETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSIXKEYP")||kw(&L->cur,"IFTHIRTYSEVENP")||kw(&L->cur,"IFHEPTETRIACONTAP")||kw(&L->cur,"IFTHIRTYSEVENKEYP")||kw(&L->cur,"WHENTHIRTYSEVENP")||kw(&L->cur,"WHENHEPTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSEVENKEYP")||kw(&L->cur,"IFTHIRTYEIGHTP")||kw(&L->cur,"IFOCTOTRIACONTAP")||kw(&L->cur,"IFTHIRTYEIGHTKEYP")||kw(&L->cur,"WHENTHIRTYEIGHTP")||kw(&L->cur,"WHENOCTOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYEIGHTKEYP")||kw(&L->cur,"IFTHIRTYNINEP")||kw(&L->cur,"IFENNEATRIACONTAP")||kw(&L->cur,"IFTHIRTYNINEKEYP")||kw(&L->cur,"WHENTHIRTYNINEP")||kw(&L->cur,"WHENENNEATRIACONTAP")||kw(&L->cur,"WHENTHIRTYNINEKEYP")||kw(&L->cur,"IFFORTYP")||kw(&L->cur,"IFTETRACONTAP")||kw(&L->cur,"IFFORTYKEYP")||kw(&L->cur,"WHENFORTYP")||kw(&L->cur,"WHENTETRACONTAP")||kw(&L->cur,"WHENFORTYKEYP")||kw(&L->cur,"IFFORTYONEP")||kw(&L->cur,"IFHENTETRACONTAP")||kw(&L->cur,"IFFORTYONEKEYP")||kw(&L->cur,"WHENFORTYONEP")||kw(&L->cur,"WHENHENTETRACONTAP")||kw(&L->cur,"WHENFORTYONEKEYP")||kw(&L->cur,"IFFORTYTWOP")||kw(&L->cur,"IFDOTETRACONTAP")||kw(&L->cur,"IFFORTYTWOKEYP")||kw(&L->cur,"WHENFORTYTWOP")||kw(&L->cur,"WHENDOTETRACONTAP")||kw(&L->cur,"WHENFORTYTWOKEYP")||kw(&L->cur,"IFFORTYTHREEP")||kw(&L->cur,"IFTRITETRACONTAP")||kw(&L->cur,"IFFORTYTHREEKEYP")||kw(&L->cur,"WHENFORTYTHREEP")||kw(&L->cur,"WHENTRITETRACONTAP")||kw(&L->cur,"WHENFORTYTHREEKEYP")||kw(&L->cur,"IFFORTYFOURP")||kw(&L->cur,"IFTETRATETRACONTAP")||kw(&L->cur,"IFFORTYFOURKEYP")||kw(&L->cur,"WHENFORTYFOURP")||kw(&L->cur,"WHENTETRATETRACONTAP")||kw(&L->cur,"WHENFORTYFOURKEYP")||kw(&L->cur,"IFFORTYFIVEP")||kw(&L->cur,"IFPENTETETRACONTAP")||kw(&L->cur,"IFFORTYFIVEKEYP")||kw(&L->cur,"WHENFORTYFIVEP")||kw(&L->cur,"WHENPENTETETRACONTAP")||kw(&L->cur,"WHENFORTYFIVEKEYP")||kw(&L->cur,"IFFORTYSIXP")||kw(&L->cur,"IFHEXETETRACONTAP")||kw(&L->cur,"IFFORTYSIXKEYP")||kw(&L->cur,"WHENFORTYSIXP")||kw(&L->cur,"WHENHEXETETRACONTAP")||kw(&L->cur,"WHENFORTYSIXKEYP")||kw(&L->cur,"IFFORTYSEVENP")||kw(&L->cur,"IFHEPTETETRACONTAP")||kw(&L->cur,"IFFORTYSEVENKEYP")||kw(&L->cur,"WHENFORTYSEVENP")||kw(&L->cur,"WHENHEPTETETRACONTAP")||kw(&L->cur,"WHENFORTYSEVENKEYP")||kw(&L->cur,"IFFORTYEIGHTP")||kw(&L->cur,"IFOCTOTETRACONTAP")||kw(&L->cur,"IFFORTYEIGHTKEYP")||kw(&L->cur,"WHENFORTYEIGHTP")||kw(&L->cur,"WHENOCTOTETRACONTAP")||kw(&L->cur,"WHENFORTYEIGHTKEYP")||kw(&L->cur,"IFFORTYNINEP")||kw(&L->cur,"IFENNEATETRACONTAP")||kw(&L->cur,"IFFORTYNINEKEYP")||kw(&L->cur,"WHENFORTYNINEP")||kw(&L->cur,"WHENENNEATETRACONTAP")||kw(&L->cur,"WHENFORTYNINEKEYP")||kw(&L->cur,"IFFIFTYP")||kw(&L->cur,"IFPENTECONTAP")||kw(&L->cur,"IFFIFTYKEYP")||kw(&L->cur,"WHENFIFTYP")||kw(&L->cur,"WHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYKEYP")||kw(&L->cur,"IFFIFTYONEP")||kw(&L->cur,"IFHENPENTECONTAP")||kw(&L->cur,"IFFIFTYONEKEYP")||kw(&L->cur,"WHENFIFTYONEP")||kw(&L->cur,"WHENHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYONEKEYP")||kw(&L->cur,"IFFIFTYTWOP")||kw(&L->cur,"IFDOPENTECONTAP")||kw(&L->cur,"IFFIFTYTWOKEYP")||kw(&L->cur,"WHENFIFTYTWOP")||kw(&L->cur,"WHENDOPENTECONTAP")||kw(&L->cur,"WHENFIFTYTWOKEYP")||kw(&L->cur,"IFFIFTYTHREEP")||kw(&L->cur,"IFTRIPENTECONTAP")||kw(&L->cur,"IFFIFTYTHREEKEYP")||kw(&L->cur,"WHENFIFTYTHREEP")||kw(&L->cur,"WHENTRIPENTECONTAP")||kw(&L->cur,"WHENFIFTYTHREEKEYP")||kw(&L->cur,"IFFIFTYFOURP")||kw(&L->cur,"IFTETRAPENTECONTAP")||kw(&L->cur,"IFFIFTYFOURKEYP")||kw(&L->cur,"WHENFIFTYFOURP")||kw(&L->cur,"WHENTETRAPENTECONTAP")||kw(&L->cur,"WHENFIFTYFOURKEYP")||kw(&L->cur,"IFFIFTYFIVEP")||kw(&L->cur,"IFPENTEPENTECONTAP")||kw(&L->cur,"IFFIFTYFIVEKEYP")||kw(&L->cur,"WHENFIFTYFIVEP")||kw(&L->cur,"WHENPENTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYFIVEKEYP")||kw(&L->cur,"IFFIFTYSIXP")||kw(&L->cur,"IFHEXEPENTECONTAP")||kw(&L->cur,"IFFIFTYSIXKEYP")||kw(&L->cur,"WHENFIFTYSIXP")||kw(&L->cur,"WHENHEXEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSIXKEYP")||kw(&L->cur,"IFFIFTYSEVENP")||kw(&L->cur,"IFHEPTEPENTECONTAP")||kw(&L->cur,"IFFIFTYSEVENKEYP")||kw(&L->cur,"WHENFIFTYSEVENP")||kw(&L->cur,"WHENHEPTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSEVENKEYP")||kw(&L->cur,"IFFIFTYEIGHTP")||kw(&L->cur,"IFOCTOPENTECONTAP")||kw(&L->cur,"IFFIFTYEIGHTKEYP")||kw(&L->cur,"WHENFIFTYEIGHTP")||kw(&L->cur,"WHENOCTOPENTECONTAP")||kw(&L->cur,"WHENFIFTYEIGHTKEYP")||kw(&L->cur,"IFFIFTYNINEP")||kw(&L->cur,"IFENNEAPENTECONTAP")||kw(&L->cur,"IFFIFTYNINEKEYP")||kw(&L->cur,"WHENFIFTYNINEP")||kw(&L->cur,"WHENENNEAPENTECONTAP")||kw(&L->cur,"WHENFIFTYNINEKEYP")||kw(&L->cur,"IFSIXTYP")||kw(&L->cur,"IFHEXECONTAP")||kw(&L->cur,"IFSIXTYKEYP")||kw(&L->cur,"WHENSIXTYP")||kw(&L->cur,"WHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYKEYP")||kw(&L->cur,"IFSIXTYONEP")||kw(&L->cur,"IFHENHEXECONTAP")||kw(&L->cur,"IFSIXTYONEKEYP")||kw(&L->cur,"WHENSIXTYONEP")||kw(&L->cur,"WHENHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYONEKEYP")||kw(&L->cur,"IFSIXTYTWOP")||kw(&L->cur,"IFDOHEXECONTAP")||kw(&L->cur,"IFSIXTYTWOKEYP")||kw(&L->cur,"WHENSIXTYTWOP")||kw(&L->cur,"WHENDOHEXECONTAP")||kw(&L->cur,"WHENSIXTYTWOKEYP")||kw(&L->cur,"IFSIXTYTHREEP")||kw(&L->cur,"IFTRIHEXECONTAP")||kw(&L->cur,"IFSIXTYTHREEKEYP")||kw(&L->cur,"WHENSIXTYTHREEP")||kw(&L->cur,"WHENTRIHEXECONTAP")||kw(&L->cur,"WHENSIXTYTHREEKEYP")||kw(&L->cur,"IFSIXTYFOURP")||kw(&L->cur,"IFTETRAHEXECONTAP")||kw(&L->cur,"IFSIXTYFOURKEYP")||kw(&L->cur,"WHENSIXTYFOURP")||kw(&L->cur,"WHENTETRAHEXECONTAP")||kw(&L->cur,"WHENSIXTYFOURKEYP")||kw(&L->cur,"IFSIXTYFIVEP")||kw(&L->cur,"IFPENTEHEXECONTAP")||kw(&L->cur,"IFSIXTYFIVEKEYP")||kw(&L->cur,"WHENSIXTYFIVEP")||kw(&L->cur,"WHENPENTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYFIVEKEYP")||kw(&L->cur,"IFSIXTYSIXP")||kw(&L->cur,"IFHEXEHEXECONTAP")||kw(&L->cur,"IFSIXTYSIXKEYP")||kw(&L->cur,"WHENSIXTYSIXP")||kw(&L->cur,"WHENHEXEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSIXKEYP")||kw(&L->cur,"IFSIXTYSEVENP")||kw(&L->cur,"IFHEPTEHEXECONTAP")||kw(&L->cur,"IFSIXTYSEVENKEYP")||kw(&L->cur,"WHENSIXTYSEVENP")||kw(&L->cur,"WHENHEPTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSEVENKEYP")||kw(&L->cur,"IFSIXTYEIGHTP")||kw(&L->cur,"IFOCTOHEXECONTAP")||kw(&L->cur,"IFSIXTYEIGHTKEYP")||kw(&L->cur,"WHENSIXTYEIGHTP")||kw(&L->cur,"WHENOCTOHEXECONTAP")||kw(&L->cur,"WHENSIXTYEIGHTKEYP")||kw(&L->cur,"IFSIXTYNINEP")||kw(&L->cur,"IFENNEAHEXECONTAP")||kw(&L->cur,"IFSIXTYNINEKEYP")||kw(&L->cur,"WHENSIXTYNINEP")||kw(&L->cur,"WHENENNEAHEXECONTAP")||kw(&L->cur,"WHENSIXTYNINEKEYP")||kw(&L->cur,"IFSEVENTYP")||kw(&L->cur,"IFHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYKEYP")||kw(&L->cur,"WHENSEVENTYP")||kw(&L->cur,"WHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYKEYP")||kw(&L->cur,"IFSEVENTYONEP")||kw(&L->cur,"IFHENHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYONEKEYP")||kw(&L->cur,"WHENSEVENTYONEP")||kw(&L->cur,"WHENHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYONEKEYP")||kw(&L->cur,"IFSEVENTYTWOP")||kw(&L->cur,"IFDOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTWOKEYP")||kw(&L->cur,"WHENSEVENTYTWOP")||kw(&L->cur,"WHENDOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTWOKEYP")||kw(&L->cur,"IFSEVENTYTHREEP")||kw(&L->cur,"IFTRIHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTHREEKEYP")||kw(&L->cur,"WHENSEVENTYTHREEP")||kw(&L->cur,"WHENTRIHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTHREEKEYP")||kw(&L->cur,"IFSEVENTYFOURP")||kw(&L->cur,"IFTETRAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFOURKEYP")||kw(&L->cur,"WHENSEVENTYFOURP")||kw(&L->cur,"WHENTETRAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFOURKEYP")||kw(&L->cur,"IFSEVENTYFIVEP")||kw(&L->cur,"IFPENTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFIVEKEYP")||kw(&L->cur,"WHENSEVENTYFIVEP")||kw(&L->cur,"WHENPENTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFIVEKEYP")||kw(&L->cur,"IFSEVENTYSIXP")||kw(&L->cur,"IFHEXEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSIXKEYP")||kw(&L->cur,"WHENSEVENTYSIXP")||kw(&L->cur,"WHENHEXEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSIXKEYP")||kw(&L->cur,"IFSEVENTYSEVENP")||kw(&L->cur,"IFHEPTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSEVENKEYP")||kw(&L->cur,"WHENSEVENTYSEVENP")||kw(&L->cur,"WHENHEPTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSEVENKEYP")||kw(&L->cur,"IFSEVENTYEIGHTP")||kw(&L->cur,"IFOCTOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYEIGHTKEYP")||kw(&L->cur,"WHENSEVENTYEIGHTP")||kw(&L->cur,"WHENOCTOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYEIGHTKEYP")||kw(&L->cur,"IFSEVENTYNINEP")||kw(&L->cur,"IFENNEAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYNINEKEYP")||kw(&L->cur,"WHENSEVENTYNINEP")||kw(&L->cur,"WHENENNEAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYNINEKEYP")||kw(&L->cur,"IFEIGHTYP")||kw(&L->cur,"IFOCTACONTAP")||kw(&L->cur,"IFEIGHTYKEYP")||kw(&L->cur,"WHENEIGHTYP")||kw(&L->cur,"WHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYKEYP")||kw(&L->cur,"IFEIGHTYONEP")||kw(&L->cur,"IFHENOCTACONTAP")||kw(&L->cur,"IFEIGHTYONEKEYP")||kw(&L->cur,"WHENEIGHTYONEP")||kw(&L->cur,"WHENHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYONEKEYP")||kw(&L->cur,"IFEIGHTYTWOP")||kw(&L->cur,"IFDOOCTACONTAP")||kw(&L->cur,"IFEIGHTYTWOKEYP")||kw(&L->cur,"WHENEIGHTYTWOP")||kw(&L->cur,"WHENDOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTWOKEYP")||kw(&L->cur,"IFEIGHTYTHREEP")||kw(&L->cur,"IFTRIOCTACONTAP")||kw(&L->cur,"IFEIGHTYTHREEKEYP")||kw(&L->cur,"WHENEIGHTYTHREEP")||kw(&L->cur,"WHENTRIOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTHREEKEYP")||kw(&L->cur,"IFEIGHTYFOURP")||kw(&L->cur,"IFTETRAOCTACONTAP")||kw(&L->cur,"IFEIGHTYFOURKEYP")||kw(&L->cur,"WHENEIGHTYFOURP")||kw(&L->cur,"WHENTETRAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFOURKEYP")||kw(&L->cur,"IFEIGHTYFIVEP")||kw(&L->cur,"IFPENTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYFIVEKEYP")||kw(&L->cur,"WHENEIGHTYFIVEP")||kw(&L->cur,"WHENPENTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFIVEKEYP")||kw(&L->cur,"IFEIGHTYSIXP")||kw(&L->cur,"IFHEXEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSIXKEYP")||kw(&L->cur,"WHENEIGHTYSIXP")||kw(&L->cur,"WHENHEXEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSIXKEYP")||kw(&L->cur,"IFEIGHTYSEVENP")||kw(&L->cur,"IFHEPTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSEVENKEYP")||kw(&L->cur,"WHENEIGHTYSEVENP")||kw(&L->cur,"WHENHEPTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSEVENKEYP")||kw(&L->cur,"IFEIGHTYEIGHTP")||kw(&L->cur,"IFOCTOOCTACONTAP")||kw(&L->cur,"IFEIGHTYEIGHTKEYP")||kw(&L->cur,"WHENEIGHTYEIGHTP")||kw(&L->cur,"WHENOCTOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYEIGHTKEYP")||kw(&L->cur,"IFEIGHTYNINEP")||kw(&L->cur,"IFENNEAOCTACONTAP")||kw(&L->cur,"IFEIGHTYNINEKEYP")||kw(&L->cur,"WHENEIGHTYNINEP")||kw(&L->cur,"WHENENNEAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYNINEKEYP")||kw(&L->cur,"IFNINETYP")||kw(&L->cur,"IFENNEACONTAP")||kw(&L->cur,"IFNINETYKEYP")||kw(&L->cur,"WHENNINETYP")||kw(&L->cur,"WHENENNEACONTAP")||kw(&L->cur,"WHENNINETYKEYP")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||kw(&L->cur,"IFTYPE")||kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENTYPE")||kw(&L->cur,"WHENVARTYPE")||kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+          kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+          kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+          kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+          kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+          kw(&L->cur,"WHENERR")||kw(&L->cur,"WHENOK")||
+          kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||
+          kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||kw(&L->cur,"EACH")||kw(&L->cur,"FN")||
+          kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||kw(&L->cur,"GUARD")||kw(&L->cur,"CASE")||
+          kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+        depth++;
+      else if (kw(&L->cur,"ELSE") && depth == 1) break;
+      else if (kw(&L->cur,"END")) {
+        depth--;
+        if (depth == 0) break;
+      }
+      lex_next(L);
+    }
+    if (depth > 1 || (depth == 1 && L->cur.kind == TK_EOF)) {
+      char ebuf[160];
+      const char *tag = is_miss ? "IFJSONMISS" : "IFJSONHAS";
+      snprintf(ebuf, sizeof ebuf,
+               "%s without END line %d â %s plate key â¦ [ELSE â¦] END",
+               tag, aln, tag);
+      fail(vm, ebuf); return -1;
+    }
+    {
+      const char *ntag = "IFJSONHAS_N";
+      if (is_miss) ntag = "IFJSONMISS_N";
+      else if (is_emptyp) ntag = "IFEMPTYP_N";
+      else if (is_nonemptyp) ntag = "IFNONEMPTYP_N";
+      else if (is_onep) ntag = "IFONEP_N";
+      else if (is_pairp) ntag = "IFPAIRP_N";
+      else if (is_triplep) ntag = "IFTRIPLEP_N";
+      else if (is_quadp) ntag = "IFQUADP_N";
+      else if (is_quintp) ntag = "IFQUINTP_N";
+      else if (is_sixp) ntag = "IFSIXP_N";
+      else if (is_sevenp) ntag = "IFSEVENP_N";
+      else if (is_eightp) ntag = "IFEIGHTP_N";
+      else if (is_ninep) ntag = "IFNINEP_N";
+      else if (is_tenp) ntag = "IFTENP_N";
+      else if (is_elevenp) ntag = "IFELEVENP_N";
+      else if (is_twelvep) ntag = "IFTWELVEP_N";
+      else if (is_thirteenp) ntag = "IFTHIRTEENP_N";
+      else if (is_fourteenp) ntag = "IFFOURTEENP_N";
+      else if (is_fifteenp) ntag = "IFFIFTEENP_N";
+      else if (is_sixteenp) ntag = "IFSIXTEENP_N";
+      else if (is_seventeenp) ntag = "IFSEVENTEENP_N";
+      else if (is_eighteenp) ntag = "IFEIGHTEENP_N";
+      else if (is_nineteenp) ntag = "IFNINETEENP_N";
+      else if (is_twentyp) ntag = "IFTWENTYP_N";
+      else if (is_twentyonep) ntag = "IFTWENTYONEP_N";
+      else if (is_twentytwop) ntag = "IFTWENTYTWOP_N";
+      else if (is_twentythreep) ntag = "IFTWENTYTHREEP_N";
+      else if (is_twentyfourp) ntag = "IFTWENTYFOURP_N";
+      else if (is_twentyfivep) ntag = "IFTWENTYFIVEP_N";
+      else if (is_twentysixp) ntag = "IFTWENTYSIXP_N";
+      else if (is_twentysevenp) ntag = "IFTWENTYSEVENP_N";
+      else if (is_twentyeightp) ntag = "IFTWENTYEIGHTP_N";
+      else if (is_twentyninep) ntag = "IFTWENTYNINEP_N";
+      else if (is_thirtyp) ntag = "IFTHIRTYP_N";
+      else if (is_thirtyonep) ntag = "IFTHIRTYONEP_N";
+      else if (is_thirtytwop) ntag = "IFTHIRTYTWOP_N";
+      else if (is_thirtythreep) ntag = "IFTHIRTYTHREEP_N";
+      else if (is_thirtyfourp) ntag = "IFTHIRTYFOURP_N";
+      else if (is_thirtyfivep) ntag = "IFTHIRTYFIVEP_N";
+      else if (is_thirtysixp) ntag = "IFTHIRTYSIXP_N";
+      else if (is_thirtysevenp) ntag = "IFTHIRTYSEVENP_N";
+      else if (is_thirtyeightp) ntag = "IFTHIRTYEIGHTP_N";
+      else if (is_thirtyninep) ntag = "IFTHIRTYNINEP_N";
+      else if (is_fortyp) ntag = "IFFORTYP_N";
+      else if (is_fortyonep) ntag = "IFFORTYONEP_N";
+      else if (is_fortytwop) ntag = "IFFORTYTWOP_N";
+      else if (is_fortythreep) ntag = "IFFORTYTHREEP_N";
+      else if (is_fortyfourp) ntag = "IFFORTYFOURP_N";
+      else if (is_fortyfivep) ntag = "IFFORTYFIVEP_N";
+      else if (is_fortysixp) ntag = "IFFORTYSIXP_N";
+      else if (is_fortysevenp) ntag = "IFFORTYSEVENP_N";
+      else if (is_fortyeightp) ntag = "IFFORTYEIGHTP_N";
+      else if (is_fortyninep) ntag = "IFFORTYNINEP_N";
+      else if (is_fiftyp) ntag = "IFFIFTYP_N";
+      else if (is_fiftyonep) ntag = "IFFIFTYONEP_N";
+      else if (is_fiftytwop) ntag = "IFFIFTYTWOP_N";
+      else if (is_fiftythreep) ntag = "IFFIFTYTHREEP_N";
+      else if (is_fiftyfourp) ntag = "IFFIFTYFOURP_N";
+      else if (is_fiftyfivep) ntag = "IFFIFTYFIVEP_N";
+      else if (is_fiftysixp) ntag = "IFFIFTYSIXP_N";
+      else if (is_fiftysevenp) ntag = "IFFIFTYSEVENP_N";
+      else if (is_fiftyeightp) ntag = "IFFIFTYEIGHTP_N";
+      else if (is_fiftyninep) ntag = "IFFIFTYNINEP_N";
+      else if (is_sixtyp) ntag = "IFSIXTYP_N";
+      else if (is_sixtyonep) ntag = "IFSIXTYONEP_N";
+      else if (is_sixtytwop) ntag = "IFSIXTYTWOP_N";
+      else if (is_sixtythreep) ntag = "IFSIXTYTHREEP_N";
+      else if (is_sixtyfourp) ntag = "IFSIXTYFOURP_N";
+      else if (is_sixtyfivep) ntag = "IFSIXTYFIVEP_N";
+      else if (is_sixtysixp) ntag = "IFSIXTYSIXP_N";
+      else if (is_sixtysevenp) ntag = "IFSIXTYSEVENP_N";
+      else if (is_sixtyeightp) ntag = "IFSIXTYEIGHTP_N";
+      else if (is_sixtyninep) ntag = "IFSIXTYNINEP_N";
+      else if (is_seventyp) ntag = "IFSEVENTYP_N";
+      else if (is_seventyonep) ntag = "IFSEVENTYONEP_N";
+      else if (is_seventytwop) ntag = "IFSEVENTYTWOP_N";
+      else if (is_seventythreep) ntag = "IFSEVENTYTHREEP_N";
+      else if (is_seventyfourp) ntag = "IFSEVENTYFOURP_N";
+      else if (is_seventyeightp) ntag = "IFSEVENTYEIGHTP_N";
+      else if (is_eightyonep) ntag = "IFEIGHTYONEP_N";
+      else if (is_eightythreep) ntag = "IFEIGHTYTHREEP_N";
+      else if (is_eightyfourp) ntag = "IFEIGHTYFOURP_N";
+      else if (is_eightyfivep) ntag = "IFEIGHTYFIVEP_N";
+      else if (is_eightysixp) ntag = "IFEIGHTYSIXP_N";
+      else if (is_eightysevenp) ntag = "IFEIGHTYSEVENP_N";
+      else if (is_eightyeightp) ntag = "IFEIGHTYEIGHTP_N";
+      else if (is_eightyninep) ntag = "IFEIGHTYNINEP_N";
+      else if (is_ninetyp) ntag = "IFNINETYP_N";
+      else if (is_ninetyonep) ntag = "IFNINETYONEP_N";
+      else if (is_ninetytwop) ntag = "IFNINETYTWOP_N";
+      else if (is_ninetythreep) ntag = "IFNINETYTHREEP_N";
+      else if (is_ninetyfourp) ntag = "IFNINETYFOURP_N";
+      else if (is_ninetyfivep) ntag = "IFNINETYFIVEP_N";
+      else if (is_ninetysixp) ntag = "IFNINETYSIXP_N";
+      else if (is_ninetysevenp) ntag = "IFNINETYSEVENP_N";
+      else if (is_ninetyeightp) ntag = "IFNINETYEIGHTP_N";
+      else if (is_ninetyninep) ntag = "IFNINETYNINEP_N";
+      else if (is_hundredp) ntag = "IFHUNDREDP_N";
+      else if (is_hundredonep) ntag = "IFHUNDREDONEP_N";
+      else if (is_hundredtwop) ntag = "IFHUNDREDTWOP_N";
+      else if (is_hundredthreep) ntag = "IFHUNDREDTHREEP_N";
+      else if (is_hundredfourp) ntag = "IFHUNDREDFOURP_N";
+      else if (is_eightytwop) ntag = "IFEIGHTYTWOP_N";
+      else if (is_eightyp) ntag = "IFEIGHTYP_N";
+      else if (is_seventyninep) ntag = "IFSEVENTYNINEP_N";
+      else if (is_seventysevenp) ntag = "IFSEVENTYSEVENP_N";
+      else if (is_seventysixp) ntag = "IFSEVENTYSIXP_N";
+      else if (is_seventyfivep) ntag = "IFSEVENTYFIVEP_N";
+      else if (is_multp) ntag = "IFMULTP_N";
+      else if (is_missp) ntag = "IFMISSP_N";
+      else if (is_extrap) ntag = "IFEXTRAP_N";
+      else if (is_only) ntag = "IFONLYP_N";
+      else if (is_exact) ntag = "IFEXACTP_N";
+      else if (is_all) ntag = "IFJSONHASALL_N";
+      else if (is_any) ntag = "IFJSONHASANY_N";
+      var_set_num(vm, "JSONHAS_N", hit);
+      var_set_num(vm, "JSONHAS_HIT", hit);
+      var_set_num(vm, "HASJSON_N", hit);
+      var_set_num(vm, "JSONHASALL_N", is_all ? hit : 0);
+      var_set_num(vm, "JSONHASANY_N", is_any ? hit : 0);
+      var_set_num(vm, "IFJSONHASALL_N", is_all ? hit : 0);
+      var_set_num(vm, "IFJSONHASANY_N", is_any ? hit : 0);
+      var_set_num(vm, "IFONLYP_N", is_only ? hit : 0);
+      var_set_num(vm, "ONLYP_N", is_only ? hit : 0);
+      var_set_num(vm, "IFNOEXTRAP_N", is_only ? hit : 0);
+      var_set_num(vm, "IFEXACTP_N", is_exact ? hit : 0);
+      var_set_num(vm, "EXACTP_N", is_exact ? hit : 0);
+      var_set_num(vm, "IFSCHEMAP_N", is_exact ? hit : 0);
+      var_set_num(vm, "IFMISSP_N", is_missp ? hit : 0);
+      var_set_num(vm, "MISSP_N", is_missp ? hit : 0);
+      var_set_num(vm, "IFABSENTP_N", is_missp ? hit : 0);
+      var_set_num(vm, "IFEXTRAP_N", is_extrap ? hit : 0);
+      var_set_num(vm, "EXTRAP_N", is_extrap ? hit : 0);
+      var_set_num(vm, "IFUNKNOWNKEYSP_N", is_extrap ? hit : 0);
+      if (is_all || is_any) {
+        var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+        var_set_num(vm, "JSONHASANY_HIT", (long)hr.code);
+      }
+      if (is_only) {
+        var_set_num(vm, "ONLYP_EXTRA", hr.n);
+        var_set_num(vm, "IFONLYP_EXTRA", hr.n);
+        var_set_num(vm, "JSONEXTRA_N", hr.n);
+      }
+      if (is_missp) {
+        var_set_num(vm, "IFMISSP_COUNT", hr.n);
+        var_set_num(vm, "MISSP_COUNT", hr.n);
+        var_set_num(vm, "JSONMISS_N", hr.n);
+        var_set_str(vm, "IFMISSP_BAG", hr.str);
+        var_set_str(vm, "MISSP_BAG", hr.str);
+      }
+      if (is_extrap) {
+        var_set_num(vm, "IFEXTRAP_COUNT", hr.n);
+        var_set_num(vm, "EXTRAP_COUNT", hr.n);
+        var_set_num(vm, "JSONEXTRA_N", hr.n);
+        var_set_str(vm, "IFEXTRAP_BAG", hr.str);
+        var_set_str(vm, "EXTRAP_BAG", hr.str);
+      }
+      if (is_emptyp || is_nonemptyp) {
+        var_set_num(vm, "IFEMPTYP_N", is_emptyp ? hit : 0);
+        var_set_num(vm, "EMPTYP_N", is_emptyp ? hit : 0);
+        var_set_num(vm, "IFISEMPTYP_N", is_emptyp ? hit : 0);
+        var_set_num(vm, "IFNONEMPTYP_N", is_nonemptyp ? hit : 0);
+        var_set_num(vm, "NONEMPTYP_N", is_nonemptyp ? hit : 0);
+        var_set_num(vm, "IFHASKEYSP_N", is_nonemptyp ? hit : 0);
+        var_set_num(vm, "IFEMPTYP_LEN", hr.n);
+        var_set_num(vm, "EMPTYP_LEN", hr.n);
+        var_set_num(vm, "JSONLEN_N", hr.n);
+      }
+      if (is_onep || is_multp || is_pairp || is_triplep || is_quadp || is_quintp || is_sixp || is_sevenp || is_eightp || is_ninep || is_tenp || is_elevenp || is_twelvep || is_thirteenp || is_fourteenp || is_fifteenp || is_sixteenp || is_seventeenp || is_eighteenp || is_nineteenp || is_twentyp || is_twentyonep || is_twentytwop || is_twentythreep || is_twentyfourp || is_twentyfivep || is_twentysixp || is_twentysevenp || is_twentyeightp || is_twentyninep || is_thirtyp || is_thirtyonep || is_thirtytwop || is_thirtythreep || is_thirtyfourp || is_thirtyfivep || is_thirtysixp || is_thirtysevenp || is_thirtyeightp || is_thirtyninep || is_fortyp || is_fortyonep || is_fortytwop || is_fortythreep || is_fortyfourp || is_fortyfivep || is_fortysixp || is_fortysevenp || is_fortyeightp || is_fortyninep || is_fiftyp || is_fiftyonep || is_fiftytwop || is_fiftythreep || is_fiftyfourp || is_fiftyfivep || is_fiftysixp || is_fiftysevenp || is_fiftyeightp || is_fiftyninep || is_sixtyp || is_sixtyonep || is_sixtytwop || is_sixtythreep || is_sixtyfourp || is_sixtyfivep || is_sixtysixp || is_sixtysevenp || is_sixtyeightp || is_sixtyninep || is_seventyp || is_seventyonep || is_seventytwop || is_seventythreep || is_seventyfourp || is_seventyfivep || is_seventysixp || is_seventysevenp || is_seventyeightp || is_seventyninep || is_eightyp || is_eightyonep || is_eightytwop || is_eightythreep || is_eightyfourp || is_eightyfivep || is_eightysixp || is_eightysevenp || is_eightyeightp || is_eightyninep || is_ninetyp || is_ninetyonep || is_ninetytwop || is_ninetythreep || is_ninetyfourp || is_ninetyfivep || is_ninetysixp || is_ninetysevenp || is_ninetyeightp || is_ninetyninep || is_hundredp || is_hundredonep || is_hundredtwop || is_hundredthreep || is_hundredfourp) {
+        var_set_num(vm, "IFONEP_N", is_onep ? hit : 0);
+        var_set_num(vm, "ONEP_N", is_onep ? hit : 0);
+        var_set_num(vm, "IFSINGLEP_N", is_onep ? hit : 0);
+        var_set_num(vm, "IFONEKEYP_N", is_onep ? hit : 0);
+        var_set_num(vm, "IFMULTP_N", is_multp ? hit : 0);
+        var_set_num(vm, "MULTP_N", is_multp ? hit : 0);
+        var_set_num(vm, "IFMANYKEYSP_N", is_multp ? hit : 0);
+        var_set_num(vm, "IFMULTIKEYP_N", is_multp ? hit : 0);
+        var_set_num(vm, "IFPAIRP_N", is_pairp ? hit : 0);
+        var_set_num(vm, "PAIRP_N", is_pairp ? hit : 0);
+        var_set_num(vm, "IFTWOP_N", is_pairp ? hit : 0);
+        var_set_num(vm, "IFTWOKEYP_N", is_pairp ? hit : 0);
+        var_set_num(vm, "IFTRIPLEP_N", is_triplep ? hit : 0);
+        var_set_num(vm, "TRIPLEP_N", is_triplep ? hit : 0);
+        var_set_num(vm, "IFTHREEP_N", is_triplep ? hit : 0);
+        var_set_num(vm, "IFTHREEKEYP_N", is_triplep ? hit : 0);
+        var_set_num(vm, "IFQUADP_N", is_quadp ? hit : 0);
+        var_set_num(vm, "QUADP_N", is_quadp ? hit : 0);
+        var_set_num(vm, "IFFOURP_N", is_quadp ? hit : 0);
+        var_set_num(vm, "IFFOURKEYP_N", is_quadp ? hit : 0);
+        var_set_num(vm, "IFQUINTP_N", is_quintp ? hit : 0);
+        var_set_num(vm, "QUINTP_N", is_quintp ? hit : 0);
+        var_set_num(vm, "IFFIVEP_N", is_quintp ? hit : 0);
+        var_set_num(vm, "IFFIVEKEYP_N", is_quintp ? hit : 0);
+        var_set_num(vm, "IFSIXP_N", is_sixp ? hit : 0);
+        var_set_num(vm, "SIXP_N", is_sixp ? hit : 0);
+        var_set_num(vm, "IFHEXAP_N", is_sixp ? hit : 0);
+        var_set_num(vm, "IFSIXKEYP_N", is_sixp ? hit : 0);
+        var_set_num(vm, "IFSEVENP_N", is_sevenp ? hit : 0);
+        var_set_num(vm, "SEVENP_N", is_sevenp ? hit : 0);
+        var_set_num(vm, "IFSEPTP_N", is_sevenp ? hit : 0);
+        var_set_num(vm, "IFSEVENKEYP_N", is_sevenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTP_N", is_eightp ? hit : 0);
+        var_set_num(vm, "EIGHTP_N", is_eightp ? hit : 0);
+        var_set_num(vm, "IFOCTP_N", is_eightp ? hit : 0);
+        var_set_num(vm, "IFEIGHTKEYP_N", is_eightp ? hit : 0);
+        var_set_num(vm, "IFNINEP_N", is_ninep ? hit : 0);
+        var_set_num(vm, "NINEP_N", is_ninep ? hit : 0);
+        var_set_num(vm, "IFNONAP_N", is_ninep ? hit : 0);
+        var_set_num(vm, "IFNINEKEYP_N", is_ninep ? hit : 0);
+        var_set_num(vm, "IFTENP_N", is_tenp ? hit : 0);
+        var_set_num(vm, "TENP_N", is_tenp ? hit : 0);
+        var_set_num(vm, "IFDECAP_N", is_tenp ? hit : 0);
+        var_set_num(vm, "IFTENKEYP_N", is_tenp ? hit : 0);
+        var_set_num(vm, "IFELEVENP_N", is_elevenp ? hit : 0);
+        var_set_num(vm, "ELEVENP_N", is_elevenp ? hit : 0);
+        var_set_num(vm, "IFUNDECAP_N", is_elevenp ? hit : 0);
+        var_set_num(vm, "IFELEVENKEYP_N", is_elevenp ? hit : 0);
+        var_set_num(vm, "IFTWELVEP_N", is_twelvep ? hit : 0);
+        var_set_num(vm, "TWELVEP_N", is_twelvep ? hit : 0);
+        var_set_num(vm, "IFDODECAP_N", is_twelvep ? hit : 0);
+        var_set_num(vm, "IFTWELVEKEYP_N", is_twelvep ? hit : 0);
+        var_set_num(vm, "IFTHIRTEENP_N", is_thirteenp ? hit : 0);
+        var_set_num(vm, "THIRTEENP_N", is_thirteenp ? hit : 0);
+        var_set_num(vm, "IFTRIDECAP_N", is_thirteenp ? hit : 0);
+        var_set_num(vm, "IFTHIRTEENKEYP_N", is_thirteenp ? hit : 0);
+        var_set_num(vm, "IFFOURTEENP_N", is_fourteenp ? hit : 0);
+        var_set_num(vm, "FOURTEENP_N", is_fourteenp ? hit : 0);
+        var_set_num(vm, "IFTETRADECAP_N", is_fourteenp ? hit : 0);
+        var_set_num(vm, "IFFOURTEENKEYP_N", is_fourteenp ? hit : 0);
+        var_set_num(vm, "IFFIFTEENP_N", is_fifteenp ? hit : 0);
+        var_set_num(vm, "FIFTEENP_N", is_fifteenp ? hit : 0);
+        var_set_num(vm, "IFPENTEDECAP_N", is_fifteenp ? hit : 0);
+        var_set_num(vm, "IFFIFTEENKEYP_N", is_fifteenp ? hit : 0);
+        var_set_num(vm, "IFSIXTEENP_N", is_sixteenp ? hit : 0);
+        var_set_num(vm, "SIXTEENP_N", is_sixteenp ? hit : 0);
+        var_set_num(vm, "IFHEXADECAP_N", is_sixteenp ? hit : 0);
+        var_set_num(vm, "IFSIXTEENKEYP_N", is_sixteenp ? hit : 0);
+        var_set_num(vm, "IFSEVENTEENP_N", is_seventeenp ? hit : 0);
+        var_set_num(vm, "SEVENTEENP_N", is_seventeenp ? hit : 0);
+        var_set_num(vm, "IFHEPTADECAP_N", is_seventeenp ? hit : 0);
+        var_set_num(vm, "IFSEVENTEENKEYP_N", is_seventeenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTEENP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "EIGHTEENP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "IFOCTODECAP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTEENKEYP_N", is_eighteenp ? hit : 0);
+        var_set_num(vm, "IFNINETEENP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "NINETEENP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "IFENNEADECAP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "IFNINETEENKEYP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "NINETEENKEYP_N", is_nineteenp ? hit : 0);
+        var_set_num(vm, "IFTWENTYP_N", is_twentyp ? hit : 0);
+        var_set_num(vm, "TWENTYP_N", is_twentyp ? hit : 0);
+        var_set_num(vm, "IFICOSAP_N", is_twentyp ? hit : 0);
+        var_set_num(vm, "IFTWENTYKEYP_N", is_twentyp ? hit : 0);
+        var_set_num(vm, "IFTWENTYONEP_N", is_twentyonep ? hit : 0);
+        var_set_num(vm, "TWENTYONEP_N", is_twentyonep ? hit : 0);
+        var_set_num(vm, "IFHENICOSAP_N", is_twentyonep ? hit : 0);
+        var_set_num(vm, "IFTWENTYONEKEYP_N", is_twentyonep ? hit : 0);
+        var_set_num(vm, "IFTWENTYTWOP_N", is_twentytwop ? hit : 0);
+        var_set_num(vm, "TWENTYTWOP_N", is_twentytwop ? hit : 0);
+        var_set_num(vm, "IFDOICOSAP_N", is_twentytwop ? hit : 0);
+        var_set_num(vm, "IFTWENTYTWOKEYP_N", is_twentytwop ? hit : 0);
+        var_set_num(vm, "IFTWENTYTHREEP_N", is_twentythreep ? hit : 0);
+        var_set_num(vm, "TWENTYTHREEP_N", is_twentythreep ? hit : 0);
+        var_set_num(vm, "IFTRICOSAP_N", is_twentythreep ? hit : 0);
+        var_set_num(vm, "IFTWENTYTHREEKEYP_N", is_twentythreep ? hit : 0);
+        var_set_num(vm, "IFTWENTYFOURP_N", is_twentyfourp ? hit : 0);
+        var_set_num(vm, "TWENTYFOURP_N", is_twentyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAICOSAP_N", is_twentyfourp ? hit : 0);
+        var_set_num(vm, "IFTWENTYFOURKEYP_N", is_twentyfourp ? hit : 0);
+        var_set_num(vm, "IFTWENTYFIVEP_N", is_twentyfivep ? hit : 0);
+        var_set_num(vm, "TWENTYFIVEP_N", is_twentyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEICOSAP_N", is_twentyfivep ? hit : 0);
+        var_set_num(vm, "IFTWENTYFIVEKEYP_N", is_twentyfivep ? hit : 0);
+        var_set_num(vm, "IFTWENTYSIXP_N", is_twentysixp ? hit : 0);
+        var_set_num(vm, "TWENTYSIXP_N", is_twentysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEICOSAP_N", is_twentysixp ? hit : 0);
+        var_set_num(vm, "IFTWENTYSIXKEYP_N", is_twentysixp ? hit : 0);
+        var_set_num(vm, "IFTWENTYSEVENP_N", is_twentysevenp ? hit : 0);
+        var_set_num(vm, "TWENTYSEVENP_N", is_twentysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTEICOSAP_N", is_twentysevenp ? hit : 0);
+        var_set_num(vm, "IFTWENTYSEVENKEYP_N", is_twentysevenp ? hit : 0);
+        var_set_num(vm, "IFTWENTYEIGHTP_N", is_twentyeightp ? hit : 0);
+        var_set_num(vm, "TWENTYEIGHTP_N", is_twentyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOICOSAP_N", is_twentyeightp ? hit : 0);
+        var_set_num(vm, "IFTWENTYEIGHTKEYP_N", is_twentyeightp ? hit : 0);
+        var_set_num(vm, "IFTWENTYNINEP_N", is_twentyninep ? hit : 0);
+        var_set_num(vm, "TWENTYNINEP_N", is_twentyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAICOSAP_N", is_twentyninep ? hit : 0);
+        var_set_num(vm, "IFTWENTYNINEKEYP_N", is_twentyninep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYP_N", is_thirtyp ? hit : 0);
+        var_set_num(vm, "THIRTYP_N", is_thirtyp ? hit : 0);
+        var_set_num(vm, "IFTRIACONTAP_N", is_thirtyp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYKEYP_N", is_thirtyp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYONEP_N", is_thirtyonep ? hit : 0);
+        var_set_num(vm, "THIRTYONEP_N", is_thirtyonep ? hit : 0);
+        var_set_num(vm, "IFHENTRIACONTAP_N", is_thirtyonep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYONEKEYP_N", is_thirtyonep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYTWOP_N", is_thirtytwop ? hit : 0);
+        var_set_num(vm, "THIRTYTWOP_N", is_thirtytwop ? hit : 0);
+        var_set_num(vm, "IFDOTRIACONTAP_N", is_thirtytwop ? hit : 0);
+        var_set_num(vm, "IFTHIRTYTWOKEYP_N", is_thirtytwop ? hit : 0);
+        var_set_num(vm, "IFTHIRTYTHREEP_N", is_thirtythreep ? hit : 0);
+        var_set_num(vm, "THIRTYTHREEP_N", is_thirtythreep ? hit : 0);
+        var_set_num(vm, "IFTRITRIACONTAP_N", is_thirtythreep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYTHREEKEYP_N", is_thirtythreep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYFOURP_N", is_thirtyfourp ? hit : 0);
+        var_set_num(vm, "THIRTYFOURP_N", is_thirtyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRATRIACONTAP_N", is_thirtyfourp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYFOURKEYP_N", is_thirtyfourp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYFIVEP_N", is_thirtyfivep ? hit : 0);
+        var_set_num(vm, "THIRTYFIVEP_N", is_thirtyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTETRIACONTAP_N", is_thirtyfivep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYFIVEKEYP_N", is_thirtyfivep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYSIXP_N", is_thirtysixp ? hit : 0);
+        var_set_num(vm, "THIRTYSIXP_N", is_thirtysixp ? hit : 0);
+        var_set_num(vm, "IFHEXETRIACONTAP_N", is_thirtysixp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYSIXKEYP_N", is_thirtysixp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYSEVENP_N", is_thirtysevenp ? hit : 0);
+        var_set_num(vm, "THIRTYSEVENP_N", is_thirtysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTETRIACONTAP_N", is_thirtysevenp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYSEVENKEYP_N", is_thirtysevenp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYEIGHTP_N", is_thirtyeightp ? hit : 0);
+        var_set_num(vm, "THIRTYEIGHTP_N", is_thirtyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOTRIACONTAP_N", is_thirtyeightp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYEIGHTKEYP_N", is_thirtyeightp ? hit : 0);
+        var_set_num(vm, "IFTHIRTYNINEP_N", is_thirtyninep ? hit : 0);
+        var_set_num(vm, "THIRTYNINEP_N", is_thirtyninep ? hit : 0);
+        var_set_num(vm, "IFENNEATRIACONTAP_N", is_thirtyninep ? hit : 0);
+        var_set_num(vm, "IFTHIRTYNINEKEYP_N", is_thirtyninep ? hit : 0);
+        var_set_num(vm, "IFFORTYP_N", is_fortyp ? hit : 0);
+        var_set_num(vm, "FORTYP_N", is_fortyp ? hit : 0);
+        var_set_num(vm, "IFTETRACONTAP_N", is_fortyp ? hit : 0);
+        var_set_num(vm, "IFFORTYKEYP_N", is_fortyp ? hit : 0);
+        var_set_num(vm, "IFFORTYONEP_N", is_fortyonep ? hit : 0);
+        var_set_num(vm, "FORTYONEP_N", is_fortyonep ? hit : 0);
+        var_set_num(vm, "IFHENTETRACONTAP_N", is_fortyonep ? hit : 0);
+        var_set_num(vm, "IFFORTYONEKEYP_N", is_fortyonep ? hit : 0);
+        var_set_num(vm, "IFFORTYTWOP_N", is_fortytwop ? hit : 0);
+        var_set_num(vm, "FORTYTWOP_N", is_fortytwop ? hit : 0);
+        var_set_num(vm, "IFDOTETRACONTAP_N", is_fortytwop ? hit : 0);
+        var_set_num(vm, "IFFORTYTWOKEYP_N", is_fortytwop ? hit : 0);
+        var_set_num(vm, "IFFORTYTHREEP_N", is_fortythreep ? hit : 0);
+        var_set_num(vm, "FORTYTHREEP_N", is_fortythreep ? hit : 0);
+        var_set_num(vm, "IFTRITETRACONTAP_N", is_fortythreep ? hit : 0);
+        var_set_num(vm, "IFFORTYTHREEKEYP_N", is_fortythreep ? hit : 0);
+        var_set_num(vm, "IFFORTYFOURP_N", is_fortyfourp ? hit : 0);
+        var_set_num(vm, "FORTYFOURP_N", is_fortyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRATETRACONTAP_N", is_fortyfourp ? hit : 0);
+        var_set_num(vm, "IFFORTYFOURKEYP_N", is_fortyfourp ? hit : 0);
+        var_set_num(vm, "IFFORTYFIVEP_N", is_fortyfivep ? hit : 0);
+        var_set_num(vm, "FORTYFIVEP_N", is_fortyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTETETRACONTAP_N", is_fortyfivep ? hit : 0);
+        var_set_num(vm, "IFFORTYFIVEKEYP_N", is_fortyfivep ? hit : 0);
+        var_set_num(vm, "IFFORTYSIXP_N", is_fortysixp ? hit : 0);
+        var_set_num(vm, "FORTYSIXP_N", is_fortysixp ? hit : 0);
+        var_set_num(vm, "IFHEXETETRACONTAP_N", is_fortysixp ? hit : 0);
+        var_set_num(vm, "IFFORTYSIXKEYP_N", is_fortysixp ? hit : 0);
+        var_set_num(vm, "IFFORTYSEVENP_N", is_fortysevenp ? hit : 0);
+        var_set_num(vm, "FORTYSEVENP_N", is_fortysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTETETRACONTAP_N", is_fortysevenp ? hit : 0);
+        var_set_num(vm, "IFFORTYSEVENKEYP_N", is_fortysevenp ? hit : 0);
+        var_set_num(vm, "IFFORTYEIGHTP_N", is_fortyeightp ? hit : 0);
+        var_set_num(vm, "FORTYEIGHTP_N", is_fortyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOTETRACONTAP_N", is_fortyeightp ? hit : 0);
+        var_set_num(vm, "IFFORTYEIGHTKEYP_N", is_fortyeightp ? hit : 0);
+        var_set_num(vm, "IFFORTYNINEP_N", is_fortyninep ? hit : 0);
+        var_set_num(vm, "FORTYNINEP_N", is_fortyninep ? hit : 0);
+        var_set_num(vm, "IFENNEATETRACONTAP_N", is_fortyninep ? hit : 0);
+        var_set_num(vm, "IFFORTYNINEKEYP_N", is_fortyninep ? hit : 0);
+        var_set_num(vm, "IFFIFTYP_N", is_fiftyp ? hit : 0);
+        var_set_num(vm, "FIFTYP_N", is_fiftyp ? hit : 0);
+        var_set_num(vm, "IFPENTECONTAP_N", is_fiftyp ? hit : 0);
+        var_set_num(vm, "IFFIFTYKEYP_N", is_fiftyp ? hit : 0);
+        var_set_num(vm, "IFFIFTYONEP_N", is_fiftyonep ? hit : 0);
+        var_set_num(vm, "FIFTYONEP_N", is_fiftyonep ? hit : 0);
+        var_set_num(vm, "IFHENPENTECONTAP_N", is_fiftyonep ? hit : 0);
+        var_set_num(vm, "IFFIFTYONEKEYP_N", is_fiftyonep ? hit : 0);
+        var_set_num(vm, "IFFIFTYTWOP_N", is_fiftytwop ? hit : 0);
+        var_set_num(vm, "FIFTYTWOP_N", is_fiftytwop ? hit : 0);
+        var_set_num(vm, "IFDOPENTECONTAP_N", is_fiftytwop ? hit : 0);
+        var_set_num(vm, "IFFIFTYTWOKEYP_N", is_fiftytwop ? hit : 0);
+        var_set_num(vm, "IFFIFTYTHREEP_N", is_fiftythreep ? hit : 0);
+        var_set_num(vm, "FIFTYTHREEP_N", is_fiftythreep ? hit : 0);
+        var_set_num(vm, "IFTRIPENTECONTAP_N", is_fiftythreep ? hit : 0);
+        var_set_num(vm, "IFFIFTYTHREEKEYP_N", is_fiftythreep ? hit : 0);
+        var_set_num(vm, "IFFIFTYFOURP_N", is_fiftyfourp ? hit : 0);
+        var_set_num(vm, "FIFTYFOURP_N", is_fiftyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAPENTECONTAP_N", is_fiftyfourp ? hit : 0);
+        var_set_num(vm, "IFFIFTYFOURKEYP_N", is_fiftyfourp ? hit : 0);
+        var_set_num(vm, "IFFIFTYFIVEP_N", is_fiftyfivep ? hit : 0);
+        var_set_num(vm, "FIFTYFIVEP_N", is_fiftyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEPENTECONTAP_N", is_fiftyfivep ? hit : 0);
+        var_set_num(vm, "IFFIFTYFIVEKEYP_N", is_fiftyfivep ? hit : 0);
+        var_set_num(vm, "IFFIFTYSIXP_N", is_fiftysixp ? hit : 0);
+        var_set_num(vm, "FIFTYSIXP_N", is_fiftysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEPENTECONTAP_N", is_fiftysixp ? hit : 0);
+        var_set_num(vm, "IFFIFTYSIXKEYP_N", is_fiftysixp ? hit : 0);
+        var_set_num(vm, "IFFIFTYSEVENP_N", is_fiftysevenp ? hit : 0);
+        var_set_num(vm, "FIFTYSEVENP_N", is_fiftysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTEPENTECONTAP_N", is_fiftysevenp ? hit : 0);
+        var_set_num(vm, "IFFIFTYSEVENKEYP_N", is_fiftysevenp ? hit : 0);
+        var_set_num(vm, "IFFIFTYEIGHTP_N", is_fiftyeightp ? hit : 0);
+        var_set_num(vm, "FIFTYEIGHTP_N", is_fiftyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOPENTECONTAP_N", is_fiftyeightp ? hit : 0);
+        var_set_num(vm, "IFFIFTYEIGHTKEYP_N", is_fiftyeightp ? hit : 0);
+        var_set_num(vm, "IFFIFTYNINEP_N", is_fiftyninep ? hit : 0);
+        var_set_num(vm, "FIFTYNINEP_N", is_fiftyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAPENTECONTAP_N", is_fiftyninep ? hit : 0);
+        var_set_num(vm, "IFFIFTYNINEKEYP_N", is_fiftyninep ? hit : 0);
+        var_set_num(vm, "IFSIXTYP_N", is_sixtyp ? hit : 0);
+        var_set_num(vm, "SIXTYP_N", is_sixtyp ? hit : 0);
+        var_set_num(vm, "IFHEXECONTAP_N", is_sixtyp ? hit : 0);
+        var_set_num(vm, "IFSIXTYKEYP_N", is_sixtyp ? hit : 0);
+        var_set_num(vm, "IFSIXTYONEP_N", is_sixtyonep ? hit : 0);
+        var_set_num(vm, "SIXTYONEP_N", is_sixtyonep ? hit : 0);
+        var_set_num(vm, "IFHENHEXECONTAP_N", is_sixtyonep ? hit : 0);
+        var_set_num(vm, "IFSIXTYONEKEYP_N", is_sixtyonep ? hit : 0);
+        var_set_num(vm, "IFSIXTYTWOP_N", is_sixtytwop ? hit : 0);
+        var_set_num(vm, "SIXTYTWOP_N", is_sixtytwop ? hit : 0);
+        var_set_num(vm, "IFDOHEXECONTAP_N", is_sixtytwop ? hit : 0);
+        var_set_num(vm, "IFSIXTYTWOKEYP_N", is_sixtytwop ? hit : 0);
+        var_set_num(vm, "IFSIXTYTHREEP_N", is_sixtythreep ? hit : 0);
+        var_set_num(vm, "SIXTYTHREEP_N", is_sixtythreep ? hit : 0);
+        var_set_num(vm, "IFTRIHEXECONTAP_N", is_sixtythreep ? hit : 0);
+        var_set_num(vm, "IFSIXTYTHREEKEYP_N", is_sixtythreep ? hit : 0);
+        var_set_num(vm, "IFSIXTYFOURP_N", is_sixtyfourp ? hit : 0);
+        var_set_num(vm, "SIXTYFOURP_N", is_sixtyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAHEXECONTAP_N", is_sixtyfourp ? hit : 0);
+        var_set_num(vm, "IFSIXTYFOURKEYP_N", is_sixtyfourp ? hit : 0);
+        var_set_num(vm, "IFSIXTYFIVEP_N", is_sixtyfivep ? hit : 0);
+        var_set_num(vm, "SIXTYFIVEP_N", is_sixtyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEHEXECONTAP_N", is_sixtyfivep ? hit : 0);
+        var_set_num(vm, "IFSIXTYFIVEKEYP_N", is_sixtyfivep ? hit : 0);
+        var_set_num(vm, "IFSIXTYSIXP_N", is_sixtysixp ? hit : 0);
+        var_set_num(vm, "SIXTYSIXP_N", is_sixtysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEHEXECONTAP_N", is_sixtysixp ? hit : 0);
+        var_set_num(vm, "IFSIXTYSIXKEYP_N", is_sixtysixp ? hit : 0);
+        var_set_num(vm, "IFSIXTYSEVENP_N", is_sixtysevenp ? hit : 0);
+        var_set_num(vm, "SIXTYSEVENP_N", is_sixtysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTEHEXECONTAP_N", is_sixtysevenp ? hit : 0);
+        var_set_num(vm, "IFSIXTYSEVENKEYP_N", is_sixtysevenp ? hit : 0);
+        var_set_num(vm, "IFSIXTYEIGHTP_N", is_sixtyeightp ? hit : 0);
+        var_set_num(vm, "SIXTYEIGHTP_N", is_sixtyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOHEXECONTAP_N", is_sixtyeightp ? hit : 0);
+        var_set_num(vm, "IFSIXTYEIGHTKEYP_N", is_sixtyeightp ? hit : 0);
+        var_set_num(vm, "IFSIXTYNINEP_N", is_sixtyninep ? hit : 0);
+        var_set_num(vm, "SIXTYNINEP_N", is_sixtyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAHEXECONTAP_N", is_sixtyninep ? hit : 0);
+        var_set_num(vm, "IFSIXTYNINEKEYP_N", is_sixtyninep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYP_N", is_seventyp ? hit : 0);
+        var_set_num(vm, "SEVENTYP_N", is_seventyp ? hit : 0);
+        var_set_num(vm, "IFHEBDOMECONTAP_N", is_seventyp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYKEYP_N", is_seventyp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYONEP_N", is_seventyonep ? hit : 0);
+        var_set_num(vm, "SEVENTYONEP_N", is_seventyonep ? hit : 0);
+        var_set_num(vm, "IFHENHEBDOMECONTAP_N", is_seventyonep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYONEKEYP_N", is_seventyonep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYTWOP_N", is_seventytwop ? hit : 0);
+        var_set_num(vm, "SEVENTYTWOP_N", is_seventytwop ? hit : 0);
+        var_set_num(vm, "IFDOHEBDOMECONTAP_N", is_seventytwop ? hit : 0);
+        var_set_num(vm, "IFSEVENTYTWOKEYP_N", is_seventytwop ? hit : 0);
+        var_set_num(vm, "IFSEVENTYTHREEP_N", is_seventythreep ? hit : 0);
+        var_set_num(vm, "SEVENTYTHREEP_N", is_seventythreep ? hit : 0);
+        var_set_num(vm, "IFTRIHEBDOMECONTAP_N", is_seventythreep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYTHREEKEYP_N", is_seventythreep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYFOURP_N", is_seventyfourp ? hit : 0);
+        var_set_num(vm, "SEVENTYFOURP_N", is_seventyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAHEBDOMECONTAP_N", is_seventyfourp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYFOURKEYP_N", is_seventyfourp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYFIVEP_N", is_seventyfivep ? hit : 0);
+        var_set_num(vm, "SEVENTYFIVEP_N", is_seventyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEHEBDOMECONTAP_N", is_seventyfivep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYFIVEKEYP_N", is_seventyfivep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYSIXP_N", is_seventysixp ? hit : 0);
+        var_set_num(vm, "SEVENTYSIXP_N", is_seventysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEHEBDOMECONTAP_N", is_seventysixp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYSIXKEYP_N", is_seventysixp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYSEVENP_N", is_seventysevenp ? hit : 0);
+        var_set_num(vm, "SEVENTYSEVENP_N", is_seventysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTEHEBDOMECONTAP_N", is_seventysevenp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYSEVENKEYP_N", is_seventysevenp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYEIGHTP_N", is_seventyeightp ? hit : 0);
+        var_set_num(vm, "SEVENTYEIGHTP_N", is_seventyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOHEBDOMECONTAP_N", is_seventyeightp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYEIGHTKEYP_N", is_seventyeightp ? hit : 0);
+        var_set_num(vm, "IFSEVENTYNINEP_N", is_seventyninep ? hit : 0);
+        var_set_num(vm, "SEVENTYNINEP_N", is_seventyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAHEBDOMECONTAP_N", is_seventyninep ? hit : 0);
+        var_set_num(vm, "IFSEVENTYNINEKEYP_N", is_seventyninep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYP_N", is_eightyp ? hit : 0);
+        var_set_num(vm, "EIGHTYP_N", is_eightyp ? hit : 0);
+        var_set_num(vm, "IFOCTACONTAP_N", is_eightyp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYKEYP_N", is_eightyp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYONEP_N", is_eightyonep ? hit : 0);
+        var_set_num(vm, "EIGHTYONEP_N", is_eightyonep ? hit : 0);
+        var_set_num(vm, "IFHENOCTACONTAP_N", is_eightyonep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYONEKEYP_N", is_eightyonep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYTWOP_N", is_eightytwop ? hit : 0);
+        var_set_num(vm, "EIGHTYTWOP_N", is_eightytwop ? hit : 0);
+        var_set_num(vm, "IFDOOCTACONTAP_N", is_eightytwop ? hit : 0);
+        var_set_num(vm, "IFEIGHTYTWOKEYP_N", is_eightytwop ? hit : 0);
+        var_set_num(vm, "IFEIGHTYTHREEP_N", is_eightythreep ? hit : 0);
+        var_set_num(vm, "EIGHTYTHREEP_N", is_eightythreep ? hit : 0);
+        var_set_num(vm, "IFTRIOCTACONTAP_N", is_eightythreep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYTHREEKEYP_N", is_eightythreep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYFOURP_N", is_eightyfourp ? hit : 0);
+        var_set_num(vm, "EIGHTYFOURP_N", is_eightyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAOCTACONTAP_N", is_eightyfourp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYFOURKEYP_N", is_eightyfourp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYFIVEP_N", is_eightyfivep ? hit : 0);
+        var_set_num(vm, "EIGHTYFIVEP_N", is_eightyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEOCTACONTAP_N", is_eightyfivep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYFIVEKEYP_N", is_eightyfivep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYSIXP_N", is_eightysixp ? hit : 0);
+        var_set_num(vm, "EIGHTYSIXP_N", is_eightysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEOCTACONTAP_N", is_eightysixp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYSIXKEYP_N", is_eightysixp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYSEVENP_N", is_eightysevenp ? hit : 0);
+        var_set_num(vm, "EIGHTYSEVENP_N", is_eightysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTEOCTACONTAP_N", is_eightysevenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYSEVENKEYP_N", is_eightysevenp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYEIGHTP_N", is_eightyeightp ? hit : 0);
+        var_set_num(vm, "EIGHTYEIGHTP_N", is_eightyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOOCTACONTAP_N", is_eightyeightp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYEIGHTKEYP_N", is_eightyeightp ? hit : 0);
+        var_set_num(vm, "IFEIGHTYNINEP_N", is_eightyninep ? hit : 0);
+        var_set_num(vm, "EIGHTYNINEP_N", is_eightyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAOCTACONTAP_N", is_eightyninep ? hit : 0);
+        var_set_num(vm, "IFEIGHTYNINEKEYP_N", is_eightyninep ? hit : 0);
+        var_set_num(vm, "IFNINETYP_N", is_ninetyp ? hit : 0);
+        var_set_num(vm, "NINETYP_N", is_ninetyp ? hit : 0);
+        var_set_num(vm, "IFENNEACONTAP_N", is_ninetyp ? hit : 0);
+        var_set_num(vm, "IFNINETYKEYP_N", is_ninetyp ? hit : 0);
+        var_set_num(vm, "IFNINETYONEP_N", is_ninetyonep ? hit : 0);
+        var_set_num(vm, "NINETYONEP_N", is_ninetyonep ? hit : 0);
+        var_set_num(vm, "IFHENENNEACONTAP_N", is_ninetyonep ? hit : 0);
+        var_set_num(vm, "IFNINETYONEKEYP_N", is_ninetyonep ? hit : 0);
+        var_set_num(vm, "IFNINETYTWOP_N", is_ninetytwop ? hit : 0);
+        var_set_num(vm, "NINETYTWOP_N", is_ninetytwop ? hit : 0);
+        var_set_num(vm, "IFDOENNEACONTAP_N", is_ninetytwop ? hit : 0);
+        var_set_num(vm, "IFNINETYTWOKEYP_N", is_ninetytwop ? hit : 0);
+        var_set_num(vm, "IFNINETYTHREEP_N", is_ninetythreep ? hit : 0);
+        var_set_num(vm, "NINETYTHREEP_N", is_ninetythreep ? hit : 0);
+        var_set_num(vm, "IFTRIENNEACONTAP_N", is_ninetythreep ? hit : 0);
+        var_set_num(vm, "IFNINETYTHREEKEYP_N", is_ninetythreep ? hit : 0);
+        var_set_num(vm, "IFNINETYFOURP_N", is_ninetyfourp ? hit : 0);
+        var_set_num(vm, "NINETYFOURP_N", is_ninetyfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAENNEACONTAP_N", is_ninetyfourp ? hit : 0);
+        var_set_num(vm, "IFNINETYFOURKEYP_N", is_ninetyfourp ? hit : 0);
+        var_set_num(vm, "IFNINETYFIVEP_N", is_ninetyfivep ? hit : 0);
+        var_set_num(vm, "NINETYFIVEP_N", is_ninetyfivep ? hit : 0);
+        var_set_num(vm, "IFPENTEENNEACONTAP_N", is_ninetyfivep ? hit : 0);
+        var_set_num(vm, "IFNINETYFIVEKEYP_N", is_ninetyfivep ? hit : 0);
+        var_set_num(vm, "IFNINETYSIXP_N", is_ninetysixp ? hit : 0);
+        var_set_num(vm, "NINETYSIXP_N", is_ninetysixp ? hit : 0);
+        var_set_num(vm, "IFHEXEENNEACONTAP_N", is_ninetysixp ? hit : 0);
+        var_set_num(vm, "IFNINETYSIXKEYP_N", is_ninetysixp ? hit : 0);
+        var_set_num(vm, "IFNINETYSEVENP_N", is_ninetysevenp ? hit : 0);
+        var_set_num(vm, "NINETYSEVENP_N", is_ninetysevenp ? hit : 0);
+        var_set_num(vm, "IFHEPTAENNEACONTAP_N", is_ninetysevenp ? hit : 0);
+        var_set_num(vm, "IFNINETYSEVENKEYP_N", is_ninetysevenp ? hit : 0);
+        var_set_num(vm, "IFNINETYEIGHTP_N", is_ninetyeightp ? hit : 0);
+        var_set_num(vm, "NINETYEIGHTP_N", is_ninetyeightp ? hit : 0);
+        var_set_num(vm, "IFOCTOENNEACONTAP_N", is_ninetyeightp ? hit : 0);
+        var_set_num(vm, "IFNINETYEIGHTKEYP_N", is_ninetyeightp ? hit : 0);
+        var_set_num(vm, "IFNINETYNINEP_N", is_ninetyninep ? hit : 0);
+        var_set_num(vm, "NINETYNINEP_N", is_ninetyninep ? hit : 0);
+        var_set_num(vm, "IFENNEAENNEACONTAP_N", is_ninetyninep ? hit : 0);
+        var_set_num(vm, "IFNINETYNINEKEYP_N", is_ninetyninep ? hit : 0);
+        var_set_num(vm, "IFHUNDREDP_N", is_hundredp ? hit : 0);
+        var_set_num(vm, "HUNDREDP_N", is_hundredp ? hit : 0);
+        var_set_num(vm, "IFHECTOP_N", is_hundredp ? hit : 0);
+        var_set_num(vm, "IFHUNDREDKEYP_N", is_hundredp ? hit : 0);
+        var_set_num(vm, "IFHUNDREDONEP_N", is_hundredonep ? hit : 0);
+        var_set_num(vm, "HUNDREDONEP_N", is_hundredonep ? hit : 0);
+        var_set_num(vm, "IFHENHECTOP_N", is_hundredonep ? hit : 0);
+        var_set_num(vm, "IFHUNDREDONEKEYP_N", is_hundredonep ? hit : 0);
+        var_set_num(vm, "HUNDREDONEKEYP_N", is_hundredonep ? hit : 0);
+        var_set_num(vm, "IFHUNDREDTWOP_N", is_hundredtwop ? hit : 0);
+        var_set_num(vm, "HUNDREDTWOP_N", is_hundredtwop ? hit : 0);
+        var_set_num(vm, "IFDOHECTOP_N", is_hundredtwop ? hit : 0);
+        var_set_num(vm, "IFHUNDREDTWOKEYP_N", is_hundredtwop ? hit : 0);
+        var_set_num(vm, "HUNDREDTWOKEYP_N", is_hundredtwop ? hit : 0);
+        var_set_num(vm, "IFHUNDREDTHREEP_N", is_hundredthreep ? hit : 0);
+        var_set_num(vm, "HUNDREDTHREEP_N", is_hundredthreep ? hit : 0);
+        var_set_num(vm, "IFTRIHECTOP_N", is_hundredthreep ? hit : 0);
+        var_set_num(vm, "IFHUNDREDTHREEKEYP_N", is_hundredthreep ? hit : 0);
+        var_set_num(vm, "HUNDREDTHREEKEYP_N", is_hundredthreep ? hit : 0);
+        var_set_num(vm, "IFHUNDREDFOURP_N", is_hundredfourp ? hit : 0);
+        var_set_num(vm, "HUNDREDFOURP_N", is_hundredfourp ? hit : 0);
+        var_set_num(vm, "IFTETRAHECTOP_N", is_hundredfourp ? hit : 0);
+        var_set_num(vm, "IFHUNDREDFOURKEYP_N", is_hundredfourp ? hit : 0);
+        var_set_num(vm, "HUNDREDFOURKEYP_N", is_hundredfourp ? hit : 0);
+
+        var_set_num(vm, "IFONEP_LEN", hr.n);
+        var_set_num(vm, "IFMULTP_LEN", hr.n);
+        var_set_num(vm, "IFPAIRP_LEN", hr.n);
+        var_set_num(vm, "IFTRIPLEP_LEN", hr.n);
+        var_set_num(vm, "IFQUADP_LEN", hr.n);
+        var_set_num(vm, "IFQUINTP_LEN", hr.n);
+        var_set_num(vm, "IFSIXP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFNINEP_LEN", hr.n);
+        var_set_num(vm, "IFTENP_LEN", hr.n);
+        var_set_num(vm, "IFELEVENP_LEN", hr.n);
+        var_set_num(vm, "IFTWELVEP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTEENP_LEN", hr.n);
+        var_set_num(vm, "IFFOURTEENP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTEENP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTEENP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTEENP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTEENP_LEN", hr.n);
+        var_set_num(vm, "IFNINETEENP_LEN", hr.n);
+        var_set_num(vm, "IFENNEADECAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETEENKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETEENKEYP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFTWENTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFTHIRTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYP_LEN", hr.n);
+        var_set_num(vm, "IFTETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYKEYP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFHENTETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYONEKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFDOTETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTRITETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRATETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFPENTETETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTETETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOTETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEATETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFPENTEPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFHEXEPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYSIXKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTEPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEAPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFHEXEHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYSIXKEYP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTEHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "SIXTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEAHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "SIXTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYP_LEN", hr.n);
+        var_set_num(vm, "IFHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFHENHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYONEKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFDOHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTRIHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEAHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYP_LEN", hr.n);
+        var_set_num(vm, "IFOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYKEYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFHENOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYONEKEYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYONEP_LEN", hr.n);
+        var_set_num(vm, "IFDOOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYTWOP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTRIOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYFOURP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFPENTEOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYSIXP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFHEXEOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYSIXKEYP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEAOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYP_LEN", hr.n);
+        var_set_num(vm, "IFENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYONEP_LEN", hr.n);
+        var_set_num(vm, "IFHENENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYONEKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYONEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFDOENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFPENTEENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYSIXKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFHEXEENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTAENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "IFOCTOENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDKEYP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDP_LEN", hr.n);
+        var_set_num(vm, "IFHECTOP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDONEP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDONEKEYP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDONEP_LEN", hr.n);
+        var_set_num(vm, "IFHENHECTOP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDONEKEYP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDTWOP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDTWOP_LEN", hr.n);
+        var_set_num(vm, "IFDOHECTOP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFTRIHECTOP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDFOURP_LEN", hr.n);
+        var_set_num(vm, "IFHUNDREDFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDFOURP_LEN", hr.n);
+        var_set_num(vm, "IFTETRAHECTOP_LEN", hr.n);
+        var_set_num(vm, "HUNDREDFOURKEYP_LEN", hr.n);
+        var_set_num(vm, "IFENNEAENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFTRIENNEACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYTHREEKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYTHREEP_LEN", hr.n);
+        var_set_num(vm, "IFNINETYKEYP_LEN", hr.n);
+        var_set_num(vm, "NINETYP_LEN", hr.n);
+        var_set_num(vm, "EIGHTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTEOCTACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFEIGHTYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "IFHEPTEHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYSEVENKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "IFPENTEHEBDOMECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSEVENTYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "SEVENTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYEIGHTKEYP_LEN", hr.n);
+        var_set_num(vm, "SIXTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "SIXTYSIXP_LEN", hr.n);
+        var_set_num(vm, "IFPENTEHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYFIVEKEYP_LEN", hr.n);
+        var_set_num(vm, "SIXTYFOURP_LEN", hr.n);
+        var_set_num(vm, "IFDOHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFSIXTYTWOKEYP_LEN", hr.n);
+        var_set_num(vm, "SIXTYTWOP_LEN", hr.n);
+        var_set_num(vm, "IFHEXECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYNINEKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFPENTECONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFIFTYKEYP_LEN", hr.n);
+        var_set_num(vm, "FIFTYP_LEN", hr.n);
+        var_set_num(vm, "IFHEXETETRACONTAP_LEN", hr.n);
+        var_set_num(vm, "IFFORTYSIXKEYP_LEN", hr.n);
+        var_set_num(vm, "FORTYSIXP_LEN", hr.n);
+        var_set_num(vm, "THIRTYNINEP_LEN", hr.n);
+        var_set_num(vm, "IFENNEATRIACONTAP_LEN", hr.n);
+        var_set_num(vm, "SIXTEENP_LEN", hr.n);
+        var_set_num(vm, "SEVENTEENP_LEN", hr.n);
+        var_set_num(vm, "EIGHTEENP_LEN", hr.n);
+        var_set_num(vm, "NINETEENP_LEN", hr.n);
+        var_set_num(vm, "TWENTYP_LEN", hr.n);
+        var_set_num(vm, "TWENTYONEP_LEN", hr.n);
+        var_set_num(vm, "TWENTYTWOP_LEN", hr.n);
+        var_set_num(vm, "TWENTYTHREEP_LEN", hr.n);
+        var_set_num(vm, "TWENTYFOURP_LEN", hr.n);
+        var_set_num(vm, "TWENTYFIVEP_LEN", hr.n);
+        var_set_num(vm, "TWENTYSIXP_LEN", hr.n);
+        var_set_num(vm, "TWENTYSEVENP_LEN", hr.n);
+        var_set_num(vm, "TWENTYEIGHTP_LEN", hr.n);
+        var_set_num(vm, "TWENTYNINEP_LEN", hr.n);
+        var_set_num(vm, "ELEVENP_LEN", hr.n);
+        var_set_num(vm, "TWELVEP_LEN", hr.n);
+        var_set_num(vm, "THIRTEENP_LEN", hr.n);
+        var_set_num(vm, "FOURTEENP_LEN", hr.n);
+        var_set_num(vm, "ONEP_LEN", hr.n);
+        var_set_num(vm, "MULTP_LEN", hr.n);
+        var_set_num(vm, "PAIRP_LEN", hr.n);
+        var_set_num(vm, "TRIPLEP_LEN", hr.n);
+        var_set_num(vm, "QUADP_LEN", hr.n);
+        var_set_num(vm, "QUINTP_LEN", hr.n);
+        var_set_num(vm, "SIXP_LEN", hr.n);
+        var_set_num(vm, "SEVENP_LEN", hr.n);
+        var_set_num(vm, "EIGHTP_LEN", hr.n);
+        var_set_num(vm, "NINEP_LEN", hr.n);
+        var_set_num(vm, "TENP_LEN", hr.n);
+        var_set_num(vm, "JSONLEN_N", hr.n);
+      }
+      var_set_str(vm, "JSON_KEY", key);
+      var_set_str(vm, "KEY", key);
+      if (take) {
+        Lex body = body_start;
+        if (exec_stmts_until(vm, &body, "END", "ELSE") < 0) return -1;
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+              kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+              kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+              kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+              kw(&L->cur,"WHENINBAG")||
+              kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+              kw(&L->cur,"WHENBETWEEN")||
+              kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+              kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+              kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+              kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+              kw(&L->cur,"WHENEXIST")||
+              kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+              kw(&L->cur,"WHENHASENV")||
+              kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+              kw(&L->cur,"WHENHASFIELD")||
+              kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+              kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+              kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+              kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+              kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+              kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+              kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFJSONHASALL")||kw(&L->cur,"IFJSONHASANY")||kw(&L->cur,"IFJSONNEED")||kw(&L->cur,"IFHASJSONALL")||kw(&L->cur,"IFHASJSONANY")||kw(&L->cur,"WHENJSONHASALL")||kw(&L->cur,"WHENJSONHASANY")||kw(&L->cur,"WHENJSONNEED")||kw(&L->cur,"WHENHASJSONALL")||kw(&L->cur,"WHENHASJSONANY")||kw(&L->cur,"IFONLYP")||kw(&L->cur,"IFNOEXTRAP")||kw(&L->cur,"IFJSONONLYP")||kw(&L->cur,"IFSTRICTP")||kw(&L->cur,"WHENONLYP")||kw(&L->cur,"WHENNOEXTRAP")||kw(&L->cur,"IFEXACTP")||kw(&L->cur,"IFSCHEMAP")||kw(&L->cur,"IFJSONEXACTP")||kw(&L->cur,"WHENEXACTP")||kw(&L->cur,"WHENSCHEMAP")||kw(&L->cur,"IFMISSP")||kw(&L->cur,"IFABSENTP")||kw(&L->cur,"IFMISSINGKEYSP")||kw(&L->cur,"WHENMISSP")||kw(&L->cur,"WHENABSENTP")||kw(&L->cur,"WHENMISSINGKEYSP")||kw(&L->cur,"IFEXTRAP")||kw(&L->cur,"IFUNKNOWNKEYSP")||kw(&L->cur,"IFUNKNOWNKEYS")||kw(&L->cur,"WHENEXTRAP")||kw(&L->cur,"WHENUNKNOWNKEYSP")||kw(&L->cur,"WHENUNKNOWNKEYS")||kw(&L->cur,"IFEMPTYP")||kw(&L->cur,"IFISEMPTYP")||kw(&L->cur,"IFEMPTYPLATE")||kw(&L->cur,"IFJSONEMPTY")||kw(&L->cur,"WHENEMPTYP")||kw(&L->cur,"WHENISEMPTYP")||kw(&L->cur,"WHENEMPTYPLATE")||kw(&L->cur,"WHENJSONEMPTY")||kw(&L->cur,"IFNONEMPTYP")||kw(&L->cur,"IFHASKEYSP")||kw(&L->cur,"IFNONEMPTYPLATE")||kw(&L->cur,"IFJSONNONEMPTY")||kw(&L->cur,"WHENNONEMPTYP")||kw(&L->cur,"WHENHASKEYSP")||kw(&L->cur,"WHENNONEMPTYPLATE")||kw(&L->cur,"WHENJSONNONEMPTY")||kw(&L->cur,"IFONEP")||kw(&L->cur,"IFSINGLEP")||kw(&L->cur,"IFONEKEYP")||kw(&L->cur,"WHENONEP")||kw(&L->cur,"WHENSINGLEP")||kw(&L->cur,"WHENONEKEYP")||kw(&L->cur,"IFMULTP")||kw(&L->cur,"IFMANYKEYSP")||kw(&L->cur,"IFMULTIKEYP")||kw(&L->cur,"WHENMULTP")||kw(&L->cur,"WHENMANYKEYSP")||kw(&L->cur,"WHENMULTIKEYP")||kw(&L->cur,"IFPAIRP")||kw(&L->cur,"IFTWOP")||kw(&L->cur,"IFTWOKEYP")||kw(&L->cur,"WHENPAIRP")||kw(&L->cur,"WHENTWOP")||kw(&L->cur,"WHENTWOKEYP")||kw(&L->cur,"IFTRIPLEP")||kw(&L->cur,"IFTHREEP")||kw(&L->cur,"IFTHREEKEYP")||kw(&L->cur,"WHENTRIPLEP")||kw(&L->cur,"WHENTHREEP")||kw(&L->cur,"WHENTHREEKEYP")||kw(&L->cur,"IFQUADP")||kw(&L->cur,"IFFOURP")||kw(&L->cur,"IFFOURKEYP")||kw(&L->cur,"WHENQUADP")||kw(&L->cur,"WHENFOURP")||kw(&L->cur,"WHENFOURKEYP")||kw(&L->cur,"IFQUINTP")||kw(&L->cur,"IFFIVEP")||kw(&L->cur,"IFFIVEKEYP")||kw(&L->cur,"WHENQUINTP")||kw(&L->cur,"WHENFIVEP")||kw(&L->cur,"WHENFIVEKEYP")||kw(&L->cur,"IFSIXP")||kw(&L->cur,"IFHEXAP")||kw(&L->cur,"IFSIXKEYP")||kw(&L->cur,"WHENSIXP")||kw(&L->cur,"WHENHEXAP")||kw(&L->cur,"WHENSIXKEYP")||kw(&L->cur,"IFSEVENP")||kw(&L->cur,"IFSEPTP")||kw(&L->cur,"IFSEVENKEYP")||kw(&L->cur,"WHENSEVENP")||kw(&L->cur,"WHENSEPTP")||kw(&L->cur,"WHENSEVENKEYP")||kw(&L->cur,"IFEIGHTP")||kw(&L->cur,"IFOCTP")||kw(&L->cur,"IFEIGHTKEYP")||kw(&L->cur,"WHENEIGHTP")||kw(&L->cur,"WHENOCTP")||kw(&L->cur,"WHENEIGHTKEYP")||kw(&L->cur,"IFNINEP")||kw(&L->cur,"IFNONAP")||kw(&L->cur,"IFNINEKEYP")||kw(&L->cur,"WHENNINEP")||kw(&L->cur,"WHENNONAP")||kw(&L->cur,"WHENNINEKEYP")||kw(&L->cur,"IFTENP")||kw(&L->cur,"IFDECAP")||kw(&L->cur,"IFTENKEYP")||kw(&L->cur,"WHENTENP")||kw(&L->cur,"WHENDECAP")||kw(&L->cur,"WHENTENKEYP")||kw(&L->cur,"IFELEVENP")||kw(&L->cur,"IFUNDECAP")||kw(&L->cur,"IFELEVENKEYP")||kw(&L->cur,"WHENELEVENP")||kw(&L->cur,"WHENUNDECAP")||kw(&L->cur,"WHENELEVENKEYP")||kw(&L->cur,"IFTWELVEP")||kw(&L->cur,"IFDODECAP")||kw(&L->cur,"IFTWELVEKEYP")||kw(&L->cur,"WHENTWELVEP")||kw(&L->cur,"WHENDODECAP")||kw(&L->cur,"WHENTWELVEKEYP")||kw(&L->cur,"IFTHIRTEENP")||kw(&L->cur,"IFTRIDECAP")||kw(&L->cur,"IFTHIRTEENKEYP")||kw(&L->cur,"WHENTHIRTEENP")||kw(&L->cur,"WHENTRIDECAP")||kw(&L->cur,"WHENTHIRTEENKEYP")||kw(&L->cur,"IFFOURTEENP")||kw(&L->cur,"IFTETRADECAP")||kw(&L->cur,"IFFOURTEENKEYP")||kw(&L->cur,"WHENFOURTEENP")||kw(&L->cur,"WHENTETRADECAP")||kw(&L->cur,"WHENFOURTEENKEYP")||kw(&L->cur,"IFFIFTEENP")||kw(&L->cur,"IFPENTEDECAP")||kw(&L->cur,"IFFIFTEENKEYP")||kw(&L->cur,"WHENFIFTEENP")||kw(&L->cur,"WHENPENTEDECAP")||kw(&L->cur,"WHENFIFTEENKEYP")||kw(&L->cur,"IFSIXTEENP")||kw(&L->cur,"IFHEXADECAP")||kw(&L->cur,"IFSIXTEENKEYP")||kw(&L->cur,"WHENSIXTEENP")||kw(&L->cur,"WHENHEXADECAP")||kw(&L->cur,"WHENSIXTEENKEYP")||kw(&L->cur,"IFSEVENTEENP")||kw(&L->cur,"IFHEPTADECAP")||kw(&L->cur,"IFSEVENTEENKEYP")||kw(&L->cur,"WHENSEVENTEENP")||kw(&L->cur,"WHENHEPTADECAP")||kw(&L->cur,"WHENSEVENTEENKEYP")||kw(&L->cur,"IFEIGHTEENP")||kw(&L->cur,"IFOCTODECAP")||kw(&L->cur,"IFEIGHTEENKEYP")||kw(&L->cur,"WHENEIGHTEENP")||kw(&L->cur,"WHENOCTODECAP")||kw(&L->cur,"WHENEIGHTEENKEYP")||kw(&L->cur,"IFNINETEENP")||kw(&L->cur,"IFENNEADECAP")||kw(&L->cur,"IFNINETEENKEYP")||kw(&L->cur,"WHENNINETEENP")||kw(&L->cur,"WHENENNEADECAP")||kw(&L->cur,"WHENNINETEENKEYP")||kw(&L->cur,"IFTWENTYP")||kw(&L->cur,"IFICOSAP")||kw(&L->cur,"IFTWENTYKEYP")||kw(&L->cur,"WHENTWENTYP")||kw(&L->cur,"WHENICOSAP")||kw(&L->cur,"WHENTWENTYKEYP")||kw(&L->cur,"IFTWENTYONEP")||kw(&L->cur,"IFHENICOSAP")||kw(&L->cur,"IFTWENTYONEKEYP")||kw(&L->cur,"WHENTWENTYONEP")||kw(&L->cur,"WHENHENICOSAP")||kw(&L->cur,"WHENTWENTYONEKEYP")||kw(&L->cur,"IFTWENTYTWOP")||kw(&L->cur,"IFDOICOSAP")||kw(&L->cur,"IFTWENTYTWOKEYP")||kw(&L->cur,"WHENTWENTYTWOP")||kw(&L->cur,"WHENDOICOSAP")||kw(&L->cur,"WHENTWENTYTWOKEYP")||kw(&L->cur,"IFTWENTYTHREEP")||kw(&L->cur,"IFTRICOSAP")||kw(&L->cur,"IFTWENTYTHREEKEYP")||kw(&L->cur,"WHENTWENTYTHREEP")||kw(&L->cur,"WHENTRICOSAP")||kw(&L->cur,"WHENTWENTYTHREEKEYP")||kw(&L->cur,"IFTWENTYFOURP")||kw(&L->cur,"IFTETRAICOSAP")||kw(&L->cur,"IFTWENTYFOURKEYP")||kw(&L->cur,"WHENTWENTYFOURP")||kw(&L->cur,"WHENTETRAICOSAP")||kw(&L->cur,"WHENTWENTYFOURKEYP")||kw(&L->cur,"IFTWENTYFIVEP")||kw(&L->cur,"IFPENTEICOSAP")||kw(&L->cur,"IFTWENTYFIVEKEYP")||kw(&L->cur,"WHENTWENTYFIVEP")||kw(&L->cur,"WHENPENTEICOSAP")||kw(&L->cur,"WHENTWENTYFIVEKEYP")||kw(&L->cur,"IFTWENTYSIXP")||kw(&L->cur,"IFHEXEICOSAP")||kw(&L->cur,"IFTWENTYSIXKEYP")||kw(&L->cur,"WHENTWENTYSIXP")||kw(&L->cur,"WHENHEXEICOSAP")||kw(&L->cur,"WHENTWENTYSIXKEYP")||kw(&L->cur,"IFTWENTYSEVENP")||kw(&L->cur,"IFHEPTEICOSAP")||kw(&L->cur,"IFTWENTYSEVENKEYP")||kw(&L->cur,"WHENTWENTYSEVENP")||kw(&L->cur,"WHENHEPTEICOSAP")||kw(&L->cur,"WHENTWENTYSEVENKEYP")||kw(&L->cur,"IFTWENTYEIGHTP")||kw(&L->cur,"IFOCTOICOSAP")||kw(&L->cur,"IFTWENTYEIGHTKEYP")||kw(&L->cur,"WHENTWENTYEIGHTP")||kw(&L->cur,"WHENOCTOICOSAP")||kw(&L->cur,"WHENTWENTYEIGHTKEYP")||kw(&L->cur,"IFTWENTYNINEP")||kw(&L->cur,"IFENNEAICOSAP")||kw(&L->cur,"IFTWENTYNINEKEYP")||kw(&L->cur,"WHENTWENTYNINEP")||kw(&L->cur,"WHENENNEAICOSAP")||kw(&L->cur,"WHENTWENTYNINEKEYP")||kw(&L->cur,"IFTHIRTYP")||kw(&L->cur,"IFTRIACONTAP")||kw(&L->cur,"IFTHIRTYKEYP")||kw(&L->cur,"WHENTHIRTYP")||kw(&L->cur,"WHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYKEYP")||kw(&L->cur,"IFTHIRTYONEP")||kw(&L->cur,"IFHENTRIACONTAP")||kw(&L->cur,"IFTHIRTYONEKEYP")||kw(&L->cur,"WHENTHIRTYONEP")||kw(&L->cur,"WHENHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYONEKEYP")||kw(&L->cur,"IFTHIRTYTWOP")||kw(&L->cur,"IFDOTRIACONTAP")||kw(&L->cur,"IFTHIRTYTWOKEYP")||kw(&L->cur,"WHENTHIRTYTWOP")||kw(&L->cur,"WHENDOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYTWOKEYP")||kw(&L->cur,"IFTHIRTYTHREEP")||kw(&L->cur,"IFTRITRIACONTAP")||kw(&L->cur,"IFTHIRTYTHREEKEYP")||kw(&L->cur,"WHENTHIRTYTHREEP")||kw(&L->cur,"WHENTRITRIACONTAP")||kw(&L->cur,"WHENTHIRTYTHREEKEYP")||kw(&L->cur,"IFTHIRTYFOURP")||kw(&L->cur,"IFTETRATRIACONTAP")||kw(&L->cur,"IFTHIRTYFOURKEYP")||kw(&L->cur,"WHENTHIRTYFOURP")||kw(&L->cur,"WHENTETRATRIACONTAP")||kw(&L->cur,"WHENTHIRTYFOURKEYP")||kw(&L->cur,"IFTHIRTYFIVEP")||kw(&L->cur,"IFPENTETRIACONTAP")||kw(&L->cur,"IFTHIRTYFIVEKEYP")||kw(&L->cur,"WHENTHIRTYFIVEP")||kw(&L->cur,"WHENPENTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYFIVEKEYP")||kw(&L->cur,"IFTHIRTYSIXP")||kw(&L->cur,"IFHEXETRIACONTAP")||kw(&L->cur,"IFTHIRTYSIXKEYP")||kw(&L->cur,"WHENTHIRTYSIXP")||kw(&L->cur,"WHENHEXETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSIXKEYP")||kw(&L->cur,"IFTHIRTYSEVENP")||kw(&L->cur,"IFHEPTETRIACONTAP")||kw(&L->cur,"IFTHIRTYSEVENKEYP")||kw(&L->cur,"WHENTHIRTYSEVENP")||kw(&L->cur,"WHENHEPTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSEVENKEYP")||kw(&L->cur,"IFTHIRTYEIGHTP")||kw(&L->cur,"IFOCTOTRIACONTAP")||kw(&L->cur,"IFTHIRTYEIGHTKEYP")||kw(&L->cur,"WHENTHIRTYEIGHTP")||kw(&L->cur,"WHENOCTOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYEIGHTKEYP")||kw(&L->cur,"IFTHIRTYNINEP")||kw(&L->cur,"IFENNEATRIACONTAP")||kw(&L->cur,"IFTHIRTYNINEKEYP")||kw(&L->cur,"WHENTHIRTYNINEP")||kw(&L->cur,"WHENENNEATRIACONTAP")||kw(&L->cur,"WHENTHIRTYNINEKEYP")||kw(&L->cur,"IFFORTYP")||kw(&L->cur,"IFTETRACONTAP")||kw(&L->cur,"IFFORTYKEYP")||kw(&L->cur,"WHENFORTYP")||kw(&L->cur,"WHENTETRACONTAP")||kw(&L->cur,"WHENFORTYKEYP")||kw(&L->cur,"IFFORTYONEP")||kw(&L->cur,"IFHENTETRACONTAP")||kw(&L->cur,"IFFORTYONEKEYP")||kw(&L->cur,"WHENFORTYONEP")||kw(&L->cur,"WHENHENTETRACONTAP")||kw(&L->cur,"WHENFORTYONEKEYP")||kw(&L->cur,"IFFORTYTWOP")||kw(&L->cur,"IFDOTETRACONTAP")||kw(&L->cur,"IFFORTYTWOKEYP")||kw(&L->cur,"WHENFORTYTWOP")||kw(&L->cur,"WHENDOTETRACONTAP")||kw(&L->cur,"WHENFORTYTWOKEYP")||kw(&L->cur,"IFFORTYTHREEP")||kw(&L->cur,"IFTRITETRACONTAP")||kw(&L->cur,"IFFORTYTHREEKEYP")||kw(&L->cur,"WHENFORTYTHREEP")||kw(&L->cur,"WHENTRITETRACONTAP")||kw(&L->cur,"WHENFORTYTHREEKEYP")||kw(&L->cur,"IFFORTYFOURP")||kw(&L->cur,"IFTETRATETRACONTAP")||kw(&L->cur,"IFFORTYFOURKEYP")||kw(&L->cur,"WHENFORTYFOURP")||kw(&L->cur,"WHENTETRATETRACONTAP")||kw(&L->cur,"WHENFORTYFOURKEYP")||kw(&L->cur,"IFFORTYFIVEP")||kw(&L->cur,"IFPENTETETRACONTAP")||kw(&L->cur,"IFFORTYFIVEKEYP")||kw(&L->cur,"WHENFORTYFIVEP")||kw(&L->cur,"WHENPENTETETRACONTAP")||kw(&L->cur,"WHENFORTYFIVEKEYP")||kw(&L->cur,"IFFORTYSIXP")||kw(&L->cur,"IFHEXETETRACONTAP")||kw(&L->cur,"IFFORTYSIXKEYP")||kw(&L->cur,"WHENFORTYSIXP")||kw(&L->cur,"WHENHEXETETRACONTAP")||kw(&L->cur,"WHENFORTYSIXKEYP")||kw(&L->cur,"IFFORTYSEVENP")||kw(&L->cur,"IFHEPTETETRACONTAP")||kw(&L->cur,"IFFORTYSEVENKEYP")||kw(&L->cur,"WHENFORTYSEVENP")||kw(&L->cur,"WHENHEPTETETRACONTAP")||kw(&L->cur,"WHENFORTYSEVENKEYP")||kw(&L->cur,"IFFORTYEIGHTP")||kw(&L->cur,"IFOCTOTETRACONTAP")||kw(&L->cur,"IFFORTYEIGHTKEYP")||kw(&L->cur,"WHENFORTYEIGHTP")||kw(&L->cur,"WHENOCTOTETRACONTAP")||kw(&L->cur,"WHENFORTYEIGHTKEYP")||kw(&L->cur,"IFFORTYNINEP")||kw(&L->cur,"IFENNEATETRACONTAP")||kw(&L->cur,"IFFORTYNINEKEYP")||kw(&L->cur,"WHENFORTYNINEP")||kw(&L->cur,"WHENENNEATETRACONTAP")||kw(&L->cur,"WHENFORTYNINEKEYP")||kw(&L->cur,"IFFIFTYP")||kw(&L->cur,"IFPENTECONTAP")||kw(&L->cur,"IFFIFTYKEYP")||kw(&L->cur,"WHENFIFTYP")||kw(&L->cur,"WHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYKEYP")||kw(&L->cur,"IFFIFTYONEP")||kw(&L->cur,"IFHENPENTECONTAP")||kw(&L->cur,"IFFIFTYONEKEYP")||kw(&L->cur,"WHENFIFTYONEP")||kw(&L->cur,"WHENHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYONEKEYP")||kw(&L->cur,"IFFIFTYTWOP")||kw(&L->cur,"IFDOPENTECONTAP")||kw(&L->cur,"IFFIFTYTWOKEYP")||kw(&L->cur,"WHENFIFTYTWOP")||kw(&L->cur,"WHENDOPENTECONTAP")||kw(&L->cur,"WHENFIFTYTWOKEYP")||kw(&L->cur,"IFFIFTYTHREEP")||kw(&L->cur,"IFTRIPENTECONTAP")||kw(&L->cur,"IFFIFTYTHREEKEYP")||kw(&L->cur,"WHENFIFTYTHREEP")||kw(&L->cur,"WHENTRIPENTECONTAP")||kw(&L->cur,"WHENFIFTYTHREEKEYP")||kw(&L->cur,"IFFIFTYFOURP")||kw(&L->cur,"IFTETRAPENTECONTAP")||kw(&L->cur,"IFFIFTYFOURKEYP")||kw(&L->cur,"WHENFIFTYFOURP")||kw(&L->cur,"WHENTETRAPENTECONTAP")||kw(&L->cur,"WHENFIFTYFOURKEYP")||kw(&L->cur,"IFFIFTYFIVEP")||kw(&L->cur,"IFPENTEPENTECONTAP")||kw(&L->cur,"IFFIFTYFIVEKEYP")||kw(&L->cur,"WHENFIFTYFIVEP")||kw(&L->cur,"WHENPENTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYFIVEKEYP")||kw(&L->cur,"IFFIFTYSIXP")||kw(&L->cur,"IFHEXEPENTECONTAP")||kw(&L->cur,"IFFIFTYSIXKEYP")||kw(&L->cur,"WHENFIFTYSIXP")||kw(&L->cur,"WHENHEXEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSIXKEYP")||kw(&L->cur,"IFFIFTYSEVENP")||kw(&L->cur,"IFHEPTEPENTECONTAP")||kw(&L->cur,"IFFIFTYSEVENKEYP")||kw(&L->cur,"WHENFIFTYSEVENP")||kw(&L->cur,"WHENHEPTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSEVENKEYP")||kw(&L->cur,"IFFIFTYEIGHTP")||kw(&L->cur,"IFOCTOPENTECONTAP")||kw(&L->cur,"IFFIFTYEIGHTKEYP")||kw(&L->cur,"WHENFIFTYEIGHTP")||kw(&L->cur,"WHENOCTOPENTECONTAP")||kw(&L->cur,"WHENFIFTYEIGHTKEYP")||kw(&L->cur,"IFFIFTYNINEP")||kw(&L->cur,"IFENNEAPENTECONTAP")||kw(&L->cur,"IFFIFTYNINEKEYP")||kw(&L->cur,"WHENFIFTYNINEP")||kw(&L->cur,"WHENENNEAPENTECONTAP")||kw(&L->cur,"WHENFIFTYNINEKEYP")||kw(&L->cur,"IFSIXTYP")||kw(&L->cur,"IFHEXECONTAP")||kw(&L->cur,"IFSIXTYKEYP")||kw(&L->cur,"WHENSIXTYP")||kw(&L->cur,"WHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYKEYP")||kw(&L->cur,"IFSIXTYONEP")||kw(&L->cur,"IFHENHEXECONTAP")||kw(&L->cur,"IFSIXTYONEKEYP")||kw(&L->cur,"WHENSIXTYONEP")||kw(&L->cur,"WHENHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYONEKEYP")||kw(&L->cur,"IFSIXTYTWOP")||kw(&L->cur,"IFDOHEXECONTAP")||kw(&L->cur,"IFSIXTYTWOKEYP")||kw(&L->cur,"WHENSIXTYTWOP")||kw(&L->cur,"WHENDOHEXECONTAP")||kw(&L->cur,"WHENSIXTYTWOKEYP")||kw(&L->cur,"IFSIXTYTHREEP")||kw(&L->cur,"IFTRIHEXECONTAP")||kw(&L->cur,"IFSIXTYTHREEKEYP")||kw(&L->cur,"WHENSIXTYTHREEP")||kw(&L->cur,"WHENTRIHEXECONTAP")||kw(&L->cur,"WHENSIXTYTHREEKEYP")||kw(&L->cur,"IFSIXTYFOURP")||kw(&L->cur,"IFTETRAHEXECONTAP")||kw(&L->cur,"IFSIXTYFOURKEYP")||kw(&L->cur,"WHENSIXTYFOURP")||kw(&L->cur,"WHENTETRAHEXECONTAP")||kw(&L->cur,"WHENSIXTYFOURKEYP")||kw(&L->cur,"IFSIXTYFIVEP")||kw(&L->cur,"IFPENTEHEXECONTAP")||kw(&L->cur,"IFSIXTYFIVEKEYP")||kw(&L->cur,"WHENSIXTYFIVEP")||kw(&L->cur,"WHENPENTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYFIVEKEYP")||kw(&L->cur,"IFSIXTYSIXP")||kw(&L->cur,"IFHEXEHEXECONTAP")||kw(&L->cur,"IFSIXTYSIXKEYP")||kw(&L->cur,"WHENSIXTYSIXP")||kw(&L->cur,"WHENHEXEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSIXKEYP")||kw(&L->cur,"IFSIXTYSEVENP")||kw(&L->cur,"IFHEPTEHEXECONTAP")||kw(&L->cur,"IFSIXTYSEVENKEYP")||kw(&L->cur,"WHENSIXTYSEVENP")||kw(&L->cur,"WHENHEPTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSEVENKEYP")||kw(&L->cur,"IFSIXTYEIGHTP")||kw(&L->cur,"IFOCTOHEXECONTAP")||kw(&L->cur,"IFSIXTYEIGHTKEYP")||kw(&L->cur,"WHENSIXTYEIGHTP")||kw(&L->cur,"WHENOCTOHEXECONTAP")||kw(&L->cur,"WHENSIXTYEIGHTKEYP")||kw(&L->cur,"IFSIXTYNINEP")||kw(&L->cur,"IFENNEAHEXECONTAP")||kw(&L->cur,"IFSIXTYNINEKEYP")||kw(&L->cur,"WHENSIXTYNINEP")||kw(&L->cur,"WHENENNEAHEXECONTAP")||kw(&L->cur,"WHENSIXTYNINEKEYP")||kw(&L->cur,"IFSEVENTYP")||kw(&L->cur,"IFHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYKEYP")||kw(&L->cur,"WHENSEVENTYP")||kw(&L->cur,"WHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYKEYP")||kw(&L->cur,"IFSEVENTYONEP")||kw(&L->cur,"IFHENHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYONEKEYP")||kw(&L->cur,"WHENSEVENTYONEP")||kw(&L->cur,"WHENHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYONEKEYP")||kw(&L->cur,"IFSEVENTYTWOP")||kw(&L->cur,"IFDOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTWOKEYP")||kw(&L->cur,"WHENSEVENTYTWOP")||kw(&L->cur,"WHENDOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTWOKEYP")||kw(&L->cur,"IFSEVENTYTHREEP")||kw(&L->cur,"IFTRIHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTHREEKEYP")||kw(&L->cur,"WHENSEVENTYTHREEP")||kw(&L->cur,"WHENTRIHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTHREEKEYP")||kw(&L->cur,"IFSEVENTYFOURP")||kw(&L->cur,"IFTETRAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFOURKEYP")||kw(&L->cur,"WHENSEVENTYFOURP")||kw(&L->cur,"WHENTETRAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFOURKEYP")||kw(&L->cur,"IFSEVENTYFIVEP")||kw(&L->cur,"IFPENTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFIVEKEYP")||kw(&L->cur,"WHENSEVENTYFIVEP")||kw(&L->cur,"WHENPENTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFIVEKEYP")||kw(&L->cur,"IFSEVENTYSIXP")||kw(&L->cur,"IFHEXEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSIXKEYP")||kw(&L->cur,"WHENSEVENTYSIXP")||kw(&L->cur,"WHENHEXEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSIXKEYP")||kw(&L->cur,"IFSEVENTYSEVENP")||kw(&L->cur,"IFHEPTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSEVENKEYP")||kw(&L->cur,"WHENSEVENTYSEVENP")||kw(&L->cur,"WHENHEPTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSEVENKEYP")||kw(&L->cur,"IFSEVENTYEIGHTP")||kw(&L->cur,"IFOCTOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYEIGHTKEYP")||kw(&L->cur,"WHENSEVENTYEIGHTP")||kw(&L->cur,"WHENOCTOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYEIGHTKEYP")||kw(&L->cur,"IFSEVENTYNINEP")||kw(&L->cur,"IFENNEAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYNINEKEYP")||kw(&L->cur,"WHENSEVENTYNINEP")||kw(&L->cur,"WHENENNEAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYNINEKEYP")||kw(&L->cur,"IFEIGHTYP")||kw(&L->cur,"IFOCTACONTAP")||kw(&L->cur,"IFEIGHTYKEYP")||kw(&L->cur,"WHENEIGHTYP")||kw(&L->cur,"WHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYKEYP")||kw(&L->cur,"IFEIGHTYONEP")||kw(&L->cur,"IFHENOCTACONTAP")||kw(&L->cur,"IFEIGHTYONEKEYP")||kw(&L->cur,"WHENEIGHTYONEP")||kw(&L->cur,"WHENHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYONEKEYP")||kw(&L->cur,"IFEIGHTYTWOP")||kw(&L->cur,"IFDOOCTACONTAP")||kw(&L->cur,"IFEIGHTYTWOKEYP")||kw(&L->cur,"WHENEIGHTYTWOP")||kw(&L->cur,"WHENDOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTWOKEYP")||kw(&L->cur,"IFEIGHTYTHREEP")||kw(&L->cur,"IFTRIOCTACONTAP")||kw(&L->cur,"IFEIGHTYTHREEKEYP")||kw(&L->cur,"WHENEIGHTYTHREEP")||kw(&L->cur,"WHENTRIOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTHREEKEYP")||kw(&L->cur,"IFEIGHTYFOURP")||kw(&L->cur,"IFTETRAOCTACONTAP")||kw(&L->cur,"IFEIGHTYFOURKEYP")||kw(&L->cur,"WHENEIGHTYFOURP")||kw(&L->cur,"WHENTETRAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFOURKEYP")||kw(&L->cur,"IFEIGHTYFIVEP")||kw(&L->cur,"IFPENTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYFIVEKEYP")||kw(&L->cur,"WHENEIGHTYFIVEP")||kw(&L->cur,"WHENPENTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFIVEKEYP")||kw(&L->cur,"IFEIGHTYSIXP")||kw(&L->cur,"IFHEXEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSIXKEYP")||kw(&L->cur,"WHENEIGHTYSIXP")||kw(&L->cur,"WHENHEXEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSIXKEYP")||kw(&L->cur,"IFEIGHTYSEVENP")||kw(&L->cur,"IFHEPTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSEVENKEYP")||kw(&L->cur,"WHENEIGHTYSEVENP")||kw(&L->cur,"WHENHEPTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSEVENKEYP")||kw(&L->cur,"IFEIGHTYEIGHTP")||kw(&L->cur,"IFOCTOOCTACONTAP")||kw(&L->cur,"IFEIGHTYEIGHTKEYP")||kw(&L->cur,"WHENEIGHTYEIGHTP")||kw(&L->cur,"WHENOCTOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYEIGHTKEYP")||kw(&L->cur,"IFEIGHTYNINEP")||kw(&L->cur,"IFENNEAOCTACONTAP")||kw(&L->cur,"IFEIGHTYNINEKEYP")||kw(&L->cur,"WHENEIGHTYNINEP")||kw(&L->cur,"WHENENNEAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYNINEKEYP")||kw(&L->cur,"IFNINETYP")||kw(&L->cur,"IFENNEACONTAP")||kw(&L->cur,"IFNINETYKEYP")||kw(&L->cur,"WHENNINETYP")||kw(&L->cur,"WHENENNEACONTAP")||kw(&L->cur,"WHENNINETYKEYP")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||kw(&L->cur,"IFTYPE")||kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENTYPE")||kw(&L->cur,"WHENVARTYPE")||kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+              kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+              kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+              kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 1);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"ELSE")) {
+        lex_next(L);
+        skip_nl(L);
+        {
+          Lex body = *L;
+          if (exec_stmts_until(vm, &body, "END", NULL) < 0) return -1;
+        }
+        depth = 1;
+        while (L->cur.kind != TK_EOF && depth > 0) {
+          if (kw(&L->cur,"BREAK")||kw(&L->cur,"CONTINUE")||kw(&L->cur,"NEXT")||kw(&L->cur,"SKIP")){
+            lex_next(L);
+            if (kw(&L->cur,"IF")) lex_next(L);
+            continue;
+          }
+          if (kw(&L->cur,"IF")||kw(&L->cur,"UNLESS")||kw(&L->cur,"IFERR")||kw(&L->cur,"IFOK")||
+              kw(&L->cur,"IFEMPTY")||kw(&L->cur,"IFNONEMPTY")||kw(&L->cur,"IFDEFINED")||
+              kw(&L->cur,"IFUNDEF")||kw(&L->cur,"IFSTARTS")||kw(&L->cur,"IFENDS")||
+              kw(&L->cur,"IFCONTAINS")||kw(&L->cur,"IFHAS")||kw(&L->cur,"IFEQS")||
+              kw(&L->cur,"IFSTARTSI")||kw(&L->cur,"IFENDSI")||kw(&L->cur,"IFCONTAINSI")||
+              kw(&L->cur,"IFHASI")||kw(&L->cur,"IFEQSI")||
+              kw(&L->cur,"IFGT")||kw(&L->cur,"IFLT")||kw(&L->cur,"IFGE")||kw(&L->cur,"IFLE")||
+              kw(&L->cur,"IFEQN")||kw(&L->cur,"IFNEQN")||
+              kw(&L->cur,"IFHASLINE")||kw(&L->cur,"IFINBAG")||kw(&L->cur,"WHENHASLINE")||
+              kw(&L->cur,"WHENINBAG")||
+              kw(&L->cur,"IFBETWEEN")||kw(&L->cur,"IFINRANGE")||kw(&L->cur,"IFWITHIN")||
+              kw(&L->cur,"WHENBETWEEN")||
+              kw(&L->cur,"IFFN")||kw(&L->cur,"IFCLASS")||kw(&L->cur,"IFHASFN")||
+              kw(&L->cur,"WHENFN")||kw(&L->cur,"WHENCLASS")||
+              kw(&L->cur,"IFOBJ")||kw(&L->cur,"IFHASOBJ")||kw(&L->cur,"IFMETHOD")||
+              kw(&L->cur,"IFHASMETHOD")||kw(&L->cur,"WHENOBJ")||kw(&L->cur,"WHENMETHOD")||
+              kw(&L->cur,"IFFILE")||kw(&L->cur,"IFDIR")||kw(&L->cur,"IFEXIST")||
+              kw(&L->cur,"IFEXISTS")||kw(&L->cur,"WHENFILE")||kw(&L->cur,"WHENDIR")||
+              kw(&L->cur,"WHENEXIST")||
+              kw(&L->cur,"IFENV")||kw(&L->cur,"WHENENV")||kw(&L->cur,"IFHASENV")||
+              kw(&L->cur,"WHENHASENV")||
+              kw(&L->cur,"IFFIELD")||kw(&L->cur,"IFHASFIELD")||kw(&L->cur,"WHENFIELD")||
+              kw(&L->cur,"WHENHASFIELD")||
+              kw(&L->cur,"IFFRESH")||kw(&L->cur,"IFSTALE")||kw(&L->cur,"WHENFRESH")||
+              kw(&L->cur,"WHENSTALE")||kw(&L->cur,"IFBIG")||kw(&L->cur,"IFSMALL")||
+              kw(&L->cur,"IFSIZE")||kw(&L->cur,"WHENBIG")||kw(&L->cur,"WHENSMALL")||
+              kw(&L->cur,"WHENSIZE")||kw(&L->cur,"IFNEWER")||kw(&L->cur,"IFOLDER")||
+              kw(&L->cur,"IFOUTOFDATE")||kw(&L->cur,"WHENNEWER")||kw(&L->cur,"WHENOLDER")||
+              kw(&L->cur,"WHENOUTOFDATE")||kw(&L->cur,"IFEQFILE")||kw(&L->cur,"IFDIFFILE")||
+              kw(&L->cur,"IFSAMEFILE")||kw(&L->cur,"WHENEQFILE")||kw(&L->cur,"WHENDIFFILE")||
+              kw(&L->cur,"WHENSAMEFILE")||kw(&L->cur,"IFJSONHAS")||kw(&L->cur,"IFJSONMISS")||
+              kw(&L->cur,"IFHASJSON")||kw(&L->cur,"WHENJSONHAS")||kw(&L->cur,"WHENJSONMISS")||
+              kw(&L->cur,"WHENHASJSON")||kw(&L->cur,"IFJSONHASALL")||kw(&L->cur,"IFJSONHASANY")||kw(&L->cur,"IFJSONNEED")||kw(&L->cur,"IFHASJSONALL")||kw(&L->cur,"IFHASJSONANY")||kw(&L->cur,"WHENJSONHASALL")||kw(&L->cur,"WHENJSONHASANY")||kw(&L->cur,"WHENJSONNEED")||kw(&L->cur,"WHENHASJSONALL")||kw(&L->cur,"WHENHASJSONANY")||kw(&L->cur,"IFONLYP")||kw(&L->cur,"IFNOEXTRAP")||kw(&L->cur,"IFJSONONLYP")||kw(&L->cur,"IFSTRICTP")||kw(&L->cur,"WHENONLYP")||kw(&L->cur,"WHENNOEXTRAP")||kw(&L->cur,"IFEXACTP")||kw(&L->cur,"IFSCHEMAP")||kw(&L->cur,"IFJSONEXACTP")||kw(&L->cur,"WHENEXACTP")||kw(&L->cur,"WHENSCHEMAP")||kw(&L->cur,"IFMISSP")||kw(&L->cur,"IFABSENTP")||kw(&L->cur,"IFMISSINGKEYSP")||kw(&L->cur,"WHENMISSP")||kw(&L->cur,"WHENABSENTP")||kw(&L->cur,"WHENMISSINGKEYSP")||kw(&L->cur,"IFEXTRAP")||kw(&L->cur,"IFUNKNOWNKEYSP")||kw(&L->cur,"IFUNKNOWNKEYS")||kw(&L->cur,"WHENEXTRAP")||kw(&L->cur,"WHENUNKNOWNKEYSP")||kw(&L->cur,"WHENUNKNOWNKEYS")||kw(&L->cur,"IFEMPTYP")||kw(&L->cur,"IFISEMPTYP")||kw(&L->cur,"IFEMPTYPLATE")||kw(&L->cur,"IFJSONEMPTY")||kw(&L->cur,"WHENEMPTYP")||kw(&L->cur,"WHENISEMPTYP")||kw(&L->cur,"WHENEMPTYPLATE")||kw(&L->cur,"WHENJSONEMPTY")||kw(&L->cur,"IFNONEMPTYP")||kw(&L->cur,"IFHASKEYSP")||kw(&L->cur,"IFNONEMPTYPLATE")||kw(&L->cur,"IFJSONNONEMPTY")||kw(&L->cur,"WHENNONEMPTYP")||kw(&L->cur,"WHENHASKEYSP")||kw(&L->cur,"WHENNONEMPTYPLATE")||kw(&L->cur,"WHENJSONNONEMPTY")||kw(&L->cur,"IFONEP")||kw(&L->cur,"IFSINGLEP")||kw(&L->cur,"IFONEKEYP")||kw(&L->cur,"WHENONEP")||kw(&L->cur,"WHENSINGLEP")||kw(&L->cur,"WHENONEKEYP")||kw(&L->cur,"IFMULTP")||kw(&L->cur,"IFMANYKEYSP")||kw(&L->cur,"IFMULTIKEYP")||kw(&L->cur,"WHENMULTP")||kw(&L->cur,"WHENMANYKEYSP")||kw(&L->cur,"WHENMULTIKEYP")||kw(&L->cur,"IFPAIRP")||kw(&L->cur,"IFTWOP")||kw(&L->cur,"IFTWOKEYP")||kw(&L->cur,"WHENPAIRP")||kw(&L->cur,"WHENTWOP")||kw(&L->cur,"WHENTWOKEYP")||kw(&L->cur,"IFTRIPLEP")||kw(&L->cur,"IFTHREEP")||kw(&L->cur,"IFTHREEKEYP")||kw(&L->cur,"WHENTRIPLEP")||kw(&L->cur,"WHENTHREEP")||kw(&L->cur,"WHENTHREEKEYP")||kw(&L->cur,"IFQUADP")||kw(&L->cur,"IFFOURP")||kw(&L->cur,"IFFOURKEYP")||kw(&L->cur,"WHENQUADP")||kw(&L->cur,"WHENFOURP")||kw(&L->cur,"WHENFOURKEYP")||kw(&L->cur,"IFQUINTP")||kw(&L->cur,"IFFIVEP")||kw(&L->cur,"IFFIVEKEYP")||kw(&L->cur,"WHENQUINTP")||kw(&L->cur,"WHENFIVEP")||kw(&L->cur,"WHENFIVEKEYP")||kw(&L->cur,"IFSIXP")||kw(&L->cur,"IFHEXAP")||kw(&L->cur,"IFSIXKEYP")||kw(&L->cur,"WHENSIXP")||kw(&L->cur,"WHENHEXAP")||kw(&L->cur,"WHENSIXKEYP")||kw(&L->cur,"IFSEVENP")||kw(&L->cur,"IFSEPTP")||kw(&L->cur,"IFSEVENKEYP")||kw(&L->cur,"WHENSEVENP")||kw(&L->cur,"WHENSEPTP")||kw(&L->cur,"WHENSEVENKEYP")||kw(&L->cur,"IFEIGHTP")||kw(&L->cur,"IFOCTP")||kw(&L->cur,"IFEIGHTKEYP")||kw(&L->cur,"WHENEIGHTP")||kw(&L->cur,"WHENOCTP")||kw(&L->cur,"WHENEIGHTKEYP")||kw(&L->cur,"IFNINEP")||kw(&L->cur,"IFNONAP")||kw(&L->cur,"IFNINEKEYP")||kw(&L->cur,"WHENNINEP")||kw(&L->cur,"WHENNONAP")||kw(&L->cur,"WHENNINEKEYP")||kw(&L->cur,"IFTENP")||kw(&L->cur,"IFDECAP")||kw(&L->cur,"IFTENKEYP")||kw(&L->cur,"WHENTENP")||kw(&L->cur,"WHENDECAP")||kw(&L->cur,"WHENTENKEYP")||kw(&L->cur,"IFELEVENP")||kw(&L->cur,"IFUNDECAP")||kw(&L->cur,"IFELEVENKEYP")||kw(&L->cur,"WHENELEVENP")||kw(&L->cur,"WHENUNDECAP")||kw(&L->cur,"WHENELEVENKEYP")||kw(&L->cur,"IFTWELVEP")||kw(&L->cur,"IFDODECAP")||kw(&L->cur,"IFTWELVEKEYP")||kw(&L->cur,"WHENTWELVEP")||kw(&L->cur,"WHENDODECAP")||kw(&L->cur,"WHENTWELVEKEYP")||kw(&L->cur,"IFTHIRTEENP")||kw(&L->cur,"IFTRIDECAP")||kw(&L->cur,"IFTHIRTEENKEYP")||kw(&L->cur,"WHENTHIRTEENP")||kw(&L->cur,"WHENTRIDECAP")||kw(&L->cur,"WHENTHIRTEENKEYP")||kw(&L->cur,"IFFOURTEENP")||kw(&L->cur,"IFTETRADECAP")||kw(&L->cur,"IFFOURTEENKEYP")||kw(&L->cur,"WHENFOURTEENP")||kw(&L->cur,"WHENTETRADECAP")||kw(&L->cur,"WHENFOURTEENKEYP")||kw(&L->cur,"IFFIFTEENP")||kw(&L->cur,"IFPENTEDECAP")||kw(&L->cur,"IFFIFTEENKEYP")||kw(&L->cur,"WHENFIFTEENP")||kw(&L->cur,"WHENPENTEDECAP")||kw(&L->cur,"WHENFIFTEENKEYP")||kw(&L->cur,"IFSIXTEENP")||kw(&L->cur,"IFHEXADECAP")||kw(&L->cur,"IFSIXTEENKEYP")||kw(&L->cur,"WHENSIXTEENP")||kw(&L->cur,"WHENHEXADECAP")||kw(&L->cur,"WHENSIXTEENKEYP")||kw(&L->cur,"IFSEVENTEENP")||kw(&L->cur,"IFHEPTADECAP")||kw(&L->cur,"IFSEVENTEENKEYP")||kw(&L->cur,"WHENSEVENTEENP")||kw(&L->cur,"WHENHEPTADECAP")||kw(&L->cur,"WHENSEVENTEENKEYP")||kw(&L->cur,"IFEIGHTEENP")||kw(&L->cur,"IFOCTODECAP")||kw(&L->cur,"IFEIGHTEENKEYP")||kw(&L->cur,"WHENEIGHTEENP")||kw(&L->cur,"WHENOCTODECAP")||kw(&L->cur,"WHENEIGHTEENKEYP")||kw(&L->cur,"IFNINETEENP")||kw(&L->cur,"IFENNEADECAP")||kw(&L->cur,"IFNINETEENKEYP")||kw(&L->cur,"WHENNINETEENP")||kw(&L->cur,"WHENENNEADECAP")||kw(&L->cur,"WHENNINETEENKEYP")||kw(&L->cur,"IFTWENTYP")||kw(&L->cur,"IFICOSAP")||kw(&L->cur,"IFTWENTYKEYP")||kw(&L->cur,"WHENTWENTYP")||kw(&L->cur,"WHENICOSAP")||kw(&L->cur,"WHENTWENTYKEYP")||kw(&L->cur,"IFTWENTYONEP")||kw(&L->cur,"IFHENICOSAP")||kw(&L->cur,"IFTWENTYONEKEYP")||kw(&L->cur,"WHENTWENTYONEP")||kw(&L->cur,"WHENHENICOSAP")||kw(&L->cur,"WHENTWENTYONEKEYP")||kw(&L->cur,"IFTWENTYTWOP")||kw(&L->cur,"IFDOICOSAP")||kw(&L->cur,"IFTWENTYTWOKEYP")||kw(&L->cur,"WHENTWENTYTWOP")||kw(&L->cur,"WHENDOICOSAP")||kw(&L->cur,"WHENTWENTYTWOKEYP")||kw(&L->cur,"IFTWENTYTHREEP")||kw(&L->cur,"IFTRICOSAP")||kw(&L->cur,"IFTWENTYTHREEKEYP")||kw(&L->cur,"WHENTWENTYTHREEP")||kw(&L->cur,"WHENTRICOSAP")||kw(&L->cur,"WHENTWENTYTHREEKEYP")||kw(&L->cur,"IFTWENTYFOURP")||kw(&L->cur,"IFTETRAICOSAP")||kw(&L->cur,"IFTWENTYFOURKEYP")||kw(&L->cur,"WHENTWENTYFOURP")||kw(&L->cur,"WHENTETRAICOSAP")||kw(&L->cur,"WHENTWENTYFOURKEYP")||kw(&L->cur,"IFTWENTYFIVEP")||kw(&L->cur,"IFPENTEICOSAP")||kw(&L->cur,"IFTWENTYFIVEKEYP")||kw(&L->cur,"WHENTWENTYFIVEP")||kw(&L->cur,"WHENPENTEICOSAP")||kw(&L->cur,"WHENTWENTYFIVEKEYP")||kw(&L->cur,"IFTWENTYSIXP")||kw(&L->cur,"IFHEXEICOSAP")||kw(&L->cur,"IFTWENTYSIXKEYP")||kw(&L->cur,"WHENTWENTYSIXP")||kw(&L->cur,"WHENHEXEICOSAP")||kw(&L->cur,"WHENTWENTYSIXKEYP")||kw(&L->cur,"IFTWENTYSEVENP")||kw(&L->cur,"IFHEPTEICOSAP")||kw(&L->cur,"IFTWENTYSEVENKEYP")||kw(&L->cur,"WHENTWENTYSEVENP")||kw(&L->cur,"WHENHEPTEICOSAP")||kw(&L->cur,"WHENTWENTYSEVENKEYP")||kw(&L->cur,"IFTWENTYEIGHTP")||kw(&L->cur,"IFOCTOICOSAP")||kw(&L->cur,"IFTWENTYEIGHTKEYP")||kw(&L->cur,"WHENTWENTYEIGHTP")||kw(&L->cur,"WHENOCTOICOSAP")||kw(&L->cur,"WHENTWENTYEIGHTKEYP")||kw(&L->cur,"IFTWENTYNINEP")||kw(&L->cur,"IFENNEAICOSAP")||kw(&L->cur,"IFTWENTYNINEKEYP")||kw(&L->cur,"WHENTWENTYNINEP")||kw(&L->cur,"WHENENNEAICOSAP")||kw(&L->cur,"WHENTWENTYNINEKEYP")||kw(&L->cur,"IFTHIRTYP")||kw(&L->cur,"IFTRIACONTAP")||kw(&L->cur,"IFTHIRTYKEYP")||kw(&L->cur,"WHENTHIRTYP")||kw(&L->cur,"WHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYKEYP")||kw(&L->cur,"IFTHIRTYONEP")||kw(&L->cur,"IFHENTRIACONTAP")||kw(&L->cur,"IFTHIRTYONEKEYP")||kw(&L->cur,"WHENTHIRTYONEP")||kw(&L->cur,"WHENHENTRIACONTAP")||kw(&L->cur,"WHENTHIRTYONEKEYP")||kw(&L->cur,"IFTHIRTYTWOP")||kw(&L->cur,"IFDOTRIACONTAP")||kw(&L->cur,"IFTHIRTYTWOKEYP")||kw(&L->cur,"WHENTHIRTYTWOP")||kw(&L->cur,"WHENDOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYTWOKEYP")||kw(&L->cur,"IFTHIRTYTHREEP")||kw(&L->cur,"IFTRITRIACONTAP")||kw(&L->cur,"IFTHIRTYTHREEKEYP")||kw(&L->cur,"WHENTHIRTYTHREEP")||kw(&L->cur,"WHENTRITRIACONTAP")||kw(&L->cur,"WHENTHIRTYTHREEKEYP")||kw(&L->cur,"IFTHIRTYFOURP")||kw(&L->cur,"IFTETRATRIACONTAP")||kw(&L->cur,"IFTHIRTYFOURKEYP")||kw(&L->cur,"WHENTHIRTYFOURP")||kw(&L->cur,"WHENTETRATRIACONTAP")||kw(&L->cur,"WHENTHIRTYFOURKEYP")||kw(&L->cur,"IFTHIRTYFIVEP")||kw(&L->cur,"IFPENTETRIACONTAP")||kw(&L->cur,"IFTHIRTYFIVEKEYP")||kw(&L->cur,"WHENTHIRTYFIVEP")||kw(&L->cur,"WHENPENTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYFIVEKEYP")||kw(&L->cur,"IFTHIRTYSIXP")||kw(&L->cur,"IFHEXETRIACONTAP")||kw(&L->cur,"IFTHIRTYSIXKEYP")||kw(&L->cur,"WHENTHIRTYSIXP")||kw(&L->cur,"WHENHEXETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSIXKEYP")||kw(&L->cur,"IFTHIRTYSEVENP")||kw(&L->cur,"IFHEPTETRIACONTAP")||kw(&L->cur,"IFTHIRTYSEVENKEYP")||kw(&L->cur,"WHENTHIRTYSEVENP")||kw(&L->cur,"WHENHEPTETRIACONTAP")||kw(&L->cur,"WHENTHIRTYSEVENKEYP")||kw(&L->cur,"IFTHIRTYEIGHTP")||kw(&L->cur,"IFOCTOTRIACONTAP")||kw(&L->cur,"IFTHIRTYEIGHTKEYP")||kw(&L->cur,"WHENTHIRTYEIGHTP")||kw(&L->cur,"WHENOCTOTRIACONTAP")||kw(&L->cur,"WHENTHIRTYEIGHTKEYP")||kw(&L->cur,"IFTHIRTYNINEP")||kw(&L->cur,"IFENNEATRIACONTAP")||kw(&L->cur,"IFTHIRTYNINEKEYP")||kw(&L->cur,"WHENTHIRTYNINEP")||kw(&L->cur,"WHENENNEATRIACONTAP")||kw(&L->cur,"WHENTHIRTYNINEKEYP")||kw(&L->cur,"IFFORTYP")||kw(&L->cur,"IFTETRACONTAP")||kw(&L->cur,"IFFORTYKEYP")||kw(&L->cur,"WHENFORTYP")||kw(&L->cur,"WHENTETRACONTAP")||kw(&L->cur,"WHENFORTYKEYP")||kw(&L->cur,"IFFORTYONEP")||kw(&L->cur,"IFHENTETRACONTAP")||kw(&L->cur,"IFFORTYONEKEYP")||kw(&L->cur,"WHENFORTYONEP")||kw(&L->cur,"WHENHENTETRACONTAP")||kw(&L->cur,"WHENFORTYONEKEYP")||kw(&L->cur,"IFFORTYTWOP")||kw(&L->cur,"IFDOTETRACONTAP")||kw(&L->cur,"IFFORTYTWOKEYP")||kw(&L->cur,"WHENFORTYTWOP")||kw(&L->cur,"WHENDOTETRACONTAP")||kw(&L->cur,"WHENFORTYTWOKEYP")||kw(&L->cur,"IFFORTYTHREEP")||kw(&L->cur,"IFTRITETRACONTAP")||kw(&L->cur,"IFFORTYTHREEKEYP")||kw(&L->cur,"WHENFORTYTHREEP")||kw(&L->cur,"WHENTRITETRACONTAP")||kw(&L->cur,"WHENFORTYTHREEKEYP")||kw(&L->cur,"IFFORTYFOURP")||kw(&L->cur,"IFTETRATETRACONTAP")||kw(&L->cur,"IFFORTYFOURKEYP")||kw(&L->cur,"WHENFORTYFOURP")||kw(&L->cur,"WHENTETRATETRACONTAP")||kw(&L->cur,"WHENFORTYFOURKEYP")||kw(&L->cur,"IFFORTYFIVEP")||kw(&L->cur,"IFPENTETETRACONTAP")||kw(&L->cur,"IFFORTYFIVEKEYP")||kw(&L->cur,"WHENFORTYFIVEP")||kw(&L->cur,"WHENPENTETETRACONTAP")||kw(&L->cur,"WHENFORTYFIVEKEYP")||kw(&L->cur,"IFFORTYSIXP")||kw(&L->cur,"IFHEXETETRACONTAP")||kw(&L->cur,"IFFORTYSIXKEYP")||kw(&L->cur,"WHENFORTYSIXP")||kw(&L->cur,"WHENHEXETETRACONTAP")||kw(&L->cur,"WHENFORTYSIXKEYP")||kw(&L->cur,"IFFORTYSEVENP")||kw(&L->cur,"IFHEPTETETRACONTAP")||kw(&L->cur,"IFFORTYSEVENKEYP")||kw(&L->cur,"WHENFORTYSEVENP")||kw(&L->cur,"WHENHEPTETETRACONTAP")||kw(&L->cur,"WHENFORTYSEVENKEYP")||kw(&L->cur,"IFFORTYEIGHTP")||kw(&L->cur,"IFOCTOTETRACONTAP")||kw(&L->cur,"IFFORTYEIGHTKEYP")||kw(&L->cur,"WHENFORTYEIGHTP")||kw(&L->cur,"WHENOCTOTETRACONTAP")||kw(&L->cur,"WHENFORTYEIGHTKEYP")||kw(&L->cur,"IFFORTYNINEP")||kw(&L->cur,"IFENNEATETRACONTAP")||kw(&L->cur,"IFFORTYNINEKEYP")||kw(&L->cur,"WHENFORTYNINEP")||kw(&L->cur,"WHENENNEATETRACONTAP")||kw(&L->cur,"WHENFORTYNINEKEYP")||kw(&L->cur,"IFFIFTYP")||kw(&L->cur,"IFPENTECONTAP")||kw(&L->cur,"IFFIFTYKEYP")||kw(&L->cur,"WHENFIFTYP")||kw(&L->cur,"WHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYKEYP")||kw(&L->cur,"IFFIFTYONEP")||kw(&L->cur,"IFHENPENTECONTAP")||kw(&L->cur,"IFFIFTYONEKEYP")||kw(&L->cur,"WHENFIFTYONEP")||kw(&L->cur,"WHENHENPENTECONTAP")||kw(&L->cur,"WHENFIFTYONEKEYP")||kw(&L->cur,"IFFIFTYTWOP")||kw(&L->cur,"IFDOPENTECONTAP")||kw(&L->cur,"IFFIFTYTWOKEYP")||kw(&L->cur,"WHENFIFTYTWOP")||kw(&L->cur,"WHENDOPENTECONTAP")||kw(&L->cur,"WHENFIFTYTWOKEYP")||kw(&L->cur,"IFFIFTYTHREEP")||kw(&L->cur,"IFTRIPENTECONTAP")||kw(&L->cur,"IFFIFTYTHREEKEYP")||kw(&L->cur,"WHENFIFTYTHREEP")||kw(&L->cur,"WHENTRIPENTECONTAP")||kw(&L->cur,"WHENFIFTYTHREEKEYP")||kw(&L->cur,"IFFIFTYFOURP")||kw(&L->cur,"IFTETRAPENTECONTAP")||kw(&L->cur,"IFFIFTYFOURKEYP")||kw(&L->cur,"WHENFIFTYFOURP")||kw(&L->cur,"WHENTETRAPENTECONTAP")||kw(&L->cur,"WHENFIFTYFOURKEYP")||kw(&L->cur,"IFFIFTYFIVEP")||kw(&L->cur,"IFPENTEPENTECONTAP")||kw(&L->cur,"IFFIFTYFIVEKEYP")||kw(&L->cur,"WHENFIFTYFIVEP")||kw(&L->cur,"WHENPENTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYFIVEKEYP")||kw(&L->cur,"IFFIFTYSIXP")||kw(&L->cur,"IFHEXEPENTECONTAP")||kw(&L->cur,"IFFIFTYSIXKEYP")||kw(&L->cur,"WHENFIFTYSIXP")||kw(&L->cur,"WHENHEXEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSIXKEYP")||kw(&L->cur,"IFFIFTYSEVENP")||kw(&L->cur,"IFHEPTEPENTECONTAP")||kw(&L->cur,"IFFIFTYSEVENKEYP")||kw(&L->cur,"WHENFIFTYSEVENP")||kw(&L->cur,"WHENHEPTEPENTECONTAP")||kw(&L->cur,"WHENFIFTYSEVENKEYP")||kw(&L->cur,"IFFIFTYEIGHTP")||kw(&L->cur,"IFOCTOPENTECONTAP")||kw(&L->cur,"IFFIFTYEIGHTKEYP")||kw(&L->cur,"WHENFIFTYEIGHTP")||kw(&L->cur,"WHENOCTOPENTECONTAP")||kw(&L->cur,"WHENFIFTYEIGHTKEYP")||kw(&L->cur,"IFFIFTYNINEP")||kw(&L->cur,"IFENNEAPENTECONTAP")||kw(&L->cur,"IFFIFTYNINEKEYP")||kw(&L->cur,"WHENFIFTYNINEP")||kw(&L->cur,"WHENENNEAPENTECONTAP")||kw(&L->cur,"WHENFIFTYNINEKEYP")||kw(&L->cur,"IFSIXTYP")||kw(&L->cur,"IFHEXECONTAP")||kw(&L->cur,"IFSIXTYKEYP")||kw(&L->cur,"WHENSIXTYP")||kw(&L->cur,"WHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYKEYP")||kw(&L->cur,"IFSIXTYONEP")||kw(&L->cur,"IFHENHEXECONTAP")||kw(&L->cur,"IFSIXTYONEKEYP")||kw(&L->cur,"WHENSIXTYONEP")||kw(&L->cur,"WHENHENHEXECONTAP")||kw(&L->cur,"WHENSIXTYONEKEYP")||kw(&L->cur,"IFSIXTYTWOP")||kw(&L->cur,"IFDOHEXECONTAP")||kw(&L->cur,"IFSIXTYTWOKEYP")||kw(&L->cur,"WHENSIXTYTWOP")||kw(&L->cur,"WHENDOHEXECONTAP")||kw(&L->cur,"WHENSIXTYTWOKEYP")||kw(&L->cur,"IFSIXTYTHREEP")||kw(&L->cur,"IFTRIHEXECONTAP")||kw(&L->cur,"IFSIXTYTHREEKEYP")||kw(&L->cur,"WHENSIXTYTHREEP")||kw(&L->cur,"WHENTRIHEXECONTAP")||kw(&L->cur,"WHENSIXTYTHREEKEYP")||kw(&L->cur,"IFSIXTYFOURP")||kw(&L->cur,"IFTETRAHEXECONTAP")||kw(&L->cur,"IFSIXTYFOURKEYP")||kw(&L->cur,"WHENSIXTYFOURP")||kw(&L->cur,"WHENTETRAHEXECONTAP")||kw(&L->cur,"WHENSIXTYFOURKEYP")||kw(&L->cur,"IFSIXTYFIVEP")||kw(&L->cur,"IFPENTEHEXECONTAP")||kw(&L->cur,"IFSIXTYFIVEKEYP")||kw(&L->cur,"WHENSIXTYFIVEP")||kw(&L->cur,"WHENPENTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYFIVEKEYP")||kw(&L->cur,"IFSIXTYSIXP")||kw(&L->cur,"IFHEXEHEXECONTAP")||kw(&L->cur,"IFSIXTYSIXKEYP")||kw(&L->cur,"WHENSIXTYSIXP")||kw(&L->cur,"WHENHEXEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSIXKEYP")||kw(&L->cur,"IFSIXTYSEVENP")||kw(&L->cur,"IFHEPTEHEXECONTAP")||kw(&L->cur,"IFSIXTYSEVENKEYP")||kw(&L->cur,"WHENSIXTYSEVENP")||kw(&L->cur,"WHENHEPTEHEXECONTAP")||kw(&L->cur,"WHENSIXTYSEVENKEYP")||kw(&L->cur,"IFSIXTYEIGHTP")||kw(&L->cur,"IFOCTOHEXECONTAP")||kw(&L->cur,"IFSIXTYEIGHTKEYP")||kw(&L->cur,"WHENSIXTYEIGHTP")||kw(&L->cur,"WHENOCTOHEXECONTAP")||kw(&L->cur,"WHENSIXTYEIGHTKEYP")||kw(&L->cur,"IFSIXTYNINEP")||kw(&L->cur,"IFENNEAHEXECONTAP")||kw(&L->cur,"IFSIXTYNINEKEYP")||kw(&L->cur,"WHENSIXTYNINEP")||kw(&L->cur,"WHENENNEAHEXECONTAP")||kw(&L->cur,"WHENSIXTYNINEKEYP")||kw(&L->cur,"IFSEVENTYP")||kw(&L->cur,"IFHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYKEYP")||kw(&L->cur,"WHENSEVENTYP")||kw(&L->cur,"WHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYKEYP")||kw(&L->cur,"IFSEVENTYONEP")||kw(&L->cur,"IFHENHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYONEKEYP")||kw(&L->cur,"WHENSEVENTYONEP")||kw(&L->cur,"WHENHENHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYONEKEYP")||kw(&L->cur,"IFSEVENTYTWOP")||kw(&L->cur,"IFDOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTWOKEYP")||kw(&L->cur,"WHENSEVENTYTWOP")||kw(&L->cur,"WHENDOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTWOKEYP")||kw(&L->cur,"IFSEVENTYTHREEP")||kw(&L->cur,"IFTRIHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYTHREEKEYP")||kw(&L->cur,"WHENSEVENTYTHREEP")||kw(&L->cur,"WHENTRIHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYTHREEKEYP")||kw(&L->cur,"IFSEVENTYFOURP")||kw(&L->cur,"IFTETRAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFOURKEYP")||kw(&L->cur,"WHENSEVENTYFOURP")||kw(&L->cur,"WHENTETRAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFOURKEYP")||kw(&L->cur,"IFSEVENTYFIVEP")||kw(&L->cur,"IFPENTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYFIVEKEYP")||kw(&L->cur,"WHENSEVENTYFIVEP")||kw(&L->cur,"WHENPENTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYFIVEKEYP")||kw(&L->cur,"IFSEVENTYSIXP")||kw(&L->cur,"IFHEXEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSIXKEYP")||kw(&L->cur,"WHENSEVENTYSIXP")||kw(&L->cur,"WHENHEXEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSIXKEYP")||kw(&L->cur,"IFSEVENTYSEVENP")||kw(&L->cur,"IFHEPTEHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYSEVENKEYP")||kw(&L->cur,"WHENSEVENTYSEVENP")||kw(&L->cur,"WHENHEPTEHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYSEVENKEYP")||kw(&L->cur,"IFSEVENTYEIGHTP")||kw(&L->cur,"IFOCTOHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYEIGHTKEYP")||kw(&L->cur,"WHENSEVENTYEIGHTP")||kw(&L->cur,"WHENOCTOHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYEIGHTKEYP")||kw(&L->cur,"IFSEVENTYNINEP")||kw(&L->cur,"IFENNEAHEBDOMECONTAP")||kw(&L->cur,"IFSEVENTYNINEKEYP")||kw(&L->cur,"WHENSEVENTYNINEP")||kw(&L->cur,"WHENENNEAHEBDOMECONTAP")||kw(&L->cur,"WHENSEVENTYNINEKEYP")||kw(&L->cur,"IFEIGHTYP")||kw(&L->cur,"IFOCTACONTAP")||kw(&L->cur,"IFEIGHTYKEYP")||kw(&L->cur,"WHENEIGHTYP")||kw(&L->cur,"WHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYKEYP")||kw(&L->cur,"IFEIGHTYONEP")||kw(&L->cur,"IFHENOCTACONTAP")||kw(&L->cur,"IFEIGHTYONEKEYP")||kw(&L->cur,"WHENEIGHTYONEP")||kw(&L->cur,"WHENHENOCTACONTAP")||kw(&L->cur,"WHENEIGHTYONEKEYP")||kw(&L->cur,"IFEIGHTYTWOP")||kw(&L->cur,"IFDOOCTACONTAP")||kw(&L->cur,"IFEIGHTYTWOKEYP")||kw(&L->cur,"WHENEIGHTYTWOP")||kw(&L->cur,"WHENDOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTWOKEYP")||kw(&L->cur,"IFEIGHTYTHREEP")||kw(&L->cur,"IFTRIOCTACONTAP")||kw(&L->cur,"IFEIGHTYTHREEKEYP")||kw(&L->cur,"WHENEIGHTYTHREEP")||kw(&L->cur,"WHENTRIOCTACONTAP")||kw(&L->cur,"WHENEIGHTYTHREEKEYP")||kw(&L->cur,"IFEIGHTYFOURP")||kw(&L->cur,"IFTETRAOCTACONTAP")||kw(&L->cur,"IFEIGHTYFOURKEYP")||kw(&L->cur,"WHENEIGHTYFOURP")||kw(&L->cur,"WHENTETRAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFOURKEYP")||kw(&L->cur,"IFEIGHTYFIVEP")||kw(&L->cur,"IFPENTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYFIVEKEYP")||kw(&L->cur,"WHENEIGHTYFIVEP")||kw(&L->cur,"WHENPENTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYFIVEKEYP")||kw(&L->cur,"IFEIGHTYSIXP")||kw(&L->cur,"IFHEXEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSIXKEYP")||kw(&L->cur,"WHENEIGHTYSIXP")||kw(&L->cur,"WHENHEXEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSIXKEYP")||kw(&L->cur,"IFEIGHTYSEVENP")||kw(&L->cur,"IFHEPTEOCTACONTAP")||kw(&L->cur,"IFEIGHTYSEVENKEYP")||kw(&L->cur,"WHENEIGHTYSEVENP")||kw(&L->cur,"WHENHEPTEOCTACONTAP")||kw(&L->cur,"WHENEIGHTYSEVENKEYP")||kw(&L->cur,"IFEIGHTYEIGHTP")||kw(&L->cur,"IFOCTOOCTACONTAP")||kw(&L->cur,"IFEIGHTYEIGHTKEYP")||kw(&L->cur,"WHENEIGHTYEIGHTP")||kw(&L->cur,"WHENOCTOOCTACONTAP")||kw(&L->cur,"WHENEIGHTYEIGHTKEYP")||kw(&L->cur,"IFEIGHTYNINEP")||kw(&L->cur,"IFENNEAOCTACONTAP")||kw(&L->cur,"IFEIGHTYNINEKEYP")||kw(&L->cur,"WHENEIGHTYNINEP")||kw(&L->cur,"WHENENNEAOCTACONTAP")||kw(&L->cur,"WHENEIGHTYNINEKEYP")||kw(&L->cur,"IFNINETYP")||kw(&L->cur,"IFENNEACONTAP")||kw(&L->cur,"IFNINETYKEYP")||kw(&L->cur,"WHENNINETYP")||kw(&L->cur,"WHENENNEACONTAP")||kw(&L->cur,"WHENNINETYKEYP")||kw(&L->cur,"IFNUM")||kw(&L->cur,"IFSTR")||kw(&L->cur,"IFTYPE")||kw(&L->cur,"IFVARTYPE")||kw(&L->cur,"IFKIND")||kw(&L->cur,"WHENNUM")||kw(&L->cur,"WHENSTR")||kw(&L->cur,"WHENTYPE")||kw(&L->cur,"WHENVARTYPE")||kw(&L->cur,"IFZERO")||kw(&L->cur,"IFNZ")||kw(&L->cur,"IFPOS")||kw(&L->cur,"IFNEG")||kw(&L->cur,"WHENZERO")||kw(&L->cur,"WHENNZ")||kw(&L->cur,"WHENPOS")||kw(&L->cur,"WHENNEG")||kw(&L->cur,"IFCANREAD")||kw(&L->cur,"IFCANWRITE")||kw(&L->cur,"IFCANEXEC")||
+              kw(&L->cur,"WHENCANREAD")||kw(&L->cur,"WHENCANWRITE")||kw(&L->cur,"WHENCANEXEC")||kw(&L->cur,"IFJSONEQ")||kw(&L->cur,"IFJSONNEQ")||kw(&L->cur,"IFSAMEJSON")||
+              kw(&L->cur,"WHENJSONEQ")||kw(&L->cur,"WHENJSONNEQ")||kw(&L->cur,"WHENSAMEJSON")||kw(&L->cur,"IFBLANK")||kw(&L->cur,"IFNOTBLANK")||
+              kw(&L->cur,"WHENBLANK")||kw(&L->cur,"WHENNOTBLANK")||kw(&L->cur,"IFLEN")||kw(&L->cur,"IFLONG")||kw(&L->cur,"IFSHORT")||
+              kw(&L->cur,"WHENLEN")||kw(&L->cur,"WHENLONG")||kw(&L->cur,"WHENSHORT")||kw(&L->cur,"IFLINES")||kw(&L->cur,"IFMANY")||kw(&L->cur,"IFFEW")||kw(&L->cur,"WHENLINES")||kw(&L->cur,"WHENMANY")||kw(&L->cur,"WHENFEW")||kw(&L->cur,"IFHASFLAG")||kw(&L->cur,"IFNOFLAG")||kw(&L->cur,"IFHASARG")||kw(&L->cur,"IFNOARG")||kw(&L->cur,"WHENHASFLAG")||kw(&L->cur,"WHENNOFLAG")||kw(&L->cur,"WHENHASARG")||kw(&L->cur,"WHENNOARG")||
+              kw(&L->cur,"LOOP")||kw(&L->cur,"SLOOP")||kw(&L->cur,"WHILE")||kw(&L->cur,"FOR")||
+              kw(&L->cur,"EACH")||kw(&L->cur,"FN")||kw(&L->cur,"REPEAT")||kw(&L->cur,"TRY")||
+              kw(&L->cur,"CASE")||kw(&L->cur,"TIMEIT")||kw(&L->cur,"RETRY")||kw(&L->cur,"TIMES"))
+            depth++;
+          else if (kw(&L->cur,"END")) {
+            depth--;
+            if (depth == 0) break;
+          }
+          lex_next(L);
+        }
+        if (kw(&L->cur,"END")) lex_next(L);
+        var_set_num(vm, ntag, 0);
+        bump(vm); return 1;
+      }
+      if (kw(&L->cur,"END")) lex_next(L);
+      var_set_num(vm, ntag, 0);
+      bump(vm); return 1;
+    }
+  }
+  return 0;
+}
