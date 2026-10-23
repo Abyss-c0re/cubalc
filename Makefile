@@ -85,6 +85,7 @@ LANG_SRC = \
 	src/lang/lang_ops_core_discover.c \
 	src/lang/lang_ops_core_flat.c \
 	src/lang/lang_ops_core_flat_bag.c \
+	src/lang/lang_ops_core_bag_push.c \
 	src/lang/lang_ops_core_flat_get.c \
 	src/lang/lang_ops_core_flat_has.c \
 	src/lang/lang_ops_core_flat_mut.c \
@@ -139,6 +140,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_ifeqfile.c \
 	src/lang/lang_ops_flow_iflen.c \
 	src/lang/lang_ops_flow_iflines.c \
+	src/lang/lang_ops_flow_ifnum.c \
 	src/lang/lang_ops_flow_ifvar.c \
 	src/lang/lang_ops_flow_oop.c \
 	src/lang/lang_ops_flow_scene.c \
