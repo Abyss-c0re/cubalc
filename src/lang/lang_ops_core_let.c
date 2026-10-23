@@ -617,5 +617,48 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       return 1;
     }
   }
+
+  /* ZERO name — numeric 0. CLEARSTR|EMPTYTO name — empty string. */
+  if (kw(&L->cur, "ZERO") || kw(&L->cur, "ZEROV") || kw(&L->cur, "ZEROOUT") ||
+      kw(&L->cur, "CLEARSTR") || kw(&L->cur, "EMPTYTO") || kw(&L->cur, "CLEARS") ||
+      kw(&L->cur, "BLANKTO") || kw(&L->cur, "ERASESTR")) {
+    char op[24], name[48];
+    int is_zero = 0;
+    snprintf(op, sizeof op, "%s", L->cur.text);
+    {
+      char *q;
+      for (q = op; *q; q++)
+        if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    }
+    if (strcmp(op, "ZERO") == 0 || strcmp(op, "ZEROV") == 0 || strcmp(op, "ZEROOUT") == 0)
+      is_zero = 1;
+    lex_next(L);
+    if (L->cur.kind != TK_IDENT) {
+      fail(vm, is_zero ? "ZERO needs name — ZERO retries" : "CLEARSTR needs name — CLEARSTR msg");
+      return -1;
+    }
+    snprintf(name, sizeof name, "%s", L->cur.text);
+    lex_next(L);
+    if (is_zero) {
+      var_set_num(vm, name, 0);
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      var_set_num(vm, "ZERO_N", 1);
+    } else {
+      var_set_str(vm, name, "");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "CLEARSTR_N", 1);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %s %s\n", is_zero ? "ZERO" : "CLEARSTR", name);
+    bump(vm);
+    return 1;
+  }
   return 0;
 }
