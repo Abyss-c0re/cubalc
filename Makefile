@@ -254,6 +254,7 @@ LANG_SRC = \
 	src/lang/lang_ops_toc_bwshift.c \
 	src/lang/lang_ops_toc_unary.c \
 	src/lang/lang_ops_toc_cmp.c \
+	src/lang/lang_ops_toc_metrics.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
 
