@@ -250,6 +250,7 @@ LANG_SRC = \
 	src/lang/lang_ops_toc_bitops.c \
 	src/lang/lang_ops_toc_alu.c \
 	src/lang/lang_ops_toc_mod.c \
+	src/lang/lang_ops_toc_revsat.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
 
