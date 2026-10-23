@@ -148,6 +148,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_iffield.c \
 	src/lang/lang_ops_flow_ifenv.c \
 	src/lang/lang_ops_flow_iffile.c \
+	src/lang/lang_ops_flow_ifbetween.c \
 	src/lang/lang_ops_flow_ifvar.c \
 	src/lang/lang_ops_flow_oop.c \
 	src/lang/lang_ops_flow_scene.c \
