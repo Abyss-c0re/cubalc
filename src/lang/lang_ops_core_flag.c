@@ -1,5 +1,5 @@
 /* CubalC lang — lang_ops_core_flag.c
- * CLI flag plane: FLAGMAP·LISTFLAGS·RESTARGS·HASFLAG·GETFLAG·GETFLAGN·GETFLAGMS
+ * CLI flag plane: FLAGMAP…GETFLAGMS · GETFLAGALL
  * Split from endarg at 1k (B_E_endarg_split). Cube is SoT. Zero bloat.
  */
 #include "lang/cubalc_lang_ops_core_flag.h"
@@ -603,6 +603,70 @@ int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
     if (vm->trace)
       fprintf(vm->trace, "# getflagms %s hit=%s ms=%ld bad=%d src=%s\n", name, hitnm, ms, bad,
               src_tag);
+    bump(vm);
+    return 1;
+  }
+
+  /* GETFLAGALL|FLAGALL|MULTIFLAG — collect every CLI --name into newline bag. */
+  if (kw(&L->cur, "GETFLAGALL") || kw(&L->cur, "FLAGALL") || kw(&L->cur, "MULTIFLAG") ||
+      kw(&L->cur, "GETFLAGS") || kw(&L->cur, "COLLECTFLAG") || kw(&L->cur, "GETFLAG_ALL")) {
+    char name[96], aliases[384], hitnm[96], bag[CUBALC_HOST_STR_MAX], fb[CUBALC_HOST_STR_MAX];
+    int cli_n, count, have_fb = 0, nac;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    bag[0] = 0;
+    fb[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGALL needs name — GETFLAGALL tags|t");
+      return -1;
+    }
+    if (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+        kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (resolve_str_arg(vm, L, fb, sizeof fb) != 0) {
+        fail_at(vm, L, "GETFLAGALL name OR \"fallback\"");
+        return -1;
+      }
+      have_fb = 1;
+    }
+    cli_n = cubalc_scan_cli_flag_all(aliases, bag, sizeof bag, hitnm, sizeof hitnm);
+    count = cli_n;
+    if (cli_n <= 0) {
+      if (have_fb) {
+        snprintf(bag, sizeof bag, "%s", fb);
+        if (fb[0]) {
+          const char *s = fb;
+          count = 1;
+          while (*s) {
+            if (*s == '\n') count++;
+            s++;
+          }
+        } else
+          count = 0;
+      } else {
+        bag[0] = 0;
+        count = 0;
+      }
+    }
+    var_set_str(vm, "LAST", bag);
+    var_set_str(vm, "FLAG", bag);
+    var_set_str(vm, "GETFLAGALL", name);
+    var_set_str(vm, "FLAGALL", bag);
+    var_set_str(vm, "FLAG_HIT_NAME", cli_n > 0 ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", cli_n > 0 ? hitnm : "");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", bag);
+    vm->last_n = (long)count;
+    var_set_num(vm, "LAST_N", (long)count);
+    var_set_num(vm, "GETFLAGALL_N", (long)count);
+    var_set_num(vm, "FLAGALL_N", (long)count);
+    var_set_num(vm, "GETFLAGALL_HIT", cli_n > 0 ? 1L : 0L);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagall %s cli=%d count=%d hit=%s\n", name, cli_n, count,
+              hitnm[0] ? hitnm : "");
     bump(vm);
     return 1;
   }
