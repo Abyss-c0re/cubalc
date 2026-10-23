@@ -691,5 +691,158 @@ int cubalc_lang_ops_core_try_endarg(VM *vm, Lex *L) {
     bump(vm);
     return 1;
   }
+
+  /* GETFLAGN|FLAGN — peel CLI --name as int LAST_N. CLI > ENV > literal.
+   * Bare → 1. Non-numeric → soft 0 + sticky LAST_ERR. */
+  if (kw(&L->cur, "GETFLAGN") || kw(&L->cur, "FLAGN") || kw(&L->cur, "FLAGNUM") ||
+      kw(&L->cur, "GETOPTN") || kw(&L->cur, "OPTN") || kw(&L->cur, "FLAG_INT") ||
+      kw(&L->cur, "INTFLAG") || kw(&L->cur, "GETFLAG_N")) {
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], nbuf[32];
+    char env_used[96], src_tag[16];
+    int hit, have_fb = 0, bad = 0, nac, from_env = 0;
+    long num = 0, fb = 0;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    env_used[0] = 0;
+    snprintf(src_tag, sizeof src_tag, "%s", "none");
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      fail_at(vm, L, "GETFLAGN needs name — GETFLAGN workers|w OR ENV WORKERS OR 4");
+      return -1;
+    }
+    while (kw(&L->cur, "OR") || kw(&L->cur, "DEFAULT") || kw(&L->cur, "ELSE") ||
+           kw(&L->cur, "FALLBACK")) {
+      lex_next(L);
+      if (kw(&L->cur, "ENV") || kw(&L->cur, "FROMENV") || kw(&L->cur, "ENVOR") ||
+          kw(&L->cur, "GETENV") || kw(&L->cur, "ENV_GET")) {
+        char en[96];
+        const char *ev;
+        lex_next(L);
+        en[0] = 0;
+        while (L->cur.kind == TK_MINUS) lex_next(L);
+        if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          snprintf(en, sizeof en, "%s", L->cur.text);
+          lex_next(L);
+        } else {
+          fail_at(vm, L, "GETFLAGN OR ENV NAME — GETFLAGN n OR ENV WORKERS OR 4");
+          return -1;
+        }
+        if (!have_fb && en[0]) {
+          ev = getenv(en);
+          if (ev && ev[0]) {
+            char *ep = NULL;
+            fb = strtol(ev, &ep, 10);
+            if (ev[0] && ep && *ep && *ep != ' ' && *ep != '\t')
+              fb = 0;
+            have_fb = 1;
+            from_env = 1;
+            snprintf(env_used, sizeof env_used, "%s", en);
+            snprintf(val, sizeof val, "%s", ev);
+          }
+        }
+        continue;
+      }
+      {
+        long lit = 0;
+        if (L->cur.kind == TK_NUM) {
+          lit = L->cur.num;
+          lex_next(L);
+        } else if (L->cur.kind == TK_MINUS) {
+          lit = parse_expr(vm, L);
+        } else if (L->cur.kind == TK_STR) {
+          char *ep = NULL;
+          lit = strtol(L->cur.text, &ep, 10);
+          lex_next(L);
+        } else if (L->cur.kind == TK_IDENT) {
+          Var *sv = var_get(vm, L->cur.text, 0);
+          if (sv && !sv->is_str) {
+            lit = sv->val;
+            lex_next(L);
+          } else if (sv && sv->is_str) {
+            lit = strtol(sv->sval, NULL, 10);
+            lex_next(L);
+          } else {
+            lit = parse_expr(vm, L);
+          }
+        } else {
+          lit = parse_expr(vm, L);
+        }
+        if (!have_fb) {
+          fb = lit;
+          have_fb = 1;
+          from_env = 0;
+        }
+      }
+      break;
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (hit) {
+      char *ep = NULL;
+      const char *p = val;
+      if (p[0] == '+') p++;
+      num = strtol(p, &ep, 10);
+      if (p[0] == 0 || (ep && *ep != 0 && *ep != ' ' && *ep != '\t')) {
+        bad = 1;
+        num = 0;
+        var_set_str(vm, "LAST_ERR", "GETFLAGN: non-numeric flag value");
+        var_set_str(vm, "ERR", "GETFLAGN: non-numeric flag value");
+      }
+    } else if (have_fb) {
+      num = fb;
+      snprintf(val, sizeof val, "%ld", num);
+    } else {
+      num = 0;
+      val[0] = 0;
+    }
+    snprintf(nbuf, sizeof nbuf, "%ld", num);
+    var_set_num(vm, "LAST_N", num);
+    vm->last_n = num;
+    var_set_num(vm, "GETFLAGN_N", num);
+    var_set_num(vm, "FLAGN", num);
+    var_set_num(vm, "GETFLAGN_HIT", hit ? 1L : 0L);
+    var_set_num(vm, "GETFLAGN_OK",
+                (hit && !bad) || (!hit && have_fb) ? 1L
+                                                   : (hit && bad ? 0L : (have_fb ? 1L : 0L)));
+    var_set_num(vm, "OK", 1);
+    var_set_str(vm, "GETFLAGN", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hit ? hitnm : "");
+    var_set_str(vm, "FLAG_ALIAS", hit ? hitnm : "");
+    if (hit)
+      snprintf(src_tag, sizeof src_tag, "%s", "cli");
+    else if (have_fb && from_env)
+      snprintf(src_tag, sizeof src_tag, "%s", "env");
+    else if (have_fb)
+      snprintf(src_tag, sizeof src_tag, "%s", "default");
+    else
+      snprintf(src_tag, sizeof src_tag, "%s", "none");
+    var_set_str(vm, "GETFLAGN_SRC", src_tag);
+    var_set_str(vm, "FLAG_SRC", src_tag);
+    var_set_str(vm, "FLAG_ENV", (!hit && from_env) ? env_used : "");
+    if (hit && !bad) {
+      var_set_str(vm, "LAST", nbuf);
+      var_set_str(vm, "FLAG", nbuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    } else if (hit && bad) {
+      var_set_str(vm, "LAST", val);
+      var_set_str(vm, "FLAG", val);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", val);
+    } else if (have_fb) {
+      var_set_str(vm, "LAST", nbuf);
+      var_set_str(vm, "FLAG", nbuf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nbuf);
+    } else {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "FLAG", "");
+      vm->last_str[0] = 0;
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# getflagn %s hit=%s num=%ld bad=%d src=%s\n", name, hitnm, num,
+              bad, src_tag);
+    bump(vm);
+    return 1;
+  }
   return 0;
 }
