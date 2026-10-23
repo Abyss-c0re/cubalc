@@ -10,6 +10,7 @@
 #include "lang/cubalc_lang_ops_dual_pair.h"
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
 #include "lang/cubalc_lang_ops_dual_immshift.h"
+#include "lang/cubalc_lang_ops_dual_imm_alu.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* pack/unpack peel (DLO4…DUNPACK32) */
@@ -146,55 +147,12 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     if (ish != 0) return ish;
   }
   /* DROLN·DRORN·DSHLN·DSHRN·DSARN → dual_immshift peel (B_dual_peel) */
-  /* digit-7 dual-stack immediate ALU: DADDN · DSUBN · DMULN (dual of SADDN/SSUBN/SMULN) */
-  if (kw(&L->cur,"DADDN")||kw(&L->cur,"2ADDN")||kw(&L->cur,"S2ADDN")||
-      kw(&L->cur,"STACK2ADDN")||kw(&L->cur,"PAIRADDN")||kw(&L->cur,"DADDIMM")||
-      kw(&L->cur,"2ADDIMM")||kw(&L->cur,"PAIRADDIMM")||kw(&L->cur,"DPLUSN")){
-    /* a b + n → (a+n) (b+n) */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = a + n;
-    long y = b + n;
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  /* imm ALU DADDN…DMULN → lang_ops_dual_imm_alu.c (B_dual_peel) */
+  {
+    int ia = cubalc_lang_ops_dual_try_imm_alu(vm, L);
+    if (ia != 0) return ia;
   }
-  if (kw(&L->cur,"DSUBN")||kw(&L->cur,"2SUBN")||kw(&L->cur,"S2SUBN")||
-      kw(&L->cur,"STACK2SUBN")||kw(&L->cur,"PAIRSUBN")||kw(&L->cur,"DSUBIMM")||
-      kw(&L->cur,"2SUBIMM")||kw(&L->cur,"PAIRSUBIMM")||kw(&L->cur,"DMINUSN")){
-    /* a b + n → (a-n) (b-n) */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = a - n;
-    long y = b - n;
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DMULN")||kw(&L->cur,"2MULN")||kw(&L->cur,"S2MULN")||
-      kw(&L->cur,"STACK2MULN")||kw(&L->cur,"PAIRMULN")||kw(&L->cur,"DMULIMM")||
-      kw(&L->cur,"2MULIMM")||kw(&L->cur,"PAIRMULIMM")||kw(&L->cur,"DTIMESN")){
-    /* a b + n → (a*n) (b*n) */
-    lex_next(L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    long a = vm->stack[vm->sp - 2];
-    long b = vm->stack[vm->sp - 1];
-    long x = a * n;
-    long y = b * n;
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DADDN·DSUBN·DMULN → dual_imm_alu peel (B_dual_peel) */
   /* digit-3 dual-stack imm saturating ALU: DSATADDN · DSATSUBN · DSATMULN (dual of SSATADDN) */
   if (kw(&L->cur,"DSATADDN")||kw(&L->cur,"S2SATADDN")||kw(&L->cur,"STACK2SATADDN")||
       kw(&L->cur,"PAIRSATADDN")||kw(&L->cur,"DADDSATN")||kw(&L->cur,"PAIRADDSATN")||
