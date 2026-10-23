@@ -79,6 +79,7 @@ LANG_SRC = \
 	src/lang/lang_ops_core_clearerr.c \
 	src/lang/lang_ops_core_endarg.c \
 	src/lang/lang_ops_core_flag.c \
+	src/lang/lang_ops_core_flagpath.c \
 	src/lang/lang_ops_core_cop.c \
 	src/lang/lang_ops_core_ctrl.c \
 	src/lang/lang_ops_core_discover.c \
