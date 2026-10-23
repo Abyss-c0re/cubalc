@@ -139,6 +139,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_fstr_fieldbag.c \
 	src/lang/lang_ops_flow_fstr_b.c \
 	src/lang/lang_ops_flow_fstr_kinship.c \
+	src/lang/lang_ops_flow_fstr_cousin.c \
 	src/lang/lang_ops_flow_fstr_hasmeth.c \
 	src/lang/lang_ops_flow_fstr_hasfield.c \
 	src/lang/lang_ops_flow_ifcmp.c \
