@@ -156,6 +156,7 @@ LANG_SRC = \
 	src/lang/lang_ops_flow_send.c \
 	src/lang/lang_ops_math.c \
 	src/lang/lang_ops_math_nbit.c \
+	src/lang/lang_ops_math_numthy.c \
 	src/lang/lang_ops_math_stack_sci.c \
 	src/lang/lang_ops_math_field32n.c \
 	src/lang/lang_ops_math_field16n.c \
