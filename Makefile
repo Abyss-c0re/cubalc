@@ -158,6 +158,7 @@ LANG_SRC = \
 	src/lang/lang_ops_math_nbit.c \
 	src/lang/lang_ops_math_stack_sci.c \
 	src/lang/lang_ops_math_field32n.c \
+	src/lang/lang_ops_math_field16n.c \
 	src/lang/lang_ops_sched.c \
 	src/lang/lang_ops_smx.c \
 	src/lang/lang_ops_smx_cascade.c \
