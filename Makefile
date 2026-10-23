@@ -201,6 +201,7 @@ LANG_SRC = \
 	src/lang/lang_ops_sys_string.c \
 	src/lang/lang_ops_sys_time_walk.c \
 	src/lang/lang_ops_sys_time_date.c \
+	src/lang/lang_ops_sys_bagmut.c \
 	src/lang/lang_ops_sys_wait.c \
 	src/lang/lang_ops_toc.c \
 	src/lang/lang_parse.c \
