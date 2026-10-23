@@ -247,6 +247,7 @@ LANG_SRC = \
 	src/lang/lang_ops_toc_field.c \
 	src/lang/lang_ops_toc_extclip.c \
 	src/lang/lang_ops_toc_mask.c \
+	src/lang/lang_ops_toc_bitops.c \
 	src/lang/lang_parse.c \
 	src/lang/lang_run.c
 
