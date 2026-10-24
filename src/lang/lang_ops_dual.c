@@ -3,11 +3,7 @@
 #include "lang/cubalc_lang_ops_dual_early.h"
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
 #include "lang/cubalc_lang_ops_dual_mid.h"
-#include "lang/cubalc_lang_ops_dual_bitpath.h"
-#include "lang/cubalc_lang_ops_dual_bitmet.h"
-#include "lang/cubalc_lang_ops_dual_datapath.h"
-#include "lang/cubalc_lang_ops_dual_imm_field.h"
-#include "lang/cubalc_lang_ops_dual_imm_wbit.h"
+#include "lang/cubalc_lang_ops_dual_bit.h"
 #include "lang/cubalc_lang_ops_dual_imm_h.h"
 #include "lang/cubalc_lang_ops_dual_imm_b.h"
 #include "lang/cubalc_lang_ops_dual_imm_n.h"
@@ -28,25 +24,10 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int md = cubalc_lang_ops_dual_try_mid(vm, L);
     if (md != 0) return md;
   }
+  /* bitpath·bitmet·datapath·imm_field·imm_wbit → dual_bit meta-try (B_dual_peel) */
   {
-    int bp = cubalc_lang_ops_dual_try_bitpath(vm, L);
-    if (bp != 0) return bp;
-  }
-  {
-    int bm = cubalc_lang_ops_dual_try_bitmet(vm, L);
-    if (bm != 0) return bm;
-  }
-  {
-    int dp = cubalc_lang_ops_dual_try_datapath(vm, L);
-    if (dp != 0) return dp;
-  }
-  {
-    int ifd = cubalc_lang_ops_dual_try_imm_field(vm, L);
-    if (ifd != 0) return ifd;
-  }
-  {
-    int iw = cubalc_lang_ops_dual_try_imm_wbit(vm, L);
-    if (iw != 0) return iw;
+    int bt = cubalc_lang_ops_dual_try_bit(vm, L);
+    if (bt != 0) return bt;
   }
   /* imm 16-bit h* family hbit…h0ord → dual_imm_h meta-try (B_dual_peel) */
   {
