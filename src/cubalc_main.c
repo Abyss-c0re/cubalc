@@ -3,9 +3,6 @@
 #include "cubalc_smx.h"
 #include "cubalc_cubechain.h"
 #include "cubalc_lang.h"
-#include "cubalc_isa.h"
-#include "cubalc_jit.h"
-#include "cubalc_translate.h"
 #include "cubalc_evolve.h"
 #include "cubalc_science_loop.h"
 #include "cubalc_cmd_smx_exchange.h"
@@ -16,7 +13,6 @@
 #include "cubalc_cmd_genesis.h"
 #include "cubalc_cmd_sync.h"
 #include "cubalc_cmd_bootpeers.h"
-#include "cubalc_run_util.h"
 #include "cubalc_cmd_forms.h"
 #include "cubalc_cmd_which.h"
 #include "cubalc_cmd_search.h"
@@ -41,6 +37,7 @@
 #include "cubalc_cmd_flaggate.h"
 #include "cubalc_cmd_translate.h"
 #include "cubalc_cmd_onboard.h"
+#include "cubalc_cmd_cookbook.h"
 #include "cubalc_cmd_compile.h"
 #include "cubalc_cmd_libmatch.h"
 #include "cubalc_cmd_recipe.h"
@@ -60,20 +57,11 @@
 #include "cubalc_cmd_formhints.h"
 #include "cubalc_cmd_errrun.h"
 #include "cubalc_cmd_cat.h"
-#include "cubalc_hostops.h"
 #include <stdio.h>
 #include <string.h>
-#include <strings.h>
 #include <stdlib.h>
-#include <ctype.h>
-#include <dirent.h>
 #include <unistd.h>
-#include <time.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <errno.h>
 
 /* CubalC machine — CBLC · smx · cubechain · hold=1 */
@@ -222,19 +210,8 @@ int main(int argc, char **argv) {
     return cubalc_cmd_onboard(argc, argv);
   }
   if (strcmp(cmd, "cookbook") == 0 || strcmp(cmd, "start") == 0) {
-    printf("CubalC cookbook paths (read these first):\n"
-           "  docs/COOKBOOK.md          # hold → place → plug → decide → smx\n"
-           "  docs/HOLD_FLASH.md        # user permission before plug-in\n"
-           "  docs/P2P_SMX.md           # SERVE/DIAL mesh\n"
-           "  docs/CORE_PROTECT.md      # Core protection\n"
-           "  programs/lib/             # INCLUDE snippets (agent_boot · hold_seed)\n"
-           "  programs/hello_cube.cubalc\n"
-           "  programs/proof/12_hold_flash_plug.cubalc\n"
-           "  programs/p2p/mesh_local.cubalc\n"
-           "  programs/protect/core_protect.cubalc\n"
-           "Commands: cubalc onboard · cubalc doctor · cubalc guide · cubalc formguide · cubalc topics · cubalc init\n"
-           "Agent first plate: cubalc onboard  (in-lang START|ONBOARD → cubalc.start.v1)\n");
-    return 0;
+    /* cookbook|start → cubalc_cmd_cookbook peel (F_main_carve) */
+    return cubalc_cmd_cookbook();
   }
   if (strcmp(cmd, "tips") == 0 || strcmp(cmd, "tip") == 0 ||
       strcmp(cmd, "howto") == 0 || strcmp(cmd, "next") == 0 ||
