@@ -15,6 +15,7 @@
 #include "cubalc_cmd_showcase.h"
 #include "cubalc_cmd_genesis.h"
 #include "cubalc_cmd_sync.h"
+#include "cubalc_cmd_bootpeers.h"
 #include "cubalc_run_util.h"
 #include "cubalc_cmd_forms.h"
 #include "cubalc_cmd_which.h"
@@ -77,148 +78,8 @@
 
 /* CubalC machine — CBLC · smx · cubechain · hold=1 */
 
-static void state_dir(char *buf, size_t n) {
-  const char *e = getenv("CUBALC_STATE");
-  if (e && e[0]) { snprintf(buf, n, "%s", e); return; }
-  snprintf(buf, n, "state");
-}
-
-static void ensure_dir(const char *d) { mkdir(d, 0755); }
-
-/* Count INCLUDE targets + DEFAULT knobs in a lib recipe (agent libs catalog). */
-static void lib_count_recipe_meta(const char *path, int *ndep_out, int *nknob_out) {
-  FILE *f;
-  char *src = NULL;
-  long sz = 0;
-  size_t nr = 0;
-  const char *lp;
-  int ndep = 0, nknob = 0;
-  if (ndep_out) *ndep_out = 0;
-  if (nknob_out) *nknob_out = 0;
-  if (!path || !path[0]) return;
-  f = fopen(path, "rb");
-  if (!f) return;
-  fseek(f, 0, SEEK_END);
-  sz = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  if (sz < 0) sz = 0;
-  if (sz > 256 * 1024) sz = 256 * 1024;
-  src = malloc((size_t)sz + 1);
-  if (!src) { fclose(f); return; }
-  nr = fread(src, 1, (size_t)sz, f);
-  fclose(f);
-  src[nr] = 0;
-  lp = src;
-  while (*lp) {
-    char raw[512];
-    size_t ri = 0;
-    const char *p;
-    while (*lp && *lp != '\n' && ri + 1 < sizeof raw)
-      raw[ri++] = *lp++;
-    raw[ri] = 0;
-    if (*lp == '\n') lp++;
-    p = raw;
-    while (*p == ' ' || *p == '\t') p++;
-    if (*p == '#' || !*p) continue;
-    if (p[0] == 'I' && p[1] == 'N' && p[2] == 'C' && p[3] == 'L' &&
-        p[4] == 'U' && p[5] == 'D' && p[6] == 'E' &&
-        (p[7] == ' ' || p[7] == '\t' || p[7] == '"' || p[7] == '\'')) {
-      p += 7;
-      while (*p == ' ' || *p == '\t') p++;
-      for (;;) {
-        if (p[0] == 'O' && p[1] == 'N' && p[2] == 'C' && p[3] == 'E' &&
-            (p[4] == ' ' || p[4] == '\t' || !p[4])) {
-          p += 4; while (*p == ' ' || *p == '\t') p++; continue;
-        }
-        if (p[0] == 'S' && p[1] == 'O' && p[2] == 'F' && p[3] == 'T' &&
-            (p[4] == ' ' || p[4] == '\t' || !p[4])) {
-          p += 4; while (*p == ' ' || *p == '\t') p++; continue;
-        }
-        if (p[0] == 'O' && p[1] == 'R' &&
-            (p[2] == ' ' || p[2] == '\t' || !p[2])) {
-          p += 2; while (*p == ' ' || *p == '\t') p++; continue;
-        }
-        break;
-      }
-      if (*p && *p != '#' && *p != '\r')
-        ndep++;
-    } else if (p[0] == 'D' && p[1] == 'E' && p[2] == 'F' && p[3] == 'A' &&
-               p[4] == 'U' && p[5] == 'L' && p[6] == 'T' &&
-               (p[7] == ' ' || p[7] == '\t')) {
-      nknob++;
-    }
-  }
-  free(src);
-  if (ndep_out) *ndep_out = ndep;
-  if (nknob_out) *nknob_out = nknob;
-}
-
-/* host:port or bare port → host buffer + port (for smx-bus TCP). */
-
-static void paths(char *viz, char *chain, char *init, char *dir, size_t n) {
-  state_dir(dir, n);
-  ensure_dir(dir);
-  snprintf(viz, n, "%s/cubalc_viz_frame.json", dir);
-  snprintf(chain, n, "%s/cubalc_chain.json", dir);
-  snprintf(init, n, "%s/cubalc_initial_matrix.json", dir);
-}
-
-static void publish(const cubalc_chain *ch) {
-  char viz[512], chainp[512], initp[512], dir[512];
-  paths(viz, chainp, initp, dir, sizeof viz);
-  /* Cube Law: one publish path → viz JSON + lattice + cells.bin united */
-  cubalc_chain_publish_united(ch);
-  cubalc_chain_write_json(ch, chainp);
-}
-
-static void store_chain(const cubalc_chain *ch, uint16_t flags) {
-  cubalc_cchn cc;
-  char dir[512];
-  state_dir(dir, sizeof dir);
-  if (cubalc_cchn_open(&cc, dir) != 0) return;
-  cubalc_cchn_append_chain(&cc, ch, flags);
-  cubalc_cchn_close(&cc);
-}
-
-static int load_genesis_bits(cubalc_matrix *gen) {
-  char viz[512], chainp[512], initp[512], dir[512], bits[CUBALC_ATOM_BITS + 1];
-  paths(viz, chainp, initp, dir, sizeof viz);
-  bits[0] = 0;
-  FILE *f = fopen(initp, "r");
-  if (f) {
-    char buf[4096];
-    size_t nr = fread(buf, 1, sizeof buf - 1, f);
-    buf[nr] = 0;
-    fclose(f);
-    char *b = strstr(buf, "\"bits\":\"");
-    if (b) {
-      b += 8;
-      int i = 0;
-      while (*b && *b != '"' && i < CUBALC_ATOM_BITS) bits[i++] = *b++;
-      bits[i] = 0;
-    }
-  }
-  if (bits[0]) {
-    cubalc_matrix_from_ascii(gen, bits, (int)strlen(bits));
-    return 0;
-  }
-  return -1;
-}
-
-
-
-/* Sync with peer hive mind: fold plate + run hive join program in-memory */
-
-
-
-
-
-/* SMX2 binary bus CLI — TCP/AF_UNIX, no HTTP (P2P wire). */
-
-
-
-
-
+/* state_dir/paths/publish/store_chain/load_genesis → cubalc_cmd_genesis (already peeled)
+ * lib_count_recipe_meta → cubalc_cmd_contracts (already peeled) */
 
 int main(int argc, char **argv) {
   const char *cmd = argc > 1 ? argv[1] : "genesis";
@@ -271,32 +132,8 @@ int main(int argc, char **argv) {
   if (strcmp(cmd, "sync") == 0 || strcmp(cmd, "hive") == 0)
     return cubalc_cmd_sync(argc > 2 ? argv[2] : NULL);
   if (strcmp(cmd, "boot") == 0 || strcmp(cmd, "os") == 0) {
-    /* CubeOS way in CubalC — braincube core. OS is path only. */
-    const char *prog = "programs/cubeos/boot.cubalc";
-    if (strcmp(cmd, "os") == 0 && argc > 2) {
-      if (strcmp(argv[2], "tick") == 0)
-        prog = "programs/cubeos/tick.cubalc";
-      else if (strcmp(argv[2], "boot") == 0)
-        prog = "programs/cubeos/boot.cubalc";
-      else if (argv[2][0] == '/' || strstr(argv[2], ".cubalc"))
-        prog = argv[2];
-      else {
-        static char pbuf[256];
-        snprintf(pbuf, sizeof pbuf, "programs/cubeos/%s.cubalc", argv[2]);
-        prog = pbuf;
-      }
-    } else if (strcmp(cmd, "boot") == 0 && argc > 2)
-      prog = argv[2];
-    cubalc_run_result rr;
-    int rc = cubalc_run_file(prog, &rr, stdout);
-    printf("{\"ok\":%s,\"cmd\":\"%s\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
-           "\"language\":\"%s\",\"version\":\"%s\",\"core\":\"c3\","
-           "\"last\":\"%s\",\"err\":\"%s\"}\n",
-           rr.ok ? "true" : "false", cmd, prog, rr.stmts, rr.asserts_ok,
-           rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-           CUBALC_LANG_VERSION, rr.last_print, rr.err);
-    return rc;
+    /* boot|os → cubalc_cmd_bootpeers peel (F_main_carve) */
+    return cubalc_cmd_boot(argc, argv);
   }
   if (strcmp(cmd, "translate") == 0 || strcmp(cmd, "from") == 0 ||
       strcmp(cmd, "decide") == 0) {
@@ -314,20 +151,8 @@ int main(int argc, char **argv) {
     return cubalc_cmd_run(argc, argv);
   }
   if (strcmp(cmd, "peers") == 0 || strcmp(cmd, "oversee") == 0) {
-    /* Generic peer fold — paths/digits from env, not device layouts in the language */
-    const char *prog = "programs/peer_fold.cubalc";
-    if (argc > 2 && (argv[2][0] == '/' || strstr(argv[2], ".cubalc")))
-      prog = argv[2];
-    cubalc_run_result rr;
-    int rc = cubalc_run_file(prog, &rr, stdout);
-    printf("{\"ok\":%s,\"cmd\":\"peers\",\"file\":\"%s\",\"stmts\":%d,"
-           "\"asserts_ok\":%d,\"asserts_fail\":%d,\"n\":%d,\"unity\":%.3f,"
-           "\"language\":\"%s\",\"version\":\"%s\",\"role\":\"peer_fold\","
-           "\"last\":\"%s\",\"err\":\"%s\"}\n",
-           rr.ok ? "true" : "false", prog, rr.stmts, rr.asserts_ok,
-           rr.asserts_fail, rr.n_cubes, rr.unity, CUBALC_LANG_NAME,
-           CUBALC_LANG_VERSION, rr.last_print, rr.err);
-    return rc;
+    /* peers|oversee → cubalc_cmd_bootpeers peel (F_main_carve) */
+    return cubalc_cmd_peers(argc, argv);
   }
   if (strcmp(cmd, "showcase") == 0 || strcmp(cmd, "demo") == 0 ||
       strcmp(cmd, "symphony") == 0) {
