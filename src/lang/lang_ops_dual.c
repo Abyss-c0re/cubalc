@@ -1,21 +1,15 @@
 /* CubalC lang — lang_ops_dual.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
 #include "lang/cubalc_lang_ops_dual_early.h"
-#include "lang/cubalc_lang_ops_dual_fieldrot.h"
 #include "lang/cubalc_lang_ops_dual_mid.h"
 #include "lang/cubalc_lang_ops_dual_bit.h"
 #include "lang/cubalc_lang_ops_dual_late.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
-  /* early pack·clip·field32·unary*·pair → dual_early meta-try (B_dual_peel) */
+  /* early pack·clip·field32·unary*·pair·fieldrot → dual_early meta-try (B_dual_peel) */
   {
     int er = cubalc_lang_ops_dual_try_early(vm, L);
     if (er != 0) return er;
-  }
-  /* dual pair/ALU/cmp/gate/math/bit plane → lang_ops_dual_clip.c (G_dual_margin) */
-  {
-    int fr = cubalc_lang_ops_dual_try_fieldrot(vm, L);
-    if (fr != 0) return fr;
   }
   /* mid imm shift·alu·sat·div·bit·range·cmp → dual_mid meta-try (B_dual_peel) */
   {
