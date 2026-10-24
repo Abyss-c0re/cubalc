@@ -22,35 +22,24 @@
 #include "cubalc_cmd_doctor.h"
 #include "cubalc_cmd_selftest.h"
 #include "cubalc_cmd_run.h"
-#include "cubalc_cmd_stdlib.h"
-#include "cubalc_cmd_vars.h"
 #include "cubalc_cmd_formrel.h"
-#include "cubalc_cmd_contracts.h"
 #include "cubalc_cmd_cliinfo.h"
 #include "cubalc_cmd_argmap.h"
 #include "cubalc_cmd_endarg.h"
 #include "cubalc_cmd_findarg.h"
-#include "cubalc_cmd_envform.h"
 #include "cubalc_cmd_pathver.h"
 #include "cubalc_cmd_help.h"
-#include "cubalc_cmd_flaggate.h"
 #include "cubalc_cmd_translate.h"
 #include "cubalc_cmd_onboard.h"
 #include "cubalc_cmd_cookbook.h"
 #include "cubalc_cmd_compile.h"
-#include "cubalc_cmd_libmatch.h"
-#include "cubalc_cmd_recipe.h"
-#include "cubalc_cmd_checkdeps.h"
-#include "cubalc_cmd_freshlibs.h"
-#include "cubalc_cmd_libage.h"
-#include "cubalc_cmd_examples.h"
 #include "cubalc_cmd_topic.h"
 #include "cubalc_cmd_runsnip.h"
 #include "cubalc_cmd_formsfor.h"
 #include "cubalc_cmd_discover_dispatch.h"
+#include "cubalc_cmd_libgate_dispatch.h"
 #include "cubalc_cmd_snip.h"
 #include "cubalc_cmd_tips.h"
-#include "cubalc_cmd_cat.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -255,104 +244,10 @@ int main(int argc, char **argv) {
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
     return cubalc_cmd_init(argc, argv);
   }
-  if (strcmp(cmd, "libs") == 0 || strcmp(cmd, "lib") == 0 ||
-      strcmp(cmd, "stdlib") == 0) {
-    /* libs/lib/stdlib → cubalc_cmd_stdlib peel (F_main_carve) */
-    return cubalc_cmd_stdlib(argc, argv);
-  }
-  
-  if (strcmp(cmd, "guards") == 0 || strcmp(cmd, "guard") == 0 ||
-      strcmp(cmd, "contracts") == 0 || strcmp(cmd, "contract") == 0) {
-    /* contracts → cubalc_cmd_contracts peel (F_main_carve) */
-    return cubalc_cmd_contracts(argc, argv);
-  }
-  if (strcmp(cmd, "env") == 0 || strcmp(cmd, "environ") == 0 ||
-      strcmp(cmd, "vars") == 0 || strcmp(cmd, "env-list") == 0) {
-    /* env/vars/env-list → cubalc_cmd_vars peel (F_main_carve) */
-    return cubalc_cmd_vars(argc, argv);
-  }
-  if (strcmp(cmd, "examples") == 0 || strcmp(cmd, "example") == 0 ||
-      strcmp(cmd, "starters") == 0 || strcmp(cmd, "recipes") == 0)
-    return cubalc_cmd_examples(argc, argv);
-  if (strcmp(cmd, "cat") == 0 || strcmp(cmd, "type") == 0 ||
-      strcmp(cmd, "read-lib") == 0 || strcmp(cmd, "source") == 0) {
-    /* cat/type/source → cubalc_cmd_cat peel (F_main_carve) */
-    return cubalc_cmd_cat(argc, argv);
-  }
-  if (strcmp(cmd, "recipe") == 0 || strcmp(cmd, "card") == 0 ||
-      strcmp(cmd, "libcard") == 0 || strcmp(cmd, "lib-card") == 0 ||
-      strcmp(cmd, "describe-lib") == 0) {
-    /* recipe/card → cubalc_cmd_recipe peel (F_main_carve) */
-    return cubalc_cmd_recipe(argc, argv);
-  }
-  if (strcmp(cmd, "checkdeps") == 0 || strcmp(cmd, "deps") == 0 ||
-      strcmp(cmd, "hasdeps") == 0 || strcmp(cmd, "needdeps") == 0 ||
-      strcmp(cmd, "verifydeps") == 0 || strcmp(cmd, "libdeps-check") == 0) {
-    /* checkdeps/hasdeps/needdeps → cubalc_cmd_checkdeps peel (F_main_carve) */
-    return cubalc_cmd_checkdeps(argc, argv);
-  }
-  if (strcmp(cmd, "picklib") == 0 || strcmp(cmd, "firstlib") == 0 ||
-      strcmp(cmd, "countmatchlibs") == 0 || strcmp(cmd, "countlibs") == 0 ||
-      strcmp(cmd, "hasmatchlibs") == 0 || strcmp(cmd, "needmatchlibs") == 0 ||
-      strcmp(cmd, "lastlib") == 0 || strcmp(cmd, "nthlib") == 0 ||
-      strcmp(cmd, "newestlib") == 0 || strcmp(cmd, "latestlib") == 0 ||
-      strcmp(cmd, "oldestlib") == 0 || strcmp(cmd, "earliestlib") == 0 ||
-      strcmp(cmd, "sortlibs") == 0 || strcmp(cmd, "libsort") == 0 ||
-      strcmp(cmd, "sortlib") == 0 || strcmp(cmd, "libsbymtime") == 0 ||
-      strcmp(cmd, "libpick") == 0 || strcmp(cmd, "libcount") == 0) {
-    /* picklib/sortlibs/match → cubalc_cmd_libmatch peel (F_main_carve) */
-    return cubalc_cmd_libmatch(argc, argv);
-  }
-  if (strcmp(cmd, "freshlibs") == 0 ||
-      strcmp(cmd, "recentlibs") == 0 ||
-      strcmp(cmd, "stalelibs") == 0 ||
-      strcmp(cmd, "olderlibs") == 0 ||
-      strcmp(cmd, "keepfreshlibs") == 0 ||
-      strcmp(cmd, "keepstalelibs") == 0) {
-    /* freshlibs/stalelibs → cubalc_cmd_freshlibs peel (F_main_carve) */
-    return cubalc_cmd_freshlibs(argc, argv);
-  }
-  if (strcmp(cmd, "libage") == 0 ||
-      strcmp(cmd, "ageoflib") == 0 ||
-      strcmp(cmd, "hasfresh") == 0 ||
-      strcmp(cmd, "isfresh") == 0 ||
-      strcmp(cmd, "needfresh") == 0 ||
-      strcmp(cmd, "requirefresh") == 0) {
-    /* libage/hasfresh/needfresh → cubalc_cmd_libage peel (F_main_carve) */
-    return cubalc_cmd_libage(argc, argv);
-  }
-  if (strcmp(cmd, "hasflagall") == 0 || strcmp(cmd, "hasallflags") == 0 ||
-      strcmp(cmd, "needflags") == 0 || strcmp(cmd, "requireflags") == 0 ||
-      strcmp(cmd, "mustflags") == 0 ||
-      strcmp(cmd, "hasflagany") == 0 || strcmp(cmd, "hasanyflags") == 0 ||
-      strcmp(cmd, "needflagany") == 0 || strcmp(cmd, "requireflagany") == 0 ||
-      strcmp(cmd, "mustflagany") == 0 || strcmp(cmd, "needanyflags") == 0 ||
-      strcmp(cmd, "hasargall") == 0 || strcmp(cmd, "hasallargs") == 0 ||
-      strcmp(cmd, "needargs") == 0 || strcmp(cmd, "requireargs") == 0 ||
-      strcmp(cmd, "mustargs") == 0 ||
-      strcmp(cmd, "hasargany") == 0 || strcmp(cmd, "hasanyargs") == 0 ||
-      strcmp(cmd, "needargany") == 0 || strcmp(cmd, "requireargany") == 0 ||
-      strcmp(cmd, "mustargany") == 0 || strcmp(cmd, "needanyargs") == 0) {
-    /* hasflagall/needflags/hasargall/needargs → cubalc_cmd_flaggate peel (F_main_carve) */
-    return cubalc_cmd_flaggate(argc, argv);
-  }
-  if (strcmp(cmd, "hasenvall") == 0 || strcmp(cmd, "hasallenv") == 0 ||
-      strcmp(cmd, "needenvs") == 0 || strcmp(cmd, "requireenvs") == 0 ||
-      strcmp(cmd, "mustenvs") == 0 || strcmp(cmd, "needenvall") == 0 ||
-      strcmp(cmd, "requireenvall") == 0 ||
-      strcmp(cmd, "hasenvany") == 0 || strcmp(cmd, "hasanyenv") == 0 ||
-      strcmp(cmd, "needenvany") == 0 || strcmp(cmd, "requireenvany") == 0 ||
-      strcmp(cmd, "mustenvany") == 0 || strcmp(cmd, "needanyenv") == 0 ||
-      strcmp(cmd, "hasform") == 0 || strcmp(cmd, "formexists") == 0 ||
-      strcmp(cmd, "needform") == 0 || strcmp(cmd, "requireform") == 0 ||
-      strcmp(cmd, "knownform") == 0 ||
-      strcmp(cmd, "hasforms") == 0 || strcmp(cmd, "needforms") == 0 ||
-      strcmp(cmd, "requireforms") == 0 || strcmp(cmd, "allforms") == 0 ||
-      strcmp(cmd, "hasformany") == 0 || strcmp(cmd, "hasanyforms") == 0 ||
-      strcmp(cmd, "needformany") == 0 || strcmp(cmd, "requireformany") == 0 ||
-      strcmp(cmd, "mustformany") == 0 || strcmp(cmd, "needanyforms") == 0) {
-    /* hasenvall/hasform gates → cubalc_cmd_envform peel (F_main_carve) */
-    return cubalc_cmd_envform(argc, argv);
+  /* libs·recipe·flag·env → cubalc_cmd_try_libgate_dispatch (F_main_carve) */
+  {
+    int lrc = cubalc_cmd_try_libgate_dispatch(argc, argv);
+    if (lrc >= 0) return lrc;
   }
   if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
       strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
