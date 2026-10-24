@@ -113,7 +113,7 @@ LANG_SRC = \
 	src/lang/lang_ops_core_plate_nest.c \
 	src/lang/lang_ops_core_print.c \
 	src/lang/lang_ops_core_sys.c \
-	src/lang/lang_ops_dual.c \
+	src/lang/lang_ops_dual.c src/lang/lang_ops_dual_early.c \
 	src/lang/lang_ops_dual_pack.c \
 	src/lang/lang_ops_dual_clip.c \
 	src/lang/lang_ops_dual_field32.c \

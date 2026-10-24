@@ -1,13 +1,6 @@
 /* CubalC lang — lang_ops_dual.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
-#include "lang/cubalc_lang_ops_dual_pack.h"
-#include "lang/cubalc_lang_ops_dual_clip.h"
-#include "lang/cubalc_lang_ops_dual_field32.h"
-#include "lang/cubalc_lang_ops_dual_unary32.h"
-#include "lang/cubalc_lang_ops_dual_unary16.h"
-#include "lang/cubalc_lang_ops_dual_unary8.h"
-#include "lang/cubalc_lang_ops_dual_unary4.h"
-#include "lang/cubalc_lang_ops_dual_pair.h"
+#include "lang/cubalc_lang_ops_dual_early.h"
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
 #include "lang/cubalc_lang_ops_dual_immshift.h"
 #include "lang/cubalc_lang_ops_dual_imm_alu.h"
@@ -26,44 +19,10 @@
 #include "lang/cubalc_lang_ops_dual_imm_n.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
-  /* pack/unpack peel (DLO4…DUNPACK32) */
+  /* early pack·clip·field32·unary*·pair → dual_early meta-try (B_dual_peel) */
   {
-    int pr = cubalc_lang_ops_dual_try_pack(vm, L);
-    if (pr != 0) return pr;
-  }
-  /* clip/sext/rotate peel (DCLIP32…DROR32) */
-  {
-    int cr = cubalc_lang_ops_dual_try_clip(vm, L);
-    if (cr != 0) return cr;
-  }
-  /* imm-32 field peel (DADD32N…D0GE32N) */
-  {
-    int f32 = cubalc_lang_ops_dual_try_field32(vm, L);
-    if (f32 != 0) return f32;
-  }
-  /* imm-32 unary/shift/metrics peel (DNOT32N…DPARITY32N) */
-  {
-    int u32 = cubalc_lang_ops_dual_try_unary32(vm, L);
-    if (u32 != 0) return u32;
-  }
-  /* imm-16 unary/shift/metrics peel (DABS16N…DNEG16N) */
-  {
-    int u16 = cubalc_lang_ops_dual_try_unary16(vm, L);
-    if (u16 != 0) return u16;
-  }
-  /* imm-8 unary/shift/metrics peel (DNOT8N…DZEXT8N) */
-  {
-    int u8 = cubalc_lang_ops_dual_try_unary8(vm, L);
-    if (u8 != 0) return u8;
-  }
-  /* imm-4 unary/shift/metrics peel (DNOT4N…DZEXT4N) */
-  {
-    int u4 = cubalc_lang_ops_dual_try_unary4(vm, L);
-    if (u4 != 0) return u4;
-  }
-  {
-    int pa = cubalc_lang_ops_dual_try_pair(vm, L);
-    if (pa != 0) return pa;
+    int er = cubalc_lang_ops_dual_try_early(vm, L);
+    if (er != 0) return er;
   }
   /* dual pair/ALU/cmp/gate/math/bit plane → lang_ops_dual_clip.c (G_dual_margin; 82 ops catalogued) */
   {
