@@ -374,101 +374,11 @@ int cubalc_host_dirstack(cubalc_host_result *r) {
   return 0;
 }
 
-/* Usability: SYS RELPATH base path — portable relative plate paths without shell. */
-int cubalc_host_relpath(const char *base, const char *path, cubalc_host_result *r) {
-  cubalc_host_result ba, pa;
-  size_t bl, pl;
-  r_clear(r);
-  if (!base || !base[0] || !path || !path[0]) {
-    snprintf(r->err, sizeof r->err, "relpath: empty base or path");
-    return -1;
-  }
-  memset(&ba, 0, sizeof ba);
-  memset(&pa, 0, sizeof pa);
-  if (cubalc_host_abspath(base, &ba) != 0 || !ba.str[0]) {
-    snprintf(r->err, sizeof r->err, "relpath: bad base");
-    return -1;
-  }
-  if (cubalc_host_abspath(path, &pa) != 0 || !pa.str[0]) {
-    snprintf(r->err, sizeof r->err, "relpath: bad path");
-    return -1;
-  }
-  bl = strlen(ba.str);
-  pl = strlen(pa.str);
-  while (bl > 1 && ba.str[bl - 1] == '/') {
-    ba.str[bl - 1] = 0;
-    bl--;
-  }
-  while (pl > 1 && pa.str[pl - 1] == '/') {
-    pa.str[pl - 1] = 0;
-    pl--;
-  }
-  if (strcmp(ba.str, pa.str) == 0) {
-    snprintf(r->str, sizeof r->str, "%s", ".");
-    r->n = 1;
-    r->code = 1; /* under / same */
-    r->ok = 1;
-    return 0;
-  }
-  if (pl > bl && strncmp(pa.str, ba.str, bl) == 0 && pa.str[bl] == '/') {
-    snprintf(r->str, sizeof r->str, "%s", pa.str + bl + 1);
-    r->n = (long)strlen(r->str);
-    r->code = 1;
-    r->ok = 1;
-    return 0;
-  }
-  /* outside base — keep absolute */
-  snprintf(r->str, sizeof r->str, "%s", pa.str);
-  r->n = (long)strlen(r->str);
-  r->code = 0;
-  r->ok = 1;
-  return 0;
-}
+/* cubalc_host_relpath → cubalc_hostops_path.c (B_hostops_margin) */
 
-/* Usability: SYS KINDSTR path — human path kind without multi ISDIR/ISFILE/ISLINK glue. */
-int cubalc_host_kindstr(const char *path, cubalc_host_result *r) {
-  struct stat st;
-  r_clear(r);
-  if (!path || !path[0]) {
-    snprintf(r->err, sizeof r->err, "kindstr: empty path");
-    return -1;
-  }
-  if (lstat(path, &st) != 0) {
-    snprintf(r->str, sizeof r->str, "%s", "missing");
-    r->n = 0;
-    r->code = 0;
-    r->ok = 1; /* soft probe — not a hard fail */
-    return 0;
-  }
-  if (S_ISLNK(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "link");
-    r->n = 3;
-  } else if (S_ISREG(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "file");
-    r->n = 1;
-  } else if (S_ISDIR(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "dir");
-    r->n = 2;
-  } else if (S_ISFIFO(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "fifo");
-    r->n = 4;
-  } else if (S_ISSOCK(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "sock");
-    r->n = 5;
-  } else if (S_ISCHR(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "chr");
-    r->n = 6;
-  } else if (S_ISBLK(st.st_mode)) {
-    snprintf(r->str, sizeof r->str, "%s", "blk");
-    r->n = 7;
-  } else {
-    snprintf(r->str, sizeof r->str, "%s", "other");
-    r->n = 8;
-  }
-  r->code = (int)r->n;
-  r->ok = 1;
-  return 0;
-}
+
+/* cubalc_host_kindstr → cubalc_hostops_path.c (B_hostops_margin) */
+
 
 /* groups → cubalc_hostops_groupscopy.c (B_hostops_margin) */
 
@@ -488,65 +398,8 @@ int cubalc_host_kindstr(const char *path, cubalc_host_result *r) {
 /* Usability: SYS REALPATH|ABSPATH path — absolute path without shell.
  * Existing paths: realpath(3) (resolves . .. symlinks).
  * Missing/relative: cwd + "/" + path (no fatal). Empty path → cwd. */
-int cubalc_host_abspath(const char *path, cubalc_host_result *r) {
-  char cwd[512], joined[1024], resolved[4096];
-  const char *p = path ? path : "";
-  size_t n;
-  r_clear(r);
-  /* empty → cwd */
-  if (!p[0] || strcmp(p, ".") == 0) {
-    if (!getcwd(r->str, sizeof r->str)) {
-      snprintf(r->err, sizeof r->err, "abspath: getcwd fail");
-      return -1;
-    }
-    r->n = (long)strlen(r->str);
-    r->ok = 1;
-    return 0;
-  }
-  /* try realpath when node exists (or intermediate for symlink) */
-  if (realpath(p, resolved) != NULL) {
-    snprintf(r->str, sizeof r->str, "%s", resolved);
-    r->n = (long)strlen(r->str);
-    r->ok = 1;
-    return 0;
-  }
-  /* absolute path that does not exist yet — return as-is (strip trailing /) */
-  if (p[0] == '/') {
-    snprintf(r->str, sizeof r->str, "%s", p);
-    n = strlen(r->str);
-    while (n > 1 && r->str[n - 1] == '/') {
-      r->str[n - 1] = 0;
-      n--;
-    }
-    r->n = (long)n;
-    r->ok = 1;
-    return 0;
-  }
-  /* relative missing — join with cwd */
-  if (!getcwd(cwd, sizeof cwd)) {
-    snprintf(r->err, sizeof r->err, "abspath: getcwd fail");
-    return -1;
-  }
-  n = strlen(cwd);
-  while (n > 1 && cwd[n - 1] == '/') {
-    cwd[n - 1] = 0;
-    n--;
-  }
-  /* strip leading ./ from relative */
-  if (p[0] == '.' && p[1] == '/')
-    p += 2;
-  snprintf(joined, sizeof joined, "%s/%s", cwd, p);
-  /* light normalize: remove trailing slash */
-  n = strlen(joined);
-  while (n > 1 && joined[n - 1] == '/') {
-    joined[n - 1] = 0;
-    n--;
-  }
-  snprintf(r->str, sizeof r->str, "%s", joined);
-  r->n = (long)strlen(r->str);
-  r->ok = 1;
-  return 0;
-}
+/* cubalc_host_abspath → cubalc_hostops_path.c (B_hostops_margin) */
+
 
 /* Usability: SYS TOUCH path — create empty plate marker or refresh mtime. */
 int cubalc_host_touch(const char *path, cubalc_host_result *r) {
@@ -707,125 +560,10 @@ int cubalc_host_mkdir(const char *path, cubalc_host_result *r) {
 
 /* ---- Grokium CubalC surface: join / json / chat ---- */
 
-int cubalc_host_join(const char *a, const char *b, cubalc_host_result *r) {
-  r_clear(r);
-  if (!a) a = "";
-  if (!b) b = "";
-  size_t la = strlen(a), lb = strlen(b);
-  int need_slash = 0;
-  if (la > 0 && lb > 0 && a[la - 1] != '/' && b[0] != '/') need_slash = 1;
-  if (la + lb + need_slash + 1 >= sizeof r->str) {
-    snprintf(r->err, sizeof r->err, "join: too long");
-    return -1;
-  }
-  if (need_slash)
-    snprintf(r->str, sizeof r->str, "%s/%s", a, b);
-  else
-    snprintf(r->str, sizeof r->str, "%s%s", a, b);
-  r->n = (long)strlen(r->str);
-  r->ok = 1;
-  return 0;
-}
+/* cubalc_host_join → cubalc_hostops_path.c (B_hostops_margin) */
 
-/* json_get·json_keys·json_set·json_del (+ esc/skip/fmt)
- * → cubalc_hostops_json_core.c (B_hostops_margin)
+
+
+/* ---- Grokium surface peels (already out of monolit) ----
+ * json_* → json_*.c · chat → hostops_chat.c
  */
-
-/* path_get·path_get_raw·path_has·path_obj (+ path_split/walk)
- * → cubalc_hostops_json_path.c (B_hostops_margin)
- */
-
-/* leaf_paths·leaf_kv·unflat_kv (+ leaf_walk/valtext helpers)
- * → cubalc_hostops_json_flat.c (B_hostops_margin)
- */
-
-/* leaf_diff·leaf_grep·leaf_filter_write·leaf_merge (+ pathbag/flatbag helpers)
- * → cubalc_hostops_json_leafdiff.c (B_hostops_margin)
- */
-
-/* cubalc_host_json_leaf_rename_pfx → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_set → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_inc → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_sum → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_avg → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_median → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_toppath → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_thresh → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_cap → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_scale → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_count → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_countn → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_match_bag → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_match_bagn → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_get → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_get_last → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_get_nth → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_getn → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_getn_last → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_getn_nth → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_type → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_freq → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_mode → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_path_by_val → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_paths_by_val → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_count_by_val → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_uniq → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_all_eq → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_first_uneq → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_leaf_uneq_paths → json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_pretty → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_path_set → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_path_del → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_merge → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_defaults → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_get_raw → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* Usability: SYS JSONPICK plate keys — keep only listed top-level keys.
- * keys_nl = newline bag (order preserved). Missing keys skipped. Raw values kept.
- * r->n = number of keys kept. Empty bag / no hits → {}. */
-/* cubalc_host_json_pick → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_rename → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_copy_key → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* cubalc_host_json_swap_keys → cubalc_hostops_json_delta peel (G_hostops_margin) */
-
-/* Usability: SYS JSONDROP plate keys — drop listed top-level keys (bulk JSONDEL).
- * keys_nl = newline bag. Missing soft-skipped. r->n = removed count. */
-/* cubalc_host_json_drop → cubalc_hostops_json_delta peel (G_hostops; monolit dup stripped) */
