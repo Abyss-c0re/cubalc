@@ -45,7 +45,7 @@ CORE_SRC = \
 LANG_SRC = \
 	src/lang/lang_core.c \
 	src/lang/lang_ops_bit.c \
-	src/lang/lang_ops_cell.c src/lang/lang_ops_cell_early.c \
+	src/lang/lang_ops_cell.c src/lang/lang_ops_cell_early.c src/lang/lang_ops_cell_mid.c \
 	src/lang/lang_ops_cell_nibble4.c \
 	src/lang/lang_ops_cell_width8.c \
 	src/lang/lang_ops_cell_bitwise_w.c \

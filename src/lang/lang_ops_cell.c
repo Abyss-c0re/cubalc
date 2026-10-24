@@ -1,9 +1,7 @@
 /* CubalC lang — lang_ops_cell.c (COP/flow · pure C · cube is SoT) */
 #include "lang/cubalc_lang_internal.h"
 #include "lang/cubalc_lang_ops_cell_early.h"
-#include "lang/cubalc_lang_ops_cell_energy.h"
-#include "lang/cubalc_lang_ops_cell_mat.h"
-#include "lang/cubalc_lang_ops_cell_energyflow.h"
+#include "lang/cubalc_lang_ops_cell_mid.h"
 #include "lang/cubalc_lang_ops_cell_inc.h"
 #include "lang/cubalc_lang_ops_cell_lib.h"
 
@@ -13,20 +11,10 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     int er = cubalc_lang_ops_cell_try_early(vm, L);
     if (er != 0) return er;
   }
-  /* energy peel (ENERGYGET·SET·ADD·SUB·XFER·CLAMP·SWAP·SHARE·fleet·SEFLOW) */
+  /* energy·mat·energyflow → cell_mid meta-try (B_cell_peel) */
   {
-    int en = cubalc_lang_ops_cell_try_energy(vm, L);
-    if (en != 0) return en;
-  }
-  /* mat* family matbits…matbrain+matlogic → cell_mat meta-try (B_cell_peel) */
-  {
-    int mat = cubalc_lang_ops_cell_try_mat(vm, L);
-    if (mat != 0) return mat;
-  }
-  /* energyflow peel (COMPARE·HARMONY·RESOLVE·ENERGYFLOW·FLOWI) */
-  {
-    int ef = cubalc_lang_ops_cell_try_energyflow(vm, L);
-    if (ef != 0) return ef;
+    int md = cubalc_lang_ops_cell_try_mid(vm, L);
+    if (md != 0) return md;
   }
   /* runtime·include_query·preload·include → cell_inc meta-try (B_cell_peel) */
   {
