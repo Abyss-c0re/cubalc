@@ -26,7 +26,6 @@
 #include "cubalc_cmd_vars.h"
 #include "cubalc_cmd_formrel.h"
 #include "cubalc_cmd_contracts.h"
-#include "cubalc_cmd_whyguide.h"
 #include "cubalc_cmd_cliinfo.h"
 #include "cubalc_cmd_argmap.h"
 #include "cubalc_cmd_endarg.h"
@@ -45,17 +44,12 @@
 #include "cubalc_cmd_freshlibs.h"
 #include "cubalc_cmd_libage.h"
 #include "cubalc_cmd_examples.h"
-#include "cubalc_cmd_guide.h"
 #include "cubalc_cmd_topic.h"
 #include "cubalc_cmd_runsnip.h"
 #include "cubalc_cmd_formsfor.h"
+#include "cubalc_cmd_discover_dispatch.h"
 #include "cubalc_cmd_snip.h"
-#include "cubalc_cmd_open.h"
-#include "cubalc_cmd_matchtopics.h"
 #include "cubalc_cmd_tips.h"
-#include "cubalc_cmd_topichint.h"
-#include "cubalc_cmd_formhints.h"
-#include "cubalc_cmd_errrun.h"
 #include "cubalc_cmd_cat.h"
 #include <stdio.h>
 #include <string.h>
@@ -252,92 +246,10 @@ int main(int argc, char **argv) {
     /* runsnip·sniprun → cubalc_cmd_runsnip peel (F_main_carve) */
     return cubalc_cmd_runsnip(argc, argv);
   }
-  if (strcmp(cmd, "discover") == 0 || strcmp(cmd, "explore") == 0 ||
-      strcmp(cmd, "discovertopics") == 0 || strcmp(cmd, "scout") == 0 ||
-      strcmp(cmd, "opendiscover") == 0) {
-    /* discover·explore → cubalc_cmd_formsfor peel (F_main_carve) */
-    return cubalc_cmd_formsfor(argc, argv);
-  }
-  if (strcmp(cmd, "open") == 0 || strcmp(cmd, "openplay") == 0 ||
-      strcmp(cmd, "openguide") == 0 || strcmp(cmd, "playopen") == 0 ||
-      strcmp(cmd, "discoverguide") == 0) {
-    /* open·openplay → cubalc_cmd_open peel (F_main_carve) */
-    return cubalc_cmd_open(argc, argv);
-  }
-  if (strcmp(cmd, "topics") == 0 || strcmp(cmd, "listtopics") == 0 ||
-      strcmp(cmd, "topiclist") == 0 || strcmp(cmd, "discovery-topics") == 0 ||
-      strcmp(cmd, "hastopic") == 0 || strcmp(cmd, "needtopic") == 0) {
-    /* topics·listtopics → cubalc_cmd_open peel (F_main_carve) */
-    return cubalc_cmd_open(argc, argv);
-  }
-  if (strcmp(cmd, "matchtopics") == 0 || strcmp(cmd, "filtertopics") == 0 ||
-      strcmp(cmd, "topicmatch") == 0 || strcmp(cmd, "greptopics") == 0 ||
-      strcmp(cmd, "picktopic") == 0 || strcmp(cmd, "firsttopic") == 0 ||
-      strcmp(cmd, "topicpick") == 0) {
-    /* matchtopics·picktopic → cubalc_cmd_matchtopics peel (F_main_carve) */
-    return cubalc_cmd_matchtopics(argc, argv);
-  }
-  if (strcmp(cmd, "hasmatchtopics") == 0 || strcmp(cmd, "hastopicmatch") == 0 ||
-      strcmp(cmd, "needmatchtopics") == 0 || strcmp(cmd, "needtopicmatch") == 0 ||
-      strcmp(cmd, "countmatchtopics") == 0 || strcmp(cmd, "counttopics") == 0 ||
-      strcmp(cmd, "ntopicmatch") == 0) {
-    /* hasmatchtopics·counttopics → cubalc_cmd_matchtopics peel (F_main_carve) */
-    return cubalc_cmd_matchtopics(argc, argv);
-  }
-  if (strcmp(cmd, "nthtopic") == 0 || strcmp(cmd, "indextopic") == 0 ||
-      strcmp(cmd, "topicnth") == 0 || strcmp(cmd, "lasttopic") == 0 ||
-      strcmp(cmd, "endtopic") == 0 || strcmp(cmd, "topiclast") == 0) {
-    /* nthtopic·lasttopic → cubalc_cmd_tips peel (F_main_carve) */
-    return cubalc_cmd_tips(argc, argv);
-  }
-
-  if (strcmp(cmd, "topichint") == 0 || strcmp(cmd, "describetopic") == 0 ||
-      strcmp(cmd, "topicdoc") == 0 || strcmp(cmd, "topichelp") == 0 ||
-      strcmp(cmd, "hinttopic") == 0 || strcmp(cmd, "topic-hint") == 0) {
-    /* topichint·describetopic → cubalc_cmd_topichint peel (F_main_carve) */
-    return cubalc_cmd_topichint(argc, argv);
-  }
-  if (strcmp(cmd, "relatedtopic") == 0 || strcmp(cmd, "seetopics") == 0 ||
-      strcmp(cmd, "relatedtopics") == 0 || strcmp(cmd, "topicrel") == 0 ||
-      strcmp(cmd, "neartopics") == 0 || strcmp(cmd, "topic-neighbors") == 0) {
-    /* relatedtopic·seetopics → cubalc_cmd_topichint peel (F_main_carve) */
-    return cubalc_cmd_topichint(argc, argv);
-  }
-  if (strcmp(cmd, "formtopics") == 0 || strcmp(cmd, "topicsof") == 0 ||
-      strcmp(cmd, "topicsfor") == 0 || strcmp(cmd, "form-topics") == 0 ||
-      strcmp(cmd, "covertopics") == 0 || strcmp(cmd, "topics-of") == 0) {
-    /* formtopics·topicsof → cubalc_cmd_topichint peel (F_main_carve) */
-    return cubalc_cmd_topichint(argc, argv);
-  }
-  if (strcmp(cmd, "formguide") == 0 || strcmp(cmd, "guideform") == 0 ||
-      strcmp(cmd, "form-guide") == 0 || strcmp(cmd, "formcard") == 0 ||
-      strcmp(cmd, "playform") == 0 || strcmp(cmd, "formboard") == 0 ||
-      strcmp(cmd, "guide") == 0 || strcmp(cmd, "playguide") == 0 ||
-      strcmp(cmd, "topicguide") == 0 || strcmp(cmd, "agentguide") == 0 ||
-      strcmp(cmd, "fulltopic") == 0 || strcmp(cmd, "topicboard") == 0 ||
-      strcmp(cmd, "guidematch") == 0 || strcmp(cmd, "matchguide") == 0 ||
-      strcmp(cmd, "guidenth") == 0 || strcmp(cmd, "nthguide") == 0 ||
-      strcmp(cmd, "guidelastmatch") == 0 || strcmp(cmd, "lastmatchguide") == 0) {
-    /* formguide·guide → cubalc_cmd_guide peel (F_main_carve) */
-    return cubalc_cmd_guide(argc, argv);
-  }
-  if (strcmp(cmd, "errtips") == 0 || strcmp(cmd, "fixtips") == 0 ||
-      strcmp(cmd, "recovertips") == 0 || strcmp(cmd, "err-tips") == 0 ||
-      strcmp(cmd, "fixhints") == 0 || strcmp(cmd, "whytips") == 0) {
-    /* errtips/formhints → cubalc_cmd_formhints peel (F_main_carve) */
-    return cubalc_cmd_formhints(argc, argv);
-  }
-  if (strcmp(cmd, "errrun") == 0 || strcmp(cmd, "recoversnip") == 0 ||
-      strcmp(cmd, "fixrun") == 0 || strcmp(cmd, "err-run") == 0 ||
-      strcmp(cmd, "errsnip") == 0 || strcmp(cmd, "fixsnip") == 0) {
-    /* errrun·recoversnip → cubalc_cmd_errrun peel (F_main_carve) */
-    return cubalc_cmd_errrun(argc, argv);
-  }
-  if (strcmp(cmd, "errguide") == 0 || strcmp(cmd, "recoverguide") == 0 ||
-      strcmp(cmd, "fixguide") == 0 || strcmp(cmd, "err-guide") == 0 ||
-      strcmp(cmd, "whyguide") == 0 || strcmp(cmd, "errplayguide") == 0) {
-    /* whyguide → cubalc_cmd_whyguide peel (F_main_carve) */
-    return cubalc_cmd_whyguide(argc, argv);
+  /* discover·open·topics·matchtopics·topichint·guide·err* → cubalc_cmd_try_discover_dispatch (F_main_carve) */
+  {
+    int drc = cubalc_cmd_try_discover_dispatch(argc, argv);
+    if (drc >= 0) return drc;
   }
   if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
       strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
