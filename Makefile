@@ -37,7 +37,7 @@ CORE_SRC = \
 	src/cubalc_smx.c src/cubalc_cubechain.c src/cubalc_hw.c src/cubalc_eeg.c src/cubalc_sot.c \
 	src/cubalc_viz_matrix.c \
 	src/cubalc_translate.c src/cubalc_hostops.c src/cubalc_hostops_tree_mut.c src/cubalc_hostops_tree_query.c src/cubalc_hostops_tree_edit.c src/cubalc_hostops_tree_lines.c src/cubalc_hostops_tree_find.c src/cubalc_hostops_tree_linefind.c src/cubalc_hostops_chat.c src/cubalc_hostops_json_delta.c \
-	src/cubalc_hostops_json_leaf.c src/cubalc_hostops_json_leafdiff.c src/cubalc_hostops_json_path.c src/cubalc_hostops_json_flat.c src/cubalc_hostops_json_core.c src/cubalc_hostops_stat_time.c src/cubalc_hostops_env.c src/cubalc_hostops_json_agg.c \
+	src/cubalc_hostops_json_leaf.c src/cubalc_hostops_json_leafdiff.c src/cubalc_hostops_json_path.c src/cubalc_hostops_json_flat.c src/cubalc_hostops_json_core.c src/cubalc_hostops_stat_time.c src/cubalc_hostops_env.c src/cubalc_hostops_inode.c src/cubalc_hostops_json_agg.c \
 	src/cubalc_hostops_json_mut.c src/cubalc_hostops_json_query.c src/cubalc_async.c \
 	src/cubalc_isa.c src/cubalc_jit.c \
 	src/cubalc_quantum.c src/cubalc_dim5.c src/cubalc_relativity.c src/cubalc_chaos.c src/cubalc_science_loop.c
