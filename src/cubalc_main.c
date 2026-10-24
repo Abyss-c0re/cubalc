@@ -8,6 +8,7 @@
 #include "cubalc_cmd_discover_dispatch.h"
 #include "cubalc_cmd_libgate_dispatch.h"
 #include "cubalc_cmd_util_dispatch.h"
+#include "cubalc_cmd_run_alias.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,21 +20,8 @@
 
 int main(int argc, char **argv) {
   const char *cmd = argc > 1 ? argv[1] : "genesis";
-  /* Usability: cubalc -e CODE ≡ cubalc run -e CODE (no subcommand required).
-   * Also -I/--include/-L top-level → run so agents skip the subcommand. */
-  if (strcmp(cmd, "-e") == 0 || strcmp(cmd, "--expr") == 0 ||
-      strcmp(cmd, "--code") == 0 || strcmp(cmd, "-c") == 0 ||
-      strcmp(cmd, "-I") == 0 || strcmp(cmd, "--include") == 0 ||
-      strcmp(cmd, "--preload") == 0 ||
-      strncmp(cmd, "--include=", 10) == 0 ||
-      strncmp(cmd, "--preload=", 10) == 0 ||
-      strcmp(cmd, "-L") == 0 || strcmp(cmd, "--include-path") == 0 ||
-      strcmp(cmd, "--lib-path") == 0 ||
-      strncmp(cmd, "--include-path=", 15) == 0 ||
-      strncmp(cmd, "--lib-path=", 11) == 0 ||
-      strcmp(cmd, "-R") == 0 || strcmp(cmd, "--require-version") == 0 ||
-      strncmp(cmd, "--require-version=", 18) == 0)
-    cmd = "run";
+  /* -e/-I/-L/-R top-level → run (F_main_carve run_alias) */
+  cmd = cubalc_cmd_resolve_run_alias(cmd);
   /* genesis…evolve core-hive → cubalc_cmd_try_corehive_dispatch (F_main_carve) */
   {
     int crc = cubalc_cmd_try_corehive_dispatch(cmd, argc, argv);
