@@ -4,9 +4,7 @@
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
 #include "lang/cubalc_lang_ops_dual_mid.h"
 #include "lang/cubalc_lang_ops_dual_bit.h"
-#include "lang/cubalc_lang_ops_dual_imm_h.h"
-#include "lang/cubalc_lang_ops_dual_imm_b.h"
-#include "lang/cubalc_lang_ops_dual_imm_n.h"
+#include "lang/cubalc_lang_ops_dual_late.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* early pack·clip·field32·unary*·pair → dual_early meta-try (B_dual_peel) */
@@ -14,7 +12,7 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int er = cubalc_lang_ops_dual_try_early(vm, L);
     if (er != 0) return er;
   }
-  /* dual pair/ALU/cmp/gate/math/bit plane → lang_ops_dual_clip.c (G_dual_margin; 82 ops catalogued) */
+  /* dual pair/ALU/cmp/gate/math/bit plane → lang_ops_dual_clip.c (G_dual_margin) */
   {
     int fr = cubalc_lang_ops_dual_try_fieldrot(vm, L);
     if (fr != 0) return fr;
@@ -29,20 +27,10 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int bt = cubalc_lang_ops_dual_try_bit(vm, L);
     if (bt != 0) return bt;
   }
-  /* imm 16-bit h* family hbit…h0ord → dual_imm_h meta-try (B_dual_peel) */
+  /* imm_h·imm_b·imm_n width families → dual_late meta-try (B_dual_peel) */
   {
-    int ihh = cubalc_lang_ops_dual_try_imm_h(vm, L);
-    if (ihh != 0) return ihh;
-  }
-  /* imm 8-bit b* family barith…bbit → dual_imm_b meta-try (B_dual_peel) */
-  {
-    int ibb = cubalc_lang_ops_dual_try_imm_b(vm, L);
-    if (ibb != 0) return ibb;
-  }
-  /* imm 4-bit n* family narith…nbit → dual_imm_n meta-try (B_dual_peel) */
-  {
-    int inn = cubalc_lang_ops_dual_try_imm_n(vm, L);
-    if (inn != 0) return inn;
+    int lt = cubalc_lang_ops_dual_try_late(vm, L);
+    if (lt != 0) return lt;
   }
   return 0;
 }
