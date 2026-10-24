@@ -14,11 +14,7 @@
 #include "lang/cubalc_lang_ops_cell_runtime.h"
 #include "lang/cubalc_lang_ops_cell_include_query.h"
 #include "lang/cubalc_lang_ops_cell_include.h"
-#include "lang/cubalc_lang_ops_cell_libcat.h"
-#include "lang/cubalc_lang_ops_cell_libpick.h"
-#include "lang/cubalc_lang_ops_cell_libread.h"
-#include "lang/cubalc_lang_ops_cell_libmeta.h"
-#include "lang/cubalc_lang_ops_cell_libage.h"
+#include "lang/cubalc_lang_ops_cell_lib.h"
 #include "lang/cubalc_lang_ops_cell_preload.h"
 
 int cubalc_lang_ops_cell(VM *vm, Lex *L){
@@ -99,35 +95,10 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     int inc = cubalc_lang_ops_cell_try_include(vm, L);
     if (inc != 0) return inc;
   }
-  /* lib catalog LISTINCLUDES·LISTLIBS·MATCH* → lang_ops_cell_libcat.c (G_cell_margin) */
+  /* lib* family libcat·libpick·libage·libread·libmeta → cell_lib meta-try (B_cell_peel) */
   {
-    int lc = cubalc_lang_ops_cell_try_libcat(vm, L);
-    if (lc != 0) return lc;
-  }
-
-
-  /* lib pick PICKLIB·NTHLIB·NEWEST/OLDEST·SORTLIBS → lang_ops_cell_libpick.c (G_cell_libpick) */
-  {
-    int lp = cubalc_lang_ops_cell_try_libpick(vm, L);
-    if (lp != 0) return lp;
-  }
-
-  /* lib age FRESH/STALE·LIBAGE·HASFRESH·NEEDFRESH → lang_ops_cell_libage.c (G_cell_libage) */
-  {
-    int la = cubalc_lang_ops_cell_try_libage(vm, L);
-    if (la != 0) return la;
-  }
-
-  /* lib read CATLIB·GREPLIB·HEAD/TAILLIB → lang_ops_cell_libread.c (G_cell_libread) */
-  {
-    int lr = cubalc_lang_ops_cell_try_libread(vm, L);
-    if (lr != 0) return lr;
-  }
-
-  /* lib meta LIBDEPS·INFO·TREE·CHECK·DEFAULTS·RECIPE → lang_ops_cell_libmeta.c (G_cell_libmeta) */
-  {
-    int lm = cubalc_lang_ops_cell_try_libmeta(vm, L);
-    if (lm != 0) return lm;
+    int lib = cubalc_lang_ops_cell_try_lib(vm, L);
+    if (lib != 0) return lib;
   }
 
   return 0;
