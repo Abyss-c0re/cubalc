@@ -21,16 +21,7 @@
 #include "lang/cubalc_lang_ops_dual_datapath.h"
 #include "lang/cubalc_lang_ops_dual_imm_field.h"
 #include "lang/cubalc_lang_ops_dual_imm_wbit.h"
-#include "lang/cubalc_lang_ops_dual_imm_hbit.h"
-#include "lang/cubalc_lang_ops_dual_imm_harith.h"
-#include "lang/cubalc_lang_ops_dual_imm_hdiv.h"
-#include "lang/cubalc_lang_ops_dual_imm_hcmp.h"
-#include "lang/cubalc_lang_ops_dual_imm_hord.h"
-#include "lang/cubalc_lang_ops_dual_imm_hsord.h"
-#include "lang/cubalc_lang_ops_dual_imm_hsmm.h"
-#include "lang/cubalc_lang_ops_dual_imm_hsclamp.h"
-#include "lang/cubalc_lang_ops_dual_imm_hpred.h"
-#include "lang/cubalc_lang_ops_dual_imm_h0ord.h"
+#include "lang/cubalc_lang_ops_dual_imm_h.h"
 #include "lang/cubalc_lang_ops_dual_imm_b.h"
 #include "lang/cubalc_lang_ops_dual_imm_n.h"
 
@@ -127,45 +118,10 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int iw = cubalc_lang_ops_dual_try_imm_wbit(vm, L);
     if (iw != 0) return iw;
   }
+  /* imm 16-bit h* family hbit…h0ord → dual_imm_h meta-try (B_dual_peel) */
   {
-    int ih = cubalc_lang_ops_dual_try_imm_hbit(vm, L);
-    if (ih != 0) return ih;
-  }
-  {
-    int ihar = cubalc_lang_ops_dual_try_imm_harith(vm, L);
-    if (ihar != 0) return ihar;
-  }
-  {
-    int ihd = cubalc_lang_ops_dual_try_imm_hdiv(vm, L);
-    if (ihd != 0) return ihd;
-  }
-  {
-    int ihc = cubalc_lang_ops_dual_try_imm_hcmp(vm, L);
-    if (ihc != 0) return ihc;
-  }
-  {
-    int iho = cubalc_lang_ops_dual_try_imm_hord(vm, L);
-    if (iho != 0) return iho;
-  }
-  {
-    int ihs = cubalc_lang_ops_dual_try_imm_hsord(vm, L);
-    if (ihs != 0) return ihs;
-  }
-  {
-    int ihm = cubalc_lang_ops_dual_try_imm_hsmm(vm, L);
-    if (ihm != 0) return ihm;
-  }
-  {
-    int ihc2 = cubalc_lang_ops_dual_try_imm_hsclamp(vm, L);
-    if (ihc2 != 0) return ihc2;
-  }
-  {
-    int ihp = cubalc_lang_ops_dual_try_imm_hpred(vm, L);
-    if (ihp != 0) return ihp;
-  }
-  {
-    int ih0 = cubalc_lang_ops_dual_try_imm_h0ord(vm, L);
-    if (ih0 != 0) return ih0;
+    int ihh = cubalc_lang_ops_dual_try_imm_h(vm, L);
+    if (ihh != 0) return ihh;
   }
   /* imm 8-bit b* family barith…bbit → dual_imm_b meta-try (B_dual_peel) */
   {
