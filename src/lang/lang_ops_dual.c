@@ -31,6 +31,7 @@
 #include "lang/cubalc_lang_ops_dual_imm_hsclamp.h"
 #include "lang/cubalc_lang_ops_dual_imm_hpred.h"
 #include "lang/cubalc_lang_ops_dual_imm_h0ord.h"
+#include "lang/cubalc_lang_ops_dual_imm_barith.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* pack/unpack peel (DLO4…DUNPACK32) */
@@ -295,77 +296,12 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     if (ih0 != 0) return ih0;
   }
   /* D0LT16N·D0GT16N·D0LE16N·D0GE16N → dual_imm_h0ord peel */
-  /* digit-7 dual-stack imm 8-bit field arith: DADD8N · DSUB8N · DMUL8N
-   * (dual of SADD8N/SSUB8N/SMUL8N; wrap uint8 byte plane on top two cells after dual halfword ALU) */
-  if (kw(&L->cur,"DADD8N")||kw(&L->cur,"S2ADD8N")||kw(&L->cur,"STACK2ADD8N")||
-      kw(&L->cur,"PAIRADD8N")||kw(&L->cur,"DADDBIMM")||kw(&L->cur,"DINC8N")||
-      kw(&L->cur,"DADDBN")){
-    /* a b + field n → byte n of each = (byte + field) & 0xFF; n clamped 0..7 */
-    lex_next(L);
-    long field = parse_expr(vm,L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 7) n = 7;
-    unsigned long f = (unsigned long)field & 0xFFul;
-    unsigned long sh = (unsigned long)(n * 8);
-    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
-    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
-    unsigned long wa = (((ma >> sh) & 0xFFul) + f) & 0xFFul;
-    unsigned long wb = (((mb >> sh) & 0xFFul) + f) & 0xFFul;
-    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
-    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
+  /* imm 8-bit field arith DADD8N·DSUB8N·DMUL8N → dual_imm_barith (B_dual_peel) */
+  {
+    int iba = cubalc_lang_ops_dual_try_imm_barith(vm, L);
+    if (iba != 0) return iba;
   }
-  if (kw(&L->cur,"DSUB8N")||kw(&L->cur,"S2SUB8N")||kw(&L->cur,"STACK2SUB8N")||
-      kw(&L->cur,"PAIRSUB8N")||kw(&L->cur,"DSUBBIMM")||kw(&L->cur,"DDEC8N")||
-      kw(&L->cur,"DSUBBN")){
-    /* a b + field n → byte n of each = (byte - field) & 0xFF; n clamped 0..7 */
-    lex_next(L);
-    long field = parse_expr(vm,L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 7) n = 7;
-    unsigned long f = (unsigned long)field & 0xFFul;
-    unsigned long sh = (unsigned long)(n * 8);
-    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
-    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
-    unsigned long wa = (((ma >> sh) & 0xFFul) - f) & 0xFFul;
-    unsigned long wb = (((mb >> sh) & 0xFFul) - f) & 0xFFul;
-    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
-    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
-  if (kw(&L->cur,"DMUL8N")||kw(&L->cur,"S2MUL8N")||kw(&L->cur,"STACK2MUL8N")||
-      kw(&L->cur,"PAIRMUL8N")||kw(&L->cur,"DMULBIMM")||kw(&L->cur,"DTIMES8N")||
-      kw(&L->cur,"DMULBN")){
-    /* a b + field n → byte n of each = (byte * field) & 0xFF; n clamped 0..7 */
-    lex_next(L);
-    long field = parse_expr(vm,L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 7) n = 7;
-    unsigned long f = (unsigned long)field & 0xFFul;
-    unsigned long sh = (unsigned long)(n * 8);
-    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
-    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
-    unsigned long wa = (((ma >> sh) & 0xFFul) * f) & 0xFFul;
-    unsigned long wb = (((mb >> sh) & 0xFFul) * f) & 0xFFul;
-    long x = (long)((ma & ~(0xFFul << sh)) | (wa << sh));
-    long y = (long)((mb & ~(0xFFul << sh)) | (wb << sh));
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DADD8N·DSUB8N·DMUL8N → dual_imm_barith peel */
   /* digit-1 dual-stack imm 8-bit field div/mod/min: DDIV8N · DMOD8N · DMIN8N
    * (dual of SDIV8N/SMOD8N/SMIN8N; field 0 → div/mod 0 on each lane) */
   if (kw(&L->cur,"DDIV8N")||kw(&L->cur,"S2DIV8N")||kw(&L->cur,"STACK2DIV8N")||
