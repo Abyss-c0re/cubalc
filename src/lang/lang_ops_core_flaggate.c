@@ -1,6 +1,6 @@
 /* CubalC lang — lang_ops_core_flaggate.c (B_E restore)
  * HASFLAGALL/NEEDFLAGS · HASFLAGANY/NEEDFLAGANY · HASARGALL/NEEDARGS · HASARGANY/NEEDARGANY
- * HASENVALL/NEEDENVS (host-env twin · B_E_science restore)
+ * HASENVALL/NEEDENVS · HASENVANY/NEEDENVANY (host-env twins · B_E_science restore)
  * Restored from broken_unlinked. Supports F_main CLI flaggate peel. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_core_flaggate.h"
@@ -926,6 +926,213 @@ int cubalc_lang_ops_core_try_flaggate(VM *vm, Lex *L) {
     }
     if (vm->trace)
       fprintf(vm->trace, "# hasenvall n=%d have=%d miss=%d hard=%d\n",
+              nkey, nhave, nmiss, hard);
+    bump(vm);
+    return 1;
+  }
+
+  /* HASENVANY|NEEDENVANY name… — multi host-env any-of gate (HASENVALL twin).
+   * Soft: LAST_N 1 if any set · ENVHAVE hits · ENVMISS absences · HASENVANY_N.
+   * Hard NEEDENVANY fail-fast if none present (USAGE tip when set).
+   * B_E_science restore — help/discover listed; form was missing. */
+  if (kw(&L->cur,"HASENVANY") || kw(&L->cur,"HAS_ENV_ANY") ||
+      kw(&L->cur,"HASANYENV") || kw(&L->cur,"ANYENV_OK") ||
+      kw(&L->cur,"ENVANY?") || kw(&L->cur,"NEEDENVANY") ||
+      kw(&L->cur,"NEED_ENV_ANY") || kw(&L->cur,"REQUIREENVANY") ||
+      kw(&L->cur,"MUSTENVANY") || kw(&L->cur,"REQUIRE_ENV_ANY") ||
+      kw(&L->cur,"NEEDANYENV") || kw(&L->cur,"REQUIREANYENV")) {
+    int hard = kw(&L->cur,"NEEDENVANY") || kw(&L->cur,"NEED_ENV_ANY") ||
+               kw(&L->cur,"REQUIREENVANY") || kw(&L->cur,"MUSTENVANY") ||
+               kw(&L->cur,"REQUIRE_ENV_ANY") || kw(&L->cur,"NEEDANYENV") ||
+               kw(&L->cur,"REQUIREANYENV");
+    char keys[32][96];
+    char miss[1024], havebag[1024];
+    int nkey = 0, nmiss = 0, nhave = 0, i, aln = L->cur.line;
+    size_t mo = 0, ho = 0;
+    lex_next(L);
+    miss[0] = 0;
+    havebag[0] = 0;
+    while (nkey < 32) {
+      char key[96];
+      key[0] = 0;
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (L->cur.kind == TK_IDENT &&
+            (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+             kw(&L->cur,"REQUIRE") || kw(&L->cur,"END") ||
+             kw(&L->cur,"IF") || kw(&L->cur,"ELSE") || kw(&L->cur,"ELIF") ||
+             kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") || kw(&L->cur,"INCLUDE") ||
+             kw(&L->cur,"SYS") || kw(&L->cur,"HELP") || kw(&L->cur,"CLEAR_ERR") ||
+             kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"DEFAULT") ||
+             kw(&L->cur,"VERSION") || kw(&L->cur,"STATUS") || kw(&L->cur,"FOR") ||
+             kw(&L->cur,"WHILE") || kw(&L->cur,"LOOP") || kw(&L->cur,"EACH") ||
+             kw(&L->cur,"USAGE") || kw(&L->cur,"CUBE") || kw(&L->cur,"PLUG") ||
+             kw(&L->cur,"HOLD_FLASH") ||
+             kw(&L->cur,"HASENV") || kw(&L->cur,"HASENVALL") || kw(&L->cur,"NEEDENVS") ||
+             kw(&L->cur,"HASENVANY") || kw(&L->cur,"NEEDENVANY") ||
+             kw(&L->cur,"HASARG") || kw(&L->cur,"HASARGALL") || kw(&L->cur,"NEEDARGS") ||
+             kw(&L->cur,"HASARGANY") || kw(&L->cur,"NEEDARGANY") ||
+             kw(&L->cur,"HASFLAG") || kw(&L->cur,"HASFLAGALL") || kw(&L->cur,"NEEDFLAGS") ||
+             kw(&L->cur,"HASFORM") || kw(&L->cur,"HASFORMS")))
+          break;
+        if (L->cur.kind == TK_STR &&
+            (strchr(L->cur.text, '\n') || strchr(L->cur.text, ',') ||
+             strchr(L->cur.text, ' ') || strchr(L->cur.text, '|'))) {
+          const char *p = L->cur.text;
+          while (*p && nkey < 32) {
+            char tok[96];
+            size_t tl = 0;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                   *p == '|' || *p == ':')
+              p++;
+            if (!*p) break;
+            while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                   p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                   tl + 1 < sizeof tok) {
+              tok[tl] = p[tl];
+              tl++;
+            }
+            tok[tl] = 0;
+            p += tl;
+            if (!tok[0]) continue;
+            snprintf(keys[nkey], sizeof keys[0], "%s", tok);
+            nkey++;
+          }
+          lex_next(L);
+          continue;
+        }
+        {
+          Var *vv = (L->cur.kind == TK_IDENT) ? var_get(vm, L->cur.text, 0) : NULL;
+          if (vv && vv->is_str && vv->sval[0] &&
+              (strchr(vv->sval, '\n') || strchr(vv->sval, ',') ||
+               strchr(vv->sval, ' ') || strchr(vv->sval, '|'))) {
+            const char *p = vv->sval;
+            while (*p && nkey < 32) {
+              char tok[96];
+              size_t tl = 0;
+              while (*p == ' ' || *p == '\t' || *p == '\n' || *p == ',' ||
+                     *p == '|' || *p == ':')
+                p++;
+              if (!*p) break;
+              while (p[tl] && p[tl] != '\n' && p[tl] != ',' && p[tl] != ' ' &&
+                     p[tl] != '\t' && p[tl] != '|' && p[tl] != ':' &&
+                     tl + 1 < sizeof tok) {
+                tok[tl] = p[tl];
+                tl++;
+              }
+              tok[tl] = 0;
+              p += tl;
+              if (!tok[0]) continue;
+              snprintf(keys[nkey], sizeof keys[0], "%s", tok);
+              nkey++;
+            }
+            lex_next(L);
+            continue;
+          }
+          if (vv && vv->is_str && vv->sval[0])
+            snprintf(key, sizeof key, "%s", vv->sval);
+          else if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(key, sizeof key, "%s", vm->last_str);
+          else
+            snprintf(key, sizeof key, "%s", L->cur.text);
+        }
+        lex_next(L);
+      } else {
+        break;
+      }
+      if (!key[0]) continue;
+      snprintf(keys[nkey], sizeof keys[0], "%s", key);
+      nkey++;
+    }
+    if (nkey == 0) {
+      if (hard) {
+        fail_at(vm, L, "NEEDENVANY name… — NEEDENVANY A B · HASENVANY bag");
+        return -1;
+      }
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASENVANY_N", 0);
+      var_set_num(vm, "ENVMISS_N", 0);
+      var_set_num(vm, "NEEDENVANY_N", 0);
+      var_set_str(vm, "ENVMISS", "");
+      var_set_str(vm, "ENVHAVE", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASENVANY: need name… — HASENVANY A B");
+      var_set_str(vm, "ERR", "HASENVANY: need name… — HASENVANY A B");
+      bump(vm);
+      return 1;
+    }
+    for (i = 0; i < nkey; i++) {
+      const char *val = getenv(keys[i]);
+      int hit = (val && val[0]) ? 1 : 0;
+      if (hit) {
+        nhave++;
+        if (ho && ho + 1 < sizeof havebag) havebag[ho++] = '\n';
+        {
+          size_t ln = strlen(keys[i]);
+          if (ho + ln < sizeof havebag) {
+            memcpy(havebag + ho, keys[i], ln);
+            ho += ln;
+            havebag[ho] = 0;
+          }
+        }
+        continue;
+      }
+      nmiss++;
+      if (mo && mo + 1 < sizeof miss) miss[mo++] = '\n';
+      {
+        size_t ln = strlen(keys[i]);
+        if (mo + ln < sizeof miss) {
+          memcpy(miss + mo, keys[i], ln);
+          mo += ln;
+          miss[mo] = 0;
+        }
+      }
+    }
+    var_set_str(vm, "ENVMISS", miss);
+    var_set_str(vm, "ENVHAVE", havebag);
+    var_set_num(vm, "ENVMISS_N", nmiss);
+    var_set_num(vm, "HASENVANY_N", nhave);
+    var_set_num(vm, "NEEDENVANY_N", nkey);
+    var_set_num(vm, "ENVS_ANY_N", nkey);
+    if (nhave > 0) {
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_str(vm, "LAST", "1");
+      snprintf(vm->last_str, sizeof vm->last_str, "1");
+      var_set_num(vm, "OK", 1);
+    } else if (hard) {
+      char em[280];
+      Var *vu = var_get(vm, "USAGE", 0);
+      const char *use = (vu && vu->is_str && vu->sval[0]) ? vu->sval : "";
+      if (use[0])
+        snprintf(em, sizeof em,
+                 "NEEDENVANY miss line %d: need one of %d envs — usage: %s",
+                 aln, nkey, use);
+      else
+        snprintf(em, sizeof em,
+                 "NEEDENVANY miss line %d: need one of [%s] — SYS ENV SET · HASENVANY · USAGE",
+                 aln, miss[0] ? miss : "?");
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      fail_at(vm, L, em);
+      return -1;
+    } else {
+      char em[240];
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "0");
+      snprintf(em, sizeof em,
+               "HASENVANY miss (0/%d): need one of %s — NEEDENVANY · USAGE",
+               nkey, miss[0] ? miss : "?");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", em);
+      var_set_str(vm, "ERR", em);
+    }
+    if (vm->trace)
+      fprintf(vm->trace, "# hasenvany n=%d have=%d miss=%d hard=%d\n",
               nkey, nhave, nmiss, hard);
     bump(vm);
     return 1;
