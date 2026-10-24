@@ -41,15 +41,7 @@
 #include "lang/cubalc_lang_ops_dual_imm_bpred.h"
 #include "lang/cubalc_lang_ops_dual_imm_b0ord.h"
 #include "lang/cubalc_lang_ops_dual_imm_bbit.h"
-#include "lang/cubalc_lang_ops_dual_imm_narith.h"
-#include "lang/cubalc_lang_ops_dual_imm_ndiv.h"
-#include "lang/cubalc_lang_ops_dual_imm_ncmp.h"
-#include "lang/cubalc_lang_ops_dual_imm_nord.h"
-#include "lang/cubalc_lang_ops_dual_imm_nsord.h"
-#include "lang/cubalc_lang_ops_dual_imm_nsmm.h"
-#include "lang/cubalc_lang_ops_dual_imm_nsclamp.h"
-#include "lang/cubalc_lang_ops_dual_imm_npred.h"
-#include "lang/cubalc_lang_ops_dual_imm_nbit.h"
+#include "lang/cubalc_lang_ops_dual_imm_n.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
   /* pack/unpack peel (DLO4…DUNPACK32) */
@@ -224,43 +216,10 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int ibb = cubalc_lang_ops_dual_try_imm_bbit(vm, L);
     if (ibb != 0) return ibb;
   }
+  /* imm 4-bit n* family narith…nbit → dual_imm_n meta-try (B_dual_peel) */
   {
-    int ina = cubalc_lang_ops_dual_try_imm_narith(vm, L);
-    if (ina != 0) return ina;
-  }
-  {
-    int ind = cubalc_lang_ops_dual_try_imm_ndiv(vm, L);
-    if (ind != 0) return ind;
-  }
-  {
-    int inc = cubalc_lang_ops_dual_try_imm_ncmp(vm, L);
-    if (inc != 0) return inc;
-  }
-  {
-    int ino = cubalc_lang_ops_dual_try_imm_nord(vm, L);
-    if (ino != 0) return ino;
-  }
-  {
-    int ins = cubalc_lang_ops_dual_try_imm_nsord(vm, L);
-    if (ins != 0) return ins;
-  }
-  {
-    int inm = cubalc_lang_ops_dual_try_imm_nsmm(vm, L);
-    if (inm != 0) return inm;
-  }
-  {
-    int inc = cubalc_lang_ops_dual_try_imm_nsclamp(vm, L);
-    if (inc != 0) return inc;
-  }
-  /* imm 4-bit sign/zero preds DSIGN4N·D0EQ4N·D0NE4N·D0LT4N·D0GT4N·D0LE4N·D0GE4N → dual_imm_npred */
-  {
-    int inp = cubalc_lang_ops_dual_try_imm_npred(vm, L);
-    if (inp != 0) return inp;
-  }
-  /* imm 4-bit field bitwise DAND4N·DOR4N·DXOR4N·DNAND4N·DNOR4N·DXNOR4N → dual_imm_nbit */
-  {
-    int inb = cubalc_lang_ops_dual_try_imm_nbit(vm, L);
-    if (inb != 0) return inb;
+    int inn = cubalc_lang_ops_dual_try_imm_n(vm, L);
+    if (inn != 0) return inn;
   }
   return 0;
 }
