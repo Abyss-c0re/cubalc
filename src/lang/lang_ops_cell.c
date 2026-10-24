@@ -9,19 +9,7 @@
 #include "lang/cubalc_lang_ops_cell_metrics.h"
 #include "lang/cubalc_lang_ops_cell_rng.h"
 #include "lang/cubalc_lang_ops_cell_energy.h"
-#include "lang/cubalc_lang_ops_cell_matbits.h"
-#include "lang/cubalc_lang_ops_cell_matscan.h"
-#include "lang/cubalc_lang_ops_cell_matmetric.h"
-#include "lang/cubalc_lang_ops_cell_matruns.h"
-#include "lang/cubalc_lang_ops_cell_matfind.h"
-#include "lang/cubalc_lang_ops_cell_matrange.h"
-#include "lang/cubalc_lang_ops_cell_matword.h"
-#include "lang/cubalc_lang_ops_cell_matpath.h"
-#include "lang/cubalc_lang_ops_cell_matfill.h"
-#include "lang/cubalc_lang_ops_cell_matalgebra.h"
-#include "lang/cubalc_lang_ops_cell_matrel.h"
-#include "lang/cubalc_lang_ops_cell_matmux.h"
-#include "lang/cubalc_lang_ops_cell_matbrain.h"
+#include "lang/cubalc_lang_ops_cell_mat.h"
 #include "lang/cubalc_lang_ops_cell_energyflow.h"
 #include "lang/cubalc_lang_ops_cell_runtime.h"
 #include "lang/cubalc_lang_ops_cell_include_query.h"
@@ -32,11 +20,6 @@
 #include "lang/cubalc_lang_ops_cell_libmeta.h"
 #include "lang/cubalc_lang_ops_cell_libage.h"
 #include "lang/cubalc_lang_ops_cell_preload.h"
-#include "lang/cubalc_lang_ops_cell_matlogic.h"
-#include <dirent.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <time.h>
 
 int cubalc_lang_ops_cell(VM *vm, Lex *L){
   /* nibble4 peel (AND4CELL…CLIPS4CELL) */
@@ -86,70 +69,10 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     int en = cubalc_lang_ops_cell_try_energy(vm, L);
     if (en != 0) return en;
   }
-  /* matbits peel (ROTBITS·SHL/SHR·SETBIT·COUNTBITS·GETBIT) */
+  /* mat* family matbits…matbrain+matlogic → cell_mat meta-try (B_cell_peel) */
   {
-    int mb = cubalc_lang_ops_cell_try_matbits(vm, L);
-    if (mb != 0) return mb;
-  }
-  /* matscan peel (FINDONE·REVBITS·SWAPBIT·DIFFBITS) */
-  {
-    int ms = cubalc_lang_ops_cell_try_matscan(vm, L);
-    if (ms != 0) return ms;
-  }
-  /* matmetric peel (DOTBITS·JACCARD·MAJ·GRAY·CLZ/CTZ·ORPOP) */
-  {
-    int mm = cubalc_lang_ops_cell_try_matmetric(vm, L);
-    if (mm != 0) return mm;
-  }
-  /* matruns peel (TRANSBITS·RUNSBITS·MASKPOP) */
-  {
-    int mr = cubalc_lang_ops_cell_try_matruns(vm, L);
-    if (mr != 0) return mr;
-  }
-  /* matfind peel (MAXRUN·ZRUNS·FINDZERO) */
-  {
-    int mf = cubalc_lang_ops_cell_try_matfind(vm, L);
-    if (mf != 0) return mf;
-  }
-  /* matrange peel (PARITYBITS·COPYRANGE·SWAPRANGE·ROTRANGE) */
-  {
-    int mrg = cubalc_lang_ops_cell_try_matrange(vm, L);
-    if (mrg != 0) return mrg;
-  }
-  /* matword peel (WORDFROM·WORDTO·EXTRACTBITS·DEPOSITBITS) */
-  {
-    int mw = cubalc_lang_ops_cell_try_matword(vm, L);
-    if (mw != 0) return mw;
-  }
-  /* matpath peel (PEXTBITS·PDEPBITS·ZIPBITS·UNZIPBITS) */
-  {
-    int mp = cubalc_lang_ops_cell_try_matpath(vm, L);
-    if (mp != 0) return mp;
-  }
-  /* matfill peel (FILLRANGE·CLEARRANGE·FLIPRANGE·COUNTRANGE) */
-  {
-    int mf = cubalc_lang_ops_cell_try_matfill(vm, L);
-    if (mf != 0) return mf;
-  }
-  /* matalgebra peel (ANDRANGE·ORRANGE·XORRANGE) */
-  {
-    int ma = cubalc_lang_ops_cell_try_matalgebra(vm, L);
-    if (ma != 0) return ma;
-  }
-  /* matrel peel (EQBITS·NEBITS·SUBSETBITS·SUPERSETBITS·DISJOINTBITS) */
-  {
-    int mr = cubalc_lang_ops_cell_try_matrel(vm, L);
-    if (mr != 0) return mr;
-  }
-  /* matmux peel (MUXBITS·BLENDBITS·MATCHBITS) */
-  {
-    int mm = cubalc_lang_ops_cell_try_matmux(vm, L);
-    if (mm != 0) return mm;
-  }
-  /* matbrain peel (SETDIGIT·FOLDBITS·EEG*) */
-  {
-    int mb = cubalc_lang_ops_cell_try_matbrain(vm, L);
-    if (mb != 0) return mb;
+    int mat = cubalc_lang_ops_cell_try_mat(vm, L);
+    if (mat != 0) return mat;
   }
   /* energyflow peel (COMPARE·HARMONY·RESOLVE·ENERGYFLOW·FLOWI) */
   {
@@ -170,11 +93,6 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
   {
     int pl = cubalc_lang_ops_cell_try_preload(vm, L);
     if (pl != 0) return pl;
-  }
-  /* matlogic peel (CLEARBITS·NOTBITS·ANDBITS·ORBITS·XORBITS·…) */
-  {
-    int ml = cubalc_lang_ops_cell_try_matlogic(vm, L);
-    if (ml != 0) return ml;
   }
   /* INCLUDE monolit → lang_ops_cell_include.c (G_cell_margin peel) */
   {

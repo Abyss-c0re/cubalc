@@ -55,7 +55,7 @@ LANG_SRC = \
 	src/lang/lang_ops_cell_metrics.c \
 	src/lang/lang_ops_cell_rng.c \
 	src/lang/lang_ops_cell_energy.c \
-	src/lang/lang_ops_cell_matbits.c \
+	src/lang/lang_ops_cell_mat.c src/lang/lang_ops_cell_matbits.c \
 	src/lang/lang_ops_cell_matscan.c \
 	src/lang/lang_ops_cell_matmetric.c \
 	src/lang/lang_ops_cell_matruns.c \
