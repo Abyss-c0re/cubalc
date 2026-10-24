@@ -4,6 +4,7 @@
  */
 #include "lang/cubalc_lang_ops_core_flag.h"
 #include "lang/cubalc_lang_ops_core_flagpath.h"
+#include "lang/cubalc_lang_ops_core_flaggate.h"
 #include "lang/cubalc_lang_ops_sys_cli.h"
 #include "lang/cubalc_lang_ops_sys_time_walk.h"
 #include "cubalc_law.h"
@@ -30,6 +31,11 @@ static int endarg_argc(void) {
 }
 int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
   /* Returns 1 handled, -1 fail, 0 not this plane. */
+  /* multi flag/arg gates → flaggate (B_E restore) */
+  {
+    int fg = cubalc_lang_ops_core_try_flaggate(vm, L);
+    if (fg) return fg;
+  }
   /* FLAGMAP/LISTFLAGS/RESTARGS — CLI surface twins of ARGMAP/NTHPOS */
   if (kw(&L->cur,"FLAGMAP") || kw(&L->cur,"FLAGKV") || kw(&L->cur,"FLAGPAIRS") ||
       kw(&L->cur,"OPTMAP") || kw(&L->cur,"CLI_FLAGMAP") || kw(&L->cur,"FLAGS_KV") ||
