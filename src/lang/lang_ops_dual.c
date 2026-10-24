@@ -2,13 +2,7 @@
 #include "lang/cubalc_lang_internal.h"
 #include "lang/cubalc_lang_ops_dual_early.h"
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
-#include "lang/cubalc_lang_ops_dual_immshift.h"
-#include "lang/cubalc_lang_ops_dual_imm_alu.h"
-#include "lang/cubalc_lang_ops_dual_imm_sat.h"
-#include "lang/cubalc_lang_ops_dual_imm_div.h"
-#include "lang/cubalc_lang_ops_dual_imm_bit.h"
-#include "lang/cubalc_lang_ops_dual_imm_range.h"
-#include "lang/cubalc_lang_ops_dual_imm_cmp.h"
+#include "lang/cubalc_lang_ops_dual_mid.h"
 #include "lang/cubalc_lang_ops_dual_bitpath.h"
 #include "lang/cubalc_lang_ops_dual_bitmet.h"
 #include "lang/cubalc_lang_ops_dual_datapath.h"
@@ -29,33 +23,10 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int fr = cubalc_lang_ops_dual_try_fieldrot(vm, L);
     if (fr != 0) return fr;
   }
+  /* mid imm shift·alu·sat·div·bit·range·cmp → dual_mid meta-try (B_dual_peel) */
   {
-    int ish = cubalc_lang_ops_dual_try_immshift(vm, L);
-    if (ish != 0) return ish;
-  }
-  {
-    int ia = cubalc_lang_ops_dual_try_imm_alu(vm, L);
-    if (ia != 0) return ia;
-  }
-  {
-    int isat = cubalc_lang_ops_dual_try_imm_sat(vm, L);
-    if (isat != 0) return isat;
-  }
-  {
-    int idv = cubalc_lang_ops_dual_try_imm_div(vm, L);
-    if (idv != 0) return idv;
-  }
-  {
-    int ibit = cubalc_lang_ops_dual_try_imm_bit(vm, L);
-    if (ibit != 0) return ibit;
-  }
-  {
-    int ir = cubalc_lang_ops_dual_try_imm_range(vm, L);
-    if (ir != 0) return ir;
-  }
-  {
-    int ic = cubalc_lang_ops_dual_try_imm_cmp(vm, L);
-    if (ic != 0) return ic;
+    int md = cubalc_lang_ops_dual_try_mid(vm, L);
+    if (md != 0) return md;
   }
   {
     int bp = cubalc_lang_ops_dual_try_bitpath(vm, L);
