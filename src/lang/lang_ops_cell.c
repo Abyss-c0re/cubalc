@@ -11,11 +11,8 @@
 #include "lang/cubalc_lang_ops_cell_energy.h"
 #include "lang/cubalc_lang_ops_cell_mat.h"
 #include "lang/cubalc_lang_ops_cell_energyflow.h"
-#include "lang/cubalc_lang_ops_cell_runtime.h"
-#include "lang/cubalc_lang_ops_cell_include_query.h"
-#include "lang/cubalc_lang_ops_cell_include.h"
+#include "lang/cubalc_lang_ops_cell_inc.h"
 #include "lang/cubalc_lang_ops_cell_lib.h"
-#include "lang/cubalc_lang_ops_cell_preload.h"
 
 int cubalc_lang_ops_cell(VM *vm, Lex *L){
   /* nibble4 peel (AND4CELL…CLIPS4CELL) */
@@ -75,24 +72,9 @@ int cubalc_lang_ops_cell(VM *vm, Lex *L){
     int ef = cubalc_lang_ops_cell_try_energyflow(vm, L);
     if (ef != 0) return ef;
   }
-  /* runtime peel (DECIDE·VIZ·SPIN·WAIT) */
+  /* runtime·include_query·preload·include → cell_inc meta-try (B_cell_peel) */
   {
-    int rt = cubalc_lang_ops_cell_try_runtime(vm, L);
-    if (rt != 0) return rt;
-  }
-  /* include query peel (INCLUDESTEMS·HASINCLUDE·NEEDINCLUDE) */
-  {
-    int iq = cubalc_lang_ops_cell_try_include_query(vm, L);
-    if (iq != 0) return iq;
-  }
-  /* preload query peel (LISTPRELOAD·PRELOADMISS·HASPRELOAD) */
-  {
-    int pl = cubalc_lang_ops_cell_try_preload(vm, L);
-    if (pl != 0) return pl;
-  }
-  /* INCLUDE monolit → lang_ops_cell_include.c (G_cell_margin peel) */
-  {
-    int inc = cubalc_lang_ops_cell_try_include(vm, L);
+    int inc = cubalc_lang_ops_cell_try_inc(vm, L);
     if (inc != 0) return inc;
   }
   /* lib* family libcat·libpick·libage·libread·libmeta → cell_lib meta-try (B_cell_peel) */
