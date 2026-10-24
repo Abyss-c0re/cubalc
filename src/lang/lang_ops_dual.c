@@ -31,16 +31,7 @@
 #include "lang/cubalc_lang_ops_dual_imm_hsclamp.h"
 #include "lang/cubalc_lang_ops_dual_imm_hpred.h"
 #include "lang/cubalc_lang_ops_dual_imm_h0ord.h"
-#include "lang/cubalc_lang_ops_dual_imm_barith.h"
-#include "lang/cubalc_lang_ops_dual_imm_bdiv.h"
-#include "lang/cubalc_lang_ops_dual_imm_bcmp.h"
-#include "lang/cubalc_lang_ops_dual_imm_bord.h"
-#include "lang/cubalc_lang_ops_dual_imm_bsord.h"
-#include "lang/cubalc_lang_ops_dual_imm_bsmm.h"
-#include "lang/cubalc_lang_ops_dual_imm_bsclamp.h"
-#include "lang/cubalc_lang_ops_dual_imm_bpred.h"
-#include "lang/cubalc_lang_ops_dual_imm_b0ord.h"
-#include "lang/cubalc_lang_ops_dual_imm_bbit.h"
+#include "lang/cubalc_lang_ops_dual_imm_b.h"
 #include "lang/cubalc_lang_ops_dual_imm_n.h"
 
 int cubalc_lang_ops_dual(VM *vm, Lex *L){
@@ -176,44 +167,9 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int ih0 = cubalc_lang_ops_dual_try_imm_h0ord(vm, L);
     if (ih0 != 0) return ih0;
   }
+  /* imm 8-bit b* family barith…bbit → dual_imm_b meta-try (B_dual_peel) */
   {
-    int iba = cubalc_lang_ops_dual_try_imm_barith(vm, L);
-    if (iba != 0) return iba;
-  }
-  {
-    int ibd = cubalc_lang_ops_dual_try_imm_bdiv(vm, L);
-    if (ibd != 0) return ibd;
-  }
-  {
-    int ibc = cubalc_lang_ops_dual_try_imm_bcmp(vm, L);
-    if (ibc != 0) return ibc;
-  }
-  {
-    int ibo = cubalc_lang_ops_dual_try_imm_bord(vm, L);
-    if (ibo != 0) return ibo;
-  }
-  {
-    int ibs = cubalc_lang_ops_dual_try_imm_bsord(vm, L);
-    if (ibs != 0) return ibs;
-  }
-  {
-    int ibm = cubalc_lang_ops_dual_try_imm_bsmm(vm, L);
-    if (ibm != 0) return ibm;
-  }
-  {
-    int ibc = cubalc_lang_ops_dual_try_imm_bsclamp(vm, L);
-    if (ibc != 0) return ibc;
-  }
-  {
-    int ibp = cubalc_lang_ops_dual_try_imm_bpred(vm, L);
-    if (ibp != 0) return ibp;
-  }
-  {
-    int ib0 = cubalc_lang_ops_dual_try_imm_b0ord(vm, L);
-    if (ib0 != 0) return ib0;
-  }
-  {
-    int ibb = cubalc_lang_ops_dual_try_imm_bbit(vm, L);
+    int ibb = cubalc_lang_ops_dual_try_imm_b(vm, L);
     if (ibb != 0) return ibb;
   }
   /* imm 4-bit n* family narith…nbit → dual_imm_n meta-try (B_dual_peel) */
