@@ -260,33 +260,8 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int iho = cubalc_lang_ops_dual_try_imm_hord(vm, L);
     if (iho != 0) return iho;
   }
-  /* DLT16N·DGT16N·DLTE16N → dual_imm_hord peel */
-  /* digit-0 dual-stack imm 16-bit field GTE: DGTE16N (dual of SGTE16N after DLTE16N) */
-  if (kw(&L->cur,"DGTE16N")||kw(&L->cur,"S2GTE16N")||kw(&L->cur,"STACK2GTE16N")||
-      kw(&L->cur,"PAIRGTE16N")||kw(&L->cur,"DCMPGE16N")||kw(&L->cur,"DGEQ16N")||
-      kw(&L->cur,"DGTEHIMM")||kw(&L->cur,"DGTEHN16")){
-    /* a b + field n → halfword n of each = (hw >= field) ? 1 : 0; n clamped 0..3 */
-    lex_next(L);
-    long field = parse_expr(vm,L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 3) n = 3;
-    unsigned long f = (unsigned long)field & 0xFFFFul;
-    unsigned long sh = (unsigned long)(n * 16);
-    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
-    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
-    unsigned long va = (ma >> sh) & 0xFFFFul;
-    unsigned long vb = (mb >> sh) & 0xFFFFul;
-    unsigned long wa = (va >= f) ? 1ul : 0ul;
-    unsigned long wb = (vb >= f) ? 1ul : 0ul;
-    long x = (long)((ma & ~(0xFFFFul << sh)) | (wa << sh));
-    long y = (long)((mb & ~(0xFFFFul << sh)) | (wb << sh));
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DLT16N·DGT16N·DLTE16N·DGTE16N → dual_imm_hord peel */
+  /* DGTE16N → dual_imm_hord peel (complete unsigned ordered-cmp) */
   /* imm 16-bit signed ordered-cmp DLTS16N·DGTS16N·DLTES16N·DGTES16N → dual_imm_hsord (B_dual_peel) */
   {
     int ihs = cubalc_lang_ops_dual_try_imm_hsord(vm, L);
@@ -304,35 +279,8 @@ int cubalc_lang_ops_dual(VM *vm, Lex *L){
     int ihc2 = cubalc_lang_ops_dual_try_imm_hsclamp(vm, L);
     if (ihc2 != 0) return ihc2;
   }
-  /* DCLAMPS16N·DBETWEENS16N → dual_imm_hsclamp peel */
-  /* digit-7 dual-stack imm 16-bit field signed WITHIN: DWITHINS16N (dual of SWITHINS16N) */
-  if (kw(&L->cur,"DWITHINS16N")||kw(&L->cur,"S2WITHINS16N")||kw(&L->cur,"STACK2WITHINS16N")||
-      kw(&L->cur,"PAIRWITHINS16N")||kw(&L->cur,"DWITHINSIGN16N")||kw(&L->cur,"DWITHINS16IMM")||
-      kw(&L->cur,"DINTERVALS16N")){
-    /* a b + lo hi n → halfword n of each = (lo <= int16(hw) < hi) ? 1 : 0; n 0..3; no swap */
-    lex_next(L);
-    long lo = parse_expr(vm,L);
-    long hi = parse_expr(vm,L);
-    long n = parse_expr(vm,L);
-    if (vm->sp < 2){ var_set_num(vm,"OK",0); bump(vm); return 1; }
-    if (n < 0) n = 0;
-    if (n > 3) n = 3;
-    long slo = (long)((unsigned long)lo & 0xFFFFul); if (slo & 0x8000) slo -= 65536;
-    long shi = (long)((unsigned long)hi & 0xFFFFul); if (shi & 0x8000) shi -= 65536;
-    unsigned long sh = (unsigned long)(n * 16);
-    unsigned long ma = (unsigned long)vm->stack[vm->sp - 2];
-    unsigned long mb = (unsigned long)vm->stack[vm->sp - 1];
-    long va = (long)((ma >> sh) & 0xFFFFul); if (va & 0x8000) va -= 65536;
-    long vb = (long)((mb >> sh) & 0xFFFFul); if (vb & 0x8000) vb -= 65536;
-    unsigned long wa = (va >= slo && va < shi) ? 1ul : 0ul;
-    unsigned long wb = (vb >= slo && vb < shi) ? 1ul : 0ul;
-    long x = (long)((ma & ~(0xFFFFul << sh)) | (wa << sh));
-    long y = (long)((mb & ~(0xFFFFul << sh)) | (wb << sh));
-    vm->stack[vm->sp - 2] = x;
-    vm->stack[vm->sp - 1] = y;
-    var_set_num(vm,"LAST_N",y); vm->last_n=y;
-    var_set_num(vm,"SP",vm->sp); var_set_num(vm,"OK",1); bump(vm); return 1;
-  }
+  /* DCLAMPS16N·DBETWEENS16N·DWITHINS16N → dual_imm_hsclamp peel */
+  /* DWITHINS16N → dual_imm_hsclamp peel (with DCLAMPS/DBETWEENS) */
   /* digit-0 dual-stack imm 16-bit field signed signum: DSIGN16N (dual of SSIGN16N) */
   if (kw(&L->cur,"DSIGN16N")||kw(&L->cur,"S2SIGN16N")||kw(&L->cur,"STACK2SIGN16N")||
       kw(&L->cur,"PAIRSIGN16N")||kw(&L->cur,"DSIGNUM16N")||kw(&L->cur,"DSGN16N")||
