@@ -5,14 +5,9 @@
 #include "cubalc_lang.h"
 #include "cubalc_cmd_corehive_dispatch.h"
 #include "cubalc_cmd_agentcli_dispatch.h"
-#include "cubalc_cmd_which.h"
-#include "cubalc_cmd_search.h"
-#include "cubalc_cmd_init.h"
-#include "cubalc_cmd_plate.h"
-#include "cubalc_cmd_pathver.h"
-#include "cubalc_cmd_help.h"
 #include "cubalc_cmd_discover_dispatch.h"
 #include "cubalc_cmd_libgate_dispatch.h"
+#include "cubalc_cmd_util_dispatch.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -54,37 +49,15 @@ int main(int argc, char **argv) {
     int drc = cubalc_cmd_try_discover_dispatch(argc, argv);
     if (drc >= 0) return drc;
   }
-  if (strcmp(cmd, "init") == 0 || strcmp(cmd, "new") == 0 ||
-      strcmp(cmd, "scaffold") == 0 || strcmp(cmd, "create") == 0) {
-    return cubalc_cmd_init(argc, argv);
-  }
   /* libs·recipe·flag·env → cubalc_cmd_try_libgate_dispatch (F_main_carve) */
   {
     int lrc = cubalc_cmd_try_libgate_dispatch(argc, argv);
     if (lrc >= 0) return lrc;
   }
-  if (strcmp(cmd, "plate") == 0 || strcmp(cmd, "jsonplate") == 0 ||
-      strcmp(cmd, "platefile") == 0 || strcmp(cmd, "agent-plate") == 0) {
-    return cubalc_cmd_plate(argc, argv);
-  }
-  if (strcmp(cmd, "version") == 0 || strcmp(cmd, "--version") == 0 ||
-      strcmp(cmd, "-V") == 0 || strcmp(cmd, "ver") == 0 ||
-      strcmp(cmd, "paths") == 0 || strcmp(cmd, "path") == 0 ||
-      strcmp(cmd, "where") == 0 || strcmp(cmd, "layout") == 0) {
-    /* version/paths → cubalc_cmd_pathver peel (F_main_carve) */
-    return cubalc_cmd_pathver(argc, argv);
-  }
-  if (strcmp(cmd, "which") == 0 || strcmp(cmd, "locate") == 0 ||
-      strcmp(cmd, "resolve") == 0) {
-    return cubalc_cmd_which(argc, argv);
-  }
-  if (strcmp(cmd, "search") == 0 || strcmp(cmd, "find") == 0 ||
-      strcmp(cmd, "query") == 0 || strcmp(cmd, "look") == 0) {
-    return cubalc_cmd_search(argc, argv);
-  }
-  if (strcmp(cmd, "help") == 0 || strcmp(cmd, "-h") == 0) {
-    /* help → cubalc_cmd_help peel (F_main_carve) */
-    return cubalc_cmd_help(argc, argv);
+  /* init·plate·pathver·which·search·help → cubalc_cmd_try_util_dispatch (F_main_carve) */
+  {
+    int urc = cubalc_cmd_try_util_dispatch(cmd, argc, argv);
+    if (urc >= 0) return urc;
   }
   fprintf(stderr, "unknown cmd %s — try help\n", cmd);
   return 2;
