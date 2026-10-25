@@ -10,8 +10,8 @@ OUT=$("$CUBALC" libs 2>&1)
 printf '%s\n' "$OUT" | grep -q '"schema":"cubalc.libs.v1"'
 printf '%s\n' "$OUT" | grep -q '"ok":true'
 printf '%s\n' "$OUT" | grep -q '"n_total":'
-# unfiltered n_match == n_total
-printf '%s\n' "$OUT" | grep -qE '"n_match":2[0-9]|"n":2[0-9]'
+# unfiltered n_match == n_total (catalog grew past 20s → multi-digit floor)
+printf '%s\n' "$OUT" | grep -qE '"n_match":([2-9][0-9]|[1-9][0-9]{2,})|"n":([2-9][0-9]|[1-9][0-9]{2,})'
 
 # plate filter
 OUT=$("$CUBALC" libs plate 2>&1)
