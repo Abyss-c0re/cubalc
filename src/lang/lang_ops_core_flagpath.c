@@ -3107,5 +3107,92 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* GREPTREE|SEARCHTREE|RGREP root needle — recursive content search under root.
+   * Twin of SYS GREPTREE. LAST = matching paths bag · GREPTREE_N · GREPTREE_SCAN.
+   * GREPTREEI case-insensitive. Soft empty/missing. Empty needle → all files.
+   * Usability: agent content discovery without WALK+GREPFILES or shell grep -r. */
+  if (kw(&L->cur, "GREPTREE") || kw(&L->cur, "SEARCHTREE") || kw(&L->cur, "RGREP") ||
+      kw(&L->cur, "TREEGREP") || kw(&L->cur, "GREPDIR") || kw(&L->cur, "CONTENTTREE") ||
+      kw(&L->cur, "GREPTREEI") || kw(&L->cur, "SEARCHTREEI") || kw(&L->cur, "RGREPI") ||
+      kw(&L->cur, "TREEGREPI") || kw(&L->cur, "GREPDIRI") || kw(&L->cur, "FINDCONTENT") ||
+      kw(&L->cur, "FINDIN")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    if (kw(&L->cur, "GREPTREEI") || kw(&L->cur, "SEARCHTREEI") || kw(&L->cur, "RGREPI") ||
+        kw(&L->cur, "TREEGREPI") || kw(&L->cur, "GREPDIRI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "GREPTREE needs root needle — GREPTREE \"work\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GREPTREE_N", 0);
+      var_set_num(vm, "GREPTREE_SCAN", 0);
+      var_set_num(vm, "SEARCHTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GREPTREE: empty path");
+      var_set_str(vm, "ERR", "GREPTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_greptree(root, needle, icase, 0, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GREPTREE_N", 0);
+      var_set_num(vm, "GREPTREE_SCAN", 0);
+      var_set_num(vm, "SEARCHTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "GREPTREE: fail");
+        var_set_str(vm, "ERR", "GREPTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "GREPTREE", hr.str);
+    var_set_str(vm, "SEARCHTREE", hr.str);
+    var_set_str(vm, "RGREP", hr.str);
+    var_set_num(vm, "GREPTREE_N", hr.n);
+    var_set_num(vm, "SEARCHTREE_N", hr.n);
+    var_set_num(vm, "RGREP_N", hr.n);
+    var_set_num(vm, "GREPTREE_SCAN", (long)hr.code);
+    var_set_str(vm, "GREPTREE_ROOT", root);
+    var_set_str(vm, "GREPTREE_NEEDLE", needle);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# greptree → hits=%ld scan=%d icase=%d\n",
+              hr.n, hr.code, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
