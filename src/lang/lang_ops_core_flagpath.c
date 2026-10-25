@@ -2051,5 +2051,189 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     bump(vm);
     return 1;
   }
+
+  /* WRITEOUTIF|PUTIFCHANGED path data — ENSUREPARENT; write only if content differs.
+   * Skip when file already equals data (mtime-stable for WAITCHANGED/FRESH).
+   * On change: temp+rename atomic write. LAST = abs · CHANGED 0|1 · LAST_N=bytes|0.
+   * Soft empty/mkdir/write fail → OK=0 sticky LAST_ERR. */
+  if (kw(&L->cur, "WRITEOUTIF") || kw(&L->cur, "PUTIFCHANGED") || kw(&L->cur, "WRITEIFCHANGED") ||
+      kw(&L->cur, "SAVEIF") || kw(&L->cur, "PUTIF") || kw(&L->cur, "STABLEWRITE") ||
+      kw(&L->cur, "WRITEUNLESSSAME") || kw(&L->cur, "IFWRITEOUT") || kw(&L->cur, "WRITEOUTDIFF")) {
+    char path[CUBALC_HOST_STR_MAX], data[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    char tmp[CUBALC_HOST_STR_MAX + 64];
+    const char *slash;
+    size_t n;
+    int created = 0, changed = 1;
+    long pid;
+    cubalc_host_result hr, rr, trash;
+    lex_next(L);
+    path[0] = 0;
+    data[0] = 0;
+    absfile[0] = 0;
+    parent[0] = 0;
+    absparent[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "WRITEOUTIF needs path — WRITEOUTIF \"a/b/c.json\" \"data\"|var");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, data, sizeof data) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(data, sizeof data, "%ld", nv);
+      } else {
+        data[0] = 0;
+      }
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "WRITEOUTIF: empty path");
+      var_set_str(vm, "ERR", "WRITEOUTIF: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUTIF_N", 0);
+      var_set_num(vm, "WRITEOUTIF_CHANGED", 0);
+      var_set_num(vm, "WRITEOUTIF_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    if (cubalc_host_exists(absfile)) {
+      memset(&hr, 0, sizeof hr);
+      if (cubalc_host_read(absfile, &hr) == 0 && strcmp(hr.str, data) == 0) {
+        changed = 0;
+        var_set_str(vm, "LAST", absfile);
+        var_set_str(vm, "WRITEOUTIF", absfile);
+        var_set_str(vm, "PATH", absfile);
+        var_set_str(vm, "WRITEOUTIF_PARENT", absparent);
+        var_set_str(vm, "DIRNAME", absparent);
+        var_set_str(vm, "PARENT", absparent);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+        vm->last_n = 0;
+        var_set_num(vm, "LAST_N", 0);
+        var_set_num(vm, "WRITEOUTIF_N", 0);
+        var_set_num(vm, "WRITEOUTIF_CHANGED", 0);
+        var_set_num(vm, "WRITEOUTIF_CREATED", 0);
+        var_set_num(vm, "PATH_EXIST", 1);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# writeoutif → %s unchanged\n", absfile);
+        bump(vm);
+        return 1;
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "WRITEOUTIF: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUTIF_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUTIF_N", 0);
+      var_set_num(vm, "WRITEOUTIF_CHANGED", 0);
+      var_set_num(vm, "WRITEOUTIF_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+#if defined(CUBALC_OS_WINDOWS)
+    pid = 0;
+#else
+    pid = (long)getpid();
+#endif
+    snprintf(tmp, sizeof tmp, "%s.cubalc-tmp.%ld", absfile, pid);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_write(tmp, data, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "WRITEOUTIF: write temp fail";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUTIF_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUTIF_N", 0);
+      var_set_num(vm, "WRITEOUTIF_CHANGED", 0);
+      var_set_num(vm, "WRITEOUTIF_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    memset(&rr, 0, sizeof rr);
+    if (cubalc_host_rename(tmp, absfile, &rr) != 0) {
+      memset(&trash, 0, sizeof trash);
+      cubalc_host_rm(tmp, &trash);
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "WRITEOUTIF_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", rr.err[0] ? rr.err : "WRITEOUTIF: rename fail");
+      var_set_str(vm, "ERR", rr.err[0] ? rr.err : "WRITEOUTIF: rename fail");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "WRITEOUTIF_N", 0);
+      var_set_num(vm, "WRITEOUTIF_CHANGED", 0);
+      var_set_num(vm, "WRITEOUTIF_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", absfile);
+    var_set_str(vm, "WRITEOUTIF", absfile);
+    var_set_str(vm, "PATH", absfile);
+    var_set_str(vm, "WRITEOUTIF_PARENT", absparent);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "WRITEOUTIF_N", hr.n);
+    var_set_num(vm, "WRITEOUTIF_CHANGED", (long)changed);
+    var_set_num(vm, "WRITEOUTIF_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# writeoutif → %s bytes=%ld changed=%d created=%d\n",
+              absfile, hr.n, changed, created);
+    bump(vm);
+    return 1;
+  }
   return 0;
 }
