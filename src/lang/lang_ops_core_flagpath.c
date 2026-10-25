@@ -3275,5 +3275,98 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* COUNTINTREE|COUNTTREE|GREPCOUNTTREE root needle — recursive occurrence tally.
+   * Twin of SYS COUNTINTREE. LAST/LAST_N = hits · COUNTINTREE_FILES = files with ≥1.
+   * COUNTINTREEI case-insensitive. Soft empty/missing. Empty needle → 0.
+   * Usability: severity/error rollups without WALK+COUNTINFILES or shell grep -rc. */
+  if (kw(&L->cur, "COUNTINTREE") || kw(&L->cur, "COUNTTREE") || kw(&L->cur, "GREPCOUNTTREE") ||
+      kw(&L->cur, "TREECOUNT") || kw(&L->cur, "OCCURTREE") || kw(&L->cur, "TOTALINTREE") ||
+      kw(&L->cur, "COUNTINTREEI") || kw(&L->cur, "COUNTTREEI") || kw(&L->cur, "GREPCOUNTTREEI") ||
+      kw(&L->cur, "TREECOUNTI") || kw(&L->cur, "OCCURTREEI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    if (kw(&L->cur, "COUNTINTREEI") || kw(&L->cur, "COUNTTREEI") ||
+        kw(&L->cur, "GREPCOUNTTREEI") || kw(&L->cur, "TREECOUNTI") ||
+        kw(&L->cur, "OCCURTREEI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "COUNTINTREE needs root needle — COUNTINTREE \"work\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COUNTINTREE", 0);
+      var_set_num(vm, "COUNTINTREE_N", 0);
+      var_set_num(vm, "COUNTINTREE_FILES", 0);
+      var_set_num(vm, "COUNTTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "COUNTINTREE: empty path");
+      var_set_str(vm, "ERR", "COUNTINTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_countintree(root, needle, icase, &hr) != 0) {
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "COUNTINTREE", 0);
+      var_set_num(vm, "COUNTINTREE_N", 0);
+      var_set_num(vm, "COUNTINTREE_FILES", 0);
+      var_set_num(vm, "COUNTTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "COUNTINTREE: fail");
+        var_set_str(vm, "ERR", "COUNTINTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    {
+      char buf[32];
+      snprintf(buf, sizeof buf, "%ld", hr.n);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    }
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "COUNTINTREE", hr.n);
+    var_set_num(vm, "COUNTINTREE_N", hr.n);
+    var_set_num(vm, "COUNTTREE", hr.n);
+    var_set_num(vm, "COUNTTREE_N", hr.n);
+    var_set_num(vm, "GREPCOUNTTREE", hr.n);
+    var_set_num(vm, "TREECOUNT", hr.n);
+    var_set_num(vm, "COUNTINTREE_FILES", (long)hr.code);
+    var_set_num(vm, "COUNTTREE_FILES", (long)hr.code);
+    var_set_str(vm, "COUNTINTREE_ROOT", hr.str[0] ? hr.str : root);
+    var_set_str(vm, "COUNTINTREE_NEEDLE", needle);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# countintree → hits=%ld files=%d icase=%d\n",
+              hr.n, hr.code, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
