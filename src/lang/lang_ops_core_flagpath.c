@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <errno.h>
+#include <time.h>
 
 int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
   /* RESTPATHS/NTHPOSPATH path-pos peels (B_flag_split from flag). */
@@ -2235,5 +2236,169 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     bump(vm);
     return 1;
   }
+
+  /* LOGSTAMP|STAMPLOG path msg — ENSUREPARENT + append "ISO msg" line one-shot.
+   * LAST = abs file · LOGSTAMP_LINE · LOGSTAMP_ISO · CREATED · LAST_N = line+NL.
+   * Soft empty/mkdir/open fail → OK=0 sticky LAST_ERR.
+   * Usability: timestamped agent logs without SYS DATE + CAT + APPENDOUT glue. */
+  if (kw(&L->cur, "LOGSTAMP") || kw(&L->cur, "STAMPLOG") || kw(&L->cur, "APPENDOUTISO") ||
+      kw(&L->cur, "LOGISO") || kw(&L->cur, "ISOLOG") || kw(&L->cur, "AUDITSTAMP") ||
+      kw(&L->cur, "TSLOG") || kw(&L->cur, "LOGTS") || kw(&L->cur, "STAMPAPPEND")) {
+    char path[CUBALC_HOST_STR_MAX], msg[CUBALC_HOST_STR_MAX];
+    char absfile[CUBALC_HOST_STR_MAX], parent[512], absparent[CUBALC_HOST_STR_MAX];
+    char iso[40], line[CUBALC_HOST_STR_MAX];
+    const char *slash;
+    size_t n;
+    int created = 0;
+    long nbytes = 0;
+    time_t now;
+    struct tm tm_utc;
+    cubalc_host_result hr;
+    FILE *af;
+    lex_next(L);
+    path[0] = 0;
+    msg[0] = 0;
+    absfile[0] = 0;
+    parent[0] = 0;
+    absparent[0] = 0;
+    iso[0] = 0;
+    line[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "LOGSTAMP needs path — LOGSTAMP \"a/b/agent.log\" \"tick ok\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, msg, sizeof msg) != 0) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(msg, sizeof msg, "%ld", nv);
+      } else {
+        msg[0] = 0;
+      }
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      var_set_str(vm, "LAST_ERR", "LOGSTAMP: empty path");
+      var_set_str(vm, "ERR", "LOGSTAMP: empty path");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "");
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LOGSTAMP_N", 0);
+      var_set_num(vm, "LOGSTAMP_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    now = time(NULL);
+#if defined(CUBALC_OS_WINDOWS)
+    {
+      struct tm *tp = gmtime(&now);
+      if (tp) tm_utc = *tp;
+      else memset(&tm_utc, 0, sizeof tm_utc);
+    }
+#else
+    if (!gmtime_r(&now, &tm_utc))
+      memset(&tm_utc, 0, sizeof tm_utc);
+#endif
+    snprintf(iso, sizeof iso, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+             tm_utc.tm_year + 1900, tm_utc.tm_mon + 1, tm_utc.tm_mday,
+             tm_utc.tm_hour, tm_utc.tm_min, tm_utc.tm_sec);
+    if (msg[0])
+      snprintf(line, sizeof line, "%s %s", iso, msg);
+    else
+      snprintf(line, sizeof line, "%s", iso);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(absfile, sizeof absfile, "%s", hr.str);
+    else
+      snprintf(absfile, sizeof absfile, "%s", path);
+    {
+      char work[CUBALC_HOST_STR_MAX];
+      snprintf(work, sizeof work, "%s", absfile);
+      n = strlen(work);
+      while (n > 1 && (work[n - 1] == '/' || work[n - 1] == '\\')) {
+        work[n - 1] = 0;
+        n--;
+      }
+      slash = cubalc_path_slash(work);
+      if (slash && slash != work) {
+        size_t dn = (size_t)(slash - work);
+        if (dn >= sizeof parent) dn = sizeof parent - 1;
+        memcpy(parent, work, dn);
+        parent[dn] = 0;
+      } else if (slash && slash == work) {
+        snprintf(parent, sizeof parent, "%c", work[0] == '\\' ? '\\' : '/');
+      } else {
+        snprintf(parent, sizeof parent, ".");
+      }
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(parent, &hr) == 0 && hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    else
+      snprintf(absparent, sizeof absparent, "%s", parent);
+    created = (cubalc_host_exists(absparent) || cubalc_host_exists(parent)) ? 0 : 1;
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mkdir(absparent, &hr) != 0) {
+      const char *err = hr.err[0] ? hr.err : "LOGSTAMP: mkdir parent failed";
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "LOGSTAMP_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", err);
+      var_set_str(vm, "ERR", err);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LOGSTAMP_N", 0);
+      var_set_num(vm, "LOGSTAMP_CREATED", 0);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    if (hr.str[0])
+      snprintf(absparent, sizeof absparent, "%s", hr.str);
+    af = fopen(absfile, "a");
+    if (!af) {
+      var_set_str(vm, "LAST", absfile);
+      var_set_str(vm, "LOGSTAMP_PARENT", absparent);
+      var_set_str(vm, "LAST_ERR", "LOGSTAMP: open fail");
+      var_set_str(vm, "ERR", "LOGSTAMP: open fail");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "LOGSTAMP_N", 0);
+      var_set_num(vm, "LOGSTAMP_CREATED", (long)created);
+      var_set_num(vm, "OK", 0);
+      bump(vm);
+      return 1;
+    }
+    fputs(line, af);
+    fputc('\n', af);
+    fclose(af);
+    nbytes = (long)strlen(line) + 1;
+    var_set_str(vm, "LAST", absfile);
+    var_set_str(vm, "LOGSTAMP", absfile);
+    var_set_str(vm, "PATH", absfile);
+    var_set_str(vm, "LOGSTAMP_PARENT", absparent);
+    var_set_str(vm, "LOGSTAMP_LINE", line);
+    var_set_str(vm, "LOGSTAMP_ISO", iso);
+    var_set_str(vm, "ISO", iso);
+    var_set_str(vm, "DATE", iso);
+    var_set_str(vm, "DIRNAME", absparent);
+    var_set_str(vm, "PARENT", absparent);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", absfile);
+    vm->last_n = nbytes;
+    var_set_num(vm, "LAST_N", nbytes);
+    var_set_num(vm, "LOGSTAMP_N", nbytes);
+    var_set_num(vm, "APPENDOUT_N", nbytes);
+    var_set_num(vm, "LOGSTAMP_CREATED", (long)created);
+    var_set_num(vm, "ENSUREPARENT_CREATED", (long)created);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# logstamp → %s line=%s created=%d\n",
+              absfile, line, created);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
