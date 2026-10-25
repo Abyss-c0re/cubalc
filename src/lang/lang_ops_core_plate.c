@@ -1168,5 +1168,236 @@ int cubalc_lang_ops_core_try_plate(VM *vm, Lex *L) {
     bump(vm); return 1;
   }
 
+  /* FILLPFILE plane — B_E_science restore (materialize {{key}} files). */
+  /* FILLPFILE|SUBSTPLATEFILE [STRICT|NEED] [FROM plate] tmpl_path [out_path]
+   * NEEDFILLPFILE [FROM plate] tmpl [out] — fail-fast if any {{key}} missing (no write).
+   * FROM: multi-plate materialize without LET PLATE=other:
+   *   FILLPFILE FROM peer "tpl/status.txt" "state/status.txt"
+   *   NEEDFILLPFILE FROM LAST tpl out
+   * Soft FILLPFILE still writes half-filled body + MISS; STRICT does not write on miss.
+   * LAST = out path; FILLPFILE_N/MISS/BYTES/BODY/MISS_KEYS; FILLPFILE_FROM=0|1. */
+  if (kw(&L->cur,"FILLPFILE") || kw(&L->cur,"SUBSTPLATEFILE") ||
+      kw(&L->cur,"EXPANDPFILE") || kw(&L->cur,"RENDERPFILE") ||
+      kw(&L->cur,"TEMPLATEPFILE") || kw(&L->cur,"PLATE_FILLFILE") ||
+      kw(&L->cur,"FILLPLATEFILE") || kw(&L->cur,"MFILLPFILE") ||
+      kw(&L->cur,"MATERIALIZEP") || kw(&L->cur,"PLATE_RENDERFILE") ||
+      kw(&L->cur,"NEEDFILLPFILE") || kw(&L->cur,"REQUIREFILLPFILE") ||
+      kw(&L->cur,"STRICTFILLPFILE") || kw(&L->cur,"FILLPFILENEED")) {
+    char path[CUBALC_HOST_STR_MAX], outpath[CUBALC_HOST_STR_MAX];
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    char plate[CUBALC_HOST_STR_MAX], expanded[CUBALC_HOST_STR_MAX];
+    char miss_keys[CUBALC_HOST_STR_MAX], from_src[CUBALC_HOST_STR_MAX];
+    long hits = 0, miss = 0;
+    int is_strict = 0, have_from = 0;
+    int aln = L->cur.line;
+    cubalc_host_result hr, wr;
+    Var *pv;
+    char op0[28];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "NEEDFILLPFILE") == 0 || strcmp(op0, "REQUIREFILLPFILE") == 0 ||
+        strcmp(op0, "STRICTFILLPFILE") == 0 || strcmp(op0, "FILLPFILENEED") == 0)
+      is_strict = 1;
+
+    lex_next(L);
+    if (!is_strict && (kw(&L->cur,"STRICT") || kw(&L->cur,"NEED") ||
+                       kw(&L->cur,"REQUIRE") || kw(&L->cur,"MUST") ||
+                       kw(&L->cur,"ALL") || kw(&L->cur,"COMPLETE"))) {
+      is_strict = 1;
+      lex_next(L);
+    }
+
+    path[0] = 0; outpath[0] = 0; a[0] = 0; b[0] = 0;
+    plate[0] = 0; expanded[0] = 0; miss_keys[0] = 0; from_src[0] = 0;
+
+    /* optional leading FROM plate_src */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+      fail(vm, is_strict ? "NEEDFILLPFILE [FROM plate] tmpl_path [out_path]"
+                         : "FILLPFILE [FROM plate] tmpl_path [out_path]");
+      return -1;
+    }
+    snprintf(path, sizeof path, "%s", a);
+    /* out path, or trailing FROM if not yet */
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF")) {
+      /* no out path yet; FROM trailing */
+    } else if (resolve_str_arg(vm, L, b, sizeof b) == 0 && b[0]) {
+      /* might be out path, unless next is FROM and b is not a path-like intent —
+         treat as out path; trailing FROM after out also supported */
+      snprintf(outpath, sizeof outpath, "%s", b);
+    }
+    if (!outpath[0])
+      snprintf(outpath, sizeof outpath, "%s", path);
+
+    /* trailing FROM plate_src */
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", 0);
+      var_set_num(vm, "FILLPFILE_MISS", 0);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "FILLPFILE: empty path");
+      var_set_str(vm, "ERR", "FILLPFILE: empty path");
+      bump(vm); return 1;
+    }
+
+    if (have_from && from_src[0]) {
+      const char *bp = from_src;
+      while (*bp == ' ' || *bp == '\t' || *bp == '\n' || *bp == '\r') bp++;
+      if (*bp == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_read(path, &hr) != 0) {
+      char ebuf[CUBALC_HOST_ERR_MAX + 32];
+      snprintf(ebuf, sizeof ebuf, "FILLPFILE: %s",
+               hr.err[0] ? hr.err : "read fail");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", 0);
+      var_set_num(vm, "FILLPFILE_MISS", 0);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
+      bump(vm); return 1;
+    }
+
+    hits = cubalc_expand_fillp(plate, hr.str, expanded, sizeof expanded, &miss,
+                               miss_keys, sizeof miss_keys);
+
+    if (is_strict && miss > 0) {
+      char flat[200], msg[320];
+      size_t mi = 0;
+      const char *mp;
+      flat[0] = 0;
+      for (mp = miss_keys; *mp && mi + 1 < sizeof flat; mp++) {
+        if (*mp == '\n' || *mp == '\r') {
+          if (mi > 0 && flat[mi - 1] != ',') {
+            flat[mi++] = ',';
+            if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+          }
+        } else {
+          flat[mi++] = *mp;
+        }
+      }
+      flat[mi] = 0;
+      if (!flat[0]) snprintf(flat, sizeof flat, "?");
+      snprintf(msg, sizeof msg,
+               "FILLPFILE STRICT missing line %d: %s — soft twin FILLPFILE / FILLPFILE_MISS",
+               aln, flat);
+      var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
+      var_set_num(vm, "FILLPFILE_MISS", miss);
+      var_set_num(vm, "FILLPFILE_N", hits);
+      var_set_str(vm, "FILLPFILE_BODY", expanded);
+      var_set_num(vm, "FILLPFILE_FROM", have_from ? 1 : 0);
+      if (vm->res) vm->res->asserts_fail++;
+      fail(vm, msg);
+      return -1;
+    }
+
+    memset(&wr, 0, sizeof wr);
+    if (cubalc_host_write(outpath, expanded, &wr) != 0) {
+      char ebuf[CUBALC_HOST_ERR_MAX + 32];
+      snprintf(ebuf, sizeof ebuf, "FILLPFILE: %s",
+               wr.err[0] ? wr.err : "write fail");
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FILLPFILE_N", hits);
+      var_set_num(vm, "FILLPFILE_MISS", miss);
+      var_set_num(vm, "FILLPFILE_BYTES", 0);
+      var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
+      var_set_num(vm, "FILLPFILE_FROM", have_from ? 1 : 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", ebuf);
+      var_set_str(vm, "ERR", ebuf);
+      bump(vm); return 1;
+    }
+
+    var_set_str(vm, "LAST", outpath);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", outpath);
+    vm->last_n = hits;
+    var_set_num(vm, "LAST_N", hits);
+    var_set_str(vm, "FILLPFILE", outpath);
+    var_set_str(vm, "SUBSTPLATEFILE", outpath);
+    var_set_str(vm, "EXPANDPFILE", outpath);
+    var_set_str(vm, "FILLPFILE_BODY", expanded);
+    var_set_num(vm, "FILLPFILE_N", hits);
+    var_set_num(vm, "SUBSTPLATEFILE_N", hits);
+    var_set_num(vm, "FILLPFILE_MISS", miss);
+    var_set_num(vm, "SUBSTPLATEFILE_MISS", miss);
+    var_set_str(vm, "FILLPFILE_MISS_KEYS", miss_keys);
+    var_set_num(vm, "FILLPFILE_BYTES", (long)strlen(expanded));
+    var_set_num(vm, "FILLPFILE_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillpfile hits=%ld miss=%ld strict=%d from=%d out=%s\n",
+              hits, miss, is_strict, have_from, outpath);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
