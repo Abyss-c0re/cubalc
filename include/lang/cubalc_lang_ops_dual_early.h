@@ -1,4 +1,4 @@
-/* CubalC DUAL early pack/clip/unary/pair/fieldrot meta-try — B_dual_peel.
+/* CubalC DUAL early pack/clip/unary/pair/fieldrot/mid meta-try — B_dual_peel.
  * Returns 0 if none matched. Zero bloat. Cube is SoT.
  */
 #ifndef CUBALC_LANG_OPS_DUAL_EARLY_H

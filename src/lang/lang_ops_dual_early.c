@@ -1,4 +1,4 @@
-/* CubalC DUAL early pack·clip·field32·unary*·pair·fieldrot meta-try — B_dual_peel.
+/* CubalC DUAL early pack·clip·field32·unary*·pair·fieldrot·mid meta-try — B_dual_peel.
  * Zero bloat. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_dual_early.h"
@@ -11,6 +11,7 @@
 #include "lang/cubalc_lang_ops_dual_unary4.h"
 #include "lang/cubalc_lang_ops_dual_pair.h"
 #include "lang/cubalc_lang_ops_dual_fieldrot.h"
+#include "lang/cubalc_lang_ops_dual_mid.h"
 
 int cubalc_lang_ops_dual_try_early(VM *vm, Lex *L) {
   {
@@ -45,9 +46,13 @@ int cubalc_lang_ops_dual_try_early(VM *vm, Lex *L) {
     int r = cubalc_lang_ops_dual_try_pair(vm, L);
     if (r != 0) return r;
   }
-  /* fieldrot after pair — same order as prior dual.c top-level call */
   {
     int r = cubalc_lang_ops_dual_try_fieldrot(vm, L);
+    if (r != 0) return r;
+  }
+  /* mid imm* after fieldrot — same order as prior dual.c top-level */
+  {
+    int r = cubalc_lang_ops_dual_try_mid(vm, L);
     if (r != 0) return r;
   }
   return 0;
