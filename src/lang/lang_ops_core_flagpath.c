@@ -3729,5 +3729,93 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* NTHINTREE|INDEXINTREE root needle index — 0-based Nth content-match path.
+   * Twin of SYS NTHINTREE. LAST=path · HIT 0|1 · NTHINTREE_I. NTHINTREEI icase.
+   * Soft empty/missing. Usability: k-th hit without GREPTREE+NTH glue. */
+  if (kw(&L->cur, "NTHINTREE") || kw(&L->cur, "INDEXINTREE") ||
+      kw(&L->cur, "ATINTREE") || kw(&L->cur, "NTHTREE") ||
+      kw(&L->cur, "TREEINDEX") || kw(&L->cur, "PICKINTREE") ||
+      kw(&L->cur, "NTHINTREEI") || kw(&L->cur, "INDEXINTREEI") ||
+      kw(&L->cur, "ATINTREEI") || kw(&L->cur, "NTHTREEI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    long index = 0, hit;
+    if (kw(&L->cur, "NTHINTREEI") || kw(&L->cur, "INDEXINTREEI") ||
+        kw(&L->cur, "ATINTREEI") || kw(&L->cur, "NTHTREEI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "NTHINTREE needs root needle index — NTHINTREE \"work\" \"error\" 0");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        L->cur.kind == TK_IDENT) {
+      index = parse_expr(vm, L);
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "NTHINTREE_N", 0);
+      var_set_num(vm, "NTHINTREE_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "NTHINTREE: empty path");
+      var_set_str(vm, "ERR", "NTHINTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_nthintree(root, needle, icase, index, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "NTHINTREE_N", 0);
+      var_set_num(vm, "NTHINTREE_HIT", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "NTHINTREE: fail");
+        var_set_str(vm, "ERR", "NTHINTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    hit = hr.n ? 1 : 0;
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_str(vm, "NTHINTREE", hr.str);
+    var_set_str(vm, "INDEXINTREE", hr.str);
+    var_set_num(vm, "NTHINTREE_N", hit);
+    var_set_num(vm, "NTHINTREE_HIT", hit);
+    var_set_num(vm, "INDEXINTREE_N", hit);
+    var_set_num(vm, "NTHINTREE_I", index);
+    var_set_str(vm, "PATH", hr.str);
+    var_set_num(vm, "PATH_EXIST", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# nthintree → hit=%ld i=%ld path=%s icase=%d\n",
+              hit, index, hr.str, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
