@@ -3194,5 +3194,86 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* REPLACETREE|GSUBTREE|SEDTREE root old new — recursive REPLACEALL under root.
+   * Twin of SYS REPLACETREE. LAST = rewritten path bag · REPLACETREE_N · REPLACETREE_SUBS.
+   * Soft empty/missing · empty old → no-op. Only writes when content changes.
+   * Usability: bulk nested plate rewrites without WALK+REPLACEFILES or shell find|sed. */
+  if (kw(&L->cur, "REPLACETREE") || kw(&L->cur, "GSUBTREE") || kw(&L->cur, "SEDTREE") ||
+      kw(&L->cur, "TREEREPLACE") || kw(&L->cur, "RPLTREE") || kw(&L->cur, "SUBALLTREE") ||
+      kw(&L->cur, "REWRITETREE") || kw(&L->cur, "TREESED") || kw(&L->cur, "BULKTREE") ||
+      kw(&L->cur, "SEDALLTREE")) {
+    char root[CUBALC_HOST_STR_MAX], olds[CUBALC_HOST_STR_MAX], news[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    lex_next(L);
+    root[0] = 0;
+    olds[0] = 0;
+    news[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "REPLACETREE needs root old new — REPLACETREE \"work\" \"OLD\" \"NEW\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, olds, sizeof olds) != 0) {
+      fail_at(vm, L, "REPLACETREE needs root old new — REPLACETREE \"work\" \"OLD\" \"NEW\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, news, sizeof news) != 0)
+      news[0] = 0;
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "REPLACETREE_N", 0);
+      var_set_num(vm, "REPLACETREE_SUBS", 0);
+      var_set_num(vm, "GSUBTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "REPLACETREE: empty path");
+      var_set_str(vm, "ERR", "REPLACETREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_replacetree(root, olds, news, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "REPLACETREE_N", 0);
+      var_set_num(vm, "REPLACETREE_SUBS", 0);
+      var_set_num(vm, "GSUBTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "REPLACETREE: fail");
+        var_set_str(vm, "ERR", "REPLACETREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "REPLACETREE", hr.str);
+    var_set_str(vm, "GSUBTREE", hr.str);
+    var_set_str(vm, "SEDTREE", hr.str);
+    var_set_num(vm, "REPLACETREE_N", hr.n);
+    var_set_num(vm, "GSUBTREE_N", hr.n);
+    var_set_num(vm, "SEDTREE_N", hr.n);
+    var_set_num(vm, "REPLACETREE_SUBS", (long)hr.code);
+    var_set_num(vm, "GSUBTREE_SUBS", (long)hr.code);
+    var_set_str(vm, "REPLACETREE_ROOT", root);
+    var_set_str(vm, "REPLACETREE_OLD", olds);
+    var_set_str(vm, "REPLACETREE_NEW", news);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# replacetree → files=%ld subs=%d\n", hr.n, hr.code);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
