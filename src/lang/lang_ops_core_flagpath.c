@@ -3640,5 +3640,94 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* TAKEINTREE|FIRSTNINTREE|HEADINTREE root needle n — first n content-match paths.
+   * Twin of SYS TAKEINTREE. LAST = path bag · TAKEINTREE_N · TAKEINTREE_MAX.
+   * TAKEINTREEI icase. Soft empty/missing. Usability: sample without GREPTREE+TAKE. */
+  if (kw(&L->cur, "TAKEINTREE") || kw(&L->cur, "FIRSTNINTREE") ||
+      kw(&L->cur, "HEADINTREE") || kw(&L->cur, "TAKETREE") ||
+      kw(&L->cur, "FIRSTNTREE") || kw(&L->cur, "LIMITINTREE") ||
+      kw(&L->cur, "TAKEINTREEI") || kw(&L->cur, "FIRSTNINTREEI") ||
+      kw(&L->cur, "HEADINTREEI") || kw(&L->cur, "TAKETREEI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    long maxn = 1;
+    if (kw(&L->cur, "TAKEINTREEI") || kw(&L->cur, "FIRSTNINTREEI") ||
+        kw(&L->cur, "HEADINTREEI") || kw(&L->cur, "TAKETREEI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "TAKEINTREE needs root needle n — TAKEINTREE \"work\" \"error\" 3");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        L->cur.kind == TK_IDENT) {
+      maxn = parse_expr(vm, L);
+    }
+    if (maxn < 0) maxn = 0;
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TAKEINTREE_N", 0);
+      var_set_num(vm, "FIRSTNINTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "TAKEINTREE: empty path");
+      var_set_str(vm, "ERR", "TAKEINTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_takeintree(root, needle, icase, maxn, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "TAKEINTREE_N", 0);
+      var_set_num(vm, "FIRSTNINTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "TAKEINTREE: fail");
+        var_set_str(vm, "ERR", "TAKEINTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "TAKEINTREE", hr.str);
+    var_set_str(vm, "FIRSTNINTREE", hr.str);
+    var_set_str(vm, "HEADINTREE", hr.str);
+    var_set_num(vm, "TAKEINTREE_N", hr.n);
+    var_set_num(vm, "FIRSTNINTREE_N", hr.n);
+    var_set_num(vm, "HEADINTREE_N", hr.n);
+    var_set_num(vm, "TAKEINTREE_MAX", maxn);
+    var_set_str(vm, "TAKEINTREE_ROOT", root);
+    var_set_str(vm, "TAKEINTREE_NEEDLE", needle);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# takeintree → n=%ld max=%ld icase=%d\n",
+              hr.n, maxn, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
