@@ -52,7 +52,7 @@ printf '%s\n' "$OUT" | grep -q '"ok":false'
 # catalog lists --from
 OUT=$("$CUBALC" init --list 2>&1)
 printf '%s\n' "$OUT" | grep -q 'from_recipe'
-printf '%s\n' "$OUT" | grep -qE '"n":[6-9]'
+printf '%s\n' "$OUT" | grep -qE '"n":([6-9]|[1-9][0-9]+)'
 printf '%s\n' "$OUT" | grep -qi -- '--from'
 
 # help mentions --from

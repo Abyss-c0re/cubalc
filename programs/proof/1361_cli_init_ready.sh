@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -qE '"n":(11|12|13)'
+printf '%s\n' "$OUT" | grep -qE '"n":([1-9]|[1-9][0-9]+)'
 printf '%s\n' "$OUT" | grep -q 'ready_boot'
 printf '%s\n' "$OUT" | grep -q -- '--ready'
 

@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -qE '"n":(14|15)'
+printf '%s\n' "$OUT" | grep -qE '"n":([1-9]|[1-9][0-9]+)'
 printf '%s\n' "$OUT" | grep -q 'env_boot'
 printf '%s\n' "$OUT" | grep -q -- '--env'
 

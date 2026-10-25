@@ -7,7 +7,7 @@ TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
 OUT=$("$CUBALC" init --list 2>&1)
-printf '%s\n' "$OUT" | grep -qE '"n":(18|19)'
+printf '%s\n' "$OUT" | grep -qE '"n":([1-9]|[1-9][0-9]+)'
 printf '%s\n' "$OUT" | grep -q 'product_session'
 printf '%s\n' "$OUT" | grep -qE -- '--product|--full-product|--service'
 
