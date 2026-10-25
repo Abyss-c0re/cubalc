@@ -957,5 +957,216 @@ int cubalc_lang_ops_core_try_plate(VM *vm, Lex *L) {
               key, cur ? 1L : 0L, nv, have_from);
     bump(vm); return 1;
   }
+
+  /* FILLPKEYS — unique {{key}} names bag (B_E_science restore). */
+  if (kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"TEMPLATEKEYS") ||
+      kw(&L->cur,"PLATE_KEYS_TMPL") || kw(&L->cur,"KEYS_IN_TEMPLATE") ||
+      kw(&L->cur,"MFILLPKEYS")) {
+    char tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    long n = 0;
+    lex_next(L);
+    tmpl[0] = 0; out[0] = 0;
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT &&
+         (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+          kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+          kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"FILLP") ||
+          kw(&L->cur,"REQUIRE") || kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT")))) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) != 0) {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+    }
+    n = cubalc_fillp_keys(tmpl, out, sizeof out);
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = n;
+    var_set_num(vm, "LAST_N", n);
+    var_set_str(vm, "FILLPKEYS", out);
+    var_set_num(vm, "FILLPKEYS_N", n);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillpkeys n=%ld\n", n);
+    bump(vm); return 1;
+  }
+
+  /* FILLP|SUBSTPLATE [STRICT] [FROM plate] [tmpl] — expand {{key}} from PLATE.
+   * B_E_science: catalog forms had helpers but no language op after thin peel. */
+  if (kw(&L->cur,"FILLP") || kw(&L->cur,"SUBSTPLATE") || kw(&L->cur,"EXPANDP") ||
+      kw(&L->cur,"TEMPLATEP") || kw(&L->cur,"FILLPLATE") || kw(&L->cur,"RENDERP") ||
+      kw(&L->cur,"PLATE_FILL") || kw(&L->cur,"PLATE_TEMPLATE") ||
+      kw(&L->cur,"MFILLP") || kw(&L->cur,"INTERPP") ||
+      kw(&L->cur,"NEEDFILLP") || kw(&L->cur,"REQUIREFILLP") ||
+      kw(&L->cur,"FILLPNEED") || kw(&L->cur,"STRICTFILLP")) {
+    char plate[CUBALC_HOST_STR_MAX], tmpl[CUBALC_HOST_STR_MAX], out[CUBALC_HOST_STR_MAX];
+    char miss_keys[CUBALC_HOST_STR_MAX], from_src[CUBALC_HOST_STR_MAX];
+    long hits = 0, miss = 0;
+    int is_strict = 0, have_from = 0, have_tmpl = 0;
+    int aln = L->cur.line;
+    Var *pv;
+    char op0[24];
+
+    snprintf(op0, sizeof op0, "%s", L->cur.text);
+    for (char *q = op0; *q; q++)
+      if (*q >= 'a' && *q <= 'z') *q = (char)(*q - 'a' + 'A');
+    if (strcmp(op0, "NEEDFILLP") == 0 || strcmp(op0, "REQUIREFILLP") == 0 ||
+        strcmp(op0, "FILLPNEED") == 0 || strcmp(op0, "STRICTFILLP") == 0)
+      is_strict = 1;
+
+    lex_next(L);
+    if (!is_strict && (kw(&L->cur,"STRICT") || kw(&L->cur,"NEED") ||
+                       kw(&L->cur,"REQUIRE") || kw(&L->cur,"MUST") ||
+                       kw(&L->cur,"ALL") || kw(&L->cur,"COMPLETE"))) {
+      is_strict = 1;
+      lex_next(L);
+    }
+
+    plate[0] = 0; tmpl[0] = 0; out[0] = 0; miss_keys[0] = 0; from_src[0] = 0;
+
+    if (kw(&L->cur,"FROM") || kw(&L->cur,"USING") || kw(&L->cur,"OF") ||
+        kw(&L->cur,"WITHPLATE") || kw(&L->cur,"PLATEFROM")) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT &&
+         (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+          kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+          kw(&L->cur,"INCLUDE") || kw(&L->cur,"SETP") || kw(&L->cur,"INCP") ||
+          kw(&L->cur,"DELP") || kw(&L->cur,"GETP") || kw(&L->cur,"MERGEP") ||
+          kw(&L->cur,"DEFAULTP") || kw(&L->cur,"TOGGLEP") || kw(&L->cur,"NEEDP") ||
+          kw(&L->cur,"HASP") || kw(&L->cur,"KEYSP") || kw(&L->cur,"DUMPP") ||
+          kw(&L->cur,"SAVEP") || kw(&L->cur,"LOADP") || kw(&L->cur,"SEEDP") ||
+          kw(&L->cur,"BOOTP") ||
+          kw(&L->cur,"FILLP") || kw(&L->cur,"FILLPKEYS") || kw(&L->cur,"SUBSTPLATE") ||
+          kw(&L->cur,"EXPANDP") || kw(&L->cur,"FILLPFILE") ||
+          kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+          kw(&L->cur,"REQUIRE") || kw(&L->cur,"FAIL") || kw(&L->cur,"PASS") ||
+          kw(&L->cur,"NOTE") || kw(&L->cur,"EXIT") || kw(&L->cur,"HOLD_FLASH") ||
+          kw(&L->cur,"VERSION")))) {
+      if (!have_tmpl) {
+        snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+        have_tmpl = 1;
+      }
+    } else if (L->cur.kind == TK_IDENT &&
+               (kw(&L->cur,"FROM") || kw(&L->cur,"USING"))) {
+      /* trailing FROM below */
+    } else if (resolve_str_arg(vm, L, tmpl, sizeof tmpl) == 0) {
+      have_tmpl = 1;
+    } else {
+      snprintf(tmpl, sizeof tmpl, "%s", vm->last_str);
+      have_tmpl = 1;
+    }
+
+    if (!have_from && (kw(&L->cur,"FROM") || kw(&L->cur,"USING") ||
+                       kw(&L->cur,"OF") || kw(&L->cur,"WITHPLATE"))) {
+      lex_next(L);
+      have_from = 1;
+      if (L->cur.kind == TK_IDENT && strcmp(L->cur.text, "LAST") == 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+        lex_next(L);
+      } else if (L->cur.kind == TK_IDENT) {
+        pv = var_get(vm, L->cur.text, 0);
+        if (pv && pv->is_str) {
+          snprintf(from_src, sizeof from_src, "%s", pv->sval);
+          lex_next(L);
+        } else if (pv) {
+          snprintf(from_src, sizeof from_src, "%ld", pv->val);
+          lex_next(L);
+        } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+          from_src[0] = 0;
+        }
+      } else if (resolve_str_arg(vm, L, from_src, sizeof from_src) != 0) {
+        snprintf(from_src, sizeof from_src, "%s", vm->last_str);
+      }
+    }
+
+    if (have_from && from_src[0]) {
+      const char *b = from_src;
+      while (*b == ' ' || *b == '\t' || *b == '\n' || *b == '\r') b++;
+      if (*b == '{')
+        snprintf(plate, sizeof plate, "%s", from_src);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    } else {
+      pv = var_get(vm, "PLATE", 0);
+      if (pv && pv->is_str && pv->sval[0])
+        snprintf(plate, sizeof plate, "%s", pv->sval);
+      else
+        snprintf(plate, sizeof plate, "%s", "{}");
+    }
+
+    hits = cubalc_expand_fillp(plate, tmpl, out, sizeof out, &miss,
+                               miss_keys, sizeof miss_keys);
+
+    if (is_strict && miss > 0) {
+      char flat[200], msg[320];
+      size_t mi = 0;
+      const char *mp;
+      flat[0] = 0;
+      for (mp = miss_keys; *mp && mi + 1 < sizeof flat; mp++) {
+        if (*mp == '\n' || *mp == '\r') {
+          if (mi > 0 && flat[mi - 1] != ',') {
+            flat[mi++] = ',';
+            if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+          }
+        } else {
+          flat[mi++] = *mp;
+        }
+      }
+      flat[mi] = 0;
+      if (!flat[0]) snprintf(flat, sizeof flat, "?");
+      snprintf(msg, sizeof msg,
+               "FILLP STRICT missing line %d: %s — soft twin FILLP / FILLP_MISS",
+               aln, flat);
+      var_set_str(vm, "FILLP_MISS_KEYS", miss_keys);
+      var_set_num(vm, "FILLP_MISS", miss);
+      var_set_num(vm, "FILLP_N", hits);
+      if (vm->res) vm->res->asserts_fail++;
+      fail(vm, msg);
+      return -1;
+    }
+
+    var_set_str(vm, "LAST", out);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+    vm->last_n = hits;
+    var_set_num(vm, "LAST_N", hits);
+    var_set_str(vm, "FILLP", out);
+    var_set_str(vm, "SUBSTPLATE", out);
+    var_set_str(vm, "EXPANDP", out);
+    var_set_str(vm, "TEMPLATEP", out);
+    var_set_num(vm, "FILLP_N", hits);
+    var_set_num(vm, "SUBSTPLATE_N", hits);
+    var_set_num(vm, "EXPANDP_N", hits);
+    var_set_num(vm, "FILLP_MISS", miss);
+    var_set_num(vm, "SUBSTPLATE_MISS", miss);
+    var_set_str(vm, "FILLP_MISS_KEYS", miss_keys);
+    var_set_num(vm, "FILLP_FROM", have_from ? 1 : 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# fillp hits=%ld miss=%ld strict=%d from=%d\n",
+              hits, miss, is_strict, have_from);
+    if (vm->res)
+      snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", out);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
