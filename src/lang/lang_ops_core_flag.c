@@ -77,6 +77,43 @@ int cubalc_lang_ops_core_try_flag(VM *vm, Lex *L) {
     bump(vm); return 1;
   }
 
+  /* HASFLAGS|HASFLAGC [min] — soft 0|1 if flag count >= min (default 1).
+   * B_E_science restore · twin of LISTFLAGS without bag clobber. */
+  if (kw(&L->cur,"HASFLAGS") || kw(&L->cur,"HASFLAGC") || kw(&L->cur,"FLAGC?") ||
+      kw(&L->cur,"ENOUGHFLAGS") || kw(&L->cur,"HAS_FLAGS") || kw(&L->cur,"FLAGS?") ||
+      kw(&L->cur,"HASNFLAGS") || kw(&L->cur,"NFLAGS?")){
+    long need = 1, have, hit;
+    char bag[CUBALC_HOST_STR_MAX];
+    char buf[8];
+    lex_next(L);
+    if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN ||
+        (L->cur.kind == TK_IDENT && !kw(&L->cur,"ASSERT") && !kw(&L->cur,"LET") &&
+         !kw(&L->cur,"PRINT") && !kw(&L->cur,"SYS") && !kw(&L->cur,"END") &&
+         !kw(&L->cur,"IF") && !kw(&L->cur,"HASARG") && !kw(&L->cur,"HASFLAG") &&
+         !kw(&L->cur,"REQUIRE") && !kw(&L->cur,"RESTARGS") && !kw(&L->cur,"USAGE") &&
+         !kw(&L->cur,"LISTFLAGS") && !kw(&L->cur,"HASRESTARGS") && !kw(&L->cur,"FLAGMAP"))){
+      need = parse_expr(vm, L);
+    }
+    if (need < 0) need = 0;
+    if (need > 32) need = 32;
+    have = cubalc_collect_listflags(bag, sizeof bag);
+    hit = (have >= need) ? 1L : 0L;
+    var_set_num(vm, "LAST_N", hit);
+    vm->last_n = hit;
+    var_set_num(vm, "HASFLAGS_N", hit);
+    var_set_num(vm, "LISTFLAGS_N", have);
+    var_set_num(vm, "FLAGC_N", have);
+    var_set_num(vm, "OK", 1);
+    snprintf(buf, sizeof buf, "%ld", hit);
+    var_set_str(vm, "LAST", buf);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    if (have > 0)
+      var_set_str(vm, "LISTFLAGS", bag);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasflags >= %ld (have %ld) → %ld\n", need, have, hit);
+    bump(vm); return 1;
+  }
+
   /* RESTARGS|POSITIONALS — newline bag of non-flag CUBALC_ARGn (positionals).
    * Soft peel; REQUIRE RESTARGS hard gate lives under REQUIRE plane. */
   if (kw(&L->cur, "RESTARGS") || kw(&L->cur, "POSITIONALS") || kw(&L->cur, "POSARGS") ||
