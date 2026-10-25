@@ -800,6 +800,47 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       bump(vm); return 1;
     }
 
+    /* REQUIRE BIN|CMD|EXE|COMMAND name — fail if not X_OK on PATH (no lib fallback).
+     * On success: LAST = resolved path, REQUIRE_BIN = path, LAST_N=1, OK=1.
+     * Usability: gate curl/sh/agent tools before SPAWN without shell which. */
+    if (kw(&L->cur,"BIN")||kw(&L->cur,"CMD")||kw(&L->cur,"EXE")||
+        kw(&L->cur,"COMMAND")||kw(&L->cur,"TOOL")||kw(&L->cur,"PROGRAM")||
+        kw(&L->cur,"BINARY")||kw(&L->cur,"EXECUTABLE")){
+      char name[160];
+      cubalc_host_result hr;
+      lex_next(L);
+      name[0] = 0;
+      if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+        fail(vm, "REQUIRE BIN \"name\"|var|LAST");
+        return -1;
+      }
+      if (!name[0]) {
+        fail(vm, "REQUIRE BIN empty name");
+        return -1;
+      }
+      if (cubalc_host_which_bin(name, &hr) != 0){
+        char msg[180];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE BIN '%s' missing line %d — install tool or fix PATH",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      var_set_str(vm, "REQUIRE_BIN", hr.str);
+      var_set_str(vm, "BIN", hr.str);
+      var_set_str(vm, "WHICHBIN", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require bin %s → %s\n", name, hr.str);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+
     if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
         kw(&L->cur, "CUBALC"))
       lex_next(L);
