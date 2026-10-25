@@ -6,7 +6,7 @@ CUBALC="${CUBALC:-$ROOT/out/cubalc}"
 cd "$ROOT"
 
 OUT=$("$CUBALC" help 2>&1)
-printf '%s\n' "$OUT" | grep -qi '1\.15\.'
+printf '%s\n' "$OUT" | grep -qi '1\.16\.'
 printf '%s\n' "$OUT" | grep -qi 'recipe'
 printf '%s\n' "$OUT" | grep -qi 'fat-session\|fat_session'
 printf '%s\n' "$OUT" | grep -qi '\-T\|timeout\|wall'

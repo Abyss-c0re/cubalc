@@ -8,15 +8,15 @@ cd "$ROOT"
 OUT=$("$CUBALC" doctor)
 printf '%s\n' "$OUT" | grep -q '"schema":"cubalc.doctor.v1"'
 printf '%s\n' "$OUT" | grep -q '"ok":true'
-printf '%s\n' "$OUT" | grep -q '"vars_max":256'
+printf '%s\n' "$OUT" | grep -q '"vars_max":1024'
 printf '%s\n' "$OUT" | grep -q '"varroom_forms":true'
 printf '%s\n' "$OUT" | grep -q 'VARROOM'
 printf '%s\n' "$OUT" | grep -q 'HASVARROOM\|NEEDVARROOM\|var_budget'
-printf '%s\n' "$OUT" | grep -q '"version":"1.15.'
+printf '%s\n' "$OUT" | grep -q '"version":"1.16.'
 
 # health alias
 OUT2=$("$CUBALC" health)
-printf '%s\n' "$OUT2" | grep -q '"vars_max":256'
+printf '%s\n' "$OUT2" | grep -q '"vars_max":1024'
 printf '%s\n' "$OUT2" | grep -q '"varroom_forms":true'
 
 # regression: libs still present

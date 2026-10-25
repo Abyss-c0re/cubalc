@@ -21,7 +21,7 @@ printf '%s\n' "$OUT" | grep -q '"docs_for_agents":true'
 printf '%s\n' "$OUT" | grep -q 'plate_uniform'
 printf '%s\n' "$OUT" | grep -q 'nest_check'
 printf '%s\n' "$OUT" | grep -q 'plate uniform'
-printf '%s\n' "$OUT" | grep -q '"version":"1.15.'
+printf '%s\n' "$OUT" | grep -q '"version":"1.16.'
 # libs_n >= 16
 n=$(printf '%s\n' "$OUT" | sed -n 's/.*"libs_n":\([0-9][0-9]*\).*/\1/p' | head -1)
 test -n "$n"

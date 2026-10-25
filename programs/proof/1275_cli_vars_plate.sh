@@ -6,7 +6,7 @@ CUBALC="${CUBALC:-$ROOT/out/cubalc}"
 
 # empty-ish program still allocates some specials
 OUT=$("$CUBALC" run -q -e 'PASS' 2>&1)
-printf '%s\n' "$OUT" | grep -q '"vars_max":256\|"vars_max": 256'
+printf '%s\n' "$OUT" | grep -q '"vars_max":1024\|"vars_max": 1024'
 printf '%s\n' "$OUT" | grep -q '"vars_full":false'
 printf '%s\n' "$OUT" | grep -q '"vars_n":'
 
@@ -30,7 +30,7 @@ ASSERT VARS_MAX >= 256
 ASSERT VARS_FULL == 0
 ' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
-printf '%s\n' "$OUT" | grep -q '"vars_max":256\|"vars_max": 256'
+printf '%s\n' "$OUT" | grep -q '"vars_max":1024\|"vars_max": 1024'
 printf '%s\n' "$OUT" | grep -q '"vars_full":false'
 
 echo "1275_cli_vars_plate: PASS"
