@@ -3556,5 +3556,89 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* HASINTREE|ANYINTREE|CONTAINSINTREE root needle — soft 0|1 content-exists probe.
+   * Twin of SYS HASINTREE. LAST_N/HIT 0|1 · PATH on hit. Does NOT clobber LAST str.
+   * HASINTREEI icase. Soft empty/missing. Usability: IF guards without FIRSTINTREE+HIT. */
+  if (kw(&L->cur, "HASINTREE") || kw(&L->cur, "ANYINTREE") ||
+      kw(&L->cur, "CONTAINSINTREE") || kw(&L->cur, "TREEHAS") ||
+      kw(&L->cur, "HASTREE") || kw(&L->cur, "ANYINTREECONTENT") ||
+      kw(&L->cur, "HASINTREEI") || kw(&L->cur, "ANYINTREEI") ||
+      kw(&L->cur, "CONTAINSINTREEI") || kw(&L->cur, "TREEHASI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    long hit;
+    if (kw(&L->cur, "HASINTREEI") || kw(&L->cur, "ANYINTREEI") ||
+        kw(&L->cur, "CONTAINSINTREEI") || kw(&L->cur, "TREEHASI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "HASINTREE needs root needle — HASINTREE \"work\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASINTREE_N", 0);
+      var_set_num(vm, "HASINTREE_HIT", 0);
+      var_set_str(vm, "PATH", "");
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "HASINTREE: empty path");
+      var_set_str(vm, "ERR", "HASINTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_findintree(root, needle, icase, 0, &hr) != 0) {
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "HASINTREE_N", 0);
+      var_set_num(vm, "HASINTREE_HIT", 0);
+      var_set_str(vm, "PATH", "");
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "HASINTREE: fail");
+        var_set_str(vm, "ERR", "HASINTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    hit = hr.n ? 1 : 0;
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    var_set_num(vm, "HASINTREE_N", hit);
+    var_set_num(vm, "HASINTREE_HIT", hit);
+    var_set_num(vm, "ANYINTREE_N", hit);
+    var_set_str(vm, "PATH", hit ? hr.str : "");
+    var_set_num(vm, "PATH_EXIST", hit);
+    if (hit) {
+      var_set_str(vm, "HASINTREE_PATH", hr.str);
+      var_set_str(vm, "ANYINTREE_PATH", hr.str);
+    } else {
+      var_set_str(vm, "HASINTREE_PATH", "");
+      var_set_str(vm, "ANYINTREE_PATH", "");
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# hasintree → hit=%ld path=%s icase=%d\n",
+              hit, hit ? hr.str : "", icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
