@@ -32,7 +32,9 @@ grep -q 'UNIFORM_NEEDLE' "$ST/agent.cubalc"
 grep -q 'ASSERT UNIFORM_EQ' "$ST/agent.cubalc"
 
 # run from ROOT so DEFAULT PLATE_PATH state/agent_plate.json resolves
+# clear stale plate so ENSUREPLATE reseeds (hit on empty {} skips PLATE_SEED)
 cd "$ROOT"
+rm -f "$ROOT/state/agent_plate.json"
 CUBALC_STATE="$ST" "$CUBALC" run "$ST/agent.cubalc" | grep -q '"ok":true'
 # durable plate under workspace state/ (scaffold default path)
 test -f "$ROOT/state/agent_plate.json"
