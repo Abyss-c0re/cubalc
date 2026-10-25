@@ -53,7 +53,7 @@ ASSERT OK == 1
 # agent_boot + plate_boot compose
 INCLUDE agent_boot
 ASSERT OK == 1
-SYS HAS VERSION "1.15"
+SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 
 # cleanup

@@ -9,7 +9,7 @@ REQUIRE VERSION 1
 ASSERT OK == 1 "major-only need ok"
 
 VERSION
-SYS HAS LAST "1.15"
+SYS HAS LAST "1.16"
 ASSERT LAST_N == 1 "VERSION string present"
 
 PRINT "require_version ok" LAST

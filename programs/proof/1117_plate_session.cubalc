@@ -19,7 +19,7 @@ ASSERT OK == 1
 ASSERT INCLUDE_OK == 1
 
 # agent_boot side
-SYS HAS VERSION "1.15"
+SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 
 # plate_boot side

@@ -5,7 +5,7 @@
 INCLUDE agent_boot
 ASSERT OK == 1 "agent_boot ok"
 ASSERT INCLUDE_OK == 1 "include path set"
-SYS HAS VERSION "1.15"
+SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1 "VERSION from boot"
 
 # no HOLD_FLASH form required — default permits plug

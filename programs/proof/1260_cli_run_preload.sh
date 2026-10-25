@@ -16,7 +16,7 @@ LET PRELOAD_TAG = "from_L_path"
 LIB
 
 # 1) -I agent_boot injects REQUIRE+VERSION without body INCLUDE
-OUT=$("$CUBALC" run -q -I agent_boot -e 'SYS HAS VERSION "1.15"
+OUT=$("$CUBALC" run -q -I agent_boot -e 'SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 SYS HAS INCLUDE_PATH "agent_boot"
 ASSERT LAST_N == 1
@@ -28,14 +28,14 @@ printf '%s\n' "$OUT" | grep -q '"asserts_fail":0'
 # 2) multi -I + --include= (order: hold_seed then agent_boot)
 OUT=$("$CUBALC" run -q -I hold_seed --include=agent_boot -e 'SYS HAS INCLUDE_PATH "agent_boot"
 ASSERT LAST_N == 1
-SYS HAS VERSION "1.15"
+SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 ' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
 printf '%s\n' "$OUT" | grep -q '"preload_n":2'
 
 # 3) CUBALC_PRELOAD env (colon list)
-OUT=$(CUBALC_PRELOAD="agent_boot" "$CUBALC" run -q -e 'SYS HAS VERSION "1.15"
+OUT=$(CUBALC_PRELOAD="agent_boot" "$CUBALC" run -q -e 'SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 ' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
@@ -51,7 +51,7 @@ printf '%s\n' "$OUT" | grep -q '"include_path_n":1'
 printf '%s\n' "$OUT" | grep -q '"preload_n":1'
 
 # 5) top-level alias (no run subcommand): cubalc -I … -e …
-OUT=$("$CUBALC" -I agent_boot -q -e 'SYS HAS VERSION "1.15"
+OUT=$("$CUBALC" -I agent_boot -q -e 'SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 ' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
@@ -67,7 +67,7 @@ printf '%s\n' "$OUT" | grep -q '"ok":true'
 printf '%s\n' "$OUT" | grep -q '"asserts_fail":0'
 
 # 7) env + CLI combine (dedupe)
-OUT=$(CUBALC_PRELOAD="agent_boot" "$CUBALC" run -q -I agent_boot -e 'SYS HAS VERSION "1.15"
+OUT=$(CUBALC_PRELOAD="agent_boot" "$CUBALC" run -q -I agent_boot -e 'SYS HAS VERSION "1.16"
 ASSERT LAST_N == 1
 ' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
