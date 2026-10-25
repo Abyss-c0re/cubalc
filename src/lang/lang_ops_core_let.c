@@ -762,6 +762,44 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
+    /* REQUIRE LIB|MODULE|INCLUDE|FILE name — resolve like INCLUDE / cubalc which.
+     * Note: FILE here means cubalc module (legacy), not host path — use REQUIRE PATH|REG. */
+    if (kw(&L->cur,"LIB")||kw(&L->cur,"MODULE")||kw(&L->cur,"INCLUDE")||
+        kw(&L->cur,"FILE")||kw(&L->cur,"STDLIB")||kw(&L->cur,"SRC")){
+      char name[160];
+      cubalc_host_result hr;
+      lex_next(L);
+      name[0] = 0;
+      /* Usability: REQUIRE LIB stem_var after EACH LINE / PICKLIB (twin of REQUIRE BIN). */
+      if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+        fail(vm, "REQUIRE LIB \"name\"|var|LAST");
+        return -1;
+      }
+      if (!name[0]) {
+        fail(vm, "REQUIRE LIB empty name");
+        return -1;
+      }
+      if (cubalc_host_find_cubalc(name, &hr) != 0){
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE LIB '%s' missing line %d — tried programs/lib · cubalc libs",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", hr.str);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "REQUIRE_LIB", hr.str);
+      if (vm->trace)
+        fprintf(vm->trace, "# require lib %s → %s\n", name, hr.str);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+
     if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
         kw(&L->cur, "CUBALC"))
       lex_next(L);
