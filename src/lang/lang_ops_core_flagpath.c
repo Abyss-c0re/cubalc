@@ -2715,5 +2715,79 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* RMTREE|RMNEST|RMRF|DELTREE path — recursive remove file or directory tree.
+   * Twin of SYS RMTREE. LAST = abs path · LAST_N / RMTREE_N = entries removed.
+   * Soft empty/fail · missing soft OK (LAST_N=0). File or symlink → unlink.
+   * Usability: clean nested agent workspaces without shell rm -rf or
+   * WALK+RMALL+RMDIR glue after MKTEMPDIR/CLAIMOUT/WRITEOUT. */
+  if (kw(&L->cur, "RMTREE") || kw(&L->cur, "RMNEST") || kw(&L->cur, "RMRF") ||
+      kw(&L->cur, "DELTREE") || kw(&L->cur, "RM_TREE") || kw(&L->cur, "PURGETREE") ||
+      kw(&L->cur, "REMOVETREE") || kw(&L->cur, "WIPETREE") || kw(&L->cur, "RMREC") ||
+      kw(&L->cur, "RECURSERM")) {
+    char path[CUBALC_HOST_STR_MAX], abs[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    lex_next(L);
+    path[0] = 0;
+    abs[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "RMTREE needs path — RMTREE \"work/tmp/root\"");
+      return -1;
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RMTREE_N", 0);
+      var_set_num(vm, "RMNEST_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "RMTREE: empty path");
+      var_set_str(vm, "ERR", "RMTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_abspath(path, &hr) == 0 && hr.str[0])
+      snprintf(abs, sizeof abs, "%s", hr.str);
+    else
+      snprintf(abs, sizeof abs, "%s", path);
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_rmtree(abs, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "RMTREE_N", 0);
+      var_set_num(vm, "RMNEST_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", abs);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", abs);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "RMTREE: fail");
+        var_set_str(vm, "ERR", "RMTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", abs);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", abs);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "RMTREE_N", hr.n);
+    var_set_num(vm, "RMNEST_N", hr.n);
+    var_set_num(vm, "RMRF_N", hr.n);
+    var_set_str(vm, "RMTREE", abs);
+    var_set_str(vm, "RMNEST", abs);
+    var_set_str(vm, "PATH", abs);
+    var_set_num(vm, "PATH_EXIST", 0);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# rmtree → %s n=%ld\n", abs, hr.n);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
