@@ -3368,5 +3368,94 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* GREPLINESTREE|EXTRACTLINETREE|HARVESTTREE root needle — recursive line harvest.
+   * Twin of SYS GREPLINESTREE. LAST = line bag · GREPLINESTREE_N · GREPLINESTREE_FILES.
+   * GREPLINESTREEI case-insensitive. Soft empty/missing. Empty needle → all lines.
+   * Usability: log harvest under a tree without WALK+GREPLINES or shell grep -rn. */
+  if (kw(&L->cur, "GREPLINESTREE") || kw(&L->cur, "EXTRACTLINETREE") ||
+      kw(&L->cur, "TREEGREPLINES") || kw(&L->cur, "HARVESTTREE") ||
+      kw(&L->cur, "LINETREE") || kw(&L->cur, "GREPLINEST") ||
+      kw(&L->cur, "GREPLINESTREEI") || kw(&L->cur, "EXTRACTLINETREEI") ||
+      kw(&L->cur, "TREEGREPLINESI") || kw(&L->cur, "HARVESTTREEI") ||
+      kw(&L->cur, "LINETREEI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0;
+    if (kw(&L->cur, "GREPLINESTREEI") || kw(&L->cur, "EXTRACTLINETREEI") ||
+        kw(&L->cur, "TREEGREPLINESI") || kw(&L->cur, "HARVESTTREEI") ||
+        kw(&L->cur, "LINETREEI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, "GREPLINESTREE needs root needle — GREPLINESTREE \"work\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GREPLINESTREE_N", 0);
+      var_set_num(vm, "GREPLINESTREE_FILES", 0);
+      var_set_num(vm, "EXTRACTLINETREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "GREPLINESTREE: empty path");
+      var_set_str(vm, "ERR", "GREPLINESTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_greplines_tree(root, needle, icase, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "GREPLINESTREE_N", 0);
+      var_set_num(vm, "GREPLINESTREE_FILES", 0);
+      var_set_num(vm, "EXTRACTLINETREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "GREPLINESTREE: fail");
+        var_set_str(vm, "ERR", "GREPLINESTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_str(vm, "GREPLINESTREE", hr.str);
+    var_set_str(vm, "EXTRACTLINETREE", hr.str);
+    var_set_str(vm, "HARVESTTREE", hr.str);
+    var_set_num(vm, "GREPLINESTREE_N", hr.n);
+    var_set_num(vm, "EXTRACTLINETREE_N", hr.n);
+    var_set_num(vm, "HARVESTTREE_N", hr.n);
+    var_set_num(vm, "GREPLINESTREE_FILES", (long)hr.code);
+    var_set_num(vm, "EXTRACTLINETREE_FILES", (long)hr.code);
+    var_set_str(vm, "GREPLINESTREE_ROOT", root);
+    var_set_str(vm, "GREPLINESTREE_NEEDLE", needle);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# greplinestree → lines=%ld files=%d icase=%d\n",
+              hr.n, hr.code, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
