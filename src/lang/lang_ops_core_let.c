@@ -1322,11 +1322,627 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       bump(vm); return 1;
     }
 
+    /* REQUIRE JSONHASALL|JSONNEED|JSONKEYS [plate] key [key…]
+     * REQUIRE JSONHASANY|NEEDJSONANY [plate] key [key…] — fail-fast any-of (HASALL twin).
+     * REQUIRE JSONONLY|NOEXTRA|JSONSTRICT|ONLYP|NOEXTRAP [plate] allow [key…]
+     * REQUIRE JSONEXACT|JSONSCHEMA|EXACTP|SCHEMAP [plate] key [key…] — HASALL + ONLY one-shot.
+     * Soft twins: SYS JSONHASALL / JSONHASANY / JSONEXTRA / JSONEXACT · ONLYP / EXACTP.
+     * Usability: full plate schema gate without multi-probe IF+FAIL glue.
+     * ONLYP/EXACTP aliases = fail-fast multi-plate twins of soft ONLYP/EXACTP. */
+    if (kw(&L->cur,"JSONHASALL") || kw(&L->cur,"JSONNEED") || kw(&L->cur,"JSONKEYS") ||
+        kw(&L->cur,"JHASALL") || kw(&L->cur,"NEEDKEYS") || kw(&L->cur,"PLATEKEYS") ||
+        kw(&L->cur,"JSONONLY") || kw(&L->cur,"JONLY") || kw(&L->cur,"JSONSTRICT") ||
+        kw(&L->cur,"ONLYP") || kw(&L->cur,"NOEXTRAP") || kw(&L->cur,"JSONONLYP") ||
+        kw(&L->cur,"STRICTP") || kw(&L->cur,"ALLOWONLYP") || kw(&L->cur,"PLATEONLYP") ||
+        kw(&L->cur,"ONLY_P") || kw(&L->cur,"NOEXTRA_P") || kw(&L->cur,"JSONONLY_P") ||
+        kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
+        kw(&L->cur,"HASANYJSON") || kw(&L->cur,"JSONANYKEY") || kw(&L->cur,"MUSTJSONANY") ||
+        kw(&L->cur,"REQUIREJSONANY") || kw(&L->cur,"NEEDANYJSON") || kw(&L->cur,"JSONNEEDANY") ||
+        kw(&L->cur,"NOEXTRA") || kw(&L->cur,"ALLOWONLY") || kw(&L->cur,"PLATEONLY") ||
+        kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON") ||
+        kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
+        kw(&L->cur,"EXACTKEYS") || kw(&L->cur,"PLATEEXACT") || kw(&L->cur,"SCHEMA") ||
+        kw(&L->cur,"EXACTP") || kw(&L->cur,"SCHEMAP") || kw(&L->cur,"PLATEEXACTP") ||
+        kw(&L->cur,"KEYSEXACTP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"PEXACT") ||
+        kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")){
+      char plate[CUBALC_HOST_STR_MAX], keys_nl[CUBALC_HOST_STR_MAX];
+      char arg[CUBALC_HOST_STR_MAX], bag[CUBALC_HOST_STR_MAX];
+      int have_plate = 0, want_only = 0, want_exact = 0, want_any = 0;
+      size_t olen = 0;
+      cubalc_host_result hr, xr;
+      if (kw(&L->cur,"JSONEXACT") || kw(&L->cur,"JEXACT") || kw(&L->cur,"JSONSCHEMA") ||
+          kw(&L->cur,"EXACTKEYS") || kw(&L->cur,"PLATEEXACT") || kw(&L->cur,"SCHEMA") ||
+          kw(&L->cur,"EXACTP") || kw(&L->cur,"SCHEMAP") || kw(&L->cur,"PLATEEXACTP") ||
+          kw(&L->cur,"KEYSEXACTP") || kw(&L->cur,"SAMEKEYSP") || kw(&L->cur,"PEXACT")) {
+        want_exact = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"JSONONLY") || kw(&L->cur,"JONLY") || kw(&L->cur,"JSONSTRICT") ||
+          kw(&L->cur,"NOEXTRA") || kw(&L->cur,"ALLOWONLY") || kw(&L->cur,"PLATEONLY") ||
+          kw(&L->cur,"JSONALLOW") || kw(&L->cur,"STRICTJSON") ||
+          kw(&L->cur,"ONLYP") || kw(&L->cur,"NOEXTRAP") || kw(&L->cur,"JSONONLYP") ||
+          kw(&L->cur,"STRICTP") || kw(&L->cur,"ALLOWONLYP") || kw(&L->cur,"PLATEONLYP") ||
+          kw(&L->cur,"ONLY_P") || kw(&L->cur,"NOEXTRA_P") || kw(&L->cur,"JSONONLY_P")) {
+        want_only = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"JSONHASANY") || kw(&L->cur,"NEEDJSONANY") || kw(&L->cur,"JHASANY") ||
+                 kw(&L->cur,"HASANYJSON") || kw(&L->cur,"JSONANYKEY") || kw(&L->cur,"MUSTJSONANY") ||
+                 kw(&L->cur,"REQUIREJSONANY") || kw(&L->cur,"NEEDANYJSON") || kw(&L->cur,"JSONNEEDANY")) {
+        want_any = 1;
+        lex_next(L);
+      } else if (kw(&L->cur,"JSON") || kw(&L->cur,"PLATE")) {
+        lex_next(L);
+        /* REQUIRE JSON SUBSET|SUPERSET|COVERS a b — two-token required-field gate */
+        if (kw(&L->cur,"SUBSET") || kw(&L->cur,"ISSUBSET") || kw(&L->cur,"IN") ||
+            kw(&L->cur,"SUPERSET") || kw(&L->cur,"ISSUPERSET") || kw(&L->cur,"COVERS") ||
+            kw(&L->cur,"COVER")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, bad;
+          int want_super = 0;
+          const char *sub, *sup;
+          if (kw(&L->cur,"SUPERSET") || kw(&L->cur,"ISSUPERSET") ||
+              kw(&L->cur,"COVERS") || kw(&L->cur,"COVER"))
+            want_super = 1;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L,
+                    want_super
+                        ? "REQUIRE JSON SUPERSET super sub — need two plates"
+                        : "REQUIRE JSON SUBSET sub super — need two plates");
+            return -1;
+          }
+          if (want_super) {
+            sub = b;
+            sup = a;
+          } else {
+            sub = a;
+            sup = b;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_subset(sub, sup, &hr) != 0 || hr.n == 0) {
+            char msg[320];
+            char flat[160];
+            size_t mi = 0;
+            const char *mp;
+            memset(&bad, 0, sizeof bad);
+            cubalc_host_json_subset_bad_keys(sub, sup, &bad);
+            flat[0] = 0;
+            for (mp = bad.str; *mp && mi + 1 < sizeof flat; mp++) {
+              if (*mp == '\n' || *mp == '\r') {
+                if (mi > 0 && flat[mi - 1] != ',') {
+                  flat[mi++] = ',';
+                  if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+                }
+              } else {
+                flat[mi++] = *mp;
+              }
+            }
+            flat[mi] = 0;
+            if (flat[0])
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONSUBSET mismatch line %d: %s — soft twin SYS JSONSUBSET",
+                       aln, flat);
+            else
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONSUBSET mismatch line %d — soft twin SYS JSONSUBSET",
+                       aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONSUBSET_N", 1);
+          var_set_num(vm, "JSONSUPERSET_N", 1);
+          var_set_num(vm, "REQUIRE_JSONSUBSET", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json %s ok\n",
+                    want_super ? "superset" : "subset");
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
+        /* REQUIRE JSON EQ a b — two-token equality gate */
+        if (kw(&L->cur,"EQ") || kw(&L->cur,"EQUAL") || kw(&L->cur,"SAME") ||
+            kw(&L->cur,"EQUALS")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, ch;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L, "REQUIRE JSON EQ a b — need two plates");
+            return -1;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_eq(a, b, &hr) != 0 || hr.n == 0) {
+            char msg[320];
+            char flat[160];
+            size_t mi = 0;
+            const char *mp;
+            memset(&ch, 0, sizeof ch);
+            cubalc_host_json_changed_keys(a, b, 0, &ch);
+            flat[0] = 0;
+            for (mp = ch.str; *mp && mi + 1 < sizeof flat; mp++) {
+              if (*mp == '\n' || *mp == '\r') {
+                if (mi > 0 && flat[mi - 1] != ',') {
+                  flat[mi++] = ',';
+                  if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+                }
+              } else {
+                flat[mi++] = *mp;
+              }
+            }
+            flat[mi] = 0;
+            if (flat[0])
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONEQ mismatch line %d: %s — soft twin SYS JSONEQ / JSONCHANGED",
+                       aln, flat);
+            else
+              snprintf(msg, sizeof msg,
+                       "REQUIRE JSONEQ mismatch line %d — soft twin SYS JSONEQ",
+                       aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONEQ_N", 1);
+          var_set_num(vm, "REQUIRE_JSONEQ", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json eq ok\n");
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
+        /* REQUIRE JSON NEQ|DIFF|DIFFERENT a b — two-token mutation gate */
+        if (kw(&L->cur,"NEQ") || kw(&L->cur,"DIFF") || kw(&L->cur,"DIFFERENT") ||
+            kw(&L->cur,"NOTEQ") || kw(&L->cur,"NOTEQUAL") || kw(&L->cur,"UNEQUAL")) {
+          char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+          cubalc_host_result hr, ch;
+          lex_next(L);
+          a[0] = 0;
+          b[0] = 0;
+          if (resolve_str_arg(vm, L, a, sizeof a) != 0)
+            snprintf(a, sizeof a, "%s", vm->last_str);
+          if (resolve_str_arg(vm, L, b, sizeof b) != 0)
+            b[0] = 0;
+          if (!a[0] || !b[0]) {
+            fail_at(vm, L, "REQUIRE JSON NEQ a b — need two plates");
+            return -1;
+          }
+          memset(&hr, 0, sizeof hr);
+          if (cubalc_host_json_eq(a, b, &hr) != 0) {
+            fail_at(vm, L, "REQUIRE JSON NEQ a b — plate compare failed");
+            return -1;
+          }
+          if (hr.n != 0) {
+            char msg[320];
+            snprintf(msg, sizeof msg,
+                     "REQUIRE JSONNEQ still-equal line %d — soft twin SYS JSONNEQ (expect mutation)",
+                     aln);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          memset(&ch, 0, sizeof ch);
+          cubalc_host_json_changed_keys(a, b, 0, &ch);
+          var_set_str(vm, "LAST", a);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", a);
+          vm->last_n = 1;
+          var_set_num(vm, "LAST_N", 1);
+          var_set_num(vm, "JSONNEQ_N", 1);
+          var_set_num(vm, "JSONEQ_N", 0);
+          var_set_num(vm, "REQUIRE_JSONNEQ", 1);
+          var_set_num(vm, "JSONCHANGED_N", ch.n);
+          var_set_str(vm, "JSONCHANGED", ch.str);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json neq ok · changed=%ld\n", ch.n);
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
+        /* REQUIRE JSON TYPE [plate] key kind — two-token type gate */
+        if (kw(&L->cur,"TYPE") || kw(&L->cur,"KIND") || kw(&L->cur,"OFTYPE")) {
+          char plate2[CUBALC_HOST_STR_MAX], key2[96], want2[32];
+          char a2[CUBALC_HOST_STR_MAX], b2[CUBALC_HOST_STR_MAX];
+          const char *got_s = "missing";
+          long got_n = 0;
+          int n2 = 0, have_w = 0;
+          cubalc_host_result gr2;
+          lex_next(L);
+          plate2[0] = 0; key2[0] = 0; want2[0] = 0;
+          a2[0] = 0; b2[0] = 0;
+          if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+            if (resolve_str_arg(vm, L, a2, sizeof a2) == 0) n2 = 1;
+          }
+          if (n2 >= 1 && L->cur.kind == TK_STR) {
+            if (resolve_str_arg(vm, L, b2, sizeof b2) == 0) n2 = 2;
+          } else if (n2 >= 1 && L->cur.kind == TK_IDENT) {
+            const char *id = L->cur.text;
+            int looks_kind =
+                strcmp(id, "num") == 0 || strcmp(id, "number") == 0 ||
+                strcmp(id, "int") == 0 || strcmp(id, "str") == 0 ||
+                strcmp(id, "string") == 0 || strcmp(id, "bool") == 0 ||
+                strcmp(id, "boolean") == 0 || strcmp(id, "null") == 0 ||
+                strcmp(id, "obj") == 0 || strcmp(id, "object") == 0 ||
+                strcmp(id, "arr") == 0 || strcmp(id, "array") == 0 ||
+                strcmp(id, "list") == 0 || strcmp(id, "missing") == 0;
+            if (!looks_kind) {
+              if (resolve_str_arg(vm, L, b2, sizeof b2) == 0) n2 = 2;
+            }
+          }
+          if (n2 >= 1 && (kw(&L->cur,"IS") || kw(&L->cur,"AS")))
+            lex_next(L);
+          if (L->cur.kind == TK_STR) {
+            if (resolve_str_arg(vm, L, want2, sizeof want2) == 0) have_w = 1;
+          } else if (L->cur.kind == TK_IDENT) {
+            snprintf(want2, sizeof want2, "%s", L->cur.text);
+            lex_next(L);
+            have_w = 1;
+          }
+          if (n2 == 2 && have_w) {
+            snprintf(plate2, sizeof plate2, "%s", a2);
+            snprintf(key2, sizeof key2, "%s", b2);
+          } else if (n2 == 1 && have_w) {
+            snprintf(plate2, sizeof plate2, "%s", vm->last_str);
+            snprintf(key2, sizeof key2, "%s", a2);
+          } else {
+            fail_at(vm, L, "REQUIRE JSON TYPE [plate] key kind — need key and kind");
+            return -1;
+          }
+          {
+            char *q;
+            for (q = want2; *q; q++)
+              if (*q >= 'A' && *q <= 'Z') *q = (char)(*q - 'A' + 'a');
+          }
+          if (strcmp(want2, "number") == 0 || strcmp(want2, "int") == 0 ||
+              strcmp(want2, "integer") == 0)
+            snprintf(want2, sizeof want2, "%s", "num");
+          else if (strcmp(want2, "string") == 0 || strcmp(want2, "text") == 0)
+            snprintf(want2, sizeof want2, "%s", "str");
+          else if (strcmp(want2, "boolean") == 0 || strcmp(want2, "flag") == 0)
+            snprintf(want2, sizeof want2, "%s", "bool");
+          else if (strcmp(want2, "nil") == 0 || strcmp(want2, "none") == 0)
+            snprintf(want2, sizeof want2, "%s", "null");
+          else if (strcmp(want2, "object") == 0 || strcmp(want2, "map") == 0)
+            snprintf(want2, sizeof want2, "%s", "obj");
+          else if (strcmp(want2, "array") == 0 || strcmp(want2, "list") == 0)
+            snprintf(want2, sizeof want2, "%s", "arr");
+          if (!plate2[0]) snprintf(plate2, sizeof plate2, "%s", "{}");
+          memset(&gr2, 0, sizeof gr2);
+          if (cubalc_host_json_get_raw(plate2, key2, &gr2) != 0) {
+            got_s = "missing";
+            got_n = 0;
+          } else {
+            const char *v = gr2.str;
+            while (*v == ' ' || *v == '\t' || *v == '\n' || *v == '\r') v++;
+            if (*v == '"') { got_s = "str"; got_n = 2; }
+            else if (*v == '{') { got_s = "obj"; got_n = 5; }
+            else if (*v == '[') { got_s = "arr"; got_n = 6; }
+            else if (strncmp(v, "true", 4) == 0 || strncmp(v, "false", 5) == 0) {
+              got_s = "bool"; got_n = 3;
+            } else if (strncmp(v, "null", 4) == 0) { got_s = "null"; got_n = 4; }
+            else if (*v == '-' || (*v >= '0' && *v <= '9')) { got_s = "num"; got_n = 1; }
+            else { got_s = "str"; got_n = 2; }
+          }
+          if (strcmp(got_s, want2) != 0) {
+            char msg[320];
+            snprintf(msg, sizeof msg,
+                     "REQUIRE JSONTYPE line %d: %s is %s, want %s — soft twin SYS JSONTYPE",
+                     aln, key2, got_s, want2);
+            if (vm->res) vm->res->asserts_fail++;
+            fail(vm, msg);
+            return -1;
+          }
+          var_set_str(vm, "LAST", plate2);
+          snprintf(vm->last_str, sizeof vm->last_str, "%s", plate2);
+          vm->last_n = got_n;
+          var_set_num(vm, "LAST_N", got_n);
+          var_set_str(vm, "JSONTYPE", got_s);
+          var_set_num(vm, "JSONTYPE_N", got_n);
+          var_set_str(vm, "JSONTYPE_KEY", key2);
+          var_set_str(vm, "JSONTYPE_WANT", want2);
+          var_set_num(vm, "REQUIRE_JSONTYPE", 1);
+          var_set_num(vm, "OK", 1);
+          if (vm->trace)
+            fprintf(vm->trace, "# require json type ok · %s is %s\n", key2, got_s);
+          if (vm->res) vm->res->asserts_ok++;
+          bump(vm); return 1;
+        }
+        if (kw(&L->cur,"EXACT") || kw(&L->cur,"SCHEMA") || kw(&L->cur,"MATCHKEYS")) {
+          want_exact = 1;
+          lex_next(L);
+        } else if (kw(&L->cur,"ONLY") || kw(&L->cur,"STRICT") || kw(&L->cur,"NOEXTRA") ||
+            kw(&L->cur,"ALLOW") || kw(&L->cur,"ALLOWED")) {
+          want_only = 1;
+          lex_next(L);
+        } else if (kw(&L->cur,"HASANY") || kw(&L->cur,"ANY") || kw(&L->cur,"SOME") ||
+                   kw(&L->cur,"ANYKEY") || kw(&L->cur,"NEEDANY") || kw(&L->cur,"ANYKEYS")) {
+          want_any = 1;
+          lex_next(L);
+        } else if (kw(&L->cur,"HASALL") || kw(&L->cur,"NEED") || kw(&L->cur,"KEYS") ||
+                   kw(&L->cur,"HAS") || kw(&L->cur,"NEEDKEYS")) {
+          lex_next(L);
+        }
+      } else {
+        lex_next(L);
+      }
+      plate[0] = 0;
+      keys_nl[0] = 0;
+      if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+        if (resolve_str_arg(vm, L, arg, sizeof arg) == 0) {
+          const char *s = arg;
+          while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
+          if (*s == '{') {
+            snprintf(plate, sizeof plate, "%s", arg);
+            have_plate = 1;
+          } else {
+            size_t al = strlen(arg);
+            if (al + 1 < sizeof keys_nl) {
+              memcpy(keys_nl, arg, al + 1);
+              olen = al;
+            }
+          }
+        }
+      }
+      if (have_plate && (kw(&L->cur,"OF") || kw(&L->cur,"KEYS") || kw(&L->cur,"FROM") ||
+                         kw(&L->cur,"NEED") || kw(&L->cur,"REQUIRE") ||
+                         kw(&L->cur,"ALLOW") || kw(&L->cur,"ALLOWED"))) {
+        lex_next(L);
+        if (resolve_str_arg(vm, L, arg, sizeof arg) == 0) {
+          snprintf(keys_nl, sizeof keys_nl, "%s", arg);
+          olen = strlen(keys_nl);
+        }
+      } else {
+        while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT) {
+          if (L->cur.kind == TK_IDENT &&
+              (kw(&L->cur,"END") || kw(&L->cur,"IF") || kw(&L->cur,"ELSE") ||
+               kw(&L->cur,"ELIF") || kw(&L->cur,"FOR") || kw(&L->cur,"WHILE") ||
+               kw(&L->cur,"LOOP") || kw(&L->cur,"ASSERT") || kw(&L->cur,"PRINT") ||
+               kw(&L->cur,"LET") || kw(&L->cur,"SYS") || kw(&L->cur,"JSON") ||
+               kw(&L->cur,"REQUIRE") || kw(&L->cur,"PASS") || kw(&L->cur,"FAIL"))) {
+            break;
+          }
+          if (resolve_str_arg(vm, L, arg, sizeof arg) != 0)
+            break;
+          if (!arg[0]) continue;
+          if (olen > 0) {
+            if (olen + 1 >= sizeof keys_nl) break;
+            keys_nl[olen++] = '\n';
+            keys_nl[olen] = 0;
+          }
+          {
+            size_t al = strlen(arg);
+            if (olen + al + 1 >= sizeof keys_nl) break;
+            memcpy(keys_nl + olen, arg, al + 1);
+            olen += al;
+          }
+        }
+      }
+      if (!have_plate)
+        snprintf(plate, sizeof plate, "%s", vm->last_str);
+      if (!plate[0])
+        snprintf(plate, sizeof plate, "%s", "{}");
+      if (!keys_nl[0]) {
+        fail_at(vm, L, want_exact
+                ? "REQUIRE EXACTP/JSONEXACT [plate] key… — need schema keys"
+                : (want_only
+                   ? "REQUIRE ONLYP/JSONONLY [plate] allow… — need allow-list keys"
+                   : (want_any
+                      ? "REQUIRE JSONHASANY [plate] key… — need at least one candidate key"
+                      : "REQUIRE JSONHASALL [plate] key… — need at least one key")));
+        return -1;
+      }
+      if (want_exact) {
+        char miss_flat[120], extra_flat[120];
+        char msg[320];
+        size_t mi;
+        const char *mp;
+        int bad = 0;
+        memset(&hr, 0, sizeof hr);
+        memset(&xr, 0, sizeof xr);
+        cubalc_host_json_has_keys(plate, keys_nl, 1, &hr);
+        cubalc_host_json_filter_plate_keys(plate, keys_nl, 1, &xr);
+        miss_flat[0] = 0;
+        extra_flat[0] = 0;
+        if (hr.n == 0) {
+          cubalc_host_result mr;
+          memset(&mr, 0, sizeof mr);
+          cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &mr);
+          mi = 0;
+          for (mp = mr.str; *mp && mi + 1 < sizeof miss_flat; mp++) {
+            if (*mp == '\n' || *mp == '\r') {
+              if (mi > 0 && miss_flat[mi - 1] != ',') {
+                miss_flat[mi++] = ',';
+                if (mi + 1 < sizeof miss_flat) miss_flat[mi++] = ' ';
+              }
+            } else {
+              miss_flat[mi++] = *mp;
+            }
+          }
+          miss_flat[mi] = 0;
+          if (!miss_flat[0]) snprintf(miss_flat, sizeof miss_flat, "?");
+          bad = 1;
+        }
+        if (xr.n > 0) {
+          mi = 0;
+          for (mp = xr.str; *mp && mi + 1 < sizeof extra_flat; mp++) {
+            if (*mp == '\n' || *mp == '\r') {
+              if (mi > 0 && extra_flat[mi - 1] != ',') {
+                extra_flat[mi++] = ',';
+                if (mi + 1 < sizeof extra_flat) extra_flat[mi++] = ' ';
+              }
+            } else {
+              extra_flat[mi++] = *mp;
+            }
+          }
+          extra_flat[mi] = 0;
+          if (!extra_flat[0]) snprintf(extra_flat, sizeof extra_flat, "?");
+          bad = 1;
+        }
+        if (bad) {
+          if (miss_flat[0] && extra_flat[0])
+            snprintf(msg, sizeof msg,
+                     "REQUIRE EXACTP/JSONEXACT line %d missing: %s · extra: %s — soft EXACTP / SYS JSONEXACT",
+                     aln, miss_flat, extra_flat);
+          else if (miss_flat[0])
+            snprintf(msg, sizeof msg,
+                     "REQUIRE EXACTP/JSONEXACT line %d missing: %s — soft EXACTP / SYS JSONEXACT",
+                     aln, miss_flat);
+          else
+            snprintf(msg, sizeof msg,
+                     "REQUIRE EXACTP/JSONEXACT line %d extra: %s — soft EXACTP / SYS JSONEXACT",
+                     aln, extra_flat);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "JSONEXACT_N", 1);
+        var_set_num(vm, "JSONEXACT_HIT", (long)hr.code);
+        var_set_num(vm, "JSONEXACT_EXTRA", 0);
+        var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+        var_set_num(vm, "REQUIRE_JSON_EXTRA", 0);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# require jsonexact hit=%d ok\n", hr.code);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+      if (want_only) {
+        memset(&xr, 0, sizeof xr);
+        if (cubalc_host_json_filter_plate_keys(plate, keys_nl, 1, &xr) != 0 ||
+            xr.n > 0) {
+          char msg[280];
+          char flat[160];
+          size_t mi = 0;
+          const char *mp;
+          bag[0] = 0;
+          if (xr.str[0])
+            snprintf(bag, sizeof bag, "%s", xr.str);
+          flat[0] = 0;
+          for (mp = bag; *mp && mi + 1 < sizeof flat; mp++) {
+            if (*mp == '\n' || *mp == '\r') {
+              if (mi > 0 && flat[mi - 1] != ',') {
+                flat[mi++] = ',';
+                if (mi + 1 < sizeof flat) flat[mi++] = ' ';
+              }
+            } else {
+              flat[mi++] = *mp;
+            }
+          }
+          flat[mi] = 0;
+          if (!flat[0])
+            snprintf(flat, sizeof flat, "?");
+          snprintf(msg, sizeof msg,
+                   "REQUIRE ONLYP/JSONONLY extra line %d: %s — soft twin ONLYP / SYS JSONEXTRA",
+                   aln, flat);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+        var_set_str(vm, "LAST", plate);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+        vm->last_n = 1;
+        var_set_num(vm, "LAST_N", 1);
+        var_set_num(vm, "JSONEXTRA_N", 0);
+        var_set_num(vm, "REQUIRE_JSON_EXTRA", 0);
+        var_set_num(vm, "REQUIRE_JSON_HIT", 1);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# require jsononly ok (no extras)\n");
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+      memset(&hr, 0, sizeof hr);
+      /* want_any=1 → any-of (JSONHASANY); else all-of (JSONHASALL) */
+      if (cubalc_host_json_has_keys(plate, keys_nl, want_any ? 0 : 1, &hr) != 0 || hr.n == 0) {
+        char msg[280];
+        char miss_flat[160];
+        size_t mi = 0;
+        const char *mp;
+        memset(&xr, 0, sizeof xr);
+        cubalc_host_json_filter_req_keys(plate, keys_nl, 0, &xr);
+        /* flatten missing bag newlines → comma list for one-line fail */
+        bag[0] = 0;
+        if (xr.str[0])
+          snprintf(bag, sizeof bag, "%s", xr.str);
+        miss_flat[0] = 0;
+        for (mp = bag; *mp && mi + 1 < sizeof miss_flat; mp++) {
+          if (*mp == '\n' || *mp == '\r') {
+            if (mi > 0 && miss_flat[mi - 1] != ',') {
+              miss_flat[mi++] = ',';
+              if (mi + 1 < sizeof miss_flat) miss_flat[mi++] = ' ';
+            }
+          } else {
+            miss_flat[mi++] = *mp;
+          }
+        }
+        miss_flat[mi] = 0;
+        if (!miss_flat[0])
+          snprintf(miss_flat, sizeof miss_flat, "?");
+        if (want_any)
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONHASANY none line %d: need one of %s — soft twin SYS JSONHASANY",
+                   aln, miss_flat);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE JSONHASALL missing line %d: %s — soft twin SYS JSONHASALL / JSONMISS",
+                   aln, miss_flat);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", plate);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", plate);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      if (want_any) {
+        var_set_num(vm, "JSONHASANY_N", 1);
+        var_set_num(vm, "JSONHASANY_HIT", (long)hr.code);
+        var_set_num(vm, "REQUIRE_JSONHASANY", 1);
+        var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      } else {
+        var_set_num(vm, "JSONHASALL_N", 1);
+        var_set_num(vm, "JSONHASALL_HIT", (long)hr.code);
+        var_set_num(vm, "REQUIRE_JSON_HIT", (long)hr.code);
+      }
+      var_set_num(vm, "OK", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require %s hit=%d ok\n",
+                want_any ? "jsonhasany" : "jsonhasall", hr.code);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+
+    if (!kw(&L->cur, "VERSION") && !kw(&L->cur, "VER") && !kw(&L->cur, "LANG") &&
+        !kw(&L->cur, "CUBALC") && L->cur.kind != TK_STR) {
+      fail(vm, "REQUIRE VERSION|LIB|ENV|ARG|PATH|DIR|BIN|FORM|JSONHASALL|JSONHASANY|ONLYP|EXACTP|…");
+      return -1;
+    }
     if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
         kw(&L->cur, "CUBALC"))
       lex_next(L);
     if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT && L->cur.kind != TK_NUM) {
-      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE RESTARGS|LIB|ENV|… (use NEED* duals)");
+      fail(vm, "REQUIRE VERSION \"x.y[.z]\" | REQUIRE RESTARGS|LIB|ENV|JSONHASANY|ONLYP|…");
       return -1;
     }
     {
