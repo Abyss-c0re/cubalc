@@ -1385,5 +1385,155 @@ int cubalc_lang_ops_core_try_flaggate(VM *vm, Lex *L) {
     bump(vm);
     return 1;
   }
+  /* USAGE + HELPFLAG — B_E_science restore (CLI help contract). */
+  /* USAGE ["text"|parts…] — sticky CLI usage contract for agents.
+   * Bare USAGE re-echoes stored USAGE (or empty). Does not change OK/ERR.
+   * REQUIRE ARG / ARGC / FLAG failures append " · usage: …" when set.
+   * Usability: one-line help without shell; twin of NOTE for CLI tools. */
+  if (kw(&L->cur,"USAGE")||kw(&L->cur,"USEAGE")||kw(&L->cur,"SYNOPSIS")||
+      kw(&L->cur,"CLI_USAGE")||kw(&L->cur,"HELP_USAGE")||kw(&L->cur,"PROG_USAGE")){
+    int aln = L->cur.line;
+    char msg[CUBALC_HOST_STR_MAX];
+    size_t olen = 0;
+    lex_next(L);
+    msg[0] = 0;
+    /* bare USAGE → re-echo sticky */
+    if (L->cur.kind == TK_NL || L->cur.kind == TK_EOF ||
+        (L->cur.kind == TK_IDENT && (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") ||
+         kw(&L->cur,"PRINT") || kw(&L->cur,"SYS") || kw(&L->cur,"IF") ||
+         kw(&L->cur,"END") || kw(&L->cur,"REQUIRE") || kw(&L->cur,"EXIT") ||
+         kw(&L->cur,"HASARG") || kw(&L->cur,"HASFLAG") || kw(&L->cur,"RESTARGS") ||
+         kw(&L->cur,"NOTE") || kw(&L->cur,"PASS") || kw(&L->cur,"FAIL") ||
+         kw(&L->cur,"INCLUDE") || kw(&L->cur,"HOLD_FLASH") || kw(&L->cur,"VERSION")))){
+      Var *u = var_get(vm, "USAGE", 0);
+      if (u && u->is_str)
+        snprintf(msg, sizeof msg, "%s", u->sval);
+      else
+        msg[0] = 0;
+    } else {
+      /* one or more string/ident/num parts → space-join like PRINT */
+      while (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT || L->cur.kind == TK_NUM ||
+             L->cur.kind == TK_MINUS) {
+        char part[512];
+        part[0] = 0;
+        if (L->cur.kind == TK_STR) {
+          snprintf(part, sizeof part, "%s", L->cur.text);
+          lex_next(L);
+        } else if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS) {
+          long n = parse_expr(vm, L);
+          snprintf(part, sizeof part, "%ld", n);
+        } else if (L->cur.kind == TK_IDENT) {
+          if (kw(&L->cur,"ASSERT") || kw(&L->cur,"LET") || kw(&L->cur,"PRINT") ||
+              kw(&L->cur,"SYS") || kw(&L->cur,"IF") || kw(&L->cur,"END") ||
+              kw(&L->cur,"REQUIRE") || kw(&L->cur,"EXIT") || kw(&L->cur,"NOTE") ||
+              kw(&L->cur,"INCLUDE") || kw(&L->cur,"HOLD_FLASH"))
+            break;
+          if (strcmp(L->cur.text, "LAST") == 0)
+            snprintf(part, sizeof part, "%s", vm->last_str);
+          else if (strcmp(L->cur.text, "USAGE") == 0) {
+            Var *u = var_get(vm, "USAGE", 0);
+            if (u && u->is_str) snprintf(part, sizeof part, "%s", u->sval);
+            else part[0] = 0;
+          } else {
+            Var *v = var_get(vm, L->cur.text, 0);
+            if (v && v->is_str) snprintf(part, sizeof part, "%s", v->sval);
+            else if (v) snprintf(part, sizeof part, "%ld", v->val);
+            else snprintf(part, sizeof part, "%s", L->cur.text);
+          }
+          lex_next(L);
+        } else
+          break;
+        if (part[0] || L->cur.kind == TK_STR) {
+          size_t pl = strlen(part);
+          if (olen > 0 && olen + 1 < sizeof msg)
+            msg[olen++] = ' ';
+          if (olen + pl < sizeof msg) {
+            memcpy(msg + olen, part, pl);
+            olen += pl;
+          }
+          msg[olen] = 0;
+        }
+      }
+      if (!msg[0])
+        snprintf(msg, sizeof msg, "usage line %d", aln);
+      var_set_str(vm, "USAGE", msg);
+    }
+    var_set_str(vm, "LAST", msg);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = (long)strlen(msg);
+    var_set_num(vm, "LAST_N", vm->last_n);
+    /* preserve OK — like NOTE */
+    if (vm->trace) fprintf(vm->trace, "# usage: %s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    bump(vm); return 1;
+  }
+  /* HELPFLAG|AUTOHELP [name[,|alt...]] — if any help alias is present on CLI,
+   * print sticky USAGE (or a short tip) and EXIT 0. Default aliases: help|h|usage.
+   * Miss → LAST_N=0 HELPFLAG_HIT=0 continue. FLAG_HIT_NAME = matching alias.
+   * Usability: USAGE + HELPFLAG replaces HASFLAG help|h + IF + USAGE + EXIT glue. */
+  if (kw(&L->cur,"HELPFLAG") || kw(&L->cur,"AUTOHELP") || kw(&L->cur,"ONHELP") ||
+      kw(&L->cur,"CLIHELP") || kw(&L->cur,"SHOWHELP") || kw(&L->cur,"HELP_FLAG") ||
+      kw(&L->cur,"IFHELP") || kw(&L->cur,"DOHELP")){
+    char name[96], aliases[384], hitnm[96], val[CUBALC_HOST_STR_MAX], msg[CUBALC_HOST_STR_MAX];
+    int hit, nac;
+    lex_next(L);
+    name[0] = 0;
+    aliases[0] = 0;
+    hitnm[0] = 0;
+    val[0] = 0;
+    msg[0] = 0;
+    nac = cubalc_read_flag_aliases(L, aliases, sizeof aliases, name, sizeof name);
+    if (nac <= 0 || !name[0]) {
+      snprintf(aliases, sizeof aliases, "help\nh\nusage");
+      snprintf(name, sizeof name, "%s", "help");
+    }
+    hit = cubalc_scan_cli_flag_any(aliases, val, sizeof val, hitnm, sizeof hitnm);
+    if (!hit) {
+      var_set_num(vm, "LAST_N", 0);
+      vm->last_n = 0;
+      var_set_num(vm, "HELPFLAG_HIT", 0);
+      var_set_num(vm, "HELPFLAG_N", 0);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "HELPFLAG", name);
+      var_set_str(vm, "FLAG_HIT_NAME", "");
+      var_set_str(vm, "FLAG_ALIAS", "");
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      if (vm->trace)
+        fprintf(vm->trace, "# helpflag %s miss\n", name);
+      bump(vm); return 1;
+    }
+    {
+      Var *u = var_get(vm, "USAGE", 0);
+      if (u && u->is_str && u->sval[0])
+        snprintf(msg, sizeof msg, "%s", u->sval);
+      else
+        snprintf(msg, sizeof msg, "usage: pass --%s for help", name);
+    }
+    var_set_str(vm, "LAST", msg);
+    var_set_str(vm, "HELPFLAG", name);
+    var_set_str(vm, "FLAG_HIT_NAME", hitnm);
+    var_set_str(vm, "FLAG_ALIAS", hitnm);
+    var_set_str(vm, "FLAG", val[0] ? val : "1");
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", msg);
+    vm->last_n = 1;
+    var_set_num(vm, "LAST_N", 1);
+    var_set_num(vm, "HELPFLAG_HIT", 1);
+    var_set_num(vm, "HELPFLAG_N", 1);
+    var_set_num(vm, "OK", 1);
+    var_set_num(vm, "EXIT", 0);
+    /* emit usage like PRINT (trace = stdout when not -q) */
+    if (vm->trace) fprintf(vm->trace, "%s\n", msg);
+    if (vm->res) snprintf(vm->res->last_print, sizeof vm->res->last_print, "%s", msg);
+    /* clean halt — EXIT 0 */
+    vm->halt = 1;
+    vm->exit_code = 0;
+    vm->break_loop = 1;
+    vm->return_fn = 1;
+    if (vm->trace)
+      fprintf(vm->trace, "# helpflag hit=%s exit 0\n", hitnm);
+    bump(vm); return 1;
+  }
+
   return 0;
 }
