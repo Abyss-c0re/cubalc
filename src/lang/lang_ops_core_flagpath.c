@@ -3457,5 +3457,104 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+  /* FIRSTINTREE|GREP1TREE|LASTINTREE root needle — first/last content-matching file.
+   * Twin of SYS FIRSTINTREE. LAST = path · LAST_N/HIT 0|1. FIRSTINTREEI/LASTINTREEI icase.
+   * Soft empty/missing. Empty needle → first/last readable regular file.
+   * Usability: one-shot pick under tree without GREPTREE+TAKE/REVL glue. */
+  if (kw(&L->cur, "FIRSTINTREE") || kw(&L->cur, "GREP1TREE") || kw(&L->cur, "HITINTREE") ||
+      kw(&L->cur, "FINDINTREE") || kw(&L->cur, "TREEFIRST") ||
+      kw(&L->cur, "FIRSTINTREEI") || kw(&L->cur, "GREP1TREEI") || kw(&L->cur, "HITINTREEI") ||
+      kw(&L->cur, "LASTINTREE") || kw(&L->cur, "GREP1TREEL") || kw(&L->cur, "HITINTREEL") ||
+      kw(&L->cur, "TREELAST") || kw(&L->cur, "LASTINTREEI") || kw(&L->cur, "GREP1TREELI") ||
+      kw(&L->cur, "HITINTREELI")) {
+    char root[CUBALC_HOST_STR_MAX], needle[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    int icase = 0, want_last = 0;
+    long hit;
+    if (kw(&L->cur, "LASTINTREE") || kw(&L->cur, "GREP1TREEL") || kw(&L->cur, "HITINTREEL") ||
+        kw(&L->cur, "TREELAST") || kw(&L->cur, "LASTINTREEI") || kw(&L->cur, "GREP1TREELI") ||
+        kw(&L->cur, "HITINTREELI"))
+      want_last = 1;
+    if (kw(&L->cur, "FIRSTINTREEI") || kw(&L->cur, "GREP1TREEI") || kw(&L->cur, "HITINTREEI") ||
+        kw(&L->cur, "LASTINTREEI") || kw(&L->cur, "GREP1TREELI") || kw(&L->cur, "HITINTREELI"))
+      icase = 1;
+    lex_next(L);
+    root[0] = 0;
+    needle[0] = 0;
+    if (resolve_str_arg(vm, L, root, sizeof root) != 0) {
+      fail_at(vm, L, want_last
+                        ? "LASTINTREE needs root needle — LASTINTREE \"work\" \"error\""
+                        : "FIRSTINTREE needs root needle — FIRSTINTREE \"work\" \"error\"");
+      return -1;
+    }
+    if (L->cur.kind == TK_STR || L->cur.kind == TK_IDENT ||
+        L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+      if (L->cur.kind == TK_NUM || L->cur.kind == TK_MINUS || L->cur.kind == TK_LPAREN) {
+        long nv = parse_expr(vm, L);
+        snprintf(needle, sizeof needle, "%ld", nv);
+      } else if (resolve_str_arg(vm, L, needle, sizeof needle) != 0) {
+        needle[0] = 0;
+      }
+    }
+    if (!root[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FIRSTINTREE_N", 0);
+      var_set_num(vm, "FIRSTINTREE_HIT", 0);
+      var_set_num(vm, "LASTINTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", want_last ? "LASTINTREE: empty path" : "FIRSTINTREE: empty path");
+      var_set_str(vm, "ERR", want_last ? "LASTINTREE: empty path" : "FIRSTINTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_findintree(root, needle, icase, want_last, &hr) != 0) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "FIRSTINTREE_N", 0);
+      var_set_num(vm, "FIRSTINTREE_HIT", 0);
+      var_set_num(vm, "LASTINTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", want_last ? "LASTINTREE: fail" : "FIRSTINTREE: fail");
+        var_set_str(vm, "ERR", want_last ? "LASTINTREE: fail" : "FIRSTINTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    hit = hr.n ? 1 : 0;
+    var_set_str(vm, "LAST", hr.str);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str);
+    vm->last_n = hit;
+    var_set_num(vm, "LAST_N", hit);
+    if (want_last) {
+      var_set_str(vm, "LASTINTREE", hr.str);
+      var_set_str(vm, "GREP1TREEL", hr.str);
+      var_set_num(vm, "LASTINTREE_N", hit);
+      var_set_num(vm, "LASTINTREE_HIT", hit);
+    } else {
+      var_set_str(vm, "FIRSTINTREE", hr.str);
+      var_set_str(vm, "GREP1TREE", hr.str);
+      var_set_num(vm, "FIRSTINTREE_N", hit);
+      var_set_num(vm, "FIRSTINTREE_HIT", hit);
+    }
+    var_set_str(vm, "PATH", hr.str);
+    var_set_num(vm, "PATH_EXIST", hit);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# %sintree → hit=%ld path=%s icase=%d\n",
+              want_last ? "last" : "first", hit, hr.str, icase);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
