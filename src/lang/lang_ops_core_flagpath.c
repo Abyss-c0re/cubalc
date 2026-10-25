@@ -2942,5 +2942,87 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* DIRSIZE|DU|TREESIZE path — recursive total file bytes under path.
+   * Twin of SYS DIRSIZE. LAST = abs · LAST_N/DIRSIZE = bytes · DIRSIZE_FILES/DIRS.
+   * Soft empty/missing. File → own size; dir → sum tree.
+   * Usability: agent disk inventory without shell du or WALK+SIZEALL. */
+  if (kw(&L->cur, "DIRSIZE") || kw(&L->cur, "DU") || kw(&L->cur, "TREESIZE") ||
+      kw(&L->cur, "DISKUSAGE") || kw(&L->cur, "DIR_SIZE") || kw(&L->cur, "TREEBYTES") ||
+      kw(&L->cur, "BYTESOF") || kw(&L->cur, "SIZEOFDIR") || kw(&L->cur, "DUSIZE") ||
+      kw(&L->cur, "USAGE")) {
+    char path[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    long files, dirs;
+    lex_next(L);
+    path[0] = 0;
+    if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+      fail_at(vm, L, "DIRSIZE needs path — DIRSIZE \"work/tmp\"");
+      return -1;
+    }
+    if (!path[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "DIRSIZE", 0);
+      var_set_num(vm, "DIRSIZE_N", 0);
+      var_set_num(vm, "DIRSIZE_FILES", 0);
+      var_set_num(vm, "DIRSIZE_DIRS", 0);
+      var_set_num(vm, "DU_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "DIRSIZE: empty path");
+      var_set_str(vm, "ERR", "DIRSIZE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_dirsize(path, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "DIRSIZE", 0);
+      var_set_num(vm, "DIRSIZE_N", 0);
+      var_set_num(vm, "DIRSIZE_FILES", 0);
+      var_set_num(vm, "DIRSIZE_DIRS", 0);
+      var_set_num(vm, "DU_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "DIRSIZE: fail");
+        var_set_str(vm, "ERR", "DIRSIZE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    files = (long)((unsigned)hr.code & 0xffffu);
+    dirs = (long)(((unsigned)hr.code >> 16) & 0xffffu);
+    var_set_str(vm, "LAST", hr.str[0] ? hr.str : path);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str[0] ? hr.str : path);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "DIRSIZE", hr.n);
+    var_set_num(vm, "DIRSIZE_N", hr.n);
+    var_set_num(vm, "TREESIZE", hr.n);
+    var_set_num(vm, "TREESIZE_N", hr.n);
+    var_set_num(vm, "DU_N", hr.n);
+    var_set_num(vm, "DIRSIZE_FILES", files);
+    var_set_num(vm, "DIRSIZE_DIRS", dirs);
+    var_set_num(vm, "DU_FILES", files);
+    var_set_num(vm, "DU_DIRS", dirs);
+    var_set_str(vm, "DIRSIZE_PATH", hr.str[0] ? hr.str : path);
+    var_set_str(vm, "PATH", hr.str[0] ? hr.str : path);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# dirsize → %s bytes=%ld files=%ld dirs=%ld\n",
+              hr.str[0] ? hr.str : path, hr.n, files, dirs);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
