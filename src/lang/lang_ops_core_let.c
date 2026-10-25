@@ -1,5 +1,6 @@
 /* CubalC lang — LET · INC/DEC · SWAP · REQUIRE RESTARGS (core var plane) */
 #include "lang/cubalc_lang_ops_core_let.h"
+#include "cubalc_hostops.h"
 #include "lang/cubalc_lang_ops_sys_cli.h"
 #include <stdio.h>
 #include <string.h>
@@ -637,6 +638,130 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       return 1;
     }
 
+    /* REQUIRE ENV|VAR|ENVVAR|HOSTENV name — getenv must be non-empty.
+     * On success: LAST = value, LAST_N = len, REQUIRE_ENV = name, OK=1.
+     * Usability: fail-fast host config (CUBALC_STATE/SMX key) without SYS ENV + IF glue. */
+    if (kw(&L->cur,"ENV")||kw(&L->cur,"VAR")||kw(&L->cur,"ENVVAR")||
+        kw(&L->cur,"HOSTENV")||kw(&L->cur,"ENVIRONMENT")){
+      char name[96];
+      const char *val;
+      lex_next(L);
+      if (L->cur.kind != TK_STR && L->cur.kind != TK_IDENT){
+        fail(vm, "REQUIRE ENV \"NAME\"");
+        return -1;
+      }
+      snprintf(name, sizeof name, "%s", L->cur.text);
+      lex_next(L);
+      if (!name[0]) {
+        fail(vm, "REQUIRE ENV empty name");
+        return -1;
+      }
+      val = getenv(name);
+      if (!val || !val[0]) {
+        char msg[160];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE ENV '%s' missing line %d — set host env or SYS ENV SET",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      {
+        size_t vl = strlen(val);
+        char out[CUBALC_HOST_STR_MAX];
+        if (vl >= sizeof out) vl = sizeof out - 1;
+        memcpy(out, val, vl);
+        out[vl] = 0;
+        var_set_str(vm, "LAST", out);
+        var_set_str(vm, "ENV", out);
+        var_set_str(vm, "REQUIRE_ENV", name);
+        snprintf(vm->last_str, sizeof vm->last_str, "%s", out);
+        vm->last_n = (long)vl;
+        var_set_num(vm, "LAST_N", (long)vl);
+        var_set_num(vm, "OK", 1);
+        if (vm->trace)
+          fprintf(vm->trace, "# require env %s ok (len %zu)\n", name, vl);
+        if (vm->res) vm->res->asserts_ok++;
+        bump(vm); return 1;
+      }
+    }
+
+    /* REQUIRE PATH|EXIST path — fail if host path missing.
+     * REQUIRE DIR|DIRECTORY path — fail if not a directory.
+     * REQUIRE REG|REGFILE|ISFILE path — fail if not a regular file.
+     * On success: LAST = path, LAST_N=1, REQUIRE_PATH = path, OK=1.
+     * Usability: gate plate/config/dir before READ without SYS EXIST + IF + FAIL. */
+    if (kw(&L->cur,"PATH")||kw(&L->cur,"EXIST")||kw(&L->cur,"EXISTS")||
+        kw(&L->cur,"PRESENT")||kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTORY")||
+        kw(&L->cur,"FOLDER")||kw(&L->cur,"ISDIR")||kw(&L->cur,"REG")||
+        kw(&L->cur,"REGFILE")||kw(&L->cur,"REGULAR")||kw(&L->cur,"ISFILE")||
+        kw(&L->cur,"PLATE")||kw(&L->cur,"HOSTPATH")){
+      char path[512];
+      cubalc_host_result hr;
+      int want_dir = 0, want_file = 0;
+      const char *kind = "PATH";
+      if (kw(&L->cur,"DIR")||kw(&L->cur,"DIRECTORY")||kw(&L->cur,"FOLDER")||
+          kw(&L->cur,"ISDIR")){
+        want_dir = 1;
+        kind = "DIR";
+      } else if (kw(&L->cur,"REG")||kw(&L->cur,"REGFILE")||kw(&L->cur,"REGULAR")||
+                 kw(&L->cur,"ISFILE")||kw(&L->cur,"PLATE")){
+        want_file = 1;
+        kind = "REG";
+      }
+      lex_next(L);
+      if (resolve_str_arg(vm, L, path, sizeof path) != 0) {
+        fail(vm, "REQUIRE PATH|DIR|REG \"path\"|var|LAST");
+        return -1;
+      }
+      if (!path[0]) {
+        fail(vm, "REQUIRE PATH empty path");
+        return -1;
+      }
+      if (want_dir || want_file) {
+        if (cubalc_host_path_kind(path, &hr) != 0 ||
+            (want_dir && hr.code != 2) ||
+            (want_file && hr.code != 1)) {
+          char msg[200];
+          const char *why = (!hr.ok && hr.err[0]) ? hr.err
+              : (want_dir ? "not a directory" : "not a regular file");
+          snprintf(msg, sizeof msg,
+                   "REQUIRE %s '%s' failed line %d — %s",
+                   kind, path, aln, why);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      } else {
+        if (!cubalc_host_exists(path)) {
+          char msg[200];
+          snprintf(msg, sizeof msg,
+                   "REQUIRE PATH '%s' missing line %d — create path or fix layout",
+                   path, aln);
+          if (vm->res) vm->res->asserts_fail++;
+          fail(vm, msg);
+          return -1;
+        }
+      }
+      var_set_str(vm, "LAST", path);
+      var_set_str(vm, "REQUIRE_PATH", path);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", path);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      if (want_dir) {
+        var_set_num(vm, "ISDIR", 1);
+        var_set_str(vm, "REQUIRE_DIR", path);
+      }
+      if (want_file) {
+        var_set_num(vm, "ISFILE", 1);
+        var_set_str(vm, "REQUIRE_REG", path);
+      }
+      if (vm->trace)
+        fprintf(vm->trace, "# require %s %s ok\n", kind, path);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
     if (kw(&L->cur, "VERSION") || kw(&L->cur, "VER") || kw(&L->cur, "LANG") ||
         kw(&L->cur, "CUBALC"))
       lex_next(L);
