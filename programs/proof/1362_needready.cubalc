@@ -1,0 +1,24 @@
+# NEEDREADY — hard prove gate twin of READY
+# Usability: fail-fast install checklist without soft READY+IF glue
+
+HOLD_FLASH 1
+
+NEEDREADY
+ASSERT OK == 1
+ASSERT READY_OK == 1
+ASSERT READY_FAIL_N == 0
+ASSERT READY_PASS_N >= 10
+SYS HASI LAST "cubalc.ready.v1"
+ASSERT LAST_N == 1
+
+# REQUIRE READY alias
+REQUIRE READY
+ASSERT OK == 1
+ASSERT READY_OK == 1
+
+# NEED_READY alias
+NEED_READY
+ASSERT READY_OK == 1
+
+PRINT "needready ok"
+PASS
