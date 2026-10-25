@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "cubalc_law.h"
+#include "lang/cubalc_lang_ops_core_help.h"
 
 int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
   if (kw(&L->cur,"LET")){
@@ -348,6 +349,50 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
   if (kw(&L->cur, "REQUIRE") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRES")) {
     int aln = L->cur.line;
     lex_next(L);
+    /* REQUIRE OK|SUCCESS ["why"] — soft-status floor (twin of NEEDOK). */
+    if (kw(&L->cur, "OK") || kw(&L->cur, "SUCCESS") || kw(&L->cur, "GOOD") ||
+        kw(&L->cur, "PASSING") || kw(&L->cur, "CLEAN")) {
+      char why[120];
+      Var *ov, *ev;
+      long okv = 1;
+      int bad = 0;
+      lex_next(L);
+      why[0] = 0;
+      if (L->cur.kind == TK_STR) {
+        snprintf(why, sizeof why, "%s", L->cur.text);
+        lex_next(L);
+      }
+      ov = var_get(vm, "OK", 0);
+      ev = var_get(vm, "LAST_ERR", 0);
+      if (ov) okv = ov->val;
+      if (okv == 0) bad = 1;
+      if (ev && ev->is_str && ev->sval[0]) bad = 1;
+      if (bad) {
+        char msg[220];
+        const char *err = (ev && ev->is_str && ev->sval[0]) ? ev->sval : "OK=0";
+        if (why[0])
+          snprintf(msg, sizeof msg,
+                   "REQUIRE OK failed line %d: %s — %s · CATCH/CLEAR_ERR · WHY",
+                   aln, why, err);
+        else
+          snprintf(msg, sizeof msg,
+                   "REQUIRE OK failed line %d: %s — CATCH/CLEAR_ERR · WHY",
+                   aln, err);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_num(vm, "LAST_N", 1);
+      vm->last_n = 1;
+      var_set_num(vm, "REQUIRE_OK", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_str(vm, "LAST", "ok");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "ok");
+      if (vm->res) vm->res->asserts_ok++;
+      if (vm->trace) fprintf(vm->trace, "# require ok\n");
+      bump(vm);
+      return 1;
+    }
     /* REQUIRE ARG n|name — CUBALC_ARGn / named env must be non-empty. */
     if (kw(&L->cur, "ARG") || kw(&L->cur, "ARGV") || kw(&L->cur, "ARGN")) {
       char key[96], envn[96], out[CUBALC_HOST_STR_MAX];
@@ -837,6 +882,48 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
       var_set_num(vm, "OK", 1);
       if (vm->trace)
         fprintf(vm->trace, "# require bin %s → %s\n", name, hr.str);
+      if (vm->res) vm->res->asserts_ok++;
+      bump(vm); return 1;
+    }
+
+    /* REQUIRE FORM|FORMS name — hard form catalog gate (HASFORM/NEEDFORM dual).
+     * Multi-word: REQUIRE FORM SORTLIBS · REQUIRE FORMS "SYS ENV". */
+    if (kw(&L->cur, "FORM") || kw(&L->cur, "FORMS") || kw(&L->cur, "OP") ||
+        kw(&L->cur, "OPCODE") || kw(&L->cur, "KW")) {
+      char name[96];
+      const char *hint = NULL;
+      int hit;
+      lex_next(L);
+      name[0] = 0;
+      if (resolve_str_arg(vm, L, name, sizeof name) != 0) {
+        fail(vm, "REQUIRE FORM \"name\"|var|LAST");
+        return -1;
+      }
+      if (!name[0]) {
+        fail(vm, "REQUIRE FORM empty name");
+        return -1;
+      }
+      hit = cubalc_form_known(name, &hint) ? 1 : 0;
+      if (!hit) {
+        char msg[200];
+        snprintf(msg, sizeof msg,
+                 "REQUIRE FORM '%s' missing line %d — cubalc forms · HELP · HASFORM",
+                 name, aln);
+        if (vm->res) vm->res->asserts_fail++;
+        fail(vm, msg);
+        return -1;
+      }
+      var_set_str(vm, "LAST", name);
+      var_set_str(vm, "FORM", name);
+      var_set_str(vm, "REQUIRE_FORM", name);
+      if (hint && hint[0]) var_set_str(vm, "FORM_HINT", hint);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", name);
+      vm->last_n = 1;
+      var_set_num(vm, "LAST_N", 1);
+      var_set_num(vm, "OK", 1);
+      var_set_num(vm, "HASFORM_N", 1);
+      if (vm->trace)
+        fprintf(vm->trace, "# require form %s ok\n", name);
       if (vm->res) vm->res->asserts_ok++;
       bump(vm); return 1;
     }
