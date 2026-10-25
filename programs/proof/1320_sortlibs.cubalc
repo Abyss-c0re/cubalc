@@ -26,10 +26,10 @@ SORTLIBS fat OLDEST
 SYS NTH 1
 ASSERT LAST == "fat_session"
 
-# LIBSORT alias + head matches NEWESTLIB
+# LIBSORT alias + head matches NEWESTLIB (guard family grew past time+var)
 LIBSORT guard
 ASSERT OK == 1
-ASSERT SORTLIBS_N == 2
+ASSERT SORTLIBS_N >= 2
 ASSERT SORTLIBS_HEAD == "time_guard"
 NEWESTLIB guard
 ASSERT LAST == "time_guard"
