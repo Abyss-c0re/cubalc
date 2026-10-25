@@ -67,6 +67,7 @@ int cubalc_cmd_help(int argc, char **argv) {
       "    plate|jsonplate …      agent plate get/set/fill/ensure/merge/eq/has/need (JSON)\n"
       "    forms|ops [prefix]     list play forms (filterable; JSON plate)\n"
       "    libs|lib|stdlib [q]    list INCLUDE libs (+stem/deps_n/defaults_n) · filter q\n"
+      "    freshlibs|stalelibs|newestlib [q] [age]  age/mtime lib match CLI (cubalc.libmatch.v1)\n"
       "    guards|contracts [q]  *guard* contracts NEED_*/SOFT/HARDFAIL · cubalc.guards.v1\n"
       "    env|environ|vars [pfx] host CUBALC_* env contract (JSON)\n"
       "    run|eval [-q][-s][-T ms][-I lib][-L dir][-R ver][-C forms][-D][-Y][-e CODE] <file|->\n"
