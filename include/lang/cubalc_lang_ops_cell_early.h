@@ -1,5 +1,4 @@
-/* CubalC CELL early width stack meta-try — B_cell_peel.
- * nibble4·width8·bitwise_w·w16rot·shift32·rot32·metrics·rng.
+/* CubalC CELL early width stack + mid energy/mat meta-try — B_cell_peel.
  * Returns 0 if none matched. Zero bloat. Cube is SoT.
  */
 #ifndef CUBALC_LANG_OPS_CELL_EARLY_H

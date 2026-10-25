@@ -1,5 +1,5 @@
-/* CubalC CELL early width stack meta-try — B_cell_peel from cell.c.
- * nibble4·width8·bitwise_w·w16rot·shift32·rot32·metrics·rng.
+/* CubalC CELL early width stack + mid energy/mat meta-try — B_cell_peel.
+ * nibble4·width8·bitwise_w·w16rot·shift32·rot32·metrics·rng·mid.
  * Zero bloat. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_cell_early.h"
@@ -11,6 +11,7 @@
 #include "lang/cubalc_lang_ops_cell_rot32.h"
 #include "lang/cubalc_lang_ops_cell_metrics.h"
 #include "lang/cubalc_lang_ops_cell_rng.h"
+#include "lang/cubalc_lang_ops_cell_mid.h"
 
 int cubalc_lang_ops_cell_try_early(VM *vm, Lex *L) {
   {
@@ -43,6 +44,11 @@ int cubalc_lang_ops_cell_try_early(VM *vm, Lex *L) {
   }
   {
     int r = cubalc_lang_ops_cell_try_rng(vm, L);
+    if (r != 0) return r;
+  }
+  /* mid energy·mat·energyflow after rng — same order as prior cell.c top-level */
+  {
+    int r = cubalc_lang_ops_cell_try_mid(vm, L);
     if (r != 0) return r;
   }
   return 0;
