@@ -3024,5 +3024,88 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* EQTREE|SAMETREE|CMPTREE a b — recursive structure + content equality.
+   * Twin of SYS EQTREE. LAST_N/EQTREE = 1|0 · EQTREE_DIFF · EQTREE_REASON.
+   * Soft empty/missing. Usability: verify CPTREE snapshots without shell diff -r. */
+  if (kw(&L->cur, "EQTREE") || kw(&L->cur, "SAMETREE") || kw(&L->cur, "CMPTREE") ||
+      kw(&L->cur, "TREEEQ") || kw(&L->cur, "EQDIR") || kw(&L->cur, "SAMEDIR") ||
+      kw(&L->cur, "DIRSEQ") || kw(&L->cur, "IDENTICALTREE") || kw(&L->cur, "TREE_EQ") ||
+      kw(&L->cur, "DIFFTREE")) {
+    char a[CUBALC_HOST_STR_MAX], b[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    long eq;
+    lex_next(L);
+    a[0] = 0;
+    b[0] = 0;
+    if (resolve_str_arg(vm, L, a, sizeof a) != 0) {
+      fail_at(vm, L, "EQTREE needs path_a path_b — EQTREE \"a\" \"b\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, b, sizeof b) != 0) {
+      fail_at(vm, L, "EQTREE needs path_a path_b — EQTREE \"a\" \"b\"");
+      return -1;
+    }
+    if (!a[0] || !b[0]) {
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "EQTREE", 0);
+      var_set_num(vm, "SAMETREE", 0);
+      var_set_num(vm, "EQTREE_N", 0);
+      var_set_str(vm, "EQTREE_DIFF", "");
+      var_set_str(vm, "EQTREE_REASON", "empty");
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "EQTREE: empty path");
+      var_set_str(vm, "ERR", "EQTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_eqtree(a, b, &hr) != 0) {
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "EQTREE", 0);
+      var_set_num(vm, "SAMETREE", 0);
+      var_set_num(vm, "EQTREE_N", 0);
+      var_set_str(vm, "EQTREE_DIFF", "");
+      var_set_str(vm, "EQTREE_REASON", hr.err[0] ? hr.err : "fail");
+      var_set_str(vm, "LAST", "0");
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", "0");
+      vm->last_n = 0;
+      var_set_num(vm, "OK", 0);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "EQTREE: fail");
+        var_set_str(vm, "ERR", "EQTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    eq = hr.n ? 1 : 0;
+    vm->last_n = eq;
+    var_set_num(vm, "LAST_N", eq);
+    var_set_num(vm, "EQTREE", eq);
+    var_set_num(vm, "SAMETREE", eq);
+    var_set_num(vm, "CMPTREE", eq);
+    var_set_num(vm, "EQTREE_N", eq);
+    var_set_str(vm, "EQTREE_DIFF", eq ? "" : (hr.str[0] ? hr.str : "."));
+    var_set_str(vm, "EQTREE_REASON", eq ? "" : (hr.err[0] ? hr.err : "differ"));
+    {
+      char buf[16];
+      snprintf(buf, sizeof buf, "%ld", eq);
+      var_set_str(vm, "LAST", buf);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", buf);
+    }
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# eqtree → %ld diff=%s reason=%s\n",
+              eq, eq ? "" : hr.str, eq ? "" : hr.err);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
