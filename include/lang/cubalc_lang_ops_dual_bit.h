@@ -1,6 +1,5 @@
-/* CubalC DUAL bit/field meta-try — B_dual_peel.
- * bitpath·bitmet·datapath·imm_field·imm_wbit. Returns 0 if none matched.
- * Zero bloat. Cube is SoT.
+/* CubalC DUAL bit/field + late imm_h/b/n meta-try — B_dual_peel.
+ * Returns 0 if none matched. Zero bloat. Cube is SoT.
  */
 #ifndef CUBALC_LANG_OPS_DUAL_BIT_H
 #define CUBALC_LANG_OPS_DUAL_BIT_H
