@@ -1,6 +1,5 @@
-/* CubalC CELL inc* family meta-try — B_cell_peel.
- * runtime·include_query·preload·include. Returns 0 if none matched.
- * Zero bloat. Cube is SoT.
+/* CubalC CELL inc* + lib* family meta-try — B_cell_peel.
+ * Returns 0 if none matched. Zero bloat. Cube is SoT.
  */
 #ifndef CUBALC_LANG_OPS_CELL_INC_H
 #define CUBALC_LANG_OPS_CELL_INC_H

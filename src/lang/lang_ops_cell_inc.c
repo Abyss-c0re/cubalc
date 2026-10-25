@@ -1,11 +1,12 @@
-/* CubalC CELL inc* family meta-try — B_cell_peel from cell.c.
- * runtime·include_query·preload·include. Zero bloat. Cube is SoT.
+/* CubalC CELL inc* + lib* family meta-try — B_cell_peel.
+ * runtime·include_query·preload·include·lib*. Zero bloat. Cube is SoT.
  */
 #include "lang/cubalc_lang_ops_cell_inc.h"
 #include "lang/cubalc_lang_ops_cell_runtime.h"
 #include "lang/cubalc_lang_ops_cell_include_query.h"
 #include "lang/cubalc_lang_ops_cell_preload.h"
 #include "lang/cubalc_lang_ops_cell_include.h"
+#include "lang/cubalc_lang_ops_cell_lib.h"
 
 int cubalc_lang_ops_cell_try_inc(VM *vm, Lex *L) {
   {
@@ -22,6 +23,11 @@ int cubalc_lang_ops_cell_try_inc(VM *vm, Lex *L) {
   }
   {
     int r = cubalc_lang_ops_cell_try_include(vm, L);
+    if (r != 0) return r;
+  }
+  /* lib* after include — same order as prior cell.c top-level */
+  {
+    int r = cubalc_lang_ops_cell_try_lib(vm, L);
     if (r != 0) return r;
   }
   return 0;
