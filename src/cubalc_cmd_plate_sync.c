@@ -16,7 +16,8 @@
 #include <errno.h>
 
 int cubalc_cmd_plate_try_sync(const char *op, const char *path, char *plate,
-                              int *file_hit, int argc, char **argv, int *ai_io) {
+                              int *file_hit, int argc, char **argv, int *ai_io,
+                              int fill_strict) {
   cubalc_host_result hr, wr, gr, keys;
   char parent[512];
   const char *slash;
@@ -25,10 +26,9 @@ int cubalc_cmd_plate_try_sync(const char *op, const char *path, char *plate,
   const char *fb = NULL;
   long delta = 1;
   int have_fb = 0;
-  int val_kind = 0;
   const char *body;
   if (!op || !path || !plate || !file_hit || !ai_io) return -1;
-  (void)argc; (void)delta; (void)have_fb; (void)fb; (void)key; (void)val;
+  (void)delta; (void)have_fb; (void)fb; (void)key; (void)val;
   memset(&hr, 0, sizeof hr);
   memset(&wr, 0, sizeof wr);
   memset(&gr, 0, sizeof gr);
@@ -57,7 +57,7 @@ int cubalc_cmd_plate_try_sync(const char *op, const char *path, char *plate,
       char miss_keys[CUBALC_HOST_STR_MAX], esc[CUBALC_HOST_STR_MAX];
       char flat[CUBALC_HOST_STR_MAX];
       long hits = 0, miss = 0, nk = 0;
-      int is_strict = (val_kind == 99) ? 1 : 0;
+      int is_strict = fill_strict ? 1 : 0;
       int is_keys = (strcmp(op, "fillkeys") == 0) ? 1 : 0;
       size_t i, o;
       cubalc_host_result tr, wrr;

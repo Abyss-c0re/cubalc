@@ -253,7 +253,8 @@ int cubalc_cmd_plate(int argc, char **argv) {
 
     /* sync fill/merge/eq/has/pluck → cubalc_cmd_plate_sync.c (B_cmd_plate_sync) */
     {
-      int sr = cubalc_cmd_plate_try_sync(op, path, plate, &file_hit, argc, argv, &ai);
+      int sr = cubalc_cmd_plate_try_sync(op, path, plate, &file_hit, argc, argv, &ai,
+                                         (val_kind == 99) ? 1 : 0);
       if (sr >= 0) return sr;
     }
 
