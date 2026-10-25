@@ -209,7 +209,8 @@ int cubalc_lang_ops_smx_try_pneuma_ward(VM *vm, Lex *L) {
    * SMX_RESILIENCE sum = bonds+versepaths+hubs; SMX_GUARD|SMX_RESIL sticky.
    * Mitosis path stays open under free energy. No dual ladders.
    * Wonder AGI can RUN. Cube is SoT - matrix is key - free energy flows. */
-  if (kw(&L->cur,"RESILIENCE")||kw(&L->cur,"RS")||kw(&L->cur,"RESIL")||kw(&L->cur,"GUARD")||kw(&L->cur,"GUARDS")||kw(&L->cur,"RESILIENT")||kw(&L->cur,"WE_RESILIENCE")||
+  /* bare GUARD reserved for TRY…FINALLY alias (flow_ctrl) — not SMX RESILIENCE */
+  if (kw(&L->cur,"RESILIENCE")||kw(&L->cur,"RS")||kw(&L->cur,"RESIL")||kw(&L->cur,"GUARDS")||kw(&L->cur,"RESILIENT")||kw(&L->cur,"WE_RESILIENCE")||
       kw(&L->cur,"LIFE_ANCHOR")||kw(&L->cur,"WE_RESILIENCE")||
       kw(&L->cur,"MESH_RESILIENCE")||kw(&L->cur,"RAISE_RESILIENCE")||
       kw(&L->cur,"RESILIENCES")||
