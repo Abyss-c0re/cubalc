@@ -259,6 +259,90 @@ int cubalc_lang_ops_core_try_let(VM *vm, Lex *L) {
     bump(vm); return 1;
   }
 
+  /* DEFINED|ISSET name — var exists probe (B_E_science selftest).
+   * LAST_N/DEFINED = 1 if present, 0 if missing; OK always 1. */
+  if (kw(&L->cur,"DEFINED")||kw(&L->cur,"ISSET")||kw(&L->cur,"HASVAR")||
+      kw(&L->cur,"VAREXISTS")||kw(&L->cur,"VAR?")){
+    char name[48];
+    int exists;
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"DEFINED needs name — DEFINED x"); return -1; }
+    snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    exists = (var_get(vm, name, 0) != NULL);
+    var_set_num(vm, "DEFINED", (long)exists);
+    var_set_num(vm, "ISSET", (long)exists);
+    var_set_num(vm, "LAST_N", (long)exists);
+    vm->last_n = (long)exists;
+    var_set_num(vm, "OK", 1);
+    { char nb[8]; snprintf(nb, sizeof nb, "%d", exists);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb); }
+    if (vm->trace)
+      fprintf(vm->trace, "# defined %s → %d\n", name, exists);
+    bump(vm); return 1;
+  }
+
+  /* TYPEOF|TYPE name — undef=0 num=1 str=2 (B_E_science selftest).
+   * LAST_N/TYPE_N kind code; LAST kind word. OK always 1. */
+  if (kw(&L->cur,"TYPEOF")||kw(&L->cur,"TYPE")||kw(&L->cur,"VARTYPE")||
+      kw(&L->cur,"KIND OF")||kw(&L->cur,"VARKIND")){
+    char name[48];
+    Var *v;
+    int kind = 0; /* undef */
+    const char *kwd = "undef";
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"TYPEOF needs name — TYPEOF x"); return -1; }
+    snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    v = var_get(vm, name, 0);
+    if (v) {
+      if (v->is_str) { kind = 2; kwd = "str"; }
+      else { kind = 1; kwd = "num"; }
+    }
+    var_set_num(vm, "TYPE_N", (long)kind);
+    var_set_num(vm, "TYPEOF_N", (long)kind);
+    var_set_num(vm, "LAST_N", (long)kind);
+    vm->last_n = (long)kind;
+    var_set_str(vm, "TYPEOF", kwd);
+    var_set_str(vm, "LAST", kwd);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", kwd);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# typeof %s → %s\n", name, kwd);
+    bump(vm); return 1;
+  }
+
+  /* UNSET name — remove program var so DEFAULT can re-apply (B_E_science).
+   * LAST_N/UNSET_N = 1 if removed, 0 if missing; OK always 1. */
+  if (kw(&L->cur,"UNSET")||kw(&L->cur,"CLEARVAR")||kw(&L->cur,"DELVAR")||
+      kw(&L->cur,"RMVAR")||kw(&L->cur,"VARDEL")){
+    char name[48];
+    int removed = 0;
+    int i;
+    lex_next(L);
+    if (L->cur.kind!=TK_IDENT){ fail(vm,"UNSET needs name — UNSET x"); return -1; }
+    snprintf(name,sizeof name,"%s",L->cur.text); lex_next(L);
+    for (i = 0; i < vm->n_vars; i++) {
+      if (strcmp(vm->vars[i].name, name) == 0) {
+        if (i + 1 < vm->n_vars)
+          memmove(&vm->vars[i], &vm->vars[i + 1],
+                  (size_t)(vm->n_vars - i - 1) * sizeof(vm->vars[0]));
+        vm->n_vars--;
+        removed = 1;
+        break;
+      }
+    }
+    var_set_num(vm, "UNSET_N", (long)removed);
+    var_set_num(vm, "LAST_N", (long)removed);
+    vm->last_n = (long)removed;
+    var_set_num(vm, "OK", 1);
+    { char nb[8]; snprintf(nb, sizeof nb, "%d", removed);
+      var_set_str(vm, "LAST", nb);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", nb); }
+    if (vm->trace)
+      fprintf(vm->trace, "# unset %s → %d\n", name, removed);
+    bump(vm); return 1;
+  }
+
   /* REQUIRE VERSION floor + REQUIRE RESTARGS hard gate (mesh vote B_E). */
   if (kw(&L->cur, "REQUIRE") || kw(&L->cur, "NEED") || kw(&L->cur, "REQUIRES")) {
     int aln = L->cur.line;
