@@ -1008,25 +1008,57 @@ int cubalc_cmd_selftest(int argc, char **argv) {
           }
         }
       } else {
-        int rc = cubalc_run_file(tests[i].path, &rr, NULL);
-        ok = (rc == 0 && rr.ok);
-        rows[nrow].ok = ok ? 1 : 0;
-        rows[nrow].asserts_ok = rr.asserts_ok;
-        rows[nrow].asserts_fail = rr.asserts_fail;
-        aok += rr.asserts_ok;
-        afail += rr.asserts_fail;
-        if (ok) {
-          n_pass++;
-          if (!json_only)
-            printf("%s\tPASS\t%d\t%s\n", tests[i].id, rr.asserts_ok,
-                   tests[i].hint);
+        /* B_E_science: .sh CLI proofs must run under sh, not cubalc_run_file
+         * (else unknown form 'set' from set -e). CUBALC points at this binary. */
+        size_t plen = strlen(tests[i].path);
+        int is_sh = (plen >= 3 && strcmp(tests[i].path + plen - 3, ".sh") == 0);
+        if (is_sh) {
+          char cmd[768];
+          int prc;
+          snprintf(cmd, sizeof cmd, "CUBALC='%s' sh '%s' 2>/dev/null",
+                   argv[0], tests[i].path);
+          prc = system(cmd);
+          ok = (prc == 0);
+          rows[nrow].ok = ok ? 1 : 0;
+          rows[nrow].asserts_ok = ok ? 1 : 0;
+          rows[nrow].asserts_fail = ok ? 0 : 1;
+          if (ok) {
+            n_pass++;
+            aok += 1;
+            if (!json_only)
+              printf("%s\tPASS\tcli-sh\t%s\n", tests[i].id, tests[i].hint);
+          } else {
+            n_fail++;
+            afail += 1;
+            snprintf(rows[nrow].err, sizeof rows[0].err,
+                     "cli .sh exit %d", prc);
+            if (!json_only)
+              printf("%s\tFAIL\tcli-sh\t%s — %s\n", tests[i].id,
+                     tests[i].hint, rows[nrow].err);
+          }
         } else {
-          n_fail++;
-          snprintf(rows[nrow].err, sizeof rows[0].err, "%s",
-                   rr.err[0] ? rr.err : (rr.last_err[0] ? rr.last_err : "fail"));
-          if (!json_only)
-            printf("%s\tFAIL\t%d/%d\t%s — %s\n", tests[i].id, rr.asserts_ok,
-                   rr.asserts_fail, tests[i].hint, rows[nrow].err);
+          int rc = cubalc_run_file(tests[i].path, &rr, NULL);
+          ok = (rc == 0 && rr.ok);
+          rows[nrow].ok = ok ? 1 : 0;
+          rows[nrow].asserts_ok = rr.asserts_ok;
+          rows[nrow].asserts_fail = rr.asserts_fail;
+          aok += rr.asserts_ok;
+          afail += rr.asserts_fail;
+          if (ok) {
+            n_pass++;
+            if (!json_only)
+              printf("%s\tPASS\t%d\t%s\n", tests[i].id, rr.asserts_ok,
+                     tests[i].hint);
+          } else {
+            n_fail++;
+            snprintf(rows[nrow].err, sizeof rows[0].err, "%s",
+                     rr.err[0] ? rr.err
+                               : (rr.last_err[0] ? rr.last_err : "fail"));
+            if (!json_only)
+              printf("%s\tFAIL\t%d/%d\t%s — %s\n", tests[i].id,
+                     rr.asserts_ok, rr.asserts_fail, tests[i].hint,
+                     rows[nrow].err);
+          }
         }
       }
       nrow++;
