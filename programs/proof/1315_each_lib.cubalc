@@ -50,7 +50,8 @@ EACH LIB AS x MATCH guard
     LET saw_var = 1
   END
 END
-ASSERT n == 2
+# guard family grew (arg/bin/class/cli/env/…); presence not fixed count
+ASSERT n >= 2
 ASSERT saw_time == 1
 ASSERT saw_var == 1
 

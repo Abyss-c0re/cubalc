@@ -5,7 +5,7 @@ CUBALC="${CUBALC:-$ROOT/out/cubalc}"
 cd "$ROOT"
 
 OUT=$("$CUBALC" run -q -e 'INCLUDE ALL MATCH guard
-ASSERT INCLUDE_ALL_N == 2
+ASSERT INCLUDE_ALL_N >= 2
 PASS' 2>&1)
 printf '%s\n' "$OUT" | grep -q '"ok":true'
 printf '%s\n' "$OUT" | grep -q 'time_guard\|var_guard'

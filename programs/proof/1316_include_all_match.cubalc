@@ -2,7 +2,8 @@
 
 INCLUDE ALL MATCH guard
 ASSERT OK == 1
-ASSERT INCLUDE_ALL_N == 2
+# guard family grew beyond time_guard+var_guard
+ASSERT INCLUDE_ALL_N >= 2
 INCLUDESTEMS
 SYS HASLINE LAST "time_guard"
 ASSERT LAST_N == 1
