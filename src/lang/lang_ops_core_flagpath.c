@@ -2865,5 +2865,82 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* MVTREE|MOVETREE|MVDIR src dest — recursive move (rename or cptree+rmtree).
+   * Twin of SYS MVTREE. LAST = abs dest · MVTREE_N · MVTREE_RENAMED 1|0.
+   * Soft empty/missing · dest-inside-src refused.
+   * Usability: promote nested agent workspaces without shell mv or CPTREE+RMTREE glue. */
+  if (kw(&L->cur, "MVTREE") || kw(&L->cur, "MOVETREE") || kw(&L->cur, "MVDIR") ||
+      kw(&L->cur, "MOVEDIR") || kw(&L->cur, "MV_TREE") || kw(&L->cur, "RELOCATETREE") ||
+      kw(&L->cur, "PROMOVETREE") || kw(&L->cur, "TREEMV") || kw(&L->cur, "RMV") ||
+      kw(&L->cur, "RENAMETREE")) {
+    char src[CUBALC_HOST_STR_MAX], dst[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    lex_next(L);
+    src[0] = 0;
+    dst[0] = 0;
+    if (resolve_str_arg(vm, L, src, sizeof src) != 0) {
+      fail_at(vm, L, "MVTREE needs src dest — MVTREE \"work/a\" \"work/b\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, dst, sizeof dst) != 0) {
+      fail_at(vm, L, "MVTREE needs src dest — MVTREE \"work/a\" \"work/b\"");
+      return -1;
+    }
+    if (!src[0] || !dst[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "MVTREE_N", 0);
+      var_set_num(vm, "MOVETREE_N", 0);
+      var_set_num(vm, "MVTREE_RENAMED", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "MVTREE: empty path");
+      var_set_str(vm, "ERR", "MVTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_mvtree(src, dst, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "MVTREE_N", 0);
+      var_set_num(vm, "MOVETREE_N", 0);
+      var_set_num(vm, "MVTREE_RENAMED", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", dst);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dst);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "MVTREE: fail");
+        var_set_str(vm, "ERR", "MVTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str[0] ? hr.str : dst);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str[0] ? hr.str : dst);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "MVTREE_N", hr.n);
+    var_set_num(vm, "MOVETREE_N", hr.n);
+    var_set_num(vm, "MVDIR_N", hr.n);
+    var_set_num(vm, "MVTREE_RENAMED", hr.code ? 1 : 0);
+    var_set_num(vm, "MOVETREE_RENAMED", hr.code ? 1 : 0);
+    var_set_str(vm, "MVTREE", hr.str[0] ? hr.str : dst);
+    var_set_str(vm, "MOVETREE", hr.str[0] ? hr.str : dst);
+    var_set_str(vm, "PATH", hr.str[0] ? hr.str : dst);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# mvtree → %s n=%ld renamed=%d\n",
+              hr.str[0] ? hr.str : dst, hr.n, hr.code);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
