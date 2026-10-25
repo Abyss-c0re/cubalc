@@ -2789,5 +2789,81 @@ int cubalc_lang_ops_core_try_flagpath(VM *vm, Lex *L) {
     return 1;
   }
 
+
+  /* CPTREE|COPYTREE|CPDIR src dest — recursive copy file or directory tree.
+   * Twin of SYS CPTREE. LAST = abs dest · LAST_N/CPTREE_N = entries · CPTREE_BYTES.
+   * Soft empty/missing · dest-inside-src refused.
+   * Usability: snapshot nested agent workspaces without shell cp -r. */
+  if (kw(&L->cur, "CPTREE") || kw(&L->cur, "COPYTREE") || kw(&L->cur, "CPDIR") ||
+      kw(&L->cur, "COPYDIR") || kw(&L->cur, "CP_TREE") || kw(&L->cur, "TREECOPY") ||
+      kw(&L->cur, "RCPY") || kw(&L->cur, "RCOPY") || kw(&L->cur, "SNAPSHOTTREE") ||
+      kw(&L->cur, "DUPTREE")) {
+    char src[CUBALC_HOST_STR_MAX], dst[CUBALC_HOST_STR_MAX];
+    cubalc_host_result hr;
+    lex_next(L);
+    src[0] = 0;
+    dst[0] = 0;
+    if (resolve_str_arg(vm, L, src, sizeof src) != 0) {
+      fail_at(vm, L, "CPTREE needs src dest — CPTREE \"work/a\" \"work/b\"");
+      return -1;
+    }
+    if (resolve_str_arg(vm, L, dst, sizeof dst) != 0) {
+      fail_at(vm, L, "CPTREE needs src dest — CPTREE \"work/a\" \"work/b\"");
+      return -1;
+    }
+    if (!src[0] || !dst[0]) {
+      var_set_str(vm, "LAST", "");
+      vm->last_str[0] = 0;
+      vm->last_n = 0;
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "CPTREE_N", 0);
+      var_set_num(vm, "CPTREE_BYTES", 0);
+      var_set_num(vm, "COPYTREE_N", 0);
+      var_set_num(vm, "OK", 0);
+      var_set_str(vm, "LAST_ERR", "CPTREE: empty path");
+      var_set_str(vm, "ERR", "CPTREE: empty path");
+      bump(vm);
+      return 1;
+    }
+    memset(&hr, 0, sizeof hr);
+    if (cubalc_host_cptree(src, dst, &hr) != 0) {
+      var_set_num(vm, "OK", 0);
+      var_set_num(vm, "LAST_N", 0);
+      var_set_num(vm, "CPTREE_N", 0);
+      var_set_num(vm, "CPTREE_BYTES", 0);
+      var_set_num(vm, "COPYTREE_N", 0);
+      vm->last_n = 0;
+      var_set_str(vm, "LAST", dst);
+      snprintf(vm->last_str, sizeof vm->last_str, "%s", dst);
+      if (hr.err[0]) {
+        var_set_str(vm, "LAST_ERR", hr.err);
+        var_set_str(vm, "ERR", hr.err);
+      } else {
+        var_set_str(vm, "LAST_ERR", "CPTREE: fail");
+        var_set_str(vm, "ERR", "CPTREE: fail");
+      }
+      bump(vm);
+      return 1;
+    }
+    var_set_str(vm, "LAST", hr.str[0] ? hr.str : dst);
+    snprintf(vm->last_str, sizeof vm->last_str, "%s", hr.str[0] ? hr.str : dst);
+    vm->last_n = hr.n;
+    var_set_num(vm, "LAST_N", hr.n);
+    var_set_num(vm, "CPTREE_N", hr.n);
+    var_set_num(vm, "COPYTREE_N", hr.n);
+    var_set_num(vm, "CPDIR_N", hr.n);
+    var_set_num(vm, "CPTREE_BYTES", (long)hr.code);
+    var_set_str(vm, "CPTREE", hr.str[0] ? hr.str : dst);
+    var_set_str(vm, "COPYTREE", hr.str[0] ? hr.str : dst);
+    var_set_str(vm, "PATH", hr.str[0] ? hr.str : dst);
+    var_set_num(vm, "PATH_EXIST", 1);
+    var_set_num(vm, "OK", 1);
+    if (vm->trace)
+      fprintf(vm->trace, "# cptree → %s n=%ld bytes=%d\n",
+              hr.str[0] ? hr.str : dst, hr.n, hr.code);
+    bump(vm);
+    return 1;
+  }
+
   return 0;
 }
