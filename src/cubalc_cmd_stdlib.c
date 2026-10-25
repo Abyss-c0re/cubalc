@@ -147,12 +147,14 @@ int cubalc_cmd_stdlib(int argc, char **argv) {
     const char *libdir = "programs/lib";
     const char *ip = getenv("CUBALC_INCLUDE_PATH");
     const char *filter = "";
-    char paths[64][160];
-    char hints[64][120];
-    char origins[64][24];
-    char stems[64][96];
-    int deps_n[64], defaults_n[64];
-    int keep[64];
+    /* catalog grew past 64 (disk ~89); room for stdlib + INCLUDE_PATH */
+    enum { CUBALC_LIBS_CAT_MAX = 128 };
+    char paths[CUBALC_LIBS_CAT_MAX][160];
+    char hints[CUBALC_LIBS_CAT_MAX][120];
+    char origins[CUBALC_LIBS_CAT_MAX][24];
+    char stems[CUBALC_LIBS_CAT_MAX][96];
+    int deps_n[CUBALC_LIBS_CAT_MAX], defaults_n[CUBALC_LIBS_CAT_MAX];
+    int keep[CUBALC_LIBS_CAT_MAX];
     char ipdirs[8][160];
     int n = 0, n_ip = 0, n_std = 0, i, j, n_total = 0, n_match = 0;
     DIR *d;
@@ -174,7 +176,7 @@ int cubalc_cmd_stdlib(int argc, char **argv) {
     d = opendir(libdir);
     if (d) {
       struct dirent *de;
-      while ((de = readdir(d)) != NULL && n < 64) {
+      while ((de = readdir(d)) != NULL && n < CUBALC_LIBS_CAT_MAX) {
         size_t len = strlen(de->d_name);
         size_t slen;
         if (len < 8 || strcmp(de->d_name + len - 7, ".cubalc") != 0)
@@ -204,7 +206,7 @@ int cubalc_cmd_stdlib(int argc, char **argv) {
     /* CUBALC_INCLUDE_PATH dirs — project INCLUDE short names (after programs/lib). */
     if (ip && ip[0]) {
       const char *seg = ip;
-      while (*seg && n < 64) {
+      while (*seg && n < CUBALC_LIBS_CAT_MAX) {
         char dir[160];
         size_t dlen = 0;
         DIR *pd;
@@ -221,7 +223,7 @@ int cubalc_cmd_stdlib(int argc, char **argv) {
         if (!pd) continue;
         {
           struct dirent *de;
-          while ((de = readdir(pd)) != NULL && n < 64) {
+          while ((de = readdir(pd)) != NULL && n < CUBALC_LIBS_CAT_MAX) {
             size_t len = strlen(de->d_name);
             size_t slen;
             int already = 0;
